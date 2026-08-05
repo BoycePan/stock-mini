@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  user: root
+  password: lilaiyun520@
+  name: gu_yu_stock
+
+wechat:
+  app_id: "wx2cfd1556edf21a24"
+  app_secret: "52ee6319067c7cfdeb5f08be7b389f1d"
+
+jwt:
+  secret: "change-me-to-a-random-string"
+  expire_hours: 24

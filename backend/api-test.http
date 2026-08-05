@@ -1,0 +1,38 @@
+### 变量
+@baseUrl = http://localhost:8080/api/v1
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODYxODcwNzksImlhdCI6MTc4NTkyNzg3OSwib3BlbmlkIjoidGVzdF9vcGVuaWRfMTIzNDUiLCJ1c2VyX2lkIjoxfQ._eILb46DtHV55Cx0lZ8_GOmmsuUJFT2m3aLS6wNq1WY
+
+###
+
+# 1. 微信登录
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "code": "081testcode"
+}
+
+###
+
+# 2. 登录 - 缺少 code 参数
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{}
+
+###
+
+# 3. 获取用户信息（需认证）
+GET {{baseUrl}}/user/profile
+Authorization: Bearer {{token}}
+
+###
+
+# 4. 无 token 访问（应返回 401）
+GET {{baseUrl}}/user/profile
+
+###
+
+# 5. 错误 token
+GET {{baseUrl}}/user/profile
+Authorization: Bearer invalid_token_xxx
