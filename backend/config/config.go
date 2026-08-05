@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	WeChat   WeChatConfig   `yaml:"wechat"`
 	JWT      JWTConfig      `yaml:"jwt"`
+	Stock    StockConfig    `yaml:"stock"` // 股票数据源配置
 }
 
 type ServerConfig struct {
@@ -53,6 +54,25 @@ func Load() *Config {
 
 	//applyEnvOverrides(&cfg)
 	return &cfg
+}
+
+// StockConfig 股票数据源配置，通过 config.yaml 的 stock 段控制。
+//
+// 每个数据源可以单独启用/禁用，以及调整限流和重试参数。
+// 生产环境建议只开 sina + eastmoney，同花顺有反爬风险。
+type StockConfig struct {
+	Sina      StockSourceConfig `yaml:"sina"`      // 新浪财经 API
+	Eastmoney StockSourceConfig `yaml:"eastmoney"` // 东方财富 API
+	Cninfo    StockSourceConfig `yaml:"cninfo"`    // 巨潮资讯 API
+	THS       StockSourceConfig `yaml:"ths"`       // 同花顺 API（高风险）
+}
+
+// StockSourceConfig 单个数据源配置。
+type StockSourceConfig struct {
+	Enabled    bool    `yaml:"enabled"`     // 是否启用
+	RateLimit  float64 `yaml:"rate_limit"`  // 最小请求间隔（秒），0 表示不限流
+	MaxRetries int     `yaml:"max_retries"` // 最大重试次数
+	Timeout    int     `yaml:"timeout"`     // 超时时间（秒），默认 30
 }
 
 func applyEnvOverrides(cfg *Config) {

@@ -15,3 +15,33 @@ wechat:
 jwt:
   secret: "change-me-to-a-random-string"
   expire_hours: 24
+
+# 股票数据源配置
+# enabled: 是否启用该数据源
+# rate_limit: 两次请求最小间隔（秒），控制对上游服务器的压力
+# max_retries: 失败重试次数（不含首次）
+# timeout: 超时秒数，默认 30
+stock:
+  sina:
+    enabled: true
+    rate_limit: 1       # 新浪限制较宽松，1 秒间隔足够
+    max_retries: 3
+    timeout: 30
+
+  eastmoney:
+    enabled: true
+    rate_limit: 4        # 东方财富最保守，4 秒间隔
+    max_retries: 5
+    timeout: 30
+
+  cninfo:
+    enabled: true
+    rate_limit: 0        # 巨潮不限流（单线程串行调用）
+    max_retries: 1
+    timeout: 30
+
+  ths:
+    enabled: false       # 同花顺默认关闭（TLS 指纹检测，Go 标准库可能被封）
+    rate_limit: 0.5
+    max_retries: 3
+    timeout: 30
