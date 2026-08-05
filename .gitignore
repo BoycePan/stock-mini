@@ -1,32 +1,110 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# ====================
+# Go
+# ====================
+
+# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+bin/
+dist/
 
-# Test binary, built with `go test -c`
+# Test binary
 *.test
 
-# Code coverage profiles and other test artifacts
+# Coverage & profiles
 *.out
-coverage.*
 *.coverprofile
+*.cov
+*.prof
+coverage.*
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Go workspace
 go.work
 go.work.sum
 
-# env file
-.env
+# Vendor
+vendor/
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Build output
+/tmp/
+/temp/
+
+# ====================
+# JavaScript / Node.js (front/)
+# ====================
+
+/front/node_modules/
+/front/npm-debug.log*
+/front/yarn-debug.log*
+/front/yarn-error.log*
+/front/pnpm-debug.log*
+/front/lerna-debug.log*
+
+# Build output
+/front/build/
+/front/dist/
+/front/.next/
+/front/.nuxt/
+/front/out/
+/front/.cache/
+/front/*.tsbuildinfo
+
+# Runtime data
+/front/pids
+/front/*.pid
+/front/*.seed
+/front/*.pid.lock
+
+# ====================
+# Environment & Secrets
+# ====================
+
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+credentials.*
+
+# ====================
+# IDE & Editor
+# ====================
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ====================
+# OS
+# ====================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+
+# ====================
+# Logs & Temp
+# ====================
+
+*.log
+*.tmp
+*.temp
+logs/
