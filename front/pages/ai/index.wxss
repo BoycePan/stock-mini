@@ -1,0 +1,43 @@
+.page-status {
+  display: inline-flex;
+  align-items: center;
+  margin: 4rpx 0 8rpx 32rpx;
+  padding: 10rpx 18rpx;
+  border: 1rpx solid #e3ddff;
+  border-radius: 30rpx;
+  background: #f6f3ff;
+  color: #735ce5;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 13rpx;
+  height: 13rpx;
+  margin-right: 10rpx;
+  border-radius: 50%;
+  background: #8368f5;
+  box-shadow: 0 0 0 5rpx rgba(131, 104, 245, 0.14);
+}
+
+.updated {
+  margin-left: 16rpx;
+  color: #8a98aa;
+  font-weight: 400;
+}
+
+.content-scroll {
+  height: calc(100vh - 186rpx);
+}
+
+.ai-hint {
+  margin: 26rpx 44rpx;
+  color: #8491a4;
+  font-size: 23rpx;
+  line-height: 36rpx;
+  text-align: center;
+}
+
+.bottom-space {
+  height: 150rpx;
+}

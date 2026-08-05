@@ -1,0 +1,32 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 108rpx 30rpx;
+  color: #8a98aa;
+}
+
+.empty-icon {
+  width: 104rpx;
+  height: 104rpx;
+  margin-bottom: 18rpx;
+  border-radius: 32rpx;
+  background: #edf3fb;
+  color: #8ca3bd;
+  font-size: 66rpx;
+  line-height: 104rpx;
+  text-align: center;
+}
+
+.empty-title {
+  color: #5e6e83;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.empty-description {
+  margin-top: 10rpx;
+  color: #8a98aa;
+  font-size: 23rpx;
+}

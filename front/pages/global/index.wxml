@@ -1,0 +1,14 @@
+<view class="page theme-{{theme}} global-page">
+  <app-header bind:share="onShare"></app-header>
+  <view class="page-status"><text class="status-dot"></text><text>{{statusLabel}}</text><text class="updated">{{updatedLabel}}</text></view>
+  <scroll-view scroll-y class="content-scroll">
+    <loading-state wx:if="{{loading}}"></loading-state>
+    <view wx:elif="{{error}}" class="error-card"><text>{{error}}</text><button bindtap="loadData">重新加载</button></view>
+    <block wx:else>
+      <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}"></section-card>
+      <view class="source-note">数据来源：{{sourceLabel}} · 部分全球指标等待后端数据源接入</view>
+    </block>
+    <view class="bottom-space"></view>
+  </scroll-view>
+  <bottom-tabbar active="{{activeTab}}" bind:change="onTabChange"></bottom-tabbar>
+</view>

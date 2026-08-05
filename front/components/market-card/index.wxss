@@ -1,0 +1,40 @@
+.market-card {
+  padding: 22rpx;
+  border: 1rpx solid #e1e9f2;
+  border-radius: 22rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 18rpx rgba(69, 91, 120, 0.06);
+}
+
+.market-name {
+  display: block;
+  color: #35445a;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.market-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.market-value {
+  color: #142033;
+  font-size: 36rpx;
+  font-weight: 650;
+}
+
+.market-change {
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.market-change.up {
+  color: #eb514d;
+}
+
+.market-change.down {
+  color: #20a66a;
+}

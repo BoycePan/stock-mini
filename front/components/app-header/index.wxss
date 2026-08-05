@@ -1,0 +1,82 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 32rpx 18rpx;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #c5e1f4;
+  border-radius: 22rpx;
+  background: linear-gradient(145deg, #e9f8ff 0%, #d8eeff 100%);
+  color: #2f8dd4;
+  font-size: 46rpx;
+  font-weight: 700;
+  box-shadow: 0 8rpx 18rpx rgba(47, 141, 212, 0.13);
+}
+
+.brand-title {
+  margin-left: 16rpx;
+  overflow: hidden;
+  color: #152338;
+  font-size: 40rpx;
+  font-weight: 750;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.share-button,
+.system-actions {
+  height: 66rpx;
+  border: 1rpx solid #e1e8f0;
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.88);
+  color: #344257;
+  box-shadow: 0 8rpx 20rpx rgba(62, 83, 111, 0.08);
+}
+
+.share-button {
+  padding: 0 26rpx;
+  font-size: 25rpx;
+  line-height: 66rpx;
+}
+
+.system-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 18rpx;
+  font-size: 27rpx;
+}
+
+.system-actions.solo {
+  margin-left: auto;
+}
+
+.divider {
+  color: #c5ceda;
+  font-size: 24rpx;
+}
+
+.mini-dot {
+  color: #4c8dff;
+  font-size: 31rpx;
+}

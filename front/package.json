@@ -1,0 +1,33 @@
+{
+  "name": "market-magic-mini",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "市场魔方助手原生微信小程序",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
+    "type-check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\""
+  },
+  "dependencies": {
+    "dayjs": "^1.11.19",
+    "mobx-miniprogram": "^6.12.3",
+    "mobx-miniprogram-bindings": "^5.1.1",
+    "tdesign-miniprogram": "^1.12.0",
+    "weapp-qrcode-canvas-2d": "^1.1.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "miniprogram-api-typings": "^3.12.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

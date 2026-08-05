@@ -1,0 +1,25 @@
+<view class="page theme-{{theme}}">
+  <app-header title="{{title}}" showShare="{{false}}"></app-header>
+  <scroll-view scroll-y class="content-scroll">
+    <loading-state wx:if="{{loading}}"></loading-state>
+    <view wx:elif="{{error}}" class="error-card">{{error}}</view>
+    <block wx:else>
+      <view class="panel">
+        <view class="panel-title"><text>热门板块</text></view>
+        <view class="board-row" wx:for="{{boards}}" wx:key="plate_code">
+          <text>{{item.plate_name}}</text>
+          <text>{{item.plate_code}}</text>
+        </view>
+      </view>
+      <view class="panel">
+        <view class="panel-title"><text>成分股</text></view>
+        <block wx:if="{{members.length}}">
+          <view class="member-row" wx:for="{{members}}" wx:key="*this">
+            <text>{{item}}</text>
+          </view>
+        </block>
+        <empty-state wx:else title="暂无成分股" description="请检查板块 cid 是否有效"></empty-state>
+      </view>
+    </block>
+  </scroll-view>
+</view>

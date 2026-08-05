@@ -1,0 +1,146 @@
+.section-card {
+  margin: 18rpx 24rpx 0;
+  padding: 26rpx 22rpx 24rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.section-card.compact {
+  padding-bottom: 20rpx;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  min-height: 54rpx;
+  margin: 0 10rpx 22rpx;
+}
+
+.title-accent {
+  width: 8rpx;
+  height: 38rpx;
+  margin-right: 14rpx;
+  border-radius: 10rpx;
+  background: linear-gradient(180deg, #ff9c5c 0%, #ff625f 100%);
+  box-shadow: 0 6rpx 12rpx rgba(255, 98, 95, 0.22);
+}
+
+.section-card.asia .title-accent {
+  background: linear-gradient(180deg, #66a6ff 0%, #4c7ff5 100%);
+  box-shadow: 0 6rpx 12rpx rgba(76, 127, 245, 0.22);
+}
+
+.section-card.ai .title-accent {
+  background: linear-gradient(180deg, #a084ff 0%, #735ce5 100%);
+  box-shadow: 0 6rpx 12rpx rgba(115, 92, 229, 0.22);
+}
+
+.section-title {
+  color: #152338;
+  font-size: 33rpx;
+  font-weight: 700;
+}
+
+.section-badge {
+  margin-left: auto;
+  padding: 7rpx 16rpx;
+  border: 1rpx solid #ffc8c4;
+  border-radius: 24rpx;
+  background: #fff5f4;
+  color: #e65551;
+  font-size: 21rpx;
+  font-weight: 600;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+}
+
+.metric-card {
+  min-height: 142rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 22rpx 20rpx;
+  border: 1rpx solid #edf1f6;
+  border-radius: 20rpx;
+  background: linear-gradient(145deg, #f8fafc 0%, #f2f6fa 100%);
+}
+
+.metric-name {
+  width: 100%;
+  overflow: hidden;
+  color: #46566b;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.metric-icon {
+  margin-right: 8rpx;
+}
+
+.metric-value {
+  max-width: 54%;
+  margin-top: 10rpx;
+  color: #152338;
+  font-size: 37rpx;
+  font-weight: 650;
+  line-height: 46rpx;
+}
+
+.metric-change {
+  margin: 10rpx 0 2rpx auto;
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 38rpx;
+  white-space: nowrap;
+}
+
+.metric-change.up {
+  color: #eb514d;
+}
+
+.metric-change.down {
+  color: #20a66a;
+}
+
+.metric-change.flat {
+  color: #8492a5;
+}
+
+.metric-change text:first-child {
+  margin-right: 6rpx;
+  font-size: 22rpx;
+}
+
+.section-card.asia .metric-card,
+.section-card.metals .metric-card {
+  min-height: 112rpx;
+  padding-top: 20rpx;
+  padding-bottom: 18rpx;
+  border-color: #e2eaf3;
+  background: #fff;
+}
+
+.section-card.asia .metric-name,
+.section-card.metals .metric-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.section-card.asia .metric-change,
+.section-card.metals .metric-change {
+  font-size: 28rpx;
+}
+
+.section-card.ai .metric-card {
+  min-height: 126rpx;
+  border-color: #e5e1fa;
+  background: linear-gradient(145deg, #fff 0%, #faf9ff 100%);
+}

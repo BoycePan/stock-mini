@@ -34,9 +34,14 @@ vendor/
 /temp/
 
 # ====================
-# JavaScript / Node.js (front/)
+# JavaScript / Node.js (pnpm workspace)
 # ====================
+/node_modules/
+/.pnpm-store/
+/pnpm-debug.log*
 
+
+/front/miniprogram_npm
 /front/node_modules/
 /front/npm-debug.log*
 /front/yarn-debug.log*

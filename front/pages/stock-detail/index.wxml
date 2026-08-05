@@ -1,0 +1,98 @@
+<view class="page theme-{{theme}}">
+  <app-header title="股票详情" showShare="{{true}}"></app-header>
+  <scroll-view scroll-y class="content-scroll">
+    <loading-state wx:if="{{loading}}"></loading-state>
+    <view wx:elif="{{error}}" class="error-card">
+      <text>{{error}}</text>
+      <button bindtap="onRefresh">重新加载</button>
+    </view>
+    <block wx:else>
+
+      <!-- 行情卡片 -->
+      <view class="quote-card">
+        <view class="quote-head">
+          <view>
+            <text class="stock-name">{{quote.name}}</text>
+            <text class="stock-code">{{quote.code}}</text>
+          </view>
+          <view class="quote-price">
+            <text class="price">{{quote.price}}</text>
+            <text class="quote-change {{quote.changeClass}}">{{quote.changeText}}</text>
+          </view>
+        </view>
+        <view class="quote-grid">
+          <view>
+            <text>今开</text>
+            <text>{{quote.open}}</text>
+          </view>
+          <view>
+            <text>昨收</text>
+            <text>{{quote.prev_close}}</text>
+          </view>
+          <view>
+            <text>最高</text>
+            <text>{{quote.high}}</text>
+          </view>
+          <view>
+            <text>最低</text>
+            <text>{{quote.low}}</text>
+          </view>
+          <view>
+            <text>成交量</text>
+            <text>{{quote.volume}}</text>
+          </view>
+          <view>
+            <text>成交额</text>
+            <text>{{quote.amount}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- K线面板 -->
+      <view class="panel">
+        <view class="panel-title">
+          <text>K线</text>
+          <view class="scale-tabs">
+            <text
+              class="{{scale === '240' ? 'selected' : ''}}"
+              data-value="240"
+              bindtap="onScaleChange"
+            >日线</text>
+            <text
+              class="{{scale === '1200' ? 'selected' : ''}}"
+              data-value="1200"
+              bindtap="onScaleChange"
+            >周线</text>
+          </view>
+        </view>
+        <view class="kline-row" wx:for="{{klines}}" wx:key="time">
+          <text>{{item.time}}</text>
+          <text>{{item.closeText}}</text>
+          <text class="{{item.pctClass}}">{{item.pctText}}</text>
+        </view>
+      </view>
+
+      <!-- 相关新闻面板 -->
+      <view class="panel">
+        <view class="panel-title">
+          <text>相关新闻</text>
+        </view>
+        <view wx:if="{{news.length}}">
+          <view
+            class="news-row"
+            wx:for="{{news}}"
+            wx:key="title"
+            data-url="{{item.url}}"
+            bindtap="onNewsTap"
+          >
+            <text class="news-title">{{item.title}}</text>
+            <text class="news-time">{{item.time}}</text>
+          </view>
+        </view>
+        <empty-state wx:else title="暂无相关新闻"></empty-state>
+      </view>
+
+    </block>
+    <view class="bottom-space"></view>
+  </scroll-view>
+</view>

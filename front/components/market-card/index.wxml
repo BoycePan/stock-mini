@@ -1,0 +1,4 @@
+<view class="market-card">
+  <text class="market-name">{{metric.name}}</text>
+  <view class="market-bottom"><text wx:if="{{metric.value}}" class="market-value">{{metric.value}}</text><text class="market-change {{metric.changeClass}}">{{metric.direction}} {{metric.changeText}}</text></view>
+</view>

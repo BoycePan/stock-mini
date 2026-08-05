@@ -1,0 +1,1 @@
+<view class="empty-state"><text class="empty-icon">◌</text><text class="empty-title">{{title}}</text><text wx:if="{{description}}" class="empty-description">{{description}}</text></view>

@@ -1,0 +1,11 @@
+<view class="header" style="{{headerStyle}}">
+  <view class="brand">
+    <view class="brand-mark">◎</view>
+    <text class="brand-title">{{title}}</text>
+  </view>
+  <view wx:if="{{showShare}}" class="header-actions">
+    <button class="share-button" bindtap="onShare">↗ 分享</button>
+    <view class="system-actions"><text>•••</text><text class="divider">|</text><text>−</text><text class="divider">|</text><text class="mini-dot">◉</text></view>
+  </view>
+  <view wx:else class="system-actions solo"><text>•••</text><text class="divider">|</text><text>−</text><text class="divider">|</text><text class="mini-dot">◉</text></view>
+</view>

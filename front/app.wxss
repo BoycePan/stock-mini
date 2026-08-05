@@ -1,0 +1,153 @@
+page {
+  background: #eef3f8;
+  color: #142033;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  box-sizing: border-box;
+}
+
+view,
+text,
+scroll-view,
+button,
+input,
+switch {
+  box-sizing: border-box;
+}
+
+button::after {
+  border: 0;
+}
+
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f8fc 0%, #edf2f7 52%, #e9eff5 100%);
+  color: #142033;
+}
+
+.page.theme-dark {
+  background: linear-gradient(180deg, #111827 0%, #151e2d 52%, #101722 100%);
+  color: #f5f7fb;
+}
+
+.page.theme-dark .header,
+.page.theme-dark .share-button,
+.page.theme-dark .system-actions,
+.page.theme-dark .tabbar {
+  background: rgba(24, 34, 49, 0.96);
+  border-color: #2a394e;
+  color: #f5f7fb;
+}
+
+.page.theme-dark .brand-mark {
+  border-color: #38516e;
+  background: #1d3047;
+  color: #6eb7ff;
+}
+
+.page.theme-dark .brand-title,
+.page.theme-dark .section-title,
+.page.theme-dark .stock-name,
+.page.theme-dark .price,
+.page.theme-dark .panel-title,
+.page.theme-dark .setting-heading,
+.page.theme-dark .theme-title,
+.page.theme-dark .follow-title,
+.page.theme-dark .news-title,
+.page.theme-dark .metric-value,
+.page.theme-dark .market-value {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .section-card,
+.page.theme-dark .quote-card,
+.page.theme-dark .panel,
+.page.theme-dark .error-card,
+.page.theme-dark .setting-section,
+.page.theme-dark .follow-card,
+.page.theme-dark .theme-card,
+.page.theme-dark .news-list,
+.page.theme-dark .loading,
+.page.theme-dark .error {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+}
+
+.page.theme-dark .metric-card,
+.page.theme-dark .theme-switch,
+.page.theme-dark .config-row,
+.page.theme-dark .service-item,
+.page.theme-dark .market-card {
+  border-color: #34465e;
+  background: #223248;
+  color: #f5f7fb;
+}
+
+.page.theme-dark .metric-name,
+.page.theme-dark .quote-grid text:last-child,
+.page.theme-dark .member-row,
+.page.theme-dark .board-row,
+.page.theme-dark .config-row input,
+.page.theme-dark .service-item {
+  color: #e5ebf4;
+}
+
+.page.theme-dark .source-note,
+.page.theme-dark .updated,
+.page.theme-dark .theme-subtitle,
+.page.theme-dark .news-time,
+.page.theme-dark .news-meta,
+.page.theme-dark .quote-grid text:first-child,
+.page.theme-dark .config-value,
+.page.theme-dark .service-sub,
+.page.theme-dark .follow-subtitle,
+.page.theme-dark .follow-tip,
+.page.theme-dark .stock-code,
+.page.theme-dark .kline-row,
+.page.theme-dark .news-intro {
+  color: #9cacc0;
+}
+
+.page.theme-dark .promo-card {
+  border-color: #66424a;
+  background: #392a34;
+}
+
+.page.theme-dark .promo-title {
+  color: #ffd7d4;
+}
+
+.page.theme-dark .promo-subtitle {
+  color: #d9a4a5;
+}
+
+.page.theme-dark .outline-button,
+.page.theme-dark .danger-button,
+.page.theme-dark .theme-option.selected {
+  border-color: #435875;
+  background: #25364d;
+  color: #e8eef7;
+}
+
+.page.theme-dark .title-accent {
+  box-shadow: 0 0 16rpx rgba(77, 150, 255, 0.35);
+}
+
+.page.theme-dark .section-badge {
+  border-color: #7d4a56;
+  background: #382a34;
+  color: #ff9b9a;
+}
+
+.page.theme-dark .news-item,
+.page.theme-dark .news-row,
+.page.theme-dark .kline-row,
+.page.theme-dark .board-row,
+.page.theme-dark .member-row {
+  border-color: #2c3d53;
+}
+
+.page.theme-dark .follow-placeholder {
+  border-color: #4a5e77;
+  color: #9cacc0;
+}

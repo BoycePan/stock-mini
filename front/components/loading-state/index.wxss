@@ -1,0 +1,17 @@
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 132rpx 0;
+  color: #728197;
+  font-size: 26rpx;
+}
+
+.loading-dot {
+  width: 24rpx;
+  height: 24rpx;
+  margin-right: 14rpx;
+  border: 4rpx solid #dce6f2;
+  border-top-color: #4c8dff;
+  border-radius: 50%;
+}

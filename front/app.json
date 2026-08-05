@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/global/index",
+    "pages/asia/index",
+    "pages/metals/index",
+    "pages/ai/index",
+    "pages/settings/index",
+    "pages/stock-detail/index",
+    "pages/sector-detail/index",
+    "pages/news/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#F3F6FA",
+    "backgroundTextStyle": "light",
+    "enablePullDownRefresh": true
+  },
+  "sitemapLocation": "sitemap.json"
+}
