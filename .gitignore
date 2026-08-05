@@ -108,3 +108,6 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 logs/
+
+
+./wx-app-stock.iml
