@@ -63,7 +63,7 @@ jobs:
             docker run -d \
               --name wx-stock-backend \
               --restart unless-stopped \
-              -p 18487:18487 \
+              --network host \
               -v /apps/stock/backend/config.yaml:/app/config.yaml:ro \
               wx-stock-backend:latest
 
