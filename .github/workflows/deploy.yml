@@ -67,12 +67,20 @@ jobs:
               -v /apps/stock/backend/config.yaml:/app/config.yaml:ro \
               wx-stock-backend:latest
 
+            # 等待启动
+            sleep 3
+
+            # 检查容器状态
+            echo "=== 容器状态 ==="
+            docker ps --filter name=wx-stock-backend --format "{{.Status}}"
+
+            # 服务器本地健康检查
+            echo "=== 健康检查 ==="
+            curl -fsS http://localhost:18487/api/health && echo "OK" || {
+              echo "FAILED, 最近日志:"
+              docker logs --tail 30 wx-stock-backend
+              exit 1
+            }
+
             # 清理旧镜像
             docker image prune -f
-
-      - name: Health check
-        run: |
-          sleep 5
-          curl -fsS http://${{ secrets.SSH_HOST }}:18487/api/health
-          echo ""
-          echo "Deploy OK"
