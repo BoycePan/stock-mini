@@ -1,0 +1,22 @@
+# IDE
+.idea/
+.vscode/
+
+# 配置文件（服务器挂载，不进镜像）
+config.yaml
+*.yaml
+
+# Git
+.git/
+.gitignore
+
+# 测试
+*_test.go
+api-test.http
+
+# 临时文件
+*.tmp
+*.log
+
+# 前端（后端镜像不需要）
+../front/

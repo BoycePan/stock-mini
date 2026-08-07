@@ -1,0 +1,77 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── 测试 ──
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: go vet
+        run: go vet ./...
+        working-directory: backend
+      - name: go test
+        run: go test ./...
+        working-directory: backend
+
+  # ── 构建镜像并部署 ──
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t wx-stock-backend:latest ./backend
+
+      - name: Save image to tar
+        run: docker save wx-stock-backend:latest | gzip > wx-stock-backend.tar.gz
+
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: wx-stock-backend.tar.gz
+          target: /apps/stock/backend/
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /apps/stock/backend
+
+            # 加载新镜像
+            docker load < wx-stock-backend.tar.gz
+            rm wx-stock-backend.tar.gz
+
+            # 滚动重启
+            docker stop wx-stock-backend 2>/dev/null || true
+            docker rm wx-stock-backend 2>/dev/null || true
+            docker run -d \
+              --name wx-stock-backend \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              -v /apps/stock/backend/config.yaml:/app/config.yaml:ro \
+              wx-stock-backend:latest
+
+            # 清理旧镜像
+            docker image prune -f
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -fsS http://${{ secrets.SSH_HOST }}:8080/api/health
+          echo ""
+          echo "Deploy OK"
