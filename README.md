@@ -68,6 +68,17 @@ chmod 600 ~/.ssh/authorized_keys
 ssh -i ~/.ssh/wx-app-stock-deploy -p 22 deploy_user@服务器IP 'whoami'
 ```
 
+如果 Actions 仍提示 `unable to authenticate`，先在服务器上查看已安装公钥的指纹：
+
+```bash
+ssh-keygen -lf ~/.ssh/authorized_keys -E sha256
+```
+
+它必须和 Actions 日志中 `Validate SSH private key` 输出的指纹一致。
+如果服务器上有多行公钥，请逐行确认。指纹一致但仍失败时，检查
+`SSH_USER` 是否就是该公钥所在用户，以及 `/home/<用户>/.ssh`、
+`authorized_keys` 的所有者和权限。
+
 在 GitHub 仓库的 `Settings -> Secrets and variables -> Actions` 中配置：
 
 | Secret | 内容 |
