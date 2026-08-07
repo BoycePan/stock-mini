@@ -1,5 +1,5 @@
 ### 变量
-@baseUrl = http://localhost:8080/api/v1
+@baseUrl = http://localhost:18487/api/v1
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODYxODcwNzksImlhdCI6MTc4NTkyNzg3OSwib3BlbmlkIjoidGVzdF9vcGVuaWRfMTIzNDUiLCJ1c2VyX2lkIjoxfQ._eILb46DtHV55Cx0lZ8_GOmmsuUJFT2m3aLS6wNq1WY
 
 ###

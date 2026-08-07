@@ -1,26 +1,122 @@
-name: Deploy Backend
+name: Build and Deploy Backend
 
 on:
   push:
     branches: [main]
     paths:
       - "backend/**"
-      - "Dockerfile"
-      - "docker-compose.yml"
+      - "deploy/**"
       - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ARTIFACT_NAME: wx-app-stock-backend-${{ github.sha }}
 
 jobs:
-  deploy:
+  build:
+    name: Build Linux binaries
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Test backend
+        working-directory: backend
+        run: go test ./...
+
+      - name: Build release packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf dist
+          mkdir -p dist
+
+          for arch in amd64 arm64; do
+            staging="$(mktemp -d)"
+            (
+              cd backend
+              GOOS=linux GOARCH="${arch}" CGO_ENABLED=0 \
+                go build -trimpath -ldflags="-s -w" \
+                -o "${staging}/server" \
+                .
+              cp config.yaml.example "${staging}/config.yaml.example"
+            )
+            tar -C "${staging}" \
+              -czf "dist/wx-app-stock-backend-linux-${arch}.tar.gz" \
+              server config.yaml.example
+            rm -rf "${staging}"
+          done
+
+          (
+            cd dist
+            sha256sum wx-app-stock-backend-linux-*.tar.gz > SHA256SUMS
+          )
+
+      - name: Verify release packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c dist/SHA256SUMS
+          test -z "$(find dist -type f -name "config.yaml" -print -quit)"
+          tar -tzf dist/wx-app-stock-backend-linux-amd64.tar.gz
+          tar -tzf dist/wx-app-stock-backend-linux-arm64.tar.gz
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    name: Deploy to server
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment files
+        uses: actions/checkout@v4
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist
+
+      - name: Upload release to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "dist/*,deploy/backend-deploy.sh,deploy/wx-app-stock-backend.service"
+          target: "/tmp/wx-app-stock-${{ github.sha }}"
+          strip_components: 1
+          overwrite: true
+
+      - name: Activate release
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /apps/stock
-            git pull origin main
-            docker compose up -d --build
-            docker image prune -f
+            set -eu
+            release_dir="/tmp/wx-app-stock-${{ github.sha }}"
+            trap 'rm -rf "$release_dir"' EXIT
+            chmod 700 "$release_dir/backend-deploy.sh"
+            "$release_dir/backend-deploy.sh" \
+              "$release_dir" \
+              "${{ github.sha }}" \
+              "/apps/stock"
