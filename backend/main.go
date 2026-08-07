@@ -58,10 +58,14 @@ func main() {
 	stockHandler := handler.NewStockHandler(klineRepo, infoRepo)
 	sectorHandler := handler.NewSectorHandler(conceptRepo)
 	newsHandler := handler.NewNewsHandler(newsRepo)
+	healthHandler := handler.NewHealthHandler(db)
 
 	// ---------- 路由 ----------
 	r := gin.Default()
 	r.Use(response.Recovery())
+
+	// 健康检查
+	r.GET("/api/health", healthHandler.Health)
 
 	api := r.Group("/api/v1")
 	api.POST("/auth/login", authHandler.Login)
