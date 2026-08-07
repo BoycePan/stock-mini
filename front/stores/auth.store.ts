@@ -3,6 +3,9 @@ import { authApi } from '../api/auth'
 import type { User } from '../types/user'
 import { clearToken, clearUser, getToken, getUser, setToken, setUser } from '../utils/storage'
 
+// 本次会话的登录 Promise：成功后会复用，失败则清空允许下次重试（模块级，避免被 mobx 观测）
+let loginPromise: Promise<boolean> | null = null
+
 export class AuthStore {
   token = getToken()
   user: User | null = getUser<User>()
@@ -15,6 +18,23 @@ export class AuthStore {
 
   get isLoggedIn() {
     return Boolean(this.token)
+  }
+
+  /**
+   * 确保本次会话只并发执行一次登录；始终返回是否登录成功。
+   * 请求层会在每个接口发送前 await 该 Promise，登录失败时返回 false
+   * 并清空缓存，允许后续请求重试登录。
+   */
+  ensureLogin(): Promise<boolean> {
+    if (!loginPromise) {
+      loginPromise = this.login()
+        .then(() => true)
+        .catch(() => {
+          loginPromise = null
+          return false
+        })
+    }
+    return loginPromise
   }
 
   async login() {

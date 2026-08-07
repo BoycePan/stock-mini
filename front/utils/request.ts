@@ -8,6 +8,19 @@ export interface RequestOptions {
   data?: Record<string, unknown> | string
   query?: Record<string, string | number | boolean | undefined>
   withAuth?: boolean
+  /** 登录接口自身需要跳过登录等待，避免死锁 */
+  skipLoginWait?: boolean
+}
+
+type LoginWaiter = () => Promise<void>
+let loginWaiter: LoginWaiter | null = null
+
+/**
+ * 注册「登录门闩」：除登录接口外的所有请求发送前都会先 await 它，
+ * 保证打开小程序先登录、接口都在登录完成后执行。
+ */
+export function setLoginWaiter(waiter: LoginWaiter | null): void {
+  loginWaiter = waiter
 }
 
 function buildQuery(query?: RequestOptions['query']): string {
@@ -23,7 +36,12 @@ export async function request<T>({
   data,
   query,
   withAuth = false,
+  skipLoginWait = false,
 }: RequestOptions): Promise<T> {
+  // 除登录接口外的所有请求，都等登录完成后才发送
+  if (!skipLoginWait && loginWaiter) {
+    await loginWaiter()
+  }
   const env = getEnv()
   const url = `${env.apiBaseUrl}${path}${buildQuery(query)}`
   const token = getToken()

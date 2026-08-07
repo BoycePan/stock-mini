@@ -7,6 +7,7 @@ export const authApi = {
       path: '/api/v1/auth/login',
       method: 'POST',
       data: { code },
+      skipLoginWait: true,
     })
   },
   profile() {

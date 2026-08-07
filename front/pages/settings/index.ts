@@ -53,6 +53,7 @@ Page({
     wx.showLoading({ title: '登录中' })
     try {
       await rootStore.auth.login()
+      console.log('🏷️ index.ts ~ 56 => ', 123)
       wx.showToast({ title: '登录成功', icon: 'success' })
       this.syncData()
     } catch {

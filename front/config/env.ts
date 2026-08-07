@@ -10,7 +10,8 @@ export interface AppEnv {
 
 function isReleaseBuild() {
   try {
-    return wx.getAccountInfoSync().miniProgram.envVersion === 'release'
+    return wx.getAccountInfoSync().miniProgram.envVersion !== 'develop'
+    // return wx.getAccountInfoSync().miniProgram.envVersion === 'release'
   } catch {
     return false
   }

@@ -44,8 +44,12 @@ export function getTheme(): ThemeMode {
 
 export function setTheme(theme: ThemeMode): void {
   wx.setStorageSync(THEME_KEY, theme)
-  const root = getApp<{ globalData: { theme?: ThemeMode } }>()
-  ;(root.globalData as typeof root.globalData & { theme?: ThemeMode }).theme = theme
+  // getApp() may return undefined during App.onLaunch because the app instance
+  // is not registered yet, so guard before touching globalData.
+  const app = getApp<{ globalData: { theme?: ThemeMode } }>()
+  if (app) {
+    app.globalData.theme = theme
+  }
 }
 
 export function getApiBaseUrl(): string {
