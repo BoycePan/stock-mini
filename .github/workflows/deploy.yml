@@ -34,11 +34,14 @@ jobs:
       - name: Save image to tar
         run: docker save wx-stock-backend:latest | gzip > wx-stock-backend.tar.gz
 
-      - name: Copy image to server
+      - name: Setup SSH key
         run: |
-          install -m 600 -D <(echo "${{ secrets.SSH_PRIVATE_KEY }}") ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          scp wx-stock-backend.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/apps/stock/backend/
+
+      - name: Copy image to server
+        run: scp wx-stock-backend.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/apps/stock/backend/
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1
