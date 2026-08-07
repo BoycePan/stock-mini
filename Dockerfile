@@ -7,9 +7,8 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# 国内镜像加速 + 自动匹配 go 版本
+# 国内镜像加速
 ENV GOPROXY=https://goproxy.cn,direct
-ENV GOTOOLCHAIN=auto
 
 # 安装系统依赖（如果需要 CGO 可取消注释）
 # RUN apk add --no-cache gcc musl-dev
