@@ -76,6 +76,9 @@ vendor/
 secrets/
 credentials.*
 
+# 配置文件包含数据库密码和API密钥
+backend/config.yaml
+
 # ====================
 # IDE & Editor
 # ====================
