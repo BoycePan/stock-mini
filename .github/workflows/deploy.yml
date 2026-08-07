@@ -95,12 +95,34 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: dist
 
+      - name: Validate SSH private key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "${SSH_PRIVATE_KEY}" || {
+            echo "GitHub secret SSH_PRIVATE_KEY is empty" >&2
+            exit 1
+          }
+
+          # Normalize CRLF pasted from Windows, then catch public or truncated keys.
+          if [ -z "${SSH_PASSPHRASE}" ]; then
+            key_file="${RUNNER_TEMP}/wx-app-stock-deploy.key"
+            printf '%s\n' "${SSH_PRIVATE_KEY}" | tr -d '\r' > "${key_file}"
+            chmod 600 "${key_file}"
+            ssh-keygen -y -f "${key_file}" >/dev/null
+          fi
+
       - name: Upload release to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || '22' }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "dist/*,deploy/backend-deploy.sh,deploy/wx-app-stock-backend.service"
           target: "/tmp/wx-app-stock-${{ github.sha }}"
           strip_components: 1
@@ -111,7 +133,9 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || '22' }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             set -eu
             release_dir="/tmp/wx-app-stock-${{ github.sha }}"
