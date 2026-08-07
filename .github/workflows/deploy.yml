@@ -63,7 +63,7 @@ jobs:
             docker run -d \
               --name wx-stock-backend \
               --restart unless-stopped \
-              -p 8080:8080 \
+              -p 18487:18487 \
               -v /apps/stock/backend/config.yaml:/app/config.yaml:ro \
               wx-stock-backend:latest
 
@@ -73,6 +73,6 @@ jobs:
       - name: Health check
         run: |
           sleep 5
-          curl -fsS http://${{ secrets.SSH_HOST }}:8080/api/health
+          curl -fsS http://${{ secrets.SSH_HOST }}:18487/api/health
           echo ""
           echo "Deploy OK"
