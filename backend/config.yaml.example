@@ -13,7 +13,7 @@ wechat:
   app_secret: "your_wechat_app_secret"
 
 jwt:
-  secret: "change-me-to-a-random-string"
+  secret: "Sw2cUol/3Kj45pxJrBC4XL/hd/nQ0eIq8XnUSDj8vMs="
   expire_hours: 24
 
 # 股票数据源配置
