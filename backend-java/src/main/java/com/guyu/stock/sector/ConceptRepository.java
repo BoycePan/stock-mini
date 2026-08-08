@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -44,19 +45,14 @@ public class ConceptRepository {
         return jdbcTemplate.query("SELECT plate_code, plate_name, cid FROM concept_board ORDER BY plate_code", BOARD_MAPPER);
     }
 
+    /** 全量替换板块成分股。@Transactional 保证 DELETE + INSERT 原子性（Task 7 修复：原手动 BEGIN/COMMIT 在连接池下是伪事务）。 */
+    @Transactional
     public void replaceMembers(String plateCode, List<String> stockCodes) {
         if (stockCodes == null || stockCodes.isEmpty()) return;
-        jdbcTemplate.execute("BEGIN");
-        try {
-            jdbcTemplate.update("DELETE FROM concept_stock WHERE plate_code = ?", plateCode);
-            for (String code : stockCodes) {
-                jdbcTemplate.update("INSERT INTO concept_stock (plate_code, stock_code) VALUES (?,?) ON CONFLICT DO NOTHING",
-                        plateCode, code);
-            }
-            jdbcTemplate.execute("COMMIT");
-        } catch (RuntimeException e) {
-            jdbcTemplate.execute("ROLLBACK");
-            throw e;
+        jdbcTemplate.update("DELETE FROM concept_stock WHERE plate_code = ?", plateCode);
+        for (String code : stockCodes) {
+            jdbcTemplate.update("INSERT INTO concept_stock (plate_code, stock_code) VALUES (?,?) ON CONFLICT DO NOTHING",
+                    plateCode, code);
         }
     }
 

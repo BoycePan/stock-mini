@@ -13,6 +13,9 @@ spring:
       minimum-idle: 5
 
 app:
+  collector:
+    auto-full: false
+    sample-size: 20
   jwt:
     secret: ${JWT_SECRET}
     expire-hours: ${JWT_EXPIRE_HOURS:24}
