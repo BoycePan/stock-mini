@@ -18,38 +18,30 @@ C 阶段已实现：概念板块（列表/板块K线/成分股）、个股新闻
 
 ## 启动方式
 
-密钥一律通过环境变量注入，不写入配置文件、不落盘。
+配置通过 `config.yaml` 提供（与 Go 版一致）。复制模板并填入真实值：
 
 ```bash
-export DB_HOST=... DB_PORT=5432 DB_NAME=... DB_USER=... DB_PASSWORD=... \
-       JWT_SECRET=... WECHAT_APP_ID=... WECHAT_APP_SECRET=...
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+cp config.yaml.example config.yaml   # 填入数据库/微信/JWT 真实值（config.yaml 已被 git 忽略）
+mvn spring-boot:run
 ```
 
-服务默认监听 `18487` 端口（见 `application.yml` 的 `server.port`）。
+`ConfigLoader` 在启动时读取 `config.yaml`（默认当前工作目录，可用环境变量 `CONFIG_PATH` 覆盖），对齐 Go 版 `config.Load()`。服务默认监听 `18487` 端口（见 `application.yml` 的 `server.port`）。
 
 ## 配置说明
 
-`application.yml` 中通过 `${...}` 占位符读取以下环境变量：
+`config.yaml` 结构对齐 Go 版 `backend/config.yaml`，字段映射如下：
 
-| 环境变量 | 用途 | 必填 |
-| --- | --- | --- |
-| `DB_HOST` | PostgreSQL 主机 | 是 |
-| `DB_PORT` | PostgreSQL 端口 | 是 |
-| `DB_NAME` | 数据库名 | 是 |
-| `DB_USER` | 数据库用户 | 是 |
-| `DB_PASSWORD` | 数据库密码 | 是 |
-| `JWT_SECRET` | JWT 签名密钥 | 是 |
-| `JWT_EXPIRE_HOURS` | JWT 有效期（小时） | 否，默认 `24` |
-| `WECHAT_APP_ID` | 微信小程序 AppID | 是 |
-| `WECHAT_APP_SECRET` | 微信小程序 AppSecret | 是 |
+| config.yaml 字段 | 用途 |
+| --- | --- |
+| `database.host/port/name/user/password` | PostgreSQL 连接 |
+| `jwt.secret` | JWT 签名密钥（必须 ≥ 32 字节） |
+| `jwt.expire_hours` | JWT 有效期（小时，默认 24） |
+| `wechat.app_id` / `wechat.app_secret` | 微信小程序 AppID / AppSecret |
+| `stock.sina.rate_limit` | 新浪行情请求间隔（秒，默认 1.0） |
+| `stock.sina.max_retries` | 新浪重试次数（默认 3） |
+| `stock.sina.timeout` | 新浪超时（秒，默认 30） |
 
-新浪行情限流参数（`app.sina`，位于 `application.yml`）：
-
-- `rate-limit-seconds`：请求间隔限流（秒），默认 `1.0`
-- `max-retries`：失败最大重试次数，默认 `3`
-- `timeout-seconds`：请求超时（秒），默认 `30`
-- `user-agent` / `referer`：请求新浪接口携带的 UA 与 Referer
+> 不再需要环境变量注入；`application.yml` 中的 `${DB_HOST}` 等占位符由 `ConfigLoader` 从 `config.yaml` 写入的 System properties 解析。
 
 ## 接口清单
 
@@ -119,9 +111,12 @@ bash scripts/verify-b-phase.sh
 
 ## 部署
 
-`Dockerfile` + `scripts/deploy.sh` 提供镜像构建与容器运行。配置从 Go 版 `backend/config.yaml` 运行时读取并注入环境变量，不落盘到仓库。
+`Dockerfile` + `scripts/deploy.sh` 提供镜像构建与容器运行。配置从 `backend-java/config.yaml` 读取——构建不打包配置，运行时把宿主机 `config.yaml` 挂载进容器 `/app/config.yaml`（只读），容器内 `ConfigLoader` 启动时读取。不依赖 Go 版 `backend/`（M3 删除 Go 版后不受影响）。
 
 ```bash
+# 前置：config.yaml 存在（git 忽略，本地提供）
+cp config.yaml.example config.yaml
+
 # 只构建镜像（不运行）
 bash scripts/deploy.sh
 
@@ -129,15 +124,8 @@ bash scripts/deploy.sh
 bash scripts/deploy.sh --run
 
 # 部署到服务器：构建 → 保存/拷贝镜像 → 服务器 docker load + docker run（参考 backend 的 CI 流程）
+# 服务器同样挂载 config.yaml：docker run -d ... -v /apps/stock/backend-java/config.yaml:/app/config.yaml:ro ...
 ```
-
-关键环境变量（由 deploy.sh 从 `backend/config.yaml` 自动读取）：
-
-| 变量 | 来源（config.yaml） |
-| --- | --- |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `database.*` |
-| `JWT_SECRET` | `jwt.secret` |
-| `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | `wechat.app_id` / `wechat.app_secret` |
 
 采集试运行：部署后可用 `run-sample-on-start=true` 触发一次小样本采集验证链路（见上文 `app.collector.run-sample-on-start`）。
 

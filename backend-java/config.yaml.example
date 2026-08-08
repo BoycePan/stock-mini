@@ -1,0 +1,41 @@
+# backend-java 配置文件模板。
+# 复制为 config.yaml 并填入真实值（config.yaml 已被 git 忽略，不会提交）。
+#   cp config.yaml.example config.yaml
+#
+# 结构对齐 Go 版 backend/config.yaml（ConfigLoader 读取 database/jwt/wechat/stock.sina）。
+
+server:
+  port: 18487
+
+database:
+  host: localhost
+  port: 5432
+  user: root
+  password: your_db_password
+  name: gu_yu_stock
+
+wechat:
+  app_id: "your_wechat_app_id"
+  app_secret: "your_wechat_app_secret"
+
+jwt:
+  # 必须 >= 32 字节（Java 侧 jjwt 要求），可直接复用 Go 版 backend/config.yaml 中的 secret
+  secret: "your_jwt_secret_at_least_32_bytes_long"
+  expire_hours: 24
+
+# 股票数据源配置（Java 侧读取 stock.sina 的限流/重试/超时）
+# rate_limit: 两次请求最小间隔（秒）
+# max_retries: 失败重试次数（不含首次）
+# timeout: 超时秒数
+stock:
+  sina:
+    enabled: true
+    rate_limit: 1
+    max_retries: 3
+    timeout: 30
+
+  ths:
+    enabled: false
+    rate_limit: 0.5
+    max_retries: 3
+    timeout: 30

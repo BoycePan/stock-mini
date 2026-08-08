@@ -5,11 +5,11 @@
 #   C 阶段：概念板块 / 板块 K 线 / 分钟线 / 个股新闻 / 新闻 feed / 巨潮公告
 #
 # 用法：
-#   export DB_HOST=... DB_PORT=5432 DB_NAME=gu_yu_stock DB_USER=... DB_PASSWORD=... \
-#          JWT_SECRET=... WECHAT_APP_ID=... WECHAT_APP_SECRET=...
 #   bash scripts/verify-b-phase.sh
 #
-# 前置：mvn 可用；本机可访问现网库与新浪/同花顺/巨潮（外网）。
+# 前置：
+#   - backend-java/config.yaml 存在且已填真实值（ConfigLoader 启动时读取，见 deploy.sh 说明）
+#   - mvn 可用；本机可访问现网库与新浪/同花顺/巨潮（外网）
 # 注意：login/profile 依赖真实微信 code，无法自动验证，脚本末尾给出手动步骤。
 
 set -euo pipefail
@@ -18,17 +18,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-18487}"
 BASE="http://localhost:${PORT}"
 
-REQUIRED_VARS=(DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD JWT_SECRET WECHAT_APP_ID WECHAT_APP_SECRET)
-for v in "${REQUIRED_VARS[@]}"; do
-  if [ -z "${!v:-}" ]; then
-    echo "缺少环境变量: $v（从部署环境/Go 版 config.yaml 获取）" >&2
-    exit 1
-  fi
-done
+CONFIG="$ROOT/config.yaml"
+if [ ! -f "$CONFIG" ]; then
+  echo "未找到 $CONFIG，请先复制模板并填入真实值：" >&2
+  echo "  cp $ROOT/config.yaml.example $CONFIG" >&2
+  exit 1
+fi
 
-echo "==> 启动后端 (profile=dev, port=${PORT}) ..."
+echo "==> 启动后端 (config=$CONFIG, port=${PORT}) ..."
 cd "$ROOT"
-mvn -q spring-boot:run -Dspring-boot.run.profiles=dev &
+mvn -q spring-boot:run &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true' EXIT
 

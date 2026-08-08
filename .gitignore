@@ -78,6 +78,7 @@ credentials.*
 
 # 配置文件包含数据库密码和API密钥
 backend/config.yaml
+backend-java/config.yaml
 
 # ====================
 # IDE & Editor

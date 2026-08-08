@@ -24,8 +24,9 @@ app:
     app-id: ${WECHAT_APP_ID}
     app-secret: ${WECHAT_APP_SECRET}
   sina:
-    rate-limit-seconds: 1.0
-    max-retries: 3
-    timeout-seconds: 30
+    # 值由 ConfigLoader 从 config.yaml 的 stock.sina.* 读取（默认值兜底）
+    rate-limit-seconds: ${SINA_RATE_LIMIT:1.0}
+    max-retries: ${SINA_MAX_RETRIES:3}
+    timeout-seconds: ${SINA_TIMEOUT:30}
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     referer: "https://finance.sina.com.cn"
