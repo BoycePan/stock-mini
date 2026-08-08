@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:health;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+# 测试专用配置（非生产值）：让 @SpringBootTest 能完整加载 JwtService/SinaClient bean
+app:
+  jwt:
+    secret: test-secret-0123456789abcdefghijklmnopqrstuvwxyz
+    expire-hours: 24
+  wechat:
+    app-id: test-appid
+    app-secret: test-appsecret
+  sina:
+    rate-limit-seconds: 1.0
+    max-retries: 1
+    timeout-seconds: 5
+    user-agent: "test-agent"
+    referer: "https://test.local"

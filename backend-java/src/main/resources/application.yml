@@ -1,0 +1,27 @@
+server:
+  port: 18487
+
+spring:
+  application:
+    name: stock-backend
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 25
+      minimum-idle: 5
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expire-hours: ${JWT_EXPIRE_HOURS:24}
+  wechat:
+    app-id: ${WECHAT_APP_ID}
+    app-secret: ${WECHAT_APP_SECRET}
+  sina:
+    rate-limit-seconds: 1.0
+    max-retries: 3
+    timeout-seconds: 30
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    referer: "https://finance.sina.com.cn"
