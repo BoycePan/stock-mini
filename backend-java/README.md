@@ -117,6 +117,32 @@ bash scripts/verify-b-phase.sh
 
 采集行为说明：试运行模式通过 `app.collector.run-sample-on-start=true` + `app.collector.sample-size=N` 触发，启动时执行一次 `CollectorService.runFull(N)` 小样本采集（默认关闭，不影响正常启动）；`sample-size` 亦可经 `CollectorService.runFull(sampleSize)` 在单元测试中验证（见 `CollectorServiceTest`）。定时 15:30 与启动自检的全量调用当前传入 `0`（全部股票）。`auto-full=false`（默认）时启动自检不会触发全量采集。
 
+## 部署
+
+`Dockerfile` + `scripts/deploy.sh` 提供镜像构建与容器运行。配置从 Go 版 `backend/config.yaml` 运行时读取并注入环境变量，不落盘到仓库。
+
+```bash
+# 只构建镜像（不运行）
+bash scripts/deploy.sh
+
+# 构建并本机运行容器（--network host，端口默认 18487，可用 PORT 覆盖）
+bash scripts/deploy.sh --run
+
+# 部署到服务器：构建 → 保存/拷贝镜像 → 服务器 docker load + docker run（参考 backend 的 CI 流程）
+```
+
+关键环境变量（由 deploy.sh 从 `backend/config.yaml` 自动读取）：
+
+| 变量 | 来源（config.yaml） |
+| --- | --- |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `database.*` |
+| `JWT_SECRET` | `jwt.secret` |
+| `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | `wechat.app_id` / `wechat.app_secret` |
+
+采集试运行：部署后可用 `run-sample-on-start=true` 触发一次小样本采集验证链路（见上文 `app.collector.run-sample-on-start`）。
+
+> 与 Go 版 `backend/` 并存时注意端口：两者默认都监听 `18487`（host 网络），并存验证请用 `PORT` 给其中一方换端口。
+
 ## 部署前检查
 
 切换线上流量前，请确认以下两点（涉及生产数据库，Java 侧启动不会自动校验）：
