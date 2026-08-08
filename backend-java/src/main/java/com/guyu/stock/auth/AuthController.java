@@ -3,6 +3,7 @@ package com.guyu.stock.auth;
 import com.guyu.stock.common.ApiResponse;
 import com.guyu.stock.common.BizException;
 import com.guyu.stock.common.ErrCode;
+import com.guyu.stock.config.AppProperties;
 import com.guyu.stock.user.User;
 import com.guyu.stock.user.UserRepository;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,11 +21,13 @@ public class AuthController {
     private final WechatService wechatService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final AppProperties appProperties;
 
-    public AuthController(WechatService wechatService, UserRepository userRepository, JwtService jwtService) {
+    public AuthController(WechatService wechatService, UserRepository userRepository, JwtService jwtService, AppProperties appProperties) {
         this.wechatService = wechatService;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.appProperties = appProperties;
     }
 
     public record LoginRequest(String code) {}
@@ -44,11 +47,18 @@ public class AuthController {
             if (user == null) {
                 user = userRepository.create(new User(0, openid, unionid, sessionKey, null, null, null, 1, null, null, null));
             } else {
+                user = new User(
+                        user.id(), user.openid(),
+                        unionid != null ? unionid : user.unionid(),
+                        sessionKey,
+                        user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(),
+                        user.lastLoginAt(), user.createdAt(), user.updatedAt());
                 userRepository.updateLogin(user);
             }
 
             String token = jwtService.generateToken(user.id(), user.openid());
-            int expireHours = 24;
+            int expireHours = appProperties.getJwt().getExpireHours();
+            if (expireHours <= 0) expireHours = 24;
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("token", token);
