@@ -58,7 +58,7 @@ public class UserRepository {
             ps.setTimestamp(6, Timestamp.valueOf(now));
             return ps;
         }, kh);
-        return user.withId(kh.getKey().longValue());
+        return new User(kh.getKey().longValue(), user.openid(), user.unionid(), user.sessionKey(), user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(), user.lastLoginAt(), now, now);
     }
 
     public void updateLogin(User user) {

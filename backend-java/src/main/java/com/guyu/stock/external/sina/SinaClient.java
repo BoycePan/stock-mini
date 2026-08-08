@@ -17,8 +17,12 @@ public class SinaClient {
 
     private final RestClient restClient;
     private final RateLimiter rateLimiter;
+    private final AppProperties.Sina sinaCfg;
+    private final int maxRetries;
 
     public SinaClient(AppProperties.Sina sinaCfg) {
+        this.sinaCfg = sinaCfg;
+        this.maxRetries = Math.max(0, sinaCfg.getMaxRetries());
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         int timeoutMs = (int) (sinaCfg.getTimeoutSeconds() <= 0 ? 30 : sinaCfg.getTimeoutSeconds()) * 1000;
         factory.setConnectTimeout(timeoutMs);
@@ -43,17 +47,33 @@ public class SinaClient {
         return (first == '6' || first == '9') ? "sh" + code : "sz" + code;
     }
 
-    /** 拉取行情；每次请求前取限流令牌（对齐 Go Limiter.Wait） */
+    /** 拉取行情；每次请求前取限流令牌（对齐 Go Limiter.Wait），失败按指数退避重试（对齐 Go fetcher） */
     public List<Quote> fetchQuotes(List<String> codes) {
         if (codes == null || codes.isEmpty()) return List.of();
-        rateLimiter.acquire();
-        List<String> symbols = codes.stream().map(this::toSymbol).toList();
-        String url = QUOTE_URL + String.join(",", symbols);
-        byte[] raw = restClient.get().uri(url).retrieve().body(byte[].class);
-        if (raw == null) return List.of();
-        // 保留 GBK 字节：先按 ISO-8859-1 转 String（不丢字节），parseBody 里名称字段再按 GBK 解码
-        String body = new String(raw, StandardCharsets.ISO_8859_1);
-        return parseBody(body);
+        RuntimeException last = null;
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                rateLimiter.acquire();
+                List<String> symbols = codes.stream().map(this::toSymbol).toList();
+                String url = QUOTE_URL + String.join(",", symbols);
+                byte[] raw = restClient.get().uri(url).retrieve().body(byte[].class);
+                if (raw == null) return List.of();
+                // 保留 GBK 字节：先按 ISO-8859-1 转 String（不丢字节），parseBody 里名称字段再按 GBK 解码
+                String body = new String(raw, StandardCharsets.ISO_8859_1);
+                return parseBody(body);
+            } catch (RuntimeException e) {
+                last = e;
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(500L * (1L << attempt));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        throw last;
     }
 
     /** 解析响应文本（body 为 ISO-8859-1 重编码串，名称字段含 GBK 中文）。供测试直接调用。 */

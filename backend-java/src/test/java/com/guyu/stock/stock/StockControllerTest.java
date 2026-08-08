@@ -56,7 +56,9 @@ class StockControllerTest {
                 .andExpect(jsonPath("$.data.keyword").value("茅台"))
                 .andExpect(jsonPath("$.data.count").value(1))
                 .andExpect(jsonPath("$.data.stocks[0].code").value("600519"))
-                .andExpect(jsonPath("$.data.stocks[0].name").value("贵州茅台"));
+                .andExpect(jsonPath("$.data.stocks[0].name").value("贵州茅台"))
+                .andExpect(jsonPath("$.data.stocks[0].is_active").value(true))
+                .andExpect(jsonPath("$.data.stocks[0].updated_at").doesNotExist());
     }
 
     @Test

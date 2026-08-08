@@ -22,8 +22,12 @@ public class JwtService {
 
     public JwtService(AppProperties.Jwt jwtCfg) {
         this.jwtCfg = jwtCfg;
+        byte[] keyBytes = jwtCfg.getSecret() == null ? new byte[0] : jwtCfg.getSecret().getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes (got " + keyBytes.length + "); set app.jwt.secret / JWT_SECRET");
+        }
         // 与 Go []byte(secret) 完全一致：用 secret 字符串的 UTF-8 字节作为 HMAC 密钥
-        this.key = Keys.hmacShaKeyFor(jwtCfg.getSecret().getBytes(StandardCharsets.UTF_8));
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(long userId, String openid) {

@@ -1,5 +1,8 @@
 package com.guyu.stock.stock;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.LocalDateTime;
 
 public record StockInfo(
@@ -9,6 +12,6 @@ public record StockInfo(
         String market,
         String board,
         String industry,
-        boolean isActive,
-        LocalDateTime updatedAt
+        @JsonProperty("is_active") boolean isActive,
+        @JsonIgnore LocalDateTime updatedAt
 ) {}

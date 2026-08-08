@@ -21,7 +21,7 @@ public class HealthController {
             jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             return Map.of("status", "ok", "database", "connected");
         } catch (Exception e) {
-            return Map.of("status", "degraded", "database", "disconnected: " + e.getMessage());
+            return Map.of("status", "degraded", "database", "disconnected: " + String.valueOf(e.getMessage()));
         }
     }
 }
