@@ -3,7 +3,6 @@ package com.guyu.stock.news;
 import com.guyu.stock.external.cninfo.Announcement;
 import com.guyu.stock.external.cninfo.CninfoClient;
 import com.guyu.stock.external.sina.SinaNewsClient;
-import com.guyu.stock.external.ths.ThsClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,8 +27,6 @@ class NewsControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockBean private SinaNewsClient sinaNewsClient;
     @MockBean private CninfoClient cninfoClient;
-    // SectorController 依赖 ThsClient（Task 9 才会注册为 bean），此处 mock 以满足上下文装配
-    @MockBean private ThsClient thsClient;
 
     @Test
     void stockNewsReturnsShape() throws Exception {

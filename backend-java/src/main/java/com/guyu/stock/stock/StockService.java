@@ -1,7 +1,9 @@
 package com.guyu.stock.stock;
 
+import com.guyu.stock.external.sina.SinaKlineClient;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,10 +14,13 @@ public class StockService {
 
     private final StockKlineRepository klineRepository;
     private final StockInfoRepository infoRepository;
+    private final SinaKlineClient sinaKlineClient;
 
-    public StockService(StockKlineRepository klineRepository, StockInfoRepository infoRepository) {
+    public StockService(StockKlineRepository klineRepository, StockInfoRepository infoRepository,
+                        SinaKlineClient sinaKlineClient) {
         this.klineRepository = klineRepository;
         this.infoRepository = infoRepository;
+        this.sinaKlineClient = sinaKlineClient;
     }
 
     /** 对齐 Go scaleToDB */
@@ -32,32 +37,100 @@ public class StockService {
         return "240".equals(scale) || "1200".equals(scale);
     }
 
-    /** 对齐 Go dbKlinesToResult：库内 DESC → API 升序；返回 {code, scale, klines, count} */
+    /** 对齐 Go handler.GetKLine：DB 周期（240/1200）→ 库内 → 未命中回退新浪并异步回填；分钟线 → 直接新浪 */
     public Map<String, Object> getKlines(String code, String scale, int count) {
         if (count <= 0) count = 100;
-        String dbScale = scaleToDb(scale);
+        if (isDbKline(scale)) {
+            Map<String, Object> fromDb = getDbKlines(code, scale, count);
+            if (fromDb != null) return fromDb;
+            // DB 未命中 → 回退新浪（日线）
+            SinaKlineClient.KLineResult sina = sinaKlineClient.getKLine(code, scale, count);
+            asyncBackfill(code, scale, sina);
+            return result(code, scale, toApiKlines(sina.klines()));
+        }
+        // 分钟线 → 新浪
+        SinaKlineClient.KLineResult sina = sinaKlineClient.getKLine(code, scale, count);
+        return result(code, scale, toApiKlines(sina.klines()));
+    }
 
-        List<Map<String, Object>> klines = new ArrayList<>();
+    /** 对齐 Go getDBKLine：库内 DESC → API 升序；返回 {code, scale, klines, count}；无数据返回 null */
+    private Map<String, Object> getDbKlines(String code, String scale, int count) {
+        String dbScale = scaleToDb(scale);
         List<StockKline> rows = klineRepository.queryByCode(code, dbScale, count);
-        // 查询结果 trade_date DESC，反转成升序
+        if (rows == null || rows.isEmpty()) return null;
+        List<Map<String, Object>> klines = new ArrayList<>();
         for (int i = rows.size() - 1; i >= 0; i--) {
             StockKline k = rows.get(i);
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("time", k.tradeDate().toString());          // "2026-08-06"
-            item.put("open", k.open());
-            item.put("high", k.high());
-            item.put("low", k.low());
-            item.put("close", k.close());
-            item.put("volume", k.volume());
-            klines.add(item);
+            klines.add(klineItem(k.tradeDate().toString(), k.open(), k.high(), k.low(), k.close(), k.volume()));
         }
+        return result(code, scale, klines);
+    }
 
+    /** 对齐 Go `go func()` 异步回填：失败不影响响应 */
+    private void asyncBackfill(String code, String scale, SinaKlineClient.KLineResult sina) {
+        try {
+            String dbScale = scaleToDb(scale);
+            List<StockKline> dbRows = toDbKlines(code, dbScale, sina.klines());
+            if (!dbRows.isEmpty()) klineRepository.batchUpsert(dbRows);
+        } catch (Exception e) {
+            // 对齐 Go go func() 异步回填，失败不影响响应
+        }
+    }
+
+    /** 对齐 Go dbKlinesToResult 的 kline item：{time, open, high, low, close, volume} */
+    private Map<String, Object> klineItem(String time, double open, double high, double low, double close, long volume) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("time", time);
+        item.put("open", open);
+        item.put("high", high);
+        item.put("low", low);
+        item.put("close", close);
+        item.put("volume", volume);
+        return item;
+    }
+
+    private List<Map<String, Object>> toApiKlines(List<SinaKlineClient.KLine> klines) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SinaKlineClient.KLine k : klines) {
+            result.add(klineItem(k.time(), k.open(), k.high(), k.low(), k.close(), k.volume()));
+        }
+        return result;
+    }
+
+    /** 对齐 Go sinaKlinesToDB：计算成交额/涨跌幅/振幅 */
+    private List<StockKline> toDbKlines(String code, String dbScale, List<SinaKlineClient.KLine> klines) {
+        List<StockKline> result = new ArrayList<>();
+        double prevClose = 0;
+        for (int i = 0; i < klines.size(); i++) {
+            SinaKlineClient.KLine k = klines.get(i);
+            // Sina 日线 day 字段形如 "2026-08-05"（前 10 位即 ISO 日期）
+            LocalDate tradeDate = LocalDate.parse(k.time().substring(0, 10));
+            double amount = round2((k.open() + k.high() + k.low() + k.close()) / 4 * k.volume());
+            double changeAmt = 0, pctChange = 0, amplitude = 0;
+            if (i > 0 && prevClose != 0) {
+                changeAmt = round2(k.close() - prevClose);
+                pctChange = round2((k.close() - prevClose) / prevClose * 100);
+                amplitude = round2((k.high() - k.low()) / prevClose * 100);
+            }
+            result.add(new StockKline(code, dbScale, tradeDate, k.open(), k.high(), k.low(), k.close(), k.volume(),
+                    amount, 0, pctChange, changeAmt, amplitude));
+            prevClose = k.close();
+        }
+        return result;
+    }
+
+    private Map<String, Object> result(String code, String scale, List<Map<String, Object>> klines) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("code", code);
         result.put("scale", scale);
         result.put("klines", klines);
         result.put("count", klines.size());
         return result;
+    }
+
+    /** 对齐 Go round2：保留两位小数 */
+    private static double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     /** 对齐 Go Search handler：返回 {keyword, count, stocks} */

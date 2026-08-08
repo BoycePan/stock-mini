@@ -42,10 +42,7 @@ public class StockController {
         if (scale == null || scale.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "scale 参数必填，例如 ?scale=240");
         }
-        // B 阶段：仅处理 DB 周期；分钟级/新浪回退放 C 阶段
-        if (!StockService.isDbKline(scale)) {
-            throw new BizException(ErrCode.INVALID_PARAM, "本阶段仅支持日线(scale=240)与周线(scale=1200)");
-        }
+        // C 阶段：分钟线（5/15/30/60）与 DB 周期（240/1200）统一由 StockService 分流处理
         return ApiResponse.success(stockService.getKlines(code, scale, count));
     }
 
