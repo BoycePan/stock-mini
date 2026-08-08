@@ -40,3 +40,15 @@ CREATE TABLE IF NOT EXISTS users (
     created_at    TIMESTAMP,
     updated_at    TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS concept_board (
+    plate_code VARCHAR(20) PRIMARY KEY,
+    plate_name VARCHAR(64),
+    cid        INT,
+    updated_at TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS concept_stock (
+    plate_code VARCHAR(20) NOT NULL,
+    stock_code VARCHAR(10) NOT NULL,
+    PRIMARY KEY (plate_code, stock_code)
+);
