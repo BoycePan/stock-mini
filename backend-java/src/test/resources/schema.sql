@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS stock_kline (
     created_at TIMESTAMP,
     PRIMARY KEY (code, scale, trade_date)
 );
+
+CREATE TABLE IF NOT EXISTS stock_info (
+    code       VARCHAR(10)  PRIMARY KEY,
+    name       VARCHAR(64),
+    type       VARCHAR(10),
+    market     VARCHAR(10),
+    board      VARCHAR(10),
+    industry   VARCHAR(64),
+    is_active  BOOLEAN,
+    updated_at TIMESTAMP
+);
