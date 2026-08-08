@@ -7,6 +7,9 @@ spring:
 
 # 测试专用配置（非生产值）：让 @SpringBootTest 能完整加载 JwtService/SinaClient bean
 app:
+  collector:
+    # 关闭启动自检：测试库为空会触发真实采集（网络），@SpringBootTest 上下文加载时必须跳过
+    startup-check: false
   jwt:
     secret: test-secret-0123456789abcdefghijklmnopqrstuvwxyz
     expire-hours: 24

@@ -8,8 +8,11 @@ import org.springframework.stereotype.Component;
 public class CollectorProperties {
     private boolean autoFull = false;
     private int sampleSize = 20;
+    private boolean startupCheck = true;
     public boolean isAutoFull() { return autoFull; }
     public void setAutoFull(boolean autoFull) { this.autoFull = autoFull; }
     public int getSampleSize() { return sampleSize; }
     public void setSampleSize(int sampleSize) { this.sampleSize = sampleSize; }
+    public boolean isStartupCheck() { return startupCheck; }
+    public void setStartupCheck(boolean startupCheck) { this.startupCheck = startupCheck; }
 }

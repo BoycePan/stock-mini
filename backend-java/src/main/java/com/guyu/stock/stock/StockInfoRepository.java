@@ -48,6 +48,12 @@ public class StockInfoRepository {
                 keyword, keyword + "%", keyword + "%", limit);
     }
 
+    /** 活跃股票数量，对齐 Go CountActiveStocks，供启动自检判断是否为空库。 */
+    public int count() {
+        Integer n = jdbcTemplate.queryForObject("SELECT count(*) FROM stock_info WHERE is_active=true", Integer.class);
+        return n == null ? 0 : n;
+    }
+
     /**
      * 按主键 code 批量 upsert，对齐 Go stock_info.go 的 BatchUpsert 语义。
      *
