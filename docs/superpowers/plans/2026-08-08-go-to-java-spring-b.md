@@ -1132,7 +1132,7 @@ git commit -m "feat: add stock klines and search endpoints"
   - `void UserRepository.updateLogin(User user)`
   - `Map<String,Object> WechatService.code2Session(String code)` → `{openid, session_key, unionid}`，失败抛 `BizException(WX_LOGIN_FAIL)`
   - `AuthController`：`POST /api/v1/auth/login` body `{"code":"..."}` → `{token, expires_in, user}`（user 字段对齐 Go model，openid 等不外泄）
-  - `UserController`：`GET /api/v1/user/profile`（经 interceptor）→ `{user_id}`
+  - `UserController`：`GET /api/v1/user/profile`（经 interceptor）→ 原始 `user_id`（对齐 Go `response.Success(user_id)` → `data: 123`）
 
 - [ ] **Step 1: 写失败测试**
 
@@ -1599,16 +1599,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/v1/user")
 public class UserController {
 
     @GetMapping("/profile")
-    public ApiResponse<Map<String, Object>> profile(HttpServletRequest request) {
+    public ApiResponse<Object> profile(HttpServletRequest request) {
         Object userId = request.getAttribute("user_id");
-        return ApiResponse.success(Map.of("user_id", userId));
+        return ApiResponse.success(userId);
     }
 }
 ```
@@ -2127,7 +2125,7 @@ Expected: 全部 PASS
 前置：先设置环境变量（值从 Go 版 `backend/config.yaml` 或部署环境获取）：
 
 ```bash
-export DB_HOST=118.178.112.125 DB_PORT=5432 DB_NAME=gu_yu_stock DB_USER=root DB_PASSWORD=<从部署环境获取> \
+export DB_HOST=<从部署环境获取> DB_PORT=<从部署环境获取> DB_NAME=gu_yu_stock DB_USER=<从部署环境获取> DB_PASSWORD=<从部署环境获取> \
        JWT_SECRET=<从部署环境获取> WECHAT_APP_ID=<从部署环境获取> WECHAT_APP_SECRET=<从部署环境获取>
 cd backend-java && mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```

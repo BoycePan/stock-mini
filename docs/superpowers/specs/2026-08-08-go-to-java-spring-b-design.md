@@ -96,7 +96,7 @@ backend-java/
 `WechatService.code2Session` → `UserRepository.findByOpenId`（查无则 create，有则 updateLogin）→ `JwtService` 签发 HS256（claims：`user_id`、`openid`，24h，同一 secret）→ `{token, expires_in, user}`。
 
 ### 3. `GET /api/v1/user/profile`（需认证）
-`AuthInterceptor` 校验 Bearer token，注入 `user_id`，返回 `{user_id}`。
+`AuthInterceptor` 校验 Bearer token，注入 `user_id`，返回原始 `user_id`（对齐 Go `response.Success(user_id)` → `data: 123`）。
 
 ### 4. `GET /api/v1/stock/search?q=&limit=`
 `StockInfoRepository.search` 按代码/名称模糊查 `stock_info`，返回 `{keyword, count, stocks}`。
