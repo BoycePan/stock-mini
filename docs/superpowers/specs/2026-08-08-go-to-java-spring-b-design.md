@@ -89,7 +89,8 @@ backend-java/
 ## 四、核心接口与数据流
 
 ### 1. `GET /api/health`
-对 DB `SELECT 1` ping，返回结构对齐 Go `healthHandler`。
+对 DB ping，成功返回 HTTP 200 + `{"status":"ok","database":"connected"}`；DB 不可用时 `{"status":"degraded","database":"disconnected: <err>"}`。
+**注意：不走 R 包装**（该接口供服务器/CI 健康检查，前端 `request.ts` 不调用），HTTP 状态码恒为 200，JSON 字段与 Go 版 `healthHandler` 完全一致。
 
 ### 2. `POST /api/v1/auth/login`（body: `{"code":"..."}`）
 `WechatService.code2Session` → `UserRepository.findByOpenId`（查无则 create，有则 updateLogin）→ `JwtService` 签发 HS256（claims：`user_id`、`openid`，24h，同一 secret）→ `{token, expires_in, user}`。
