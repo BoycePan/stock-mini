@@ -38,6 +38,7 @@
 | `src/main/java/com/guyu/stock/common/ErrCode.java` | 错误码常量 + 消息 |
 | `src/main/java/com/guyu/stock/common/GlobalExceptionHandler.java` | `@RestControllerAdvice`（对应 Go `Recovery`） |
 | `src/main/java/com/guyu/stock/config/AppProperties.java` | `app.*` 配置绑定 |
+| `src/main/java/com/guyu/stock/config/BeanConfig.java` | `@Bean` 提供 JwtService / SinaClient（组件需嵌套配置类） |
 | `src/main/java/com/guyu/stock/config/WebConfig.java` | 注册 AuthInterceptor |
 | `src/main/java/com/guyu/stock/auth/AuthInterceptor.java` | Bearer token 校验（对应 Go `middleware/jwt.go`） |
 | `src/main/java/com/guyu/stock/auth/JwtService.java` | jjwt 签发/校验 |
@@ -122,6 +123,21 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+
+# 测试专用配置（非生产值）：让 @SpringBootTest 能完整加载 JwtService/SinaClient bean
+app:
+  jwt:
+    secret: test-secret-0123456789abcdefghijklmnopqrstuvwxyz
+    expire-hours: 24
+  wechat:
+    app-id: test-appid
+    app-secret: test-appsecret
+  sina:
+    rate-limit-seconds: 1.0
+    max-retries: 1
+    timeout-seconds: 5
+    user-agent: "test-agent"
+    referer: "https://test.local"
 ```
 
 - [ ] **Step 2: 运行验证失败**
@@ -1100,6 +1116,7 @@ git commit -m "feat: add stock klines and search endpoints"
 - Create: `src/main/java/com/guyu/stock/auth/AuthController.java`
 - Create: `src/main/java/com/guyu/stock/auth/UserController.java`
 - Create: `src/main/java/com/guyu/stock/config/WebConfig.java`
+- Create: `src/main/java/com/guyu/stock/config/BeanConfig.java`
 - Modify: `src/test/resources/schema.sql`（追加 users 表）
 - Test: `src/test/java/com/guyu/stock/auth/JwtServiceTest.java`
 - Test: `src/test/java/com/guyu/stock/auth/AuthInterceptorTest.java`
@@ -1623,6 +1640,31 @@ public class WebConfig implements WebMvcConfigurer {
 }
 ```
 
+`BeanConfig.java`（`JwtService` 非 `@Component`——其构造器接收嵌套配置类 `AppProperties.Jwt`，由这里提供 bean 供 `AuthInterceptor` 注入）：
+
+```java
+package com.guyu.stock.config;
+
+import com.guyu.stock.auth.JwtService;
+import com.guyu.stock.external.sina.SinaClient;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class BeanConfig {
+
+    @Bean
+    public JwtService jwtService(AppProperties appProperties) {
+        return new JwtService(appProperties.getJwt());
+    }
+
+    @Bean
+    public SinaClient sinaClient(AppProperties appProperties) {
+        return new SinaClient(appProperties.getSina());
+    }
+}
+```
+
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `mvn test -Dtest=JwtServiceTest,AuthInterceptorTest`
@@ -1644,6 +1686,7 @@ git commit -m "feat: add WeChat login, JWT auth and user profile endpoint"
 - Create: `src/main/java/com/guyu/stock/external/sina/SinaClient.java`
 - Create: `src/main/java/com/guyu/stock/external/sina/SinaQuoteService.java`
 - Modify: `src/main/java/com/guyu/stock/stock/StockController.java`（加 quote/quotes 两个端点）
+- Modify: `src/main/java/com/guyu/stock/config/BeanConfig.java`（追加 SinaClient bean）
 - Test: `src/test/java/com/guyu/stock/external/sina/SinaQuoteParserTest.java`
 - Test: `src/test/java/com/guyu/stock/external/sina/SinaQuoteServiceTest.java`
 
@@ -1811,7 +1854,7 @@ public record Quote(
 ) {}
 ```
 
-`SinaClient.java`（`@Component`，构造器注入 `AppProperties.Sina`；`fetchQuotes` 为 public 可重写便于测试）：
+`SinaClient.java`（**不是 `@Component`**——构造器接收嵌套配置类 `AppProperties.Sina`，由 `BeanConfig` 提供 bean；`fetchQuotes` 为 public 可重写便于测试）：
 
 ```java
 package com.guyu.stock.external.sina;
@@ -1820,7 +1863,6 @@ import com.google.common.util.concurrent.RateLimiter;
 import com.guyu.stock.config.AppProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.nio.charset.Charset;
@@ -1828,7 +1870,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
 public class SinaClient {
 
     private static final String QUOTE_URL = "http://hq.sinajs.cn/list=";
