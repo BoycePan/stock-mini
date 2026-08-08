@@ -24,7 +24,7 @@ public class StockController {
     }
 
     @GetMapping("/search")
-    public ApiResponse<Map<String, Object>> search(@RequestParam("q") String q,
+    public ApiResponse<Map<String, Object>> search(@RequestParam(value = "q", required = false) String q,
                                                    @RequestParam(value = "limit", defaultValue = "20") int limit) {
         if (q == null || q.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "q 参数必填");
@@ -34,7 +34,7 @@ public class StockController {
 
     @GetMapping("/{code}/klines")
     public ApiResponse<Map<String, Object>> getKlines(@PathVariable("code") String code,
-                                                      @RequestParam("scale") String scale,
+                                                      @RequestParam(value = "scale", required = false) String scale,
                                                       @RequestParam(value = "count", defaultValue = "100") int count) {
         if (code == null || code.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "股票代码不能为空");
@@ -58,7 +58,7 @@ public class StockController {
     }
 
     @GetMapping("/quotes")
-    public ApiResponse<List<Quote>> getQuotes(@RequestParam("codes") String codesStr) {
+    public ApiResponse<List<Quote>> getQuotes(@RequestParam(value = "codes", required = false) String codesStr) {
         if (codesStr == null || codesStr.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "codes 参数必填，逗号分隔");
         }

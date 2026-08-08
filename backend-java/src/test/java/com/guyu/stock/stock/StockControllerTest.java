@@ -58,4 +58,28 @@ class StockControllerTest {
                 .andExpect(jsonPath("$.data.stocks[0].code").value("600519"))
                 .andExpect(jsonPath("$.data.stocks[0].name").value("贵州茅台"));
     }
+
+    @Test
+    void missingQReturns400WithGoMessage() throws Exception {
+        mockMvc.perform(get("/api/v1/stock/search"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.msg").value("q 参数必填"));
+    }
+
+    @Test
+    void missingScaleReturns400WithGoMessage() throws Exception {
+        mockMvc.perform(get("/api/v1/stock/600519/klines"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.msg").value("scale 参数必填，例如 ?scale=240"));
+    }
+
+    @Test
+    void missingCodesReturns400WithGoMessage() throws Exception {
+        mockMvc.perform(get("/api/v1/stock/quotes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.msg").value("codes 参数必填，逗号分隔"));
+    }
 }
