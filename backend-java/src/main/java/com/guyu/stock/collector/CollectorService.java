@@ -40,8 +40,8 @@ public class CollectorService {
         this.conceptRepository = conceptRepository;
     }
 
-    /** 对齐 Go RefreshStockInfo：股票列表 + 行业分类 → stock_info */
-    public void refreshStockInfo() {
+    /** 对齐 Go RefreshStockInfo：股票列表 + 行业分类 → stock_info；返回已拉取的股票列表供 runFull 复用 */
+    public List<SinaInfoClient.SinaStock> refreshStockInfo() {
         log.info("[采集] 开始刷新股票信息");
         List<SinaInfoClient.SinaStock> stocks = sinaInfoClient.fetchStockList();
         Map<String, String> industryMap;
@@ -58,6 +58,7 @@ public class CollectorService {
         }
         stockInfoRepository.batchUpsert(infos);
         log.info("[采集] 股票信息刷新完成，{} 条", infos.size());
+        return stocks;
     }
 
     /** 对齐 Go RefreshConceptData：板块列表 + 成分股 → concept_board/concept_stock */
@@ -83,12 +84,10 @@ public class CollectorService {
     /** 对齐 Go RunFull，sampleSize<=0 处理全部；返回处理股票数 */
     public int runFull(int sampleSize) {
         log.info("[采集] 开始全量采集（含日K线）");
-        refreshStockInfo();
-        List<SinaInfoClient.SinaStock> stocks;
-        try {
-            stocks = allStocks();
-        } catch (Exception e) {
-            log.warn("[采集] 股票列表拉取失败: {}", e.getMessage());
+        // 股票列表只拉取一次：refreshStockInfo 内部已拉取并返回，直接复用，避免二次请求
+        List<SinaInfoClient.SinaStock> stocks = refreshStockInfo();
+        if (stocks == null || stocks.isEmpty()) {
+            log.warn("[采集] 股票列表为空，跳过采集");
             return 0;
         }
         int limit = (sampleSize > 0 && sampleSize < stocks.size()) ? sampleSize : stocks.size();
@@ -107,10 +106,6 @@ public class CollectorService {
         }
         log.info("[采集] K线写入完成，共保存 {} 只股票", saved);
         return saved;
-    }
-
-    private List<SinaInfoClient.SinaStock> allStocks() {
-        return sinaInfoClient.fetchStockList();
     }
 
     private List<StockKline> toDbKlines(String code, List<SinaKlineClient.KLine> klines) {
@@ -132,7 +127,8 @@ public class CollectorService {
         return result;
     }
 
+    /** 对齐 Go round2：float64(int(v*100+0.5))/100，向零截断（负值 -1.235 → -1.23，与 Java Math.round 的 half-up 不同） */
     private static double round2(double v) {
-        return Math.round(v * 100) / 100.0;
+        return (long) (v * 100 + 0.5) / 100.0;
     }
 }

@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class StockService {
@@ -15,12 +17,15 @@ public class StockService {
     private final StockKlineRepository klineRepository;
     private final StockInfoRepository infoRepository;
     private final SinaKlineClient sinaKlineClient;
+    private final ExecutorService backfillExecutor;
 
     public StockService(StockKlineRepository klineRepository, StockInfoRepository infoRepository,
                         SinaKlineClient sinaKlineClient) {
         this.klineRepository = klineRepository;
         this.infoRepository = infoRepository;
         this.sinaKlineClient = sinaKlineClient;
+        // 对齐 Go `go func()`：DB 回填放后台线程，不阻塞响应
+        this.backfillExecutor = Executors.newSingleThreadExecutor();
     }
 
     /** 对齐 Go scaleToDB */
@@ -66,15 +71,17 @@ public class StockService {
         return result(code, scale, klines);
     }
 
-    /** 对齐 Go `go func()` 异步回填：失败不影响响应 */
+    /** 对齐 Go `go func()` 异步回填：提交到后台线程执行，响应立即返回；失败不影响响应（fire-and-forget） */
     private void asyncBackfill(String code, String scale, SinaKlineClient.KLineResult sina) {
-        try {
-            String dbScale = scaleToDb(scale);
-            List<StockKline> dbRows = toDbKlines(code, dbScale, sina.klines());
-            if (!dbRows.isEmpty()) klineRepository.batchUpsert(dbRows);
-        } catch (Exception e) {
-            // 对齐 Go go func() 异步回填，失败不影响响应
-        }
+        backfillExecutor.submit(() -> {
+            try {
+                String dbScale = scaleToDb(scale);
+                List<StockKline> dbRows = toDbKlines(code, dbScale, sina.klines());
+                if (!dbRows.isEmpty()) klineRepository.batchUpsert(dbRows);
+            } catch (Exception e) {
+                // 对齐 Go go func() 异步回填，失败不影响响应
+            }
+        });
     }
 
     /** 对齐 Go dbKlinesToResult 的 kline item：{time, open, high, low, close, volume} */
@@ -128,9 +135,9 @@ public class StockService {
         return result;
     }
 
-    /** 对齐 Go round2：保留两位小数 */
+    /** 对齐 Go round2：float64(int(v*100+0.5))/100，向零截断（负值 -1.235 → -1.23，与 Java Math.round 的 half-up 不同） */
     private static double round2(double v) {
-        return Math.round(v * 100.0) / 100.0;
+        return (long) (v * 100 + 0.5) / 100.0;
     }
 
     /** 对齐 Go Search handler：返回 {keyword, count, stocks} */

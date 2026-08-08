@@ -96,6 +96,7 @@ C 阶段在 B 阶段基础上新增：同花顺概念板块（板块列表 / 板
 | `app.collector.auto-full` | `false` | `false` 时 15:30 定时全量跳过、启动自检仅刷新股票信息/板块；`true` 时执行全量（含日K线）采集 |
 | `app.collector.sample-size` | `20` | `CollectorService.runFull(sampleSize)` 的采样股票数上限（>0 且小于总数时仅处理前 N 只，0 表示全部） |
 | `app.collector.startup-check` | `true` | 启动自检开关：`stock_info` / `concept_board` 表为空时自动采集；测试环境置 `false` 跳过 |
+| `app.collector.run-sample-on-start` | `false` | 试运行模式：启动时执行一次小样本采集 `runFull(sample-size)`，用于上线前小样本验证采集链路；默认关闭 |
 
 ### 定时任务
 
@@ -114,7 +115,20 @@ C 阶段在 B 阶段基础上新增：同花顺概念板块（板块列表 / 板
 bash scripts/verify-b-phase.sh
 ```
 
-采集行为说明：当前没有管理触发端点；`sample-size` 通过 `CollectorService.runFull(sampleSize)` 生效（见 `CollectorServiceTest`），定时 15:30 与启动自检的全量调用当前传入 `0`（全部股票）。`auto-full=false`（默认）时启动自检不会触发全量采集。
+采集行为说明：试运行模式通过 `app.collector.run-sample-on-start=true` + `app.collector.sample-size=N` 触发，启动时执行一次 `CollectorService.runFull(N)` 小样本采集（默认关闭，不影响正常启动）；`sample-size` 亦可经 `CollectorService.runFull(sampleSize)` 在单元测试中验证（见 `CollectorServiceTest`）。定时 15:30 与启动自检的全量调用当前传入 `0`（全部股票）。`auto-full=false`（默认）时启动自检不会触发全量采集。
+
+## 部署前检查
+
+切换线上流量前，请确认以下两点（涉及生产数据库，Java 侧启动不会自动校验）：
+
+1. **`JWT_SECRET` 长度**：生产环境注入的 `JWT_SECRET` 必须 ≥ 32 字节。Go 版对短密钥宽松放行，而 Java 侧使用 jjwt 校验签名，密钥短于 32 字节会抛出 `WeakKeyException` 导致登录/鉴权失败。
+2. **`news_feed` 唯一索引**：生产库 `news_feed` 表必须存在唯一索引 `(stock_code, title, published_at)`（与 Go 侧 `ON CONFLICT DO NOTHING` 的去重语义一致）。若缺失，重复采集会写入重复新闻，且 `ON CONFLICT DO NOTHING` 失去效果。可用以下语句校验/补齐：
+
+   ```sql
+   CREATE UNIQUE INDEX IF NOT EXISTS uk_news_feed_dedup ON news_feed (stock_code, title, published_at);
+   ```
+
+另外，路由行为与 Go 版有一个有意的、低风险的差异：Java 侧未知路由返回 HTTP 404、方法不匹配返回 HTTP 405（Go 版对两者均返回 404）。该差异仅影响客户端错误路径，不影响正常契约，前端无需改动。
 
 ## 测试
 

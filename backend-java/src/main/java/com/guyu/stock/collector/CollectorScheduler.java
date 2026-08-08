@@ -55,6 +55,16 @@ public class CollectorScheduler implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // 试运行模式：app.collector.run-sample-on-start=true 时，启动即执行一次小样本采集
+        // （spec 要求的 runFull(sampleSize) 手动触发验证入口），默认关闭不影响正常启动。
+        if (props.isRunSampleOnStart()) {
+            try {
+                int n = collectorService.runFull(props.getSampleSize());
+                log.info("[启动] run-sample-on-start=true，执行小样本采集 sample-size={}，处理 {} 只", props.getSampleSize(), n);
+            } catch (Exception e) {
+                log.error("[启动] 小样本采集失败", e);
+            }
+        }
         // 启动自检开关：测试环境(app.collector.startup-check=false)下跳过，避免 @SpringBootTest 上下文
         // 加载时因测试库 stock_info/concept_board 为空而触发真实网络采集。
         if (!props.isStartupCheck()) {

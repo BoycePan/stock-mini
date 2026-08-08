@@ -64,3 +64,5 @@ CREATE TABLE IF NOT EXISTS news_feed (
     source       VARCHAR(64),
     published_at TIMESTAMP WITH TIME ZONE
 );
+-- 去重索引：与 Go 侧 BatchSave 的 ON CONFLICT DO NOTHING 语义一致（同 stock_code+title+published_at 跳过）
+CREATE UNIQUE INDEX IF NOT EXISTS uk_news_feed_dedup ON news_feed (stock_code, title, published_at);

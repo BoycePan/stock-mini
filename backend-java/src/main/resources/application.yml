@@ -16,6 +16,7 @@ app:
   collector:
     auto-full: false
     sample-size: 20
+    run-sample-on-start: false
   jwt:
     secret: ${JWT_SECRET}
     expire-hours: ${JWT_EXPIRE_HOURS:24}
