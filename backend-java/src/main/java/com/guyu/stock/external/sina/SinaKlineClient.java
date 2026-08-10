@@ -11,6 +11,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 新浪K线
+ */
 public class SinaKlineClient {
 
     public record KLine(String time, double open, double high, double low, double close, long volume) {}

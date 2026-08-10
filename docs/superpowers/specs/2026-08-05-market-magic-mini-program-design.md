@@ -23,7 +23,7 @@
 
 ### 2.1 真实接口优先
 
-当前后端文档 `doc/API.md` 已提供：
+当前后端文档 `../../API.md` 已提供：
 
 - 认证：`POST /api/v1/auth/login`、`GET /api/v1/user/profile`
 - 股票：搜索、单只行情、批量行情、K 线

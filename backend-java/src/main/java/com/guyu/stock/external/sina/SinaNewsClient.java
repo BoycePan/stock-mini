@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 新浪新闻
+ */
 public class SinaNewsClient {
 
     public record NewsItem(String title, String summary, String url, String time, String source) {}

@@ -11,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 新浪行情
+ */
 public class SinaClient {
 
     private static final String QUOTE_URL = "http://hq.sinajs.cn/list=";

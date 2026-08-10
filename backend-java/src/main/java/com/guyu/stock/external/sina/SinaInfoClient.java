@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 新浪资讯
+ */
 public class SinaInfoClient {
 
     public record SinaStock(String code, String name, String market, String board) {}
