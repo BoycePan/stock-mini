@@ -2,6 +2,7 @@ package com.guyu.stock.auth;
 
 import com.guyu.stock.common.BizException;
 import com.guyu.stock.config.AppProperties;
+import com.guyu.stock.service.JwtService;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

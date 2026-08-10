@@ -22,3 +22,21 @@ app:
     timeout-seconds: 5
     user-agent: "test-agent"
     referer: "https://test.local"
+  eastmoney:
+    rate-limit-seconds: 0.0
+    max-retries: 1
+    timeout-seconds: 5
+    user-agent: "test-agent"
+    referer: "https://test.local"
+  cninfo:
+    rate-limit-seconds: 0.0
+    max-retries: 1
+    timeout-seconds: 5
+    user-agent: "test-agent"
+    referer: "https://test.local"
+  ths:
+    rate-limit-seconds: 0.0
+    max-retries: 1
+    timeout-seconds: 5
+    user-agent: "test-agent"
+    referer: "https://test.local"

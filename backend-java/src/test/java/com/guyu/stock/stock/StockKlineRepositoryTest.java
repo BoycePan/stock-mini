@@ -1,5 +1,7 @@
 package com.guyu.stock.stock;
 
+import com.guyu.stock.dao.StockKlineRepository;
+import com.guyu.stock.model.StockKline;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

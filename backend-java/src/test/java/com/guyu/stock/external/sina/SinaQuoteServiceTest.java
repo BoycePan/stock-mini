@@ -1,5 +1,6 @@
 package com.guyu.stock.external.sina;
 
+import com.guyu.stock.service.SinaQuoteService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

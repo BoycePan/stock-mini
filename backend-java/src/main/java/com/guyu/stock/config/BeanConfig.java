@@ -1,8 +1,9 @@
 package com.guyu.stock.config;
 
-import com.guyu.stock.auth.JwtService;
+import com.guyu.stock.service.JwtService;
 import com.guyu.stock.common.fetcher.DataSource;
 import com.guyu.stock.external.cninfo.CninfoClient;
+import com.guyu.stock.external.eastmoney.EastmoneyKlineClient;
 import com.guyu.stock.external.sina.SinaClient;
 import com.guyu.stock.external.sina.SinaInfoClient;
 import com.guyu.stock.external.sina.SinaKlineClient;
@@ -25,20 +26,35 @@ public class BeanConfig {
     }
 
     // ---------- C 阶段：外部采集数据源与客户端 ----------
+    // 四个数据源（新浪/东方财富/同花顺/巨潮）的限流/重试/超时全部来自 app.* 配置，
+    // 对齐 Go 版 backend/config.yaml 的 stock 段（见 application.yml）。
 
     @Bean
-    public DataSource sinaSource() {
-        return DataSource.sina();
+    public DataSource sinaSource(AppProperties appProperties) {
+        AppProperties.Sina cfg = appProperties.getSina();
+        return new DataSource("sina", cfg.getRateLimitSeconds(), cfg.getMaxRetries(),
+                cfg.getUserAgent(), cfg.getReferer(), cfg.getTimeoutSeconds());
     }
 
     @Bean
-    public DataSource thsSource() {
-        return DataSource.ths();
+    public DataSource thsSource(AppProperties appProperties) {
+        AppProperties.Ths cfg = appProperties.getThs();
+        return new DataSource("ths", cfg.getRateLimitSeconds(), cfg.getMaxRetries(),
+                cfg.getUserAgent(), cfg.getReferer(), cfg.getTimeoutSeconds());
     }
 
     @Bean
-    public DataSource cninfoSource() {
-        return DataSource.cninfo();
+    public DataSource cninfoSource(AppProperties appProperties) {
+        AppProperties.Cninfo cfg = appProperties.getCninfo();
+        return new DataSource("cninfo", cfg.getRateLimitSeconds(), cfg.getMaxRetries(),
+                cfg.getUserAgent(), cfg.getReferer(), cfg.getTimeoutSeconds());
+    }
+
+    @Bean
+    public DataSource eastmoneySource(AppProperties appProperties) {
+        AppProperties.Eastmoney cfg = appProperties.getEastmoney();
+        return new DataSource("eastmoney", cfg.getRateLimitSeconds(), cfg.getMaxRetries(),
+                cfg.getUserAgent(), cfg.getReferer(), cfg.getTimeoutSeconds());
     }
 
     @Bean
@@ -64,5 +80,10 @@ public class BeanConfig {
     @Bean
     public CninfoClient cninfoClient(DataSource cninfoSource) {
         return new CninfoClient(cninfoSource, 1000);
+    }
+
+    @Bean
+    public EastmoneyKlineClient eastmoneyKlineClient(DataSource eastmoneySource) {
+        return new EastmoneyKlineClient(eastmoneySource);
     }
 }

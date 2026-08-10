@@ -1,6 +1,7 @@
 package com.guyu.stock.sector;
 
-import com.guyu.stock.sector.ConceptRepository.ConceptBoard;
+import com.guyu.stock.dao.ConceptRepository;
+import com.guyu.stock.model.ConceptBoard;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

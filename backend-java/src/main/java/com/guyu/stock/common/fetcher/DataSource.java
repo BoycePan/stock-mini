@@ -19,14 +19,23 @@ public class DataSource {
     private final int maxRetries;
     private final String userAgent;
     private final String referer;
+    private final int connectTimeoutMs;
+    private final int readTimeoutMs;
     private final RateLimiter limiter;
 
     public DataSource(String name, double rateLimitSeconds, int maxRetries, String userAgent, String referer) {
+        this(name, rateLimitSeconds, maxRetries, userAgent, referer, 30);
+    }
+
+    public DataSource(String name, double rateLimitSeconds, int maxRetries, String userAgent, String referer, int timeoutSeconds) {
         this.name = name;
         this.rateLimitSeconds = rateLimitSeconds;
         this.maxRetries = Math.max(0, maxRetries);
         this.userAgent = userAgent;
         this.referer = referer;
+        int timeoutMs = timeoutSeconds <= 0 ? 30_000 : timeoutSeconds * 1000;
+        this.connectTimeoutMs = timeoutMs;
+        this.readTimeoutMs = timeoutMs;
         this.limiter = rateLimitSeconds > 0 ? RateLimiter.create(1.0 / rateLimitSeconds) : null;
     }
 
@@ -34,18 +43,6 @@ public class DataSource {
         return new DataSource("sina", 1.0, 3,
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "https://finance.sina.com.cn");
-    }
-
-    public static DataSource ths() {
-        return new DataSource("ths", 0.5, 3,
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "https://q.10jqka.com.cn/");
-    }
-
-    public static DataSource cninfo() {
-        return new DataSource("cninfo", 0, 1,
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "http://www.cninfo.com.cn/");
     }
 
     public String name() { return name; }
@@ -106,8 +103,8 @@ public class DataSource {
 
     private HttpURLConnection open(String url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setConnectTimeout(30_000);
-        conn.setReadTimeout(30_000);
+        conn.setConnectTimeout(connectTimeoutMs);
+        conn.setReadTimeout(readTimeoutMs);
         conn.setInstanceFollowRedirects(true);
         if (userAgent != null && !userAgent.isBlank()) conn.setRequestProperty("User-Agent", userAgent);
         if (referer != null && !referer.isBlank()) conn.setRequestProperty("Referer", referer);

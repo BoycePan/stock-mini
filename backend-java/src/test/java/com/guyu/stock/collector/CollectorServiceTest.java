@@ -1,11 +1,12 @@
 package com.guyu.stock.collector;
 
+import com.guyu.stock.dao.ConceptRepository;
+import com.guyu.stock.dao.StockInfoRepository;
+import com.guyu.stock.dao.StockKlineRepository;
 import com.guyu.stock.external.sina.SinaInfoClient;
 import com.guyu.stock.external.sina.SinaKlineClient;
 import com.guyu.stock.external.ths.ThsClient;
-import com.guyu.stock.sector.ConceptRepository;
-import com.guyu.stock.stock.StockInfoRepository;
-import com.guyu.stock.stock.StockKlineRepository;
+import com.guyu.stock.service.CollectorService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

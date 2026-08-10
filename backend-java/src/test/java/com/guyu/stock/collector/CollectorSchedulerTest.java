@@ -1,5 +1,7 @@
 package com.guyu.stock.collector;
 
+import com.guyu.stock.config.CollectorProperties;
+import com.guyu.stock.task.CollectorScheduler;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

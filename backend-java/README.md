@@ -18,30 +18,41 @@ C 阶段已实现：概念板块（列表/板块K线/成分股）、个股新闻
 
 ## 启动方式
 
-配置通过 `config.yaml` 提供（与 Go 版一致）。复制模板并填入真实值：
+配置通过 `.env` 提供。复制模板并填入真实值：
 
 ```bash
-cp config.yaml.example config.yaml   # 填入数据库/微信/JWT 真实值（config.yaml 已被 git 忽略）
+cp .env.example .env   # 填入数据库/微信/JWT 真实值（.env 已被 git 忽略）
 mvn spring-boot:run
 ```
 
-`ConfigLoader` 在启动时读取 `config.yaml`（默认当前工作目录，可用环境变量 `CONFIG_PATH` 覆盖），对齐 Go 版 `config.Load()`。服务默认监听 `18487` 端口（见 `application.yml` 的 `server.port`）。
+`spring-dotenv` 在启动时读取工作目录的 `.env`（等价于环境变量，OS 环境变量优先级更高），键名对齐 Go 版 `backend/config.yaml`。服务默认监听 `18487` 端口（见 `application.yml` 的 `server.port`）。
 
 ## 配置说明
 
-`config.yaml` 结构对齐 Go 版 `backend/config.yaml`，字段映射如下：
+`.env` 键名对齐 Go 版 `backend/config.yaml` 字段，映射如下：
 
-| config.yaml 字段 | 用途 |
-| --- | --- |
-| `database.host/port/name/user/password` | PostgreSQL 连接 |
-| `jwt.secret` | JWT 签名密钥（必须 ≥ 32 字节） |
-| `jwt.expire_hours` | JWT 有效期（小时，默认 24） |
-| `wechat.app_id` / `wechat.app_secret` | 微信小程序 AppID / AppSecret |
-| `stock.sina.rate_limit` | 新浪行情请求间隔（秒，默认 1.0） |
-| `stock.sina.max_retries` | 新浪重试次数（默认 3） |
-| `stock.sina.timeout` | 新浪超时（秒，默认 30） |
+| `.env` 变量 | 对应 Go 配置 | 用途 |
+| --- | --- | --- |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `database.*` | PostgreSQL 连接 |
+| `JWT_SECRET` | `jwt.secret` | JWT 签名密钥（必须 ≥ 32 字节） |
+| `JWT_EXPIRE_HOURS` | `jwt.expire_hours` | JWT 有效期（小时，默认 24） |
+| `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | `wechat.app_id` / `wechat.app_secret` | 微信小程序 AppID / AppSecret |
+| `SINA_RATE_LIMIT` | `stock.sina.rate_limit` | 新浪行情请求间隔（秒，默认 1.0） |
+| `SINA_MAX_RETRIES` | `stock.sina.max_retries` | 新浪重试次数（默认 3） |
+| `SINA_TIMEOUT` | `stock.sina.timeout` | 新浪超时（秒，默认 30） |
+| `EASTMONEY_RATE_LIMIT` | `stock.eastmoney.rate_limit` | 东方财富请求间隔（秒，默认 4.0，最保守） |
+| `EASTMONEY_MAX_RETRIES` | `stock.eastmoney.max_retries` | 东方财富重试次数（默认 5） |
+| `EASTMONEY_TIMEOUT` | `stock.eastmoney.timeout` | 东方财富超时（秒，默认 30） |
+| `CNINFO_RATE_LIMIT` | `stock.cninfo.rate_limit` | 巨潮资讯请求间隔（秒，默认 0 不限流） |
+| `CNINFO_MAX_RETRIES` | `stock.cninfo.max_retries` | 巨潮资讯重试次数（默认 1） |
+| `CNINFO_TIMEOUT` | `stock.cninfo.timeout` | 巨潮资讯超时（秒，默认 30） |
+| `THS_RATE_LIMIT` | `stock.ths.rate_limit` | 同花顺请求间隔（秒，默认 0.5） |
+| `THS_MAX_RETRIES` | `stock.ths.max_retries` | 同花顺重试次数（默认 3） |
+| `THS_TIMEOUT` | `stock.ths.timeout` | 同花顺超时（秒，默认 30） |
 
-> 不再需要环境变量注入；`application.yml` 中的 `${DB_HOST}` 等占位符由 `ConfigLoader` 从 `config.yaml` 写入的 System properties 解析。
+四个数据源的限流/重试/超时均通过 `app.*` 配置注入 `DataSource`（`BeanConfig` 中构造），不再硬编码；默认值与 Go 版 `config.yaml` 的 `stock.*` 段一致。东方财富 `EastmoneyKlineClient` 已提供（含成交额 + 换手率），与 Go 版一致暂未接入请求/采集路径，仅作为按需补充的客户端预留。
+
+`application.yml` 中的 `${DB_HOST}` 等占位符由 spring-dotenv 从 `.env` 读取解析；真实环境变量优先级更高，生产环境可直接用环境变量注入，无需 `.env` 文件。
 
 ## 接口清单
 
@@ -111,11 +122,11 @@ bash scripts/verify-b-phase.sh
 
 ## 部署
 
-`Dockerfile` + `scripts/deploy.sh` 提供镜像构建与容器运行。配置从 `backend-java/config.yaml` 读取——构建不打包配置，运行时把宿主机 `config.yaml` 挂载进容器 `/app/config.yaml`（只读），容器内 `ConfigLoader` 启动时读取。不依赖 Go 版 `backend/`（M3 删除 Go 版后不受影响）。
+`Dockerfile` + `scripts/deploy.sh` 提供镜像构建与容器运行。配置从 `backend-java/.env` 读取——构建不打包配置，运行时用 `docker run --env-file` 把 `.env` 注入为容器环境变量（spring-dotenv 读取；OS 环境变量优先于 `.env`）。不依赖 Go 版 `backend/`（M3 删除 Go 版后不受影响）。
 
 ```bash
-# 前置：config.yaml 存在（git 忽略，本地提供）
-cp config.yaml.example config.yaml
+# 前置：.env 存在（git 忽略，本地提供）
+cp .env.example .env
 
 # 只构建镜像（不运行）
 bash scripts/deploy.sh
@@ -124,7 +135,7 @@ bash scripts/deploy.sh
 bash scripts/deploy.sh --run
 
 # 部署到服务器：构建 → 保存/拷贝镜像 → 服务器 docker load + docker run（参考 backend 的 CI 流程）
-# 服务器同样挂载 config.yaml：docker run -d ... -v /apps/stock/backend-java/config.yaml:/app/config.yaml:ro ...
+# 服务器同样用 .env 注入：docker run -d ... --env-file /apps/stock/backend-java/.env ...
 ```
 
 采集试运行：部署后可用 `run-sample-on-start=true` 触发一次小样本采集验证链路（见上文 `app.collector.run-sample-on-start`）。

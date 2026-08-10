@@ -74,6 +74,13 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- .env 配置加载（启动时读工作目录 .env，OS 环境变量优先） -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

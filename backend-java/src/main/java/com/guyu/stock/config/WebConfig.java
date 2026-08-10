@@ -1,6 +1,5 @@
 package com.guyu.stock.config;
 
-import com.guyu.stock.auth.AuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

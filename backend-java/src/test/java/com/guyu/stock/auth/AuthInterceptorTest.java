@@ -1,6 +1,8 @@
 package com.guyu.stock.auth;
 
 import com.guyu.stock.config.AppProperties;
+import com.guyu.stock.config.AuthInterceptor;
+import com.guyu.stock.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;

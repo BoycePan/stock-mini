@@ -2,8 +2,9 @@
 #
 # backend-java 部署脚本。
 #
-# 从 backend-java/config.yaml 读取数据库/微信/JWT/新浪配置（ConfigLoader 在容器内读取，
-# 挂载进 /app/config.yaml，不通过环境变量注入）。构建 backend-java 镜像。
+# 从 backend-java/.env 读取数据库/微信/JWT/新浪配置（构建不打包配置，
+# 运行时用 docker run --env-file 注入为容器环境变量，spring-dotenv 读取；OS 环境变量优先于 .env）。
+# 构建 backend-java 镜像。
 # 默认只构建；加 --run 才在本机以容器方式运行（--network host）。
 #
 # 用法：
@@ -11,8 +12,8 @@
 #   bash scripts/deploy.sh --run      # 构建并运行容器（默认端口 18487，可用 PORT 覆盖）
 #   bash scripts/deploy.sh --tag v1   # 指定镜像 tag（默认 latest）
 #
-# 前置：backend-java/config.yaml 必须存在（git 忽略，本地提供）：
-#   cp backend-java/config.yaml.example backend-java/config.yaml   # 再填入真实值
+# 前置：backend-java/.env 必须存在（git 忽略，本地提供）：
+#   cp backend-java/.env.example backend-java/.env   # 再填入真实值
 #
 # 注意：--run 会启动一个占 18487 端口的容器（与运行中的 Go 版冲突时请用 PORT 改端口）。
 
@@ -20,7 +21,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BACKEND_JAVA="$ROOT/backend-java"
-CONFIG="$BACKEND_JAVA/config.yaml"
+ENV_FILE="$BACKEND_JAVA/.env"
 
 RUN=0
 TAG="latest"
@@ -34,24 +35,23 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ ! -f "$CONFIG" ]; then
-  echo "未找到 $CONFIG" >&2
+if [ ! -f "$ENV_FILE" ]; then
+  echo "未找到 $ENV_FILE" >&2
   echo "请先复制模板并填入真实值：" >&2
-  echo "  cp $BACKEND_JAVA/config.yaml.example $CONFIG" >&2
-  echo "（真实值可从 backend/config.yaml 复制；config.yaml 均被 git 忽略，不会提交）" >&2
+  echo "  cp $BACKEND_JAVA/.env.example $ENV_FILE" >&2
+  echo "（真实值可从 backend/config.yaml 复制；.env 被 git 忽略，不会提交）" >&2
   exit 1
 fi
 
-# 从 YAML 提取 `key: value`（键在文件中唯一；去引号）——仅用于提前校验，运行时由 ConfigLoader 读取
-yaml_get() {
-  sed -n "s/^[[:space:]]*$1:[[:space:]]*[\"']\?\([^\"']*\)[\"']\?$/\1/p" "$CONFIG" | head -1
+# 从 .env 提取 `KEY=VALUE`（键唯一；去除首尾引号）——仅用于提前校验，运行时由 docker --env-file 注入
+env_get() {
+  sed -n "s/^[[:space:]]*$1=\(.*\)$/\1/p" "$ENV_FILE" | head -1 \
+    | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
 }
 
-for kv in "host:DB_HOST" "port:DB_PORT" "name:DB_NAME" "user:DB_USER" "password:DB_PASSWORD" "secret:JWT_SECRET" "app_id:WECHAT_APP_ID" "app_secret:WECHAT_APP_SECRET"; do
-  key="${kv%%:*}"
-  var="${kv##*:}"
-  val="$(yaml_get "$key")"
-  [ -n "$val" ] || { echo "config.yaml 中缺少 $key（$var）" >&2; exit 1; }
+for var in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD JWT_SECRET WECHAT_APP_ID WECHAT_APP_SECRET; do
+  val="$(env_get "$var")"
+  [ -n "$val" ] || { echo ".env 中缺少 $var" >&2; exit 1; }
 done
 
 echo "==> 构建镜像 stock-backend-java:$TAG (source: $BACKEND_JAVA)"
@@ -60,7 +60,7 @@ docker build -t "stock-backend-java:$TAG" "$BACKEND_JAVA"
 if [ "$RUN" -ne 1 ]; then
   echo ""
   echo "镜像已构建（未运行）。运行：bash scripts/deploy.sh --run"
-  echo "运行时将把 $CONFIG 挂载到容器 /app/config.yaml（只读）。"
+  echo "运行时将把 $ENV_FILE 以 --env-file 注入容器环境变量。"
   exit 0
 fi
 
@@ -71,7 +71,7 @@ docker run -d \
   --restart unless-stopped \
   --network host \
   -e SERVER_PORT="$PORT" \
-  -v "$CONFIG:/app/config.yaml:ro" \
+  --env-file "$ENV_FILE" \
   "stock-backend-java:$TAG"
 
 echo "==> 等待健康检查 ..."

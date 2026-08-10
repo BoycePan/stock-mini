@@ -1,3 +1,5 @@
+# 配置来源：工作目录 .env（spring-dotenv 启动时加载）或真实环境变量，OS 环境变量优先。
+# 模板见 .env.example；测试走 application-test.yml，不依赖 .env。
 server:
   port: 18487
 
@@ -24,9 +26,30 @@ app:
     app-id: ${WECHAT_APP_ID}
     app-secret: ${WECHAT_APP_SECRET}
   sina:
-    # 值由 ConfigLoader 从 config.yaml 的 stock.sina.* 读取（默认值兜底）
+    # 值来自 .env（spring-dotenv）或环境变量；未设置时用默认值兜底
     rate-limit-seconds: ${SINA_RATE_LIMIT:1.0}
     max-retries: ${SINA_MAX_RETRIES:3}
     timeout-seconds: ${SINA_TIMEOUT:30}
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     referer: "https://finance.sina.com.cn"
+  eastmoney:
+    # 对齐 Go config.yaml stock.eastmoney（限流最保守，4s/次，只做按需补充）
+    rate-limit-seconds: ${EASTMONEY_RATE_LIMIT:4.0}
+    max-retries: ${EASTMONEY_MAX_RETRIES:5}
+    timeout-seconds: ${EASTMONEY_TIMEOUT:30}
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    referer: "https://quote.eastmoney.com/"
+  cninfo:
+    # 对齐 Go config.yaml stock.cninfo（不限流，单线程串行调用）
+    rate-limit-seconds: ${CNINFO_RATE_LIMIT:0.0}
+    max-retries: ${CNINFO_MAX_RETRIES:1}
+    timeout-seconds: ${CNINFO_TIMEOUT:30}
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    referer: "http://www.cninfo.com.cn/"
+  ths:
+    # 对齐 Go config.yaml stock.ths（TLS 指纹检测风险，默认关闭）
+    rate-limit-seconds: ${THS_RATE_LIMIT:0.5}
+    max-retries: ${THS_MAX_RETRIES:3}
+    timeout-seconds: ${THS_TIMEOUT:30}
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    referer: "https://q.10jqka.com.cn/"

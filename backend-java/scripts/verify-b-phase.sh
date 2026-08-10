@@ -8,7 +8,7 @@
 #   bash scripts/verify-b-phase.sh
 #
 # 前置：
-#   - backend-java/config.yaml 存在且已填真实值（ConfigLoader 启动时读取，见 deploy.sh 说明）
+#   - backend-java/.env 存在且已填真实值（spring-dotenv 启动时读取，见 deploy.sh 说明）
 #   - mvn 可用；本机可访问现网库与新浪/同花顺/巨潮（外网）
 # 注意：login/profile 依赖真实微信 code，无法自动验证，脚本末尾给出手动步骤。
 
@@ -18,14 +18,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-18487}"
 BASE="http://localhost:${PORT}"
 
-CONFIG="$ROOT/config.yaml"
-if [ ! -f "$CONFIG" ]; then
-  echo "未找到 $CONFIG，请先复制模板并填入真实值：" >&2
-  echo "  cp $ROOT/config.yaml.example $CONFIG" >&2
+ENV_FILE="$ROOT/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  echo "未找到 $ENV_FILE，请先复制模板并填入真实值：" >&2
+  echo "  cp $ROOT/.env.example $ENV_FILE" >&2
   exit 1
 fi
 
-echo "==> 启动后端 (config=$CONFIG, port=${PORT}) ..."
+echo "==> 启动后端 (env=$ENV_FILE, port=${PORT}) ..."
 cd "$ROOT"
 mvn -q spring-boot:run &
 PID=$!
