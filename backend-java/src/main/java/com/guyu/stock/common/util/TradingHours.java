@@ -49,7 +49,10 @@ public final class TradingHours {
             Map.entry("nl", window("15:00", "23:30")),
             Map.entry("ca", window("21:30", "04:00")),
             Map.entry("br", window("21:00", "04:00")),
-            Map.entry("mx", window("22:30", "05:00"))
+            Map.entry("mx", window("22:30", "05:00")),
+            Map.entry("vn", window("10:00", "15:30")),
+            Map.entry("id", window("10:00", "16:30")),
+            Map.entry("th", window("11:00", "17:30"))
     );
 
     private TradingHours() {}

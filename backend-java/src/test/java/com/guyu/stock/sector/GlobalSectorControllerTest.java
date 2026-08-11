@@ -78,22 +78,22 @@ class GlobalSectorControllerTest {
 
     @Test
     void fetchSectorsReturnsCounts() throws Exception {
-        when(yahooSectorService.fetchSectors("1y")).thenReturn(44);
+        when(yahooSectorService.fetchSectors("1y")).thenReturn(45);
 
         mockMvc.perform(get("/api/v1/global-sector/fetch-sectors"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.ok").value(44))
-                .andExpect(jsonPath("$.data.total").value(44));
+                .andExpect(jsonPath("$.data.ok").value(45))
+                .andExpect(jsonPath("$.data.total").value(45));
     }
 
     @Test
     void syncInfoReturnsCounts() throws Exception {
-        when(yahooSectorService.syncSectorInfo()).thenReturn(44);
+        when(yahooSectorService.syncSectorInfo()).thenReturn(45);
 
         mockMvc.perform(get("/api/v1/global-sector/sync-info"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.synced").value(44));
+                .andExpect(jsonPath("$.data.synced").value(45));
     }
 }

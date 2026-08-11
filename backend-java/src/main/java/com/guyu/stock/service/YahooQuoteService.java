@@ -69,6 +69,18 @@ public class YahooQuoteService {
                 names.put(s.code(), s.name());
             }
         }
+        for (YahooAsset.Symbol s : YahooAsset.BONDS) {
+            if (TradingHours.isTrading("bond", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
+        }
+        for (YahooAsset.Symbol s : YahooAsset.STOCKS) {
+            if (TradingHours.isTrading("stock", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
+        }
         if (codes.isEmpty()) {
             log.info("[quote-snapshot] 当前无市场开市，跳过本轮刷新");
             return 0;

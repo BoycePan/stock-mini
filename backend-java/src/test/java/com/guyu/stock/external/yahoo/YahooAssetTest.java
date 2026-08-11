@@ -7,12 +7,12 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** 全球资产清单合法性：commodity 8 / forex 5 / crypto 2，合并 15，code 唯一，market 全 global，category 非空。 */
+/** 全球资产清单合法性：commodity 17 / forex 5 / crypto 2 / bond 3 / stock 16，合并 43，code 唯一，category 非空。 */
 class YahooAssetTest {
 
     @Test
-    void commodityHas8() {
-        assertThat(YahooAsset.COMMODITIES).hasSize(8);
+    void commodityHas17() {
+        assertThat(YahooAsset.COMMODITIES).hasSize(17);
     }
 
     @Test
@@ -26,8 +26,18 @@ class YahooAssetTest {
     }
 
     @Test
-    void allMergesTo15() {
-        assertThat(YahooAsset.ALL).hasSize(15);
+    void bondsHas3() {
+        assertThat(YahooAsset.BONDS).hasSize(3);
+    }
+
+    @Test
+    void stocksHas16() {
+        assertThat(YahooAsset.STOCKS).hasSize(16);
+    }
+
+    @Test
+    void allMergesTo43() {
+        assertThat(YahooAsset.ALL).hasSize(43);
     }
 
     @Test
@@ -38,8 +48,9 @@ class YahooAssetTest {
     }
 
     @Test
-    void allMarketGlobalAndCategoryValid() {
-        assertThat(YahooAsset.ALL).allMatch(s -> s.market().equals("global"));
+    void marketAndCategoryValid() {
+        // 商品/外汇/加密 market=global；美债/个股 market=us
+        assertThat(YahooAsset.ALL).allMatch(s -> s.market().equals("global") || s.market().equals("us"));
         Set<String> categories = YahooAsset.ALL.stream().map(YahooAsset.Symbol::category).collect(java.util.stream.Collectors.toSet());
         assertThat(categories).isNotEmpty();
         assertThat(YahooAsset.ALL).allMatch(s -> s.category() != null && !s.category().isBlank());

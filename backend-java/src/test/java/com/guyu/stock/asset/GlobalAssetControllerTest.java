@@ -45,13 +45,24 @@ class GlobalAssetControllerTest {
 
     @Test
     void fetchByTypeReturnsCounts() throws Exception {
-        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(8);
+        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(17);
 
         mockMvc.perform(get("/api/v1/asset/fetch").param("type", "commodity").param("range", "1mo"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.ok").value(8))
-                .andExpect(jsonPath("$.data.total").value(8));
+                .andExpect(jsonPath("$.data.ok").value(17))
+                .andExpect(jsonPath("$.data.total").value(17));
+    }
+
+    @Test
+    void stockTypeResolves() throws Exception {
+        when(yahooAssetService.fetchAssets(anyList(), eq("us-stock"), eq("1y"))).thenReturn(16);
+
+        mockMvc.perform(get("/api/v1/asset/fetch").param("type", "stock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.ok").value(16))
+                .andExpect(jsonPath("$.data.total").value(16));
     }
 
     @Test
@@ -66,7 +77,7 @@ class GlobalAssetControllerTest {
 
     @Test
     void invalidTypeReturns400() throws Exception {
-        mockMvc.perform(get("/api/v1/asset/list").param("type", "stock"))
+        mockMvc.perform(get("/api/v1/asset/list").param("type", "equity"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400));
     }

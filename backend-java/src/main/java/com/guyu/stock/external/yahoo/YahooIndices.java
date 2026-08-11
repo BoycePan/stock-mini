@@ -18,6 +18,7 @@ public final class YahooIndices {
             new Symbol("^NDX", "纳斯达克100", "us"),
             new Symbol("^RUT", "罗素2000", "us"),
             new Symbol("^VIX", "VIX波动率", "us"),
+            new Symbol("^SOX", "费城半导体", "us"),
             // 中国
             new Symbol("000001.SS", "上证综指", "cn"),
             new Symbol("399001.SZ", "深证成指", "cn"),
@@ -30,6 +31,9 @@ public final class YahooIndices {
             new Symbol("^BSESN", "印度SENSEX", "in"),
             new Symbol("^AXJO", "澳洲ASX200", "au"),
             new Symbol("^STI", "新加坡海峡", "sg"),
+            new Symbol("VNM", "越南VN30", "vn"),
+            new Symbol("EIDO", "印尼", "id"),
+            new Symbol("THD", "泰国", "th"),
             // 欧洲
             new Symbol("^FTSE", "英国富时100", "gb"),
             new Symbol("^GDAXI", "德国DAX", "de"),

@@ -85,11 +85,11 @@ class YahooAssetServiceTest {
     void syncAssetInfoRegistersTypeAndMarket() {
         int n = service.syncAssetInfo(YahooAsset.COMMODITIES, "commodity");
 
-        assertThat(n).isEqualTo(8);
+        assertThat(n).isEqualTo(17);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<StockInfo>> captor = ArgumentCaptor.forClass(List.class);
         verify(infoRepository).batchUpsert(captor.capture());
-        assertThat(captor.getValue()).hasSize(8);
+        assertThat(captor.getValue()).hasSize(17);
         assertThat(captor.getValue()).allMatch(i -> i.type().equals("commodity"));
         assertThat(captor.getValue()).allMatch(i -> i.market().equals("global"));
         assertThat(captor.getValue()).allMatch(i -> i.board() != null && !i.board().isBlank());

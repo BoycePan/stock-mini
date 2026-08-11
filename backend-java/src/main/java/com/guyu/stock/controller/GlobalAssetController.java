@@ -39,7 +39,7 @@ public class GlobalAssetController {
     public ApiResponse<List<AssetQuote>> list(@RequestParam("type") String type,
                                               @RequestParam(value = "market", required = false) String market) {
         resolve(type); // 校验 type 合法性
-        return ApiResponse.success(yahooQuoteService.listAssetQuotes(type, market));
+        return ApiResponse.success(yahooQuoteService.listAssetQuotes(storageType(type), market));
     }
 
     /** 资产 K线：DB 有则查库，无则经 sidecar 拉取落库并返回（带缓存防限流） */
@@ -55,12 +55,12 @@ public class GlobalAssetController {
         return ApiResponse.success(yahooAssetService.getQuote(code));
     }
 
-    /** 手动触发拉取一类资产日线并落库 stock_kline（type 区分 commodity/forex/crypto） */
+    /** 手动触发拉取一类资产日线并落库 stock_kline（type 区分 commodity/forex/crypto/bond/stock） */
     @GetMapping("/fetch")
     public ApiResponse<Map<String, Object>> fetch(@RequestParam("type") String type,
                                                   @RequestParam(value = "range", defaultValue = "1y") String range) {
         List<YahooAsset.Symbol> symbols = resolve(type);
-        int ok = yahooAssetService.fetchAssets(symbols, type, range);
+        int ok = yahooAssetService.fetchAssets(symbols, storageType(type), range);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("type", type);
         result.put("range", range);
@@ -73,7 +73,7 @@ public class GlobalAssetController {
     @GetMapping("/sync-info")
     public ApiResponse<Map<String, Object>> syncInfo(@RequestParam("type") String type) {
         List<YahooAsset.Symbol> symbols = resolve(type);
-        int n = yahooAssetService.syncAssetInfo(symbols, type);
+        int n = yahooAssetService.syncAssetInfo(symbols, storageType(type));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("type", type);
         result.put("synced", n);
@@ -90,7 +90,14 @@ public class GlobalAssetController {
             case "commodity" -> YahooAsset.COMMODITIES;
             case "forex" -> YahooAsset.FOREX;
             case "crypto" -> YahooAsset.CRYPTO;
+            case "bond" -> YahooAsset.BONDS;
+            case "stock" -> YahooAsset.STOCKS;
             default -> throw new BizException(ErrCode.INVALID_PARAM, "未知 type: " + type);
         };
+    }
+
+    /** API type → 存储 type：美股个股用 us-stock，避免与 A股（type='stock'）冲突 */
+    private String storageType(String type) {
+        return "stock".equals(type) ? "us-stock" : type;
     }
 }

@@ -21,6 +21,7 @@ public final class YahooSectors {
             new Symbol("XLI", "工业", "us", "industry"),
             new Symbol("XLB", "材料", "us", "industry"),
             new Symbol("XLU", "公用事业", "us", "industry"),
+            new Symbol("VNQ", "房地产", "us", "industry"),
             // 美股热门主题
             new Symbol("SMH", "半导体", "us", "theme"),
             new Symbol("GLD", "黄金", "us", "theme"),
