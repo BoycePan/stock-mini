@@ -6,14 +6,19 @@ Java 后端通过 HTTP 调用本服务拉取国外指数 / 股票 / 板块 ETF /
   2. 调 yfinance 拉数据
   3. 转成 JSON 返回
 
-代理策略：
-  读取环境变量 HTTPS_PROXY / HTTP_PROXY（yfinance 底层 requests 会自动读取）。
-  - 本机开发：启动时带上  HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890
-  - 海外服务器：不带代理环境变量，yfinance 直连雅虎即可
-  本文件内不需要写代理逻辑。
+数据通道（二选一，按环境变量切换）：
+  A. Cloudflare Worker 反向代理（推荐，海外/国内服务器都无需 Clash）：
+        YF_WORKER_BASE=https://proxy.lilaiyun.online
+        YF_AUTH_TOKEN=<worker 鉴权 token>
+     本文件内部把 yfinance 对 yahoo.com 的请求重写到 Worker 并加 X-Auth-Token。
+     注意：yfinance 1.2.0 要求 curl_cffi session（TLS 指纹模拟），普通 requests.Session 不行。
+  B. 直连雅虎（海外服务器或本机走 Clash）：
+        不设 YF_WORKER_BASE，走环境变量 HTTPS_PROXY / HTTP_PROXY（yfinance 底层自动读取）。
+      本机开发：HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890
 
 启动方式：
-  HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 python3 scripts/fetch_service.py
+  方式 A：YF_WORKER_BASE=... YF_AUTH_TOKEN=... python3 scripts/fetch_service.py
+  方式 B：HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 python3 scripts/fetch_service.py
 """
 
 import os
@@ -21,6 +26,7 @@ import time
 
 import uvicorn
 import yfinance as yf
+from curl_cffi import requests as curl_requests
 from fastapi import FastAPI
 
 app = FastAPI(title="Yahoo Finance Sidecar", version="0.1.0")
@@ -47,6 +53,28 @@ def _to_number(value, default=0.0):
     return float(value)
 
 
+# ---- Cloudflare Worker 反向代理通道 ----
+WORKER_BASE = os.environ.get("YF_WORKER_BASE", "").strip().rstrip("/")
+AUTH_TOKEN = os.environ.get("YF_AUTH_TOKEN", "").strip()
+
+
+class WorkerSession(curl_requests.Session):
+    """把所有到 yahoo.com 的请求重写到 Worker 并加 X-Auth-Token。"""
+
+    def request(self, method, url, **kwargs):
+        if WORKER_BASE and "yahoo.com" in url:
+            url = WORKER_BASE + "/" + url
+            headers = dict(kwargs.get("headers", {}))
+            if AUTH_TOKEN:
+                headers["X-Auth-Token"] = AUTH_TOKEN
+            kwargs["headers"] = headers
+        return super().request(method, url, **kwargs)
+
+
+# 配置了 Worker 才用 WorkerSession；否则 None（yfinance 走直连/代理）
+_SESSION = WorkerSession() if (WORKER_BASE and AUTH_TOKEN) else None
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -65,7 +93,7 @@ def kline(symbol: str, range: str = "1mo", interval: str = "1d"):
     """
 
     def fetch():
-        df = yf.Ticker(symbol).history(period=range, interval=interval)
+        df = yf.Ticker(symbol, session=_SESSION).history(period=range, interval=interval)
         if df.empty:
             return []
         rows = []
@@ -88,7 +116,7 @@ def quote(symbol: str):
     """实时行情快照。"""
 
     def fetch():
-        info = yf.Ticker(symbol).fast_info
+        info = yf.Ticker(symbol, session=_SESSION).fast_info
         return {
             "symbol": symbol,
             "price": _to_number(info.last_price),
@@ -105,7 +133,7 @@ def _quotes_impl(symbols):
     result = []
     try:
         df = yf.download(symbols, period="2d", interval="1d", progress=False,
-                         group_by="ticker", threads=False, auto_adjust=False)
+                         group_by="ticker", threads=False, auto_adjust=False, session=_SESSION)
     except Exception:
         df = None
     for s in symbols:
@@ -124,7 +152,7 @@ def _quotes_impl(symbols):
             pass
         if not price:
             try:
-                info = yf.Ticker(s).fast_info
+                info = yf.Ticker(s, session=_SESSION).fast_info
                 price = _to_number(info.last_price)
                 prev = _to_number(getattr(info, "previous_close", 0))
             except Exception:

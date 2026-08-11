@@ -24,14 +24,14 @@ class YahooQuoteServiceTest {
     @Test
     void skipsZeroPriceQuote() {
         when(client.getQuotes(any())).thenReturn(List.of(
-                new YahooKlineClient.BatchQuote("^GSPC", 4521.3, 4500.0, 0.47),
-                new YahooKlineClient.BatchQuote("^DJI", 0.0, 0.0, 0.0)));
+                new YahooKlineClient.BatchQuote("BTC-USD", 64198.5, 63910.5, 0.45),
+                new YahooKlineClient.BatchQuote("ETH-USD", 0.0, 0.0, 0.0)));
 
         int updated = service.refreshSnapshot();
 
         assertThat(updated).isEqualTo(1);
         verify(repository).upsert(List.of(
-                new QuoteSnapshot("^GSPC", "标普500", 4521.3, 0.47, null)));
+                new QuoteSnapshot("BTC-USD", "比特币", 64198.5, 0.45, null)));
     }
 
     @Test
@@ -58,13 +58,14 @@ class YahooQuoteServiceTest {
     }
 
     @Test
-    void refreshIncludesSectorSymbols() {
+    void refreshIncludesCryptoSymbols() {
+        // crypto 7×24 恒开市，names 映射一定存在，验证非指数 symbol 也能带中文名进快照
         when(client.getQuotes(any())).thenReturn(List.of(
-                new YahooKlineClient.BatchQuote("XLK", 200.5, 199.0, 0.75)));
+                new YahooKlineClient.BatchQuote("BTC-USD", 64198.5, 63910.5, 0.45)));
 
         int updated = service.refreshSnapshot();
 
         assertThat(updated).isEqualTo(1);
-        verify(repository).upsert(List.of(new QuoteSnapshot("XLK", "科技", 200.5, 0.75, null)));
+        verify(repository).upsert(List.of(new QuoteSnapshot("BTC-USD", "比特币", 64198.5, 0.45, null)));
     }
 }

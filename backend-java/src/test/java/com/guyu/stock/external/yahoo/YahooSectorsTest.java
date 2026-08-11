@@ -12,8 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class YahooSectorsTest {
 
     @Test
-    void listHas25Sectors() {
-        assertThat(YahooSectors.SECTORS).hasSize(25);
+    void listHas44Sectors() {
+        assertThat(YahooSectors.SECTORS).hasSize(44);
     }
 
     @Test

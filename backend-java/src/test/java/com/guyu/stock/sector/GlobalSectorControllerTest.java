@@ -34,8 +34,8 @@ class GlobalSectorControllerTest {
     @Test
     void listReturnsSectorQuotesGrouped() throws Exception {
         when(yahooQuoteService.listSectorQuotes(null)).thenReturn(List.of(
-                new SectorQuote("XLK", "科技", "us", "industry", 200.5, 1.2, null),
-                new SectorQuote("SMH", "半导体", "us", "theme", 250.0, 0.8, null)));
+                new SectorQuote("XLK", "科技", "us", "industry", 200.5, 1.2, null, "21:30-04:00", true),
+                new SectorQuote("SMH", "半导体", "us", "theme", 250.0, 0.8, null, "21:30-04:00", true)));
 
         mockMvc.perform(get("/api/v1/global-sector/list"))
                 .andExpect(status().isOk())
@@ -49,7 +49,7 @@ class GlobalSectorControllerTest {
     @Test
     void listFiltersByMarket() throws Exception {
         when(yahooQuoteService.listSectorQuotes("us")).thenReturn(List.of(
-                new SectorQuote("GLD", "黄金", "us", "theme", 402.5, 1.0, null)));
+                new SectorQuote("GLD", "黄金", "us", "theme", 402.5, 1.0, null, "21:30-04:00", true)));
 
         mockMvc.perform(get("/api/v1/global-sector/list").param("market", "us"))
                 .andExpect(status().isOk())
@@ -78,22 +78,22 @@ class GlobalSectorControllerTest {
 
     @Test
     void fetchSectorsReturnsCounts() throws Exception {
-        when(yahooSectorService.fetchSectors("1y")).thenReturn(25);
+        when(yahooSectorService.fetchSectors("1y")).thenReturn(44);
 
         mockMvc.perform(get("/api/v1/global-sector/fetch-sectors"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.ok").value(25))
-                .andExpect(jsonPath("$.data.total").value(25));
+                .andExpect(jsonPath("$.data.ok").value(44))
+                .andExpect(jsonPath("$.data.total").value(44));
     }
 
     @Test
     void syncInfoReturnsCounts() throws Exception {
-        when(yahooSectorService.syncSectorInfo()).thenReturn(25);
+        when(yahooSectorService.syncSectorInfo()).thenReturn(44);
 
         mockMvc.perform(get("/api/v1/global-sector/sync-info"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.synced").value(25));
+                .andExpect(jsonPath("$.data.synced").value(44));
     }
 }

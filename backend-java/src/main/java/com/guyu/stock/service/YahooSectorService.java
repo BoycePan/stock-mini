@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.guyu.stock.common.util.NumUtil;
 import com.guyu.stock.common.util.SleepUtil;
+import com.guyu.stock.common.util.TradingHours;
 import com.guyu.stock.dao.StockInfoRepository;
 import com.guyu.stock.dao.StockKlineRepository;
 import com.guyu.stock.dao.YahooQuoteRepository;
@@ -66,13 +67,16 @@ public class YahooSectorService {
         return ok;
     }
 
-    /** 把板块元数据登记到 stock_info（type='sector'，market 取自清单，board 存 industry/theme 供前端分组） */
+    /** 把板块元数据登记到 stock_info（type='sector'，market 取自清单，board 存 industry/theme 供前端分组），并补写交易时段 */
     public int syncSectorInfo() {
         List<StockInfo> infos = new ArrayList<>();
         for (YahooSectors.Symbol s : YahooSectors.SECTORS) {
             infos.add(new StockInfo(s.code(), s.name(), "sector", s.market(), s.category(), null, true, null));
         }
         infoRepository.batchUpsert(infos);
+        for (YahooSectors.Symbol s : YahooSectors.SECTORS) {
+            infoRepository.updateTradingHours(s.code(), TradingHours.tradingHours("sector", s.market()));
+        }
         log.info("[yahoo-sector] 板块元数据登记 stock_info 完成，{} 条", infos.size());
         return infos.size();
     }

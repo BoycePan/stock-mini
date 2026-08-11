@@ -92,11 +92,11 @@ class YahooSectorServiceTest {
     void syncSectorInfoRegistersWithBoardCategory() {
         int n = service.syncSectorInfo();
 
-        assertThat(n).isEqualTo(25);
+        assertThat(n).isEqualTo(44);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<StockInfo>> captor = ArgumentCaptor.forClass(List.class);
         verify(infoRepository).batchUpsert(captor.capture());
-        assertThat(captor.getValue()).hasSize(25);
+        assertThat(captor.getValue()).hasSize(44);
         assertThat(captor.getValue()).allMatch(i -> i.type().equals("sector"));
         assertThat(captor.getValue()).allMatch(i -> i.market().equals("us") || i.market().equals("global"));
         assertThat(captor.getValue()).allMatch(i -> i.board().equals("industry") || i.board().equals("theme"));

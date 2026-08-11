@@ -83,6 +83,10 @@ public class AppProperties {
         /** 本机开发代理（如 http://127.0.0.1:7890），注入给 Python 侧让 yfinance 走代理；生产海外留空=直连 */
         private String httpsProxy;
         private String httpProxy;
+        /** Cloudflare Worker 反向代理地址（如 https://proxy.lilaiyun.online）；留空=直连/走 Clash 代理 */
+        private String workerBase;
+        /** Worker 鉴权 token（X-Auth-Token） */
+        private String authToken;
         /** 是否每天 6:00 自动拉取全球指数并同步元数据（美股收盘后所有市场均已收盘） */
         private boolean autoFetch = true;
         /** 是否开启快照定时刷新（60s 拉最新点位落 quote_snapshot） */

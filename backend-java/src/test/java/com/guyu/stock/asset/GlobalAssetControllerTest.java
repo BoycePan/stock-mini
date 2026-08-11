@@ -33,7 +33,7 @@ class GlobalAssetControllerTest {
     @Test
     void listByTypeReturnsAssets() throws Exception {
         when(yahooQuoteService.listAssetQuotes("commodity", null)).thenReturn(List.of(
-                new AssetQuote("GC=F", "黄金", "commodity", "global", "贵金属", 4401.9, 1.2, null)));
+                new AssetQuote("GC=F", "黄金", "commodity", "global", "贵金属", 4401.9, 1.2, null, "06:00-05:00", true)));
 
         mockMvc.perform(get("/api/v1/asset/list").param("type", "commodity"))
                 .andExpect(status().isOk())

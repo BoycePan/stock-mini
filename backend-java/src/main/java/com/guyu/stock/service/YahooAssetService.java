@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.guyu.stock.common.util.NumUtil;
 import com.guyu.stock.common.util.SleepUtil;
+import com.guyu.stock.common.util.TradingHours;
 import com.guyu.stock.dao.StockInfoRepository;
 import com.guyu.stock.dao.StockKlineRepository;
 import com.guyu.stock.dao.YahooQuoteRepository;
@@ -66,13 +67,16 @@ public class YahooAssetService {
         return ok;
     }
 
-    /** 把一批资产元数据登记到 stock_info（type 指定，market/board 取自清单） */
+    /** 把一批资产元数据登记到 stock_info（type 指定，market/board 取自清单），并补写交易时段 */
     public int syncAssetInfo(List<YahooAsset.Symbol> symbols, String type) {
         List<StockInfo> infos = new ArrayList<>();
         for (YahooAsset.Symbol s : symbols) {
             infos.add(new StockInfo(s.code(), s.name(), type, s.market(), s.category(), null, true, null));
         }
         infoRepository.batchUpsert(infos);
+        for (YahooAsset.Symbol s : symbols) {
+            infoRepository.updateTradingHours(s.code(), TradingHours.tradingHours(type, s.market()));
+        }
         log.info("[yahoo-asset:{}] 元数据登记 stock_info 完成，{} 条", type, infos.size());
         return infos.size();
     }

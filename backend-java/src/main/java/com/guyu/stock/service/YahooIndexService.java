@@ -7,6 +7,7 @@ import com.guyu.stock.dao.StockKlineRepository;
 import com.guyu.stock.dao.YahooQuoteRepository;
 import com.guyu.stock.common.util.NumUtil;
 import com.guyu.stock.common.util.SleepUtil;
+import com.guyu.stock.common.util.TradingHours;
 import com.guyu.stock.external.yahoo.YahooIndices;
 import com.guyu.stock.external.yahoo.YahooKlineClient;
 import com.guyu.stock.model.QuoteSnapshot;
@@ -68,13 +69,16 @@ public class YahooIndexService {
         return ok;
     }
 
-    /** 把指数元数据登记到 stock_info（type='index'，market 用于前端分组展示） */
+    /** 把指数元数据登记到 stock_info（type='index'，market 用于前端分组展示），并补写交易时段 */
     public int syncIndexInfo() {
         List<StockInfo> infos = new ArrayList<>();
         for (YahooIndices.Symbol s : YahooIndices.INDICES) {
             infos.add(new StockInfo(s.code(), s.name(), "index", s.market(), null, null, true, null));
         }
         infoRepository.batchUpsert(infos);
+        for (YahooIndices.Symbol s : YahooIndices.INDICES) {
+            infoRepository.updateTradingHours(s.code(), TradingHours.tradingHours("index", s.market()));
+        }
         log.info("[yahoo-index] 指数元数据登记 stock_info 完成，{} 条", infos.size());
         return infos.size();
     }

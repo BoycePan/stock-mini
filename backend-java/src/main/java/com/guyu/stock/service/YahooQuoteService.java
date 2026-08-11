@@ -1,6 +1,7 @@
 package com.guyu.stock.service;
 
 import com.guyu.stock.dao.YahooQuoteRepository;
+import com.guyu.stock.common.util.TradingHours;
 import com.guyu.stock.external.yahoo.YahooAsset;
 import com.guyu.stock.external.yahoo.YahooIndices;
 import com.guyu.stock.external.yahoo.YahooKlineClient;
@@ -34,21 +35,43 @@ public class YahooQuoteService {
         this.quoteRepository = quoteRepository;
     }
 
-    /** 批量拉指数+板块+全球资产全部最新点位并覆盖落库，返回更新条数 */
+    /** 批量拉指数+板块+全球资产最新点位并覆盖落库；只刷当前开市的 symbol（闭市保留旧快照），返回更新条数 */
     public int refreshSnapshot() {
         List<String> codes = new ArrayList<>();
         Map<String, String> names = new HashMap<>();
         for (YahooIndices.Symbol s : YahooIndices.INDICES) {
-            codes.add(s.code());
-            names.put(s.code(), s.name());
+            if (TradingHours.isTrading("index", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
         }
         for (YahooSectors.Symbol s : YahooSectors.SECTORS) {
-            codes.add(s.code());
-            names.put(s.code(), s.name());
+            if (TradingHours.isTrading("sector", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
         }
-        for (YahooAsset.Symbol s : YahooAsset.ALL) {
-            codes.add(s.code());
-            names.put(s.code(), s.name());
+        for (YahooAsset.Symbol s : YahooAsset.COMMODITIES) {
+            if (TradingHours.isTrading("commodity", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
+        }
+        for (YahooAsset.Symbol s : YahooAsset.FOREX) {
+            if (TradingHours.isTrading("forex", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
+        }
+        for (YahooAsset.Symbol s : YahooAsset.CRYPTO) {
+            if (TradingHours.isTrading("crypto", s.market())) {
+                codes.add(s.code());
+                names.put(s.code(), s.name());
+            }
+        }
+        if (codes.isEmpty()) {
+            log.info("[quote-snapshot] 当前无市场开市，跳过本轮刷新");
+            return 0;
         }
         List<YahooKlineClient.BatchQuote> quotes = yahooKlineClient.getQuotes(codes);
         if (quotes.isEmpty()) return 0;

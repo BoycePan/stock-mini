@@ -52,6 +52,13 @@ public class FetchSidecarLauncher implements ApplicationRunner {
             if (cfg.getHttpProxy() != null && !cfg.getHttpProxy().isBlank()) {
                 pb.environment().put("HTTP_PROXY", cfg.getHttpProxy());
             }
+            // Cloudflare Worker 反向代理通道：sidecar 走 Worker 则无需 Clash 代理（fetch_service.py 读取）
+            if (cfg.getWorkerBase() != null && !cfg.getWorkerBase().isBlank()) {
+                pb.environment().put("YF_WORKER_BASE", cfg.getWorkerBase());
+            }
+            if (cfg.getAuthToken() != null && !cfg.getAuthToken().isBlank()) {
+                pb.environment().put("YF_AUTH_TOKEN", cfg.getAuthToken());
+            }
             process = pb.inheritIO().start();
         } catch (IOException e) {
             log.error("[fetch-sidecar] 启动 Python 失败: {}", e.getMessage());

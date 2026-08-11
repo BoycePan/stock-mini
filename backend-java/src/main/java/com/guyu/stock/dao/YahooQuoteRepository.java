@@ -1,5 +1,6 @@
 package com.guyu.stock.dao;
 
+import com.guyu.stock.common.util.TradingHours;
 import com.guyu.stock.model.AssetQuote;
 import com.guyu.stock.model.IndexQuote;
 import com.guyu.stock.model.QuoteSnapshot;
@@ -44,7 +45,7 @@ public class YahooQuoteRepository {
     /** 指数列表：stock_info(type=index) 为主，LEFT JOIN quote_snapshot 拿实时点位；快照未刷时 price 为 null */
     public List<IndexQuote> queryIndexList() {
         return jdbcTemplate.query("""
-                SELECT s.code, s.name, s.market, q.price, q.pct_change, q.updated_at
+                SELECT s.code, s.name, s.market, s.trading_hours, q.price, q.pct_change, q.updated_at
                 FROM stock_info s
                 LEFT JOIN quote_snapshot q ON q.code = s.code
                 WHERE s.type = 'index' AND s.is_active = true
@@ -58,7 +59,9 @@ public class YahooQuoteRepository {
                         toDouble(rs.getObject("pct_change")),
                         rs.getTimestamp("updated_at") != null
                                 ? rs.getTimestamp("updated_at").toLocalDateTime()
-                                : null));
+                                : null,
+                        rs.getString("trading_hours"),
+                        TradingHours.isTrading("index", rs.getString("market"))));
     }
 
     /** 查询单个指数最新实时快照；无记录返回 null。 */
@@ -87,7 +90,9 @@ public class YahooQuoteRepository {
             toDouble(rs.getObject("pct_change")),
             rs.getTimestamp("updated_at") != null
                     ? rs.getTimestamp("updated_at").toLocalDateTime()
-                    : null);
+                    : null,
+            rs.getString("trading_hours"),
+            TradingHours.isTrading("sector", rs.getString("market")));
 
     private static final org.springframework.jdbc.core.RowMapper<AssetQuote> ASSET_MAPPER = (rs, i) -> new AssetQuote(
             rs.getString("code"),
@@ -99,13 +104,15 @@ public class YahooQuoteRepository {
             toDouble(rs.getObject("pct_change")),
             rs.getTimestamp("updated_at") != null
                     ? rs.getTimestamp("updated_at").toLocalDateTime()
-                    : null);
+                    : null,
+            rs.getString("trading_hours"),
+            TradingHours.isTrading(rs.getString("type"), rs.getString("market")));
 
     /** 全球资产列表（商品/外汇/加密）：按 type 必查、market 可选过滤；含 type/market/board 供前端分组 */
     public List<AssetQuote> queryAssetList(String type, String market) {
         if (market == null || market.isBlank()) {
             return jdbcTemplate.query("""
-                    SELECT s.code, s.name, s.type, s.market, s.board, q.price, q.pct_change, q.updated_at
+                    SELECT s.code, s.name, s.type, s.market, s.board, s.trading_hours, q.price, q.pct_change, q.updated_at
                     FROM stock_info s
                     LEFT JOIN quote_snapshot q ON q.code = s.code
                     WHERE s.type = ? AND s.is_active = true
@@ -113,7 +120,7 @@ public class YahooQuoteRepository {
                     """, ASSET_MAPPER, type);
         }
         return jdbcTemplate.query("""
-                SELECT s.code, s.name, s.type, s.market, s.board, q.price, q.pct_change, q.updated_at
+                SELECT s.code, s.name, s.type, s.market, s.board, s.trading_hours, q.price, q.pct_change, q.updated_at
                 FROM stock_info s
                 LEFT JOIN quote_snapshot q ON q.code = s.code
                 WHERE s.type = ? AND s.is_active = true AND s.market = ?
@@ -125,7 +132,7 @@ public class YahooQuoteRepository {
     public List<SectorQuote> querySectorList(String market) {
         if (market == null || market.isBlank()) {
             return jdbcTemplate.query("""
-                    SELECT s.code, s.name, s.market, s.board, q.price, q.pct_change, q.updated_at
+                    SELECT s.code, s.name, s.market, s.board, s.trading_hours, q.price, q.pct_change, q.updated_at
                     FROM stock_info s
                     LEFT JOIN quote_snapshot q ON q.code = s.code
                     WHERE s.type = 'sector' AND s.is_active = true
@@ -133,7 +140,7 @@ public class YahooQuoteRepository {
                     """, SECTOR_MAPPER);
         }
         return jdbcTemplate.query("""
-                SELECT s.code, s.name, s.market, s.board, q.price, q.pct_change, q.updated_at
+                SELECT s.code, s.name, s.market, s.board, s.trading_hours, q.price, q.pct_change, q.updated_at
                 FROM stock_info s
                 LEFT JOIN quote_snapshot q ON q.code = s.code
                 WHERE s.type = 'sector' AND s.is_active = true AND s.market = ?

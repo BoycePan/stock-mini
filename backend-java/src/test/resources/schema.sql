@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS stock_info (
     market     VARCHAR(10),
     board      VARCHAR(10),
     industry   VARCHAR(64),
+    trading_hours VARCHAR(50),
     is_active  BOOLEAN,
     updated_at TIMESTAMP
 );

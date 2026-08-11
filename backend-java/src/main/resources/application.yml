@@ -64,6 +64,10 @@ app:
     # 本机开发代理（注入给 Python 侧走雅虎）；生产海外留空=直连。也可只配 FETCH_HTTPS_PROXY。
     https-proxy: ${FETCH_HTTPS_PROXY:}
     http-proxy: ${FETCH_HTTP_PROXY:}
+    # Cloudflare Worker 反向代理通道：配了 FETCH_WORKER_BASE/FETCH_AUTH_TOKEN 则 sidecar 走 Worker（无需 Clash）；
+    # 留空则用上面的代理或直连（二选一）。
+    worker-base: ${FETCH_WORKER_BASE:}
+    auth-token: ${FETCH_AUTH_TOKEN:}
     # 每天 6:00 自动拉取全球指数并同步元数据；设 FETCH_AUTO=false 关闭
     auto-fetch: ${FETCH_AUTO:true}
     # 指数/板块/资产快照定时刷新：默认 60s 批量拉最新点位落 quote_snapshot（63+ symbol，30s 会撞雅虎限流）

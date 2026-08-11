@@ -49,6 +49,17 @@ public class StockInfoRepository {
                 keyword, keyword + "%", keyword + "%", limit);
     }
 
+    /**
+     * 单独补写某资产的交易时段（stock_info.trading_hours，北京时间，如 "21:30-04:00"）。
+     * 雅虎指数/板块/资产元数据登记后调用；tradingHours 为 null 时跳过（如未知市场）。
+     */
+    public void updateTradingHours(String code, String tradingHours) {
+        if (tradingHours == null || code == null) return;
+        Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+        jdbcTemplate.update("UPDATE stock_info SET trading_hours=?, updated_at=? WHERE code=?",
+                tradingHours, now, code);
+    }
+
     /** 活跃股票数量，对齐 Go CountActiveStocks，供启动自检判断是否为空库。 */
     public int count() {
         Integer n = jdbcTemplate.queryForObject("SELECT count(*) FROM stock_info WHERE is_active=true", Integer.class);
