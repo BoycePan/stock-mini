@@ -1,8 +1,8 @@
 # 股御信息 — 股票行情 API 文档
 
 > 服务地址: `http://localhost:18487/api/v1`
-> 数据源: 新浪财经 / 同花顺 / 巨潮资讯
-> 更新时间: 2026-08-05
+> 数据源: **雅虎 Finance（全球市场）** / 新浪财经 / 同花顺 / 巨潮资讯
+> 更新时间: 2026-08-11
 
 ---
 
@@ -31,6 +31,9 @@
 
 | 数据类型 | 缓存位置 | TTL |
 |----------|----------|-----|
+| 雅虎实时快照 | PostgreSQL(quote_snapshot) | 60s 定时刷新，仅刷开市 |
+| 雅虎K线 | PostgreSQL(stock_kline) | 每日 6:00 拉取 |
+| 雅虎实时行情 | 内存 + sidecar | 10s + 60s |
 | 分钟K线 | 内存 | 30-180s |
 | 日线/周线 | PostgreSQL | 永久 |
 | 实时行情 | 内存 | 3s |
@@ -44,7 +47,152 @@
 
 ---
 
-## 一、股票行情
+## 一、全球市场数据（雅虎 Finance）
+
+> 数据源：**雅虎 Finance**（经 Cloudflare Worker 反向代理），覆盖全球指数 / 板块 ETF / 商品 / 外汇 / 加密 / 美债 / 美股个股，共 **117 个标的**。
+
+### 数据更新机制
+
+| 数据 | 机制 | 说明 |
+|------|------|------|
+| 历史K线 | 每日 6:00 定时拉取落库 `stock_kline` | 也可手动触发 fetch 接口 |
+| 实时快照 | 每 60s 批量刷新 `quote_snapshot` | **仅刷当前开市资产**（按交易时段过滤） |
+| 交易时段 | `stock_info.trading_hours`（北京时间） | list 接口返回 `tradingHours` + `isTrading` |
+
+### 1.1 全球指数列表
+
+```
+GET /api/v1/index/list
+```
+
+返回全部全球指数（**29 个**），按 `market` 分组。
+
+```json
+{
+  "code": 200, "msg": "success",
+  "data": [
+    {"code": "^GSPC", "name": "标普500", "market": "us", "price": 7753.11, "pctChange": -0.06, "updatedAt": "2026-08-11T19:40:03", "tradingHours": "21:30-04:00", "isTrading": false},
+    {"code": "000001.SS", "name": "上证综指", "market": "cn", "price": 3421.50, "pctChange": 0.32, "updatedAt": "...", "tradingHours": "09:30-15:00", "isTrading": false}
+  ]
+}
+```
+
+### 1.2 全球板块列表
+
+```
+GET /api/v1/global-sector/list?market={market}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| market | string | 否 | 不传返回全部；可选 `us` / `global` |
+
+按 `market` + `board`（industry/theme）分组：us 行业 9 + 主题 26、global 行业 10，共 **45 个**。
+
+```json
+{
+  "code": 200, "msg": "success",
+  "data": [
+    {"code": "XLK", "name": "科技", "market": "us", "board": "industry", "price": 186.32, "pctChange": -0.88, "updatedAt": "...", "tradingHours": "21:30-04:00", "isTrading": false},
+    {"code": "BOTZ", "name": "机器人AI", "market": "us", "board": "theme", "price": 37.42, "pctChange": -0.51, "updatedAt": "...", "tradingHours": "21:30-04:00", "isTrading": false}
+  ]
+}
+```
+
+### 1.3 全球资产列表
+
+```
+GET /api/v1/asset/list?type={type}&market={market}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| type | string | 是 | `commodity`(17) / `forex`(5) / `crypto`(2) / `bond`(3) / `stock`(16) |
+| market | string | 否 | 可选 `global` / `us`，不传返回全部 |
+
+```json
+{
+  "code": 200, "msg": "success",
+  "data": [
+    {"code": "GC=F", "name": "黄金", "type": "commodity", "market": "global", "board": "贵金属", "price": 4443.00, "pctChange": 1.67, "updatedAt": "...", "tradingHours": "06:00-05:00", "isTrading": true},
+    {"code": "NVDA", "name": "英伟达", "type": "us-stock", "market": "us", "board": "美股科技", "price": 313.33, "pctChange": 2.10, "updatedAt": "...", "tradingHours": "21:30-04:00", "isTrading": false}
+  ]
+}
+```
+
+> 注：`type=stock` 查询的是美股/中概（存储 type 为 `us-stock`），与 A股（type=`stock`）区分。
+
+### 1.4 列表字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| code | string | 行情代码（`^GSPC` / `XLK` / `GC=F` / `BTC-USD` / `NVDA`） |
+| name | string | 中文名 |
+| type | string | 仅资产有：`commodity` / `forex` / `crypto` / `bond` / `us-stock` |
+| market | string | 交易市场：`us` / `global` / `cn` / `hk` / `jp` / ... |
+| board | string | 板块分类：`industry` / `theme`；资产细分：`贵金属` / `能源` / `有色金属` / `中概股` / ... |
+| price | number | 最新点位（60s 快照；当前未开市为 null） |
+| pctChange | number | 涨跌幅 %（相对昨收） |
+| updatedAt | string | 快照更新时间 |
+| tradingHours | string | 交易时段（北京时间），如 `21:30-04:00` / `24H` |
+| isTrading | boolean | 当前是否开市 |
+
+### 1.5 K线
+
+```
+GET /api/v1/index/{code}/klines?range={range}
+GET /api/v1/global-sector/{code}/klines?range={range}
+GET /api/v1/asset/{code}/klines?range={range}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| range | string | 否 | `1d / 5d / 1mo / 3mo / 6mo / ytd / 1y / 2y / 5y / 10y / max`，默认 `1y` |
+
+> 代码需 URL 编码：`GC=F` → `GC%3DF`，`^GSPC` → `%5EGSPC`。
+
+```json
+{
+  "code": 200, "msg": "success",
+  "data": {
+    "code": "BOTZ", "range": "1mo", "scale": "1d",
+    "klines": [
+      {"time": "2026-07-13", "open": 37.1, "high": 37.9, "low": 36.8, "close": 37.4, "volume": 1234567}
+    ],
+    "count": 21,
+    "latest": {"price": 37.42, "pctChange": -0.51, "updatedAt": "..."}
+  }
+}
+```
+
+### 1.6 实时行情
+
+```
+GET /api/v1/index/{code}/quote
+GET /api/v1/global-sector/{code}/quote
+GET /api/v1/asset/{code}/quote
+```
+
+透传 sidecar 实时行情（10s 缓存）：
+
+```json
+{ "code": 200, "msg": "success", "data": {"symbol": "GC=F", "price": 4443.0, "currency": "USD", "exchange": "CMX"} }
+```
+
+### 1.7 拉取与同步（手动触发）
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/v1/index/fetch-indices?range=1y` | 拉全部指数日线落库 → `{range, ok, total}` |
+| `GET /api/v1/index/sync-info` | 同步指数元数据到 stock_info → `{synced, total}` |
+| `GET /api/v1/global-sector/fetch-sectors?range=1y` | 拉全部板块日线落库 |
+| `GET /api/v1/global-sector/sync-info` | 同步板块元数据 |
+| `GET /api/v1/asset/fetch?type=commodity&range=1y` | 拉一类资产日线落库 |
+| `GET /api/v1/asset/sync-info?type=commodity` | 同步一类资产元数据 |
+
+---
+
+## 二、股票行情
 
 ### 1.1 股票搜索
 
@@ -214,7 +362,7 @@ GET /api/v1/stock/:code/klines?scale={周期}&count={条数}
 
 ---
 
-## 二、概念板块
+## 三、概念板块
 
 ### 2.1 板块列表
 
@@ -808,7 +956,7 @@ cid 从板块列表接口获取，返回该板块包含的股票代码列表。
 
 ---
 
-## 三、新闻与公告
+## 四、新闻与公告
 
 ### 3.1 个股新闻
 
@@ -941,7 +1089,7 @@ GET /api/v1/stock/:code/announcements?page={页码}&size={条数}
 
 ---
 
-## 四、认证
+## 五、认证
 
 ### 4.1 微信登录
 
@@ -978,22 +1126,25 @@ Authorization: Bearer {token}
 
 ---
 
-## 五、定时任务
+## 六、定时任务
 
 | 时间 | 任务 | 耗时 |
 |------|------|------|
+| 每日 6:00 | 拉取雅虎全球资产日线（指数/板块/商品/外汇/加密/美债/个股） | ~3分钟 |
+| 每 60s | 刷新雅虎实时快照 quote_snapshot（仅刷当前开市资产） | ~10s |
 | 交易日 9:00 | 刷新股票列表+行业分类 | ~2分钟 |
 | 交易日 9:05 | 刷新概念板块+成分股 | ~2分钟 |
 | 交易日 15:30 | 全量日K线采集 | ~90分钟 |
 
 ---
 
-## 六、数据库表
+## 七、数据库表
 
 | 表 | 说明 | 数据量 |
 |----|------|--------|
-| stock_info | 股票基本信息 | 5,203 |
-| stock_kline | K线(日/周) | 按需积累 |
+| stock_info | 股票/指数/板块/资产基本信息（含 trading_hours 交易时段） | 5,300+ |
+| stock_kline | K线(日/周)，type 区分 index/sector/commodity/forex/crypto/bond/us-stock | 按需积累 |
+| quote_snapshot | 雅虎实时快照（每 60s 覆盖，仅存最新值） | 117 |
 | concept_board | 概念板块 | 100 |
 | concept_stock | 板块成分股 | 7,641 |
 | news_feed | 新闻/公告 | 按需积累 |
