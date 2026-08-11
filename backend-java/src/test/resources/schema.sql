@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS stock_kline (
     code       VARCHAR(10)  NOT NULL,
     scale      VARCHAR(10)  NOT NULL,
     trade_date DATE         NOT NULL,
+    type       VARCHAR(20)  NOT NULL DEFAULT 'stock',
     open       DOUBLE PRECISION,
     high       DOUBLE PRECISION,
     low        DOUBLE PRECISION,
@@ -66,3 +67,12 @@ CREATE TABLE IF NOT EXISTS news_feed (
 );
 -- 去重索引：与 Go 侧 BatchSave 的 ON CONFLICT DO NOTHING 语义一致（同 stock_code+title+published_at 跳过）
 CREATE UNIQUE INDEX IF NOT EXISTS uk_news_feed_dedup ON news_feed (stock_code, title, published_at);
+
+-- 指数/行情实时快照（定时任务每 30s 覆盖刷新，仅存最新值）
+CREATE TABLE IF NOT EXISTS quote_snapshot (
+    code       VARCHAR(20) PRIMARY KEY,
+    name       VARCHAR(64),
+    price      NUMERIC(18,4),
+    pct_change NUMERIC(10,2),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);

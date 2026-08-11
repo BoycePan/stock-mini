@@ -124,7 +124,7 @@ public class StockService {
                 amplitude = round2((k.high() - k.low()) / prevClose * 100);
             }
             result.add(new StockKline(code, dbScale, tradeDate, k.open(), k.high(), k.low(), k.close(), k.volume(),
-                    amount, 0, pctChange, changeAmt, amplitude));
+                    amount, 0, pctChange, changeAmt, amplitude, "stock"));
             prevClose = k.close();
         }
         return result;

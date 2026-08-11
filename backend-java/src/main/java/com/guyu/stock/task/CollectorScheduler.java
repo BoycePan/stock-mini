@@ -35,17 +35,26 @@ public class CollectorScheduler implements ApplicationRunner {
     public static Trigger decideFull(CollectorProperties props) {
         return props.isAutoFull() ? Trigger.RUN : Trigger.SKIP;
     }
-
+    
+    /**
+     * 刷新股票的信息
+     */
     @Scheduled(cron = "0 0 9 * * MON-FRI")
     public void refreshStockInfoDaily() {
         try { collectorService.refreshStockInfo(); } catch (Exception e) { log.error("9:00 刷新股票信息失败", e); }
     }
-
+    
+    /**
+     * 刷新概念板块信息
+     */
     @Scheduled(cron = "0 5 9 * * MON-FRI")
     public void refreshConceptDaily() {
         try { collectorService.refreshConceptData(); } catch (Exception e) { log.error("9:05 刷新概念板块失败", e); }
     }
-
+    
+    /**
+     * 刷新A股全量 K 线数据
+     */
     @Scheduled(cron = "0 30 15 * * MON-FRI")
     public void runFullDaily() {
         if (decideFull(props) == Trigger.SKIP) {

@@ -64,7 +64,7 @@ class StockKlineRepositoryTest {
     void batchUpsertInsertsNewRows() {
         repo.batchUpsert(List.of(
                 new StockKline("600001", "1d", LocalDate.of(2026, 8, 7), 11.5, 12.5, 11.0, 12.0, 3000L,
-                        36000.0, 0, 0, 0, 0)));
+                        36000.0, 0, 0, 0, 0, "stock")));
         List<StockKline> rows = repo.queryByCode("600001", "1d", 10);
         assertThat(rows).hasSize(3);
         assertThat(rows.get(0).tradeDate()).isEqualTo(LocalDate.of(2026, 8, 7)); // DESC 最新在前
@@ -74,7 +74,7 @@ class StockKlineRepositoryTest {
     void batchUpsertUpdatesExistingRowOnConflict() {
         repo.batchUpsert(List.of(
                 new StockKline("600001", "1d", LocalDate.of(2026, 8, 6), 99.0, 100.0, 98.0, 99.5, 5000L,
-                        50000.0, 0, 0, 0, 0)));
+                        50000.0, 0, 0, 0, 0, "stock")));
         List<StockKline> rows = repo.queryByCode("600001", "1d", 10);
         assertThat(rows).hasSize(2); // 冲突行被更新，不新增
         StockKline updated = rows.stream()

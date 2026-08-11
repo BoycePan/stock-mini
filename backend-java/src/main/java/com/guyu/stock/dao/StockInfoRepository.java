@@ -62,7 +62,7 @@ public class StockInfoRepository {
      * ON CONFLICT (code) DO UPDATE SET ... EXCLUDED（C 阶段 Task 7/9 已验证），
      * 故用「先 UPDATE 后 INSERT + ON CONFLICT DO NOTHING」实现同样的按主键 upsert 语义
      * （H2 测试库与生产 PostgreSQL 均兼容，与 StockKlineRepository.batchUpsert/ConceptRepository.upsertBoard 同一约定）。
-     * type/is_active 由采集侧固定为 "stock"/true（与 Go sinaToModelInfos 一致）。
+     * type/is_active 取自传入实体：A股采集传 "stock"/true，雅虎指数元数据传 "index"/true。
      */
     public void batchUpsert(List<StockInfo> infos) {
         if (infos == null || infos.isEmpty()) return;
@@ -73,16 +73,16 @@ public class StockInfoRepository {
                         name=?, type=?, market=?, board=?, industry=?, is_active=?, updated_at=?
                     WHERE code=?
                     """,
-                    info.name(), "stock", info.market(), info.board(), info.industry(),
-                    true, now, info.code());
+                    info.name(), info.type(), info.market(), info.board(), info.industry(),
+                    info.isActive(), now, info.code());
             if (updated == 0) {
                 jdbcTemplate.update("""
                         INSERT INTO stock_info (code, name, type, market, board, industry, is_active, updated_at)
                         VALUES (?,?,?,?,?,?,?,?)
                         ON CONFLICT DO NOTHING
                         """,
-                        info.code(), info.name(), "stock", info.market(), info.board(), info.industry(),
-                        true, now);
+                        info.code(), info.name(), info.type(), info.market(), info.board(), info.industry(),
+                        info.isActive(), now);
             }
         }
     }

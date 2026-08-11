@@ -15,5 +15,6 @@ public record StockKline(
         double turnover,
         double pctChange,
         double changeAmt,
-        double amplitude
+        double amplitude,
+        String type
 ) {}

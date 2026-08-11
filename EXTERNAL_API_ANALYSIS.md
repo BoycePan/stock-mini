@@ -642,9 +642,65 @@ def _get_stock_market(code):
 
 来源文件: `data/international.py`, `cli/fetch.py:725-827`
 
-### 7.1 美股数据
+> **实测验证**: 2026-08-10 通过 Clash 代理实际调通 43 个标的（各国股票/全球指数/板块ETF/期货/外汇/加密货币），全部返回正常。
 
-**调用方式**
+### 7.1 数据覆盖范围（代码规则）
+
+#### 7.1.1 各国股市（代码 = 代码 + 交易所后缀）
+
+| 国家/地区 | 后缀 | 例子 | 实测最新价 |
+|-----------|------|------|-----------|
+| 美国 | 无后缀 | `AAPL` `NVDA` | ✅ 313.33 |
+| 韩国 | `.KS` | `005930.KS` 三星电子 | ✅ 230000 |
+| 日本 | `.T` | `7203.T` 丰田 | ✅ 2981 |
+| 香港 | `.HK` | `0700.HK` 腾讯 | ✅ 481.4 |
+| 台湾 | `.TW` | `2330.TW` 台积电 | ✅ 2380 |
+| 德国 | `.DE` | `SAP.DE` | ✅ 178.16 |
+| 中国大陆 A 股 | `.SS` / `.SZ` | `600519.SS` 茅台 | ✅ 1348.86 |
+| 英国 | `.L` | `BP.L` | 同类规则 |
+| 印度 | `.NS` | `RELIANCE.NS` | 同类规则 |
+
+#### 7.1.2 全球主要指数（前缀 `^`）
+
+| 指数 | 代码 | 实测 |
+|------|------|------|
+| 标普500 / 纳斯达克 / 纳指100 | `^GSPC` `^IXIC` `^NDX` | ✅ 7757 / 26690 / 29722 |
+| 韩国 KOSPI | `^KS11` | ✅ 6299 |
+| 日本日经225 | `^N225` | ✅ 66970 |
+| 香港恒生 | `^HSI` | ✅ 25937 |
+| 印度 SENSEX / 英国富时 / 法国CAC | `^BSESN` `^FTSE` `^FCHI` | ✅ |
+
+#### 7.1.3 热门板块 ETF（美股，直接代码）
+
+- **半导体/芯片**: `SMH` `SOXX`，个股 `NVDA` `AMD` `ASML` `TSM` ✅
+- **黄金/贵金属**: `GLD` 金ETF、`GDX` 金矿股、`SLV` 银ETF ✅
+- **AI 概念**: `NVDA` `TSM` ✅
+- **EV/电池**: `TSLA` `RIVN` ✅
+- **稀土/铀**: `REMX` `URA` ✅
+- **国防军工**: `LMT` `ITA` ✅
+- **行业板块全套**: 科技`XLK`、金融`XLF`、能源`XLE`、必需消费`XLP`、医疗`XLV`、工业`XLI`、材料`XLB`、公用事业`XLU` ✅
+
+#### 7.1.4 期货（后缀 `=F`）
+
+| 品种 | 代码 | 实测 |
+|------|------|------|
+| 黄金 | `GC=F` | ✅ 4401.9 |
+| 白银 | `SI=F` | ✅ 64.3 |
+| 铜 | `HG=F` | ✅ 6.62 |
+| WTI原油 | `CL=F` | ✅ 78.9 |
+| 标普500期货 | `ES=F` | ✅ 7790 |
+| 纳指期货 | `NQ=F` | ✅ 29951 |
+| 布伦特原油 / 天然气 | `BZ=F` `NG=F` | 同类规则 |
+
+#### 7.1.5 外汇 & 加密货币
+
+- 外汇（后缀 `=X`）: `EURUSD=X` 欧元/美元、`JPY=X`、`CNY=X`
+- 美元指数: `DX-Y.NYB` ✅ 99.69
+- 加密货币: `BTC-USD` ✅ 64922、`ETH-USD` ✅ 1915
+
+### 7.2 调用方式
+
+**单只/批量下载（现有代码使用方式）**
 ```python
 import yfinance as yf
 
@@ -663,12 +719,6 @@ data = yf.download(['AAPL', 'MSFT', 'GOOGL', ...], period='3mo',
 | `progress` | `False` | 关闭进度条(非交互模式) |
 | `group_by` | `ticker` | 批量下载时按ticker分组 |
 
-**指数代码**
-| 代码 | 说明 |
-|------|------|
-| `^IXIC` | 纳斯达克综合指数 |
-| `^KS11` | 韩国 KOSPI 指数 |
-
 **返回 DataFrame 列**: `Date, Open, High, Low, Close, Volume, Dividends, Stock Splits`
 
 **转换为统一格式**:
@@ -680,7 +730,14 @@ df = df.rename(columns={
 # 计算: 涨跌额, 涨跌幅, 成交额(估算), 换手率(默认0)
 ```
 
-**韩国个股**
+**指数代码（原有）**
+| 代码 | 说明 |
+|------|------|
+| `^IXIC` | 纳斯达克综合指数 |
+| `^KS11` | 韩国 KOSPI 指数 |
+
+### 7.3 韩国个股
+
 ```python
 kr_stocks = {
     '005930.KS': '三星电子',
@@ -688,7 +745,9 @@ kr_stocks = {
 }
 ```
 
-**美股列表** (来自 `config.json` 的 `data_fetch.us_nasdaq_top50.symbols`)
+### 7.4 美股列表
+
+来自 `config.json` 的 `data_fetch.us_nasdaq_top50.symbols`
 ```json
 {
   "AAPL": "Apple Inc.",
@@ -697,12 +756,52 @@ kr_stocks = {
 }
 ```
 
-### 7.2 文件存储
+### 7.5 数据深度（单标的可获取字段，实测可用）
+
+```python
+t = yf.Ticker("AAPL")
+t.history(period="1mo")                # 历史K线（日线/分钟线 interval 可选）
+t.history(period="5d", interval="5m")  # 5分钟K线
+t.fast_info.last_price                 # 实时最新价
+t.info                                 # 公司信息（市值/名称/52周高低等）
+t.balance_sheet                        # 资产负债表
+t.financials                           # 利润表
+t.dividends / t.splits                 # 分红 / 拆股历史
+t.calendar                             # 财报日期/分红登记日
+t.recommendations                      # 分析师评级
+t.options                              # 期权链（含到期日列表）
+```
+
+### 7.6 文件存储
 
 美股和韩股分别存储到:
 - 指数: `data/index_us/{symbol}.csv`, `data/index_kr/{symbol}.csv`
 - 个股: `data/stock_us/{symbol}.csv`, `data/stock_kr/{symbol}.csv`
 - 韩股代码中的 `.` 替换为 `_` (如 005930.KS → 005930_KS.csv)
+
+### 7.7 代理配置（本机 Clash，必须）
+
+本机直连 Yahoo 返回 **429 限流**，必须走 Clash 代理：
+- 代理工具: Clash Party (mihomo 内核)，混合端口 `7890`
+- 调用方式（yfinance 自动读取环境变量）:
+```bash
+HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 python3 脚本.py
+```
+- 代码内设置:
+```python
+import os
+os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+os.environ['HTTP_PROXY']  = 'http://127.0.0.1:7890'
+import yfinance as yf
+```
+
+### 7.8 使用注意事项
+
+1. **代理必须**: 直连 Yahoo 被 429 限流；走代理 + 浏览器 UA 才返回 200。
+2. **限流**: 请求间隔建议 ≥0.5s，高频会被 Yahoo 429。
+3. **User-Agent**: 部分接口对空 UA/默认 UA 会 429，yfinance 自带 UA 正常。
+4. **代码格式**: 不同市场用 `代码+后缀`（`.KS`/`.T`/`.HK`/`.TW`/`.DE`），指数前缀 `^`，期货后缀 `=F`。
+5. **版本**: 本机 yfinance 1.2.0（Python 3.9）；如遇接口变动可升级。
 
 ---
 

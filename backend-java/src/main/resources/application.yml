@@ -53,3 +53,19 @@ app:
     timeout-seconds: ${THS_TIMEOUT:30}
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     referer: "https://q.10jqka.com.cn/"
+  fetch:
+    # 雅虎 Python sidecar（方案 A）。开发模式默认拉起；生产设 FETCH_ENABLED=false，单独部署 sidecar。
+    enabled: ${FETCH_ENABLED:true}
+    script-path: ${FETCH_SCRIPT_PATH:scripts/fetch_service.py}
+    python: ${FETCH_PYTHON:python3}
+    host: ${FETCH_HOST:127.0.0.1}
+    port: ${FETCH_PORT:8001}
+    startup-timeout-seconds: ${FETCH_STARTUP_TIMEOUT:30}
+    # 本机开发代理（注入给 Python 侧走雅虎）；生产海外留空=直连。也可只配 FETCH_HTTPS_PROXY。
+    https-proxy: ${FETCH_HTTPS_PROXY:}
+    http-proxy: ${FETCH_HTTP_PROXY:}
+    # 每天 6:00 自动拉取全球指数并同步元数据；设 FETCH_AUTO=false 关闭
+    auto-fetch: ${FETCH_AUTO:true}
+    # 指数快照定时刷新：默认 30s 批量拉最新点位落 quote_snapshot
+    snapshot-enabled: ${FETCH_SNAPSHOT_ENABLED:true}
+    snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:30000}

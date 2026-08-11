@@ -9,6 +9,7 @@ import com.guyu.stock.external.sina.SinaInfoClient;
 import com.guyu.stock.external.sina.SinaKlineClient;
 import com.guyu.stock.external.sina.SinaNewsClient;
 import com.guyu.stock.external.ths.ThsClient;
+import com.guyu.stock.external.yahoo.YahooKlineClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -85,5 +86,13 @@ public class BeanConfig {
     @Bean
     public EastmoneyKlineClient eastmoneyKlineClient(DataSource eastmoneySource) {
         return new EastmoneyKlineClient(eastmoneySource);
+    }
+
+    // ---------- D 阶段：雅虎 Python sidecar ----------
+    // baseUrl 来自 app.fetch.host/port（默认 127.0.0.1:8001），sidecar 由 FetchSidecarLauncher 拉起。
+    @Bean
+    public YahooKlineClient yahooKlineClient(AppProperties appProperties) {
+        AppProperties.Fetch cfg = appProperties.getFetch();
+        return new YahooKlineClient("http://" + cfg.getHost() + ":" + cfg.getPort());
     }
 }

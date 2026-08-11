@@ -6,33 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── 测试 ──
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-      - name: go vet
-        run: go vet ./...
-        working-directory: backend
-      - name: go test
-        run: go test ./...
-        working-directory: backend
-
-  # ── 构建镜像并部署 ──
+  # ── 构建镜像并部署到服务器（scp 直传，不走镜像仓库） ──
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t wx-stock-backend:latest ./backend
+        run: docker build -t stock-backend-java:latest ./backend-java
 
       - name: Save image to tar
-        run: docker save wx-stock-backend:latest | gzip > wx-stock-backend.tar.gz
+        run: docker save stock-backend-java:latest | gzip > stock-backend-java.tar.gz
 
       - name: Setup SSH key
         run: |
@@ -41,8 +25,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Create remote dir
+        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /apps/stock/backend-java"
+
       - name: Copy image to server
-        run: scp wx-stock-backend.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/apps/stock/backend/
+        run: scp stock-backend-java.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/apps/stock/backend-java/
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1
@@ -51,34 +38,50 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /apps/stock/backend
+            cd /apps/stock/backend-java
+
+            # 配置不打包进镜像：服务器上必须有 .env（git 忽略，无法从仓库带过来）
+            # 首次部署前手动创建：ssh 到服务器后
+            #   mkdir -p /apps/stock/backend-java
+            #   把本地 backend-java/.env 内容拷到 /apps/stock/backend-java/.env
+            if [ ! -f .env ]; then
+              echo ".env 不存在，请先创建 /apps/stock/backend-java/.env（模板见仓库 backend-java/.env.example）" >&2
+              exit 1
+            fi
 
             # 加载新镜像
-            docker load < wx-stock-backend.tar.gz
-            rm wx-stock-backend.tar.gz
+            docker load < stock-backend-java.tar.gz
+            rm stock-backend-java.tar.gz
 
             # 滚动重启
-            docker stop wx-stock-backend 2>/dev/null || true
-            docker rm wx-stock-backend 2>/dev/null || true
+            docker stop stock-backend-java 2>/dev/null || true
+            docker rm stock-backend-java 2>/dev/null || true
             docker run -d \
-              --name wx-stock-backend \
+              --name stock-backend-java \
               --restart unless-stopped \
               --network host \
-              -v /apps/stock/backend/config.yaml:/app/config.yaml:ro \
-              wx-stock-backend:latest
+              --env-file .env \
+              stock-backend-java:latest
 
-            # 等待启动
-            sleep 3
+            # 等待健康检查（最多 60s）
+            echo "=== 等待启动 ==="
+            for i in $(seq 1 60); do
+              if curl -fsS http://localhost:18487/api/health >/dev/null 2>&1; then
+                echo "就绪 (${i}s)"
+                break
+              fi
+              sleep 1
+              [ "$i" -eq 60 ] && { echo "健康检查超时" >&2; false; }
+            done
 
             # 检查容器状态
             echo "=== 容器状态 ==="
-            docker ps --filter name=wx-stock-backend --format "{{.Status}}"
+            docker ps --filter name=stock-backend-java --format "{{.Status}}"
 
-            # 服务器本地健康检查
             echo "=== 健康检查 ==="
-            curl -fsS http://localhost:18487/api/health && echo "OK" || {
+            curl -fsS http://localhost:18487/api/health && echo " OK" || {
               echo "FAILED, 最近日志:"
-              docker logs --tail 30 wx-stock-backend
+              docker logs --tail 30 stock-backend-java
               exit 1
             }
 

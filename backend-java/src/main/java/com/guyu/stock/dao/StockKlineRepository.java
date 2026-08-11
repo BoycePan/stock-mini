@@ -32,7 +32,8 @@ public class StockKlineRepository {
             rs.getDouble("turnover"),
             rs.getDouble("pct_change"),
             rs.getDouble("change_amt"),
-            rs.getDouble("amplitude")
+            rs.getDouble("amplitude"),
+            rs.getString("type")
     );
 
     public List<StockKline> queryByCode(String code, String scale, int limit) {
@@ -63,20 +64,20 @@ public class StockKlineRepository {
             int updated = jdbcTemplate.update("""
                     UPDATE stock_kline SET
                         open=?, high=?, low=?, close=?, volume=?, amount=?, turnover=?,
-                        pct_change=?, change_amt=?, amplitude=?, created_at=?
+                        pct_change=?, change_amt=?, amplitude=?, type=?, created_at=?
                     WHERE code=? AND scale=? AND trade_date=?
                     """,
                     k.open(), k.high(), k.low(), k.close(), k.volume(), k.amount(), k.turnover(),
-                    k.pctChange(), k.changeAmt(), k.amplitude(), now,
+                    k.pctChange(), k.changeAmt(), k.amplitude(), k.type(), now,
                     k.code(), k.scale(), java.sql.Date.valueOf(k.tradeDate()));
             if (updated == 0) {
                 jdbcTemplate.update("""
-                        INSERT INTO stock_kline (code, scale, trade_date, open, high, low, close, volume, amount, turnover, pct_change, change_amt, amplitude, created_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        INSERT INTO stock_kline (code, scale, trade_date, open, high, low, close, volume, amount, turnover, pct_change, change_amt, amplitude, type, created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                         ON CONFLICT DO NOTHING
                         """,
                         k.code(), k.scale(), java.sql.Date.valueOf(k.tradeDate()), k.open(), k.high(), k.low(), k.close(),
-                        k.volume(), k.amount(), k.turnover(), k.pctChange(), k.changeAmt(), k.amplitude(), now);
+                        k.volume(), k.amount(), k.turnover(), k.pctChange(), k.changeAmt(), k.amplitude(), k.type(), now);
             }
         }
     }
