@@ -6,6 +6,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.guyu.stock.common.fetcher.DataSource;
+import com.guyu.stock.common.util.StockCodeUtil;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -50,12 +51,6 @@ public class SinaKlineClient {
                 .build();
     }
 
-    public String toSymbol(String code) {
-        if (code == null || code.isEmpty()) return code;
-        char first = code.charAt(0);
-        return (first == '6' || first == '9') ? "sh" + code : "sz" + code;
-    }
-
     public KLineResult getKLine(String code, String scale, int count) {
         if (count <= 0) count = 100;
         if (!"240".equals(scale)) {
@@ -70,7 +65,7 @@ public class SinaKlineClient {
     }
 
     private KLineResult fetch(String code, String scale, int count) {
-        String url = KLINE_URL + "?symbol=" + toSymbol(code) + "&scale=" + scale + "&ma=no&datalen=" + count;
+        String url = KLINE_URL + "?symbol=" + StockCodeUtil.toSymbol(code) + "&scale=" + scale + "&ma=no&datalen=" + count;
         String body = source.getString(url);
         try {
             JsonNode arr = MAPPER.readTree(body);

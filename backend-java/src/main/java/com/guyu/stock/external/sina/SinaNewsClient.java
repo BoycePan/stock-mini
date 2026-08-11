@@ -6,6 +6,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.guyu.stock.common.fetcher.DataSource;
 import com.guyu.stock.common.fetcher.Encoders;
+import com.guyu.stock.common.util.StockCodeUtil;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -54,7 +55,7 @@ public class SinaNewsClient {
         String key = "stock:" + code + ":" + page;
         List<NewsItem> cached = stockNewsCache.getIfPresent(key);
         if (cached != null) return cached;
-        String url = String.format(STOCK_NEWS_URL, toSymbol(code), page);
+        String url = String.format(STOCK_NEWS_URL, StockCodeUtil.toSymbol(code), page);
         byte[] raw = source.getBytes(url);
         String html = Encoders.decode(raw, "gb2312");
         List<NewsItem> items = parseStockNews(html);
@@ -107,11 +108,5 @@ public class SinaNewsClient {
 
     private static String fmtTime(long epochSecond) {
         return epochSecond <= 0 ? "" : TIME_FMT.format(Instant.ofEpochSecond(epochSecond));
-    }
-
-    static String toSymbol(String code) {
-        if (code == null || code.isEmpty()) return code;
-        char first = code.charAt(0);
-        return (first == '6' || first == '9') ? "sh" + code : "sz" + code;
     }
 }

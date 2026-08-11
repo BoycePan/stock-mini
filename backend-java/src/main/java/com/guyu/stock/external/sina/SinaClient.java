@@ -1,6 +1,8 @@
 package com.guyu.stock.external.sina;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.guyu.stock.common.util.NumUtil;
+import com.guyu.stock.common.util.StockCodeUtil;
 import com.guyu.stock.config.AppProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -43,13 +45,6 @@ public class SinaClient {
         this.rateLimiter = RateLimiter.create(1.0 / interval);
     }
 
-    /** 6/9 开头 → sh，其他 → sz（对齐 Go toSymbol） */
-    public String toSymbol(String code) {
-        if (code == null || code.isEmpty()) return code;
-        char first = code.charAt(0);
-        return (first == '6' || first == '9') ? "sh" + code : "sz" + code;
-    }
-
     /** 拉取行情；每次请求前取限流令牌（对齐 Go Limiter.Wait），失败按指数退避重试（对齐 Go fetcher） */
     public List<Quote> fetchQuotes(List<String> codes) {
         if (codes == null || codes.isEmpty()) return List.of();
@@ -57,7 +52,7 @@ public class SinaClient {
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 rateLimiter.acquire();
-                List<String> symbols = codes.stream().map(this::toSymbol).toList();
+                List<String> symbols = codes.stream().map(StockCodeUtil::toSymbol).toList();
                 String url = QUOTE_URL + String.join(",", symbols);
                 byte[] raw = restClient.get().uri(url).retrieve().body(byte[].class);
                 if (raw == null) return List.of();
@@ -109,19 +104,19 @@ public class SinaClient {
         String[] fields = line.split(",", -1);
         if (fields.length < 32) return null;
         String name = decodeGbk(fields[0]);
-        double prevClose = parseDouble(fields[2]);
-        double price = parseDouble(fields[3]);
+        double prevClose = NumUtil.parseDouble(fields[2]);
+        double price = NumUtil.parseDouble(fields[3]);
         double pctChange = prevClose != 0 ? (price - prevClose) / prevClose * 100 : 0;
         return new Quote(
                 code,
                 name,
-                parseDouble(fields[1]),      // open
+                NumUtil.parseDouble(fields[1]),      // open
                 prevClose,
                 price,
-                parseDouble(fields[4]),      // high
-                parseDouble(fields[5]),      // low
-                parseLong(fields[8]),        // volume
-                parseDouble(fields[9]),      // amount
+                NumUtil.parseDouble(fields[4]),      // high
+                NumUtil.parseDouble(fields[5]),      // low
+                NumUtil.parseLong(fields[8]),        // volume
+                NumUtil.parseDouble(fields[9]),      // amount
                 safeField(fields, 30),       // date
                 safeField(fields, 31),       // time
                 0,                           // turnover 恒 0（对齐 Go）
@@ -137,21 +132,5 @@ public class SinaClient {
 
     private String safeField(String[] fields, int idx) {
         return idx < fields.length ? fields[idx].trim() : "";
-    }
-
-    private double parseDouble(String s) {
-        try {
-            return Double.parseDouble(s.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-    private long parseLong(String s) {
-        try {
-            return Long.parseLong(s.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 }

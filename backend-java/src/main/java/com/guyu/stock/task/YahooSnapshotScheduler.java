@@ -10,13 +10,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 指数快照定时刷新：每 30s 批量拉雅虎最新点位覆盖落库 quote_snapshot。
+ * 全局实时快照定时刷新（指数 + 板块 ETF）：每 60s 批量拉雅虎最新点位覆盖落库 quote_snapshot。
  * 启动时立即刷一次避免空库；刷新失败临时降频 2 分钟防持续撞限流。
  */
 @Component
-public class YahooQuoteScheduler implements ApplicationRunner {
+public class YahooSnapshotScheduler implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(YahooQuoteScheduler.class);
+    private static final Logger log = LoggerFactory.getLogger(YahooSnapshotScheduler.class);
 
     private final YahooQuoteService quoteService;
     private final AppProperties appProperties;
@@ -24,12 +24,12 @@ public class YahooQuoteScheduler implements ApplicationRunner {
     // 429/网络异常降频：期间跳过刷新
     private volatile long skipUntil = 0;
 
-    public YahooQuoteScheduler(YahooQuoteService quoteService, AppProperties appProperties) {
+    public YahooSnapshotScheduler(YahooQuoteService quoteService, AppProperties appProperties) {
         this.quoteService = quoteService;
         this.appProperties = appProperties;
     }
 
-    @Scheduled(initialDelay = 30000, fixedDelayString = "${app.fetch.snapshot-interval-ms:30000}")
+    @Scheduled(initialDelay = 60000, fixedDelayString = "${app.fetch.snapshot-interval-ms:60000}")
     public void refresh() {
         AppProperties.Fetch cfg = appProperties.getFetch();
         if (!cfg.isSnapshotEnabled()) return;
@@ -45,14 +45,14 @@ public class YahooQuoteScheduler implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        // 启动立即刷一次，避免冷启动空库；失败则由 30s 后的 @Scheduled 自动补刷
+        // 启动立即刷一次，避免冷启动空库；失败则由 60s 后的 @Scheduled 自动补刷
         if (appProperties.getFetch().isSnapshotEnabled()) {
             try {
                 quoteService.refreshSnapshot();
                 skipUntil = 0;
                 log.info("[quote-snapshot] 启动立即刷新完成");
             } catch (Exception e) {
-                log.warn("[quote-snapshot] 启动刷新失败（30s 后自动补刷）: {}", e.getMessage());
+                log.warn("[quote-snapshot] 启动刷新失败（60s 后自动补刷）: {}", e.getMessage());
             }
         }
     }

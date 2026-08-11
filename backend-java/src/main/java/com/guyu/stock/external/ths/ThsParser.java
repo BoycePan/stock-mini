@@ -3,6 +3,7 @@ package com.guyu.stock.external.ths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guyu.stock.common.fetcher.Encoders;
+import com.guyu.stock.common.util.NumUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,8 +53,8 @@ public final class ThsParser {
                 String[] p = line.split(",");
                 if (p.length < 7) continue;
                 String date = p[0].length() == 8 ? p[0].substring(0,4) + "-" + p[0].substring(4,6) + "-" + p[0].substring(6,8) : p[0];
-                klines.add(new BoardKLine(date, parseDouble(p[1]), parseDouble(p[2]), parseDouble(p[3]),
-                        parseDouble(p[4]), parseLong(p[5]), parseDouble(p[6])));
+                klines.add(new BoardKLine(date, NumUtil.parseDouble(p[1]), NumUtil.parseDouble(p[2]), NumUtil.parseDouble(p[3]),
+                        NumUtil.parseDouble(p[4]), NumUtil.parseLong(p[5]), NumUtil.parseDouble(p[6])));
             }
             return klines;
         } catch (Exception e) {
@@ -72,12 +73,5 @@ public final class ThsParser {
             if ((first == '0' || first == '3' || first == '6') && seen.add(code)) codes.add(code);
         }
         return codes;
-    }
-
-    private static double parseDouble(String s) {
-        try { return Double.parseDouble(s.trim()); } catch (NumberFormatException e) { return 0; }
-    }
-    private static long parseLong(String s) {
-        try { return Long.parseLong(s.trim()); } catch (NumberFormatException e) { return 0; }
     }
 }

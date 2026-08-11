@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS news_feed (
 -- 去重索引：与 Go 侧 BatchSave 的 ON CONFLICT DO NOTHING 语义一致（同 stock_code+title+published_at 跳过）
 CREATE UNIQUE INDEX IF NOT EXISTS uk_news_feed_dedup ON news_feed (stock_code, title, published_at);
 
--- 指数/行情实时快照（定时任务每 30s 覆盖刷新，仅存最新值）
+-- 指数/行情实时快照（定时任务每 60s 覆盖刷新，仅存最新值）
 CREATE TABLE IF NOT EXISTS quote_snapshot (
     code       VARCHAR(20) PRIMARY KEY,
     name       VARCHAR(64),

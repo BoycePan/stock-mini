@@ -3,6 +3,7 @@ package com.guyu.stock.service;
 import com.guyu.stock.dao.ConceptRepository;
 import com.guyu.stock.dao.StockInfoRepository;
 import com.guyu.stock.dao.StockKlineRepository;
+import com.guyu.stock.common.util.NumUtil;
 import com.guyu.stock.external.sina.SinaInfoClient;
 import com.guyu.stock.external.sina.SinaKlineClient;
 import com.guyu.stock.external.ths.ThsClient;
@@ -113,22 +114,17 @@ public class CollectorService {
         double prevClose = 0;
         for (SinaKlineClient.KLine k : klines) {
             LocalDate date = LocalDate.parse(k.time().substring(0, 10));
-            double amount = round2((k.open() + k.high() + k.low() + k.close()) / 4 * k.volume());
+            double amount = NumUtil.round2((k.open() + k.high() + k.low() + k.close()) / 4 * k.volume());
             double changeAmt = 0, pctChange = 0, amplitude = 0;
             if (prevClose != 0) {
-                changeAmt = round2(k.close() - prevClose);
-                pctChange = round2((k.close() - prevClose) / prevClose * 100);
-                amplitude = round2((k.high() - k.low()) / prevClose * 100);
+                changeAmt = NumUtil.round2(k.close() - prevClose);
+                pctChange = NumUtil.round2((k.close() - prevClose) / prevClose * 100);
+                amplitude = NumUtil.round2((k.high() - k.low()) / prevClose * 100);
             }
             result.add(new StockKline(code, "1d", date, k.open(), k.high(), k.low(), k.close(), k.volume(),
                     amount, 0, pctChange, changeAmt, amplitude, "stock"));
             prevClose = k.close();
         }
         return result;
-    }
-
-    /** 对齐 Go round2：float64(int(v*100+0.5))/100，向零截断（负值 -1.235 → -1.23，与 Java Math.round 的 half-up 不同） */
-    private static double round2(double v) {
-        return (long) (v * 100 + 0.5) / 100.0;
     }
 }

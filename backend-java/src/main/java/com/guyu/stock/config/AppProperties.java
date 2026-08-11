@@ -85,9 +85,9 @@ public class AppProperties {
         private String httpProxy;
         /** 是否每天 6:00 自动拉取全球指数并同步元数据（美股收盘后所有市场均已收盘） */
         private boolean autoFetch = true;
-        /** 是否开启快照定时刷新（30s 拉最新点位落 quote_snapshot） */
+        /** 是否开启快照定时刷新（60s 拉最新点位落 quote_snapshot） */
         private boolean snapshotEnabled = true;
-        /** 快照刷新间隔（毫秒），默认 30s */
-        private long snapshotIntervalMs = 30000;
+        /** 快照刷新间隔（毫秒），默认 60s（防雅虎限流） */
+        private long snapshotIntervalMs = 60000;
     }
 }

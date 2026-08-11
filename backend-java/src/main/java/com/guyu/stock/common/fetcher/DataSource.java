@@ -1,6 +1,7 @@
 package com.guyu.stock.common.fetcher;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.guyu.stock.common.util.SleepUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +53,7 @@ public class DataSource {
         RuntimeException last = null;
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             if (attempt > 0) {
-                sleep(500L * (1L << (attempt - 1))); // 指数退避 500ms→1s→2s
+                SleepUtil.sleep(500L * (1L << (attempt - 1))); // 指数退避 500ms→1s→2s
             }
             if (limiter != null) limiter.acquire();
             try {
@@ -118,9 +119,5 @@ public class DataSource {
         } finally {
             conn.disconnect();
         }
-    }
-
-    private void sleep(long ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 }

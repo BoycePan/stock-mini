@@ -3,6 +3,8 @@ package com.guyu.stock.external.sina;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guyu.stock.common.fetcher.DataSource;
+import com.guyu.stock.common.util.NumUtil;
+import com.guyu.stock.common.util.SleepUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +47,7 @@ public class SinaInfoClient {
                 } catch (Exception e) {
                     throw new com.guyu.stock.common.fetcher.FetchException("解析股票列表 JSON 失败", e);
                 }
-                sleep(150);
+                SleepUtil.sleep(150);
             }
         }
         return all;
@@ -61,7 +63,7 @@ public class SinaInfoClient {
             String industry = parts[1];
             for (int i = 8; i + 3 < parts.length; i += 4) {
                 String code = stripMarketPrefix(parts[i]);
-                code = String.format("%06d", safeInt(code));
+                code = String.format("%06d", NumUtil.parseInt(code));
                 if (!code.equals("000000")) result.put(code, industry);
             }
         }
@@ -88,13 +90,5 @@ public class SinaInfoClient {
     private static String stripMarketPrefix(String s) {
         if (s.length() > 2 && (s.startsWith("sh") || s.startsWith("sz") || s.startsWith("bj"))) return s.substring(2);
         return s;
-    }
-
-    private static int safeInt(String s) {
-        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
-    }
-
-    private static void sleep(long ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 }

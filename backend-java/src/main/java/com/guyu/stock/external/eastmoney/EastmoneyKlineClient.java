@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guyu.stock.common.fetcher.DataSource;
 import com.guyu.stock.common.fetcher.FetchException;
+import com.guyu.stock.common.util.NumUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,13 +57,13 @@ public class EastmoneyKlineClient {
                 if (f.length < 11) continue;
                 result.add(new KLine(
                         f[0].trim(),
-                        parseDouble(f[1]),
-                        parseDouble(f[2]),
-                        parseDouble(f[3]),
-                        parseDouble(f[4]),
-                        parseLong(f[5]),
-                        parseDouble(f[6]),
-                        parseDouble(f[10])));
+                        NumUtil.parseDouble(f[1]),
+                        NumUtil.parseDouble(f[2]),
+                        NumUtil.parseDouble(f[3]),
+                        NumUtil.parseDouble(f[4]),
+                        NumUtil.parseLong(f[5]),
+                        NumUtil.parseDouble(f[6]),
+                        NumUtil.parseDouble(f[10])));
             }
         } catch (Exception e) {
             throw new FetchException("东财K线JSON解析失败", e);
@@ -77,21 +78,5 @@ public class EastmoneyKlineClient {
     static String toSecId(String code) {
         if (code == null || code.isEmpty()) return code;
         return code.charAt(0) == '6' ? "1." + code : "0." + code;
-    }
-
-    private static double parseDouble(String s) {
-        try {
-            return Double.parseDouble(s.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-    private static long parseLong(String s) {
-        try {
-            return Long.parseLong(s.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 }

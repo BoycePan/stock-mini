@@ -122,14 +122,17 @@ def _quotes_impl(symbols):
                     prev = float(closes.iloc[-2]) if len(closes) >= 2 else price
         except Exception:
             pass
-        if price is None:
+        if not price:
             try:
                 info = yf.Ticker(s).fast_info
                 price = _to_number(info.last_price)
                 prev = _to_number(getattr(info, "previous_close", 0))
             except Exception:
-                price = 0.0
-                prev = 0.0
+                # 两条路径都失败：跳过该 symbol，避免 Java 侧用 0 覆盖有效快照
+                continue
+        if not price:
+            # fast_info 兜底仍返回 0/NaN：视为失败，同样跳过
+            continue
         pct = (price - prev) / prev * 100 if prev and price else 0.0
         result.append({
             "symbol": s,

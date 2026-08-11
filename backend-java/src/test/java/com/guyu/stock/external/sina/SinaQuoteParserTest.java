@@ -1,5 +1,6 @@
 package com.guyu.stock.external.sina;
 
+import com.guyu.stock.common.util.StockCodeUtil;
 import com.guyu.stock.config.AppProperties;
 import org.junit.jupiter.api.Test;
 
@@ -64,9 +65,9 @@ class SinaQuoteParserTest {
 
     @Test
     void toSymbolMapsShAndSz() {
-        assertThat(client.toSymbol("600001")).isEqualTo("sh600001");
-        assertThat(client.toSymbol("900001")).isEqualTo("sh900001");
-        assertThat(client.toSymbol("000001")).isEqualTo("sz000001");
-        assertThat(client.toSymbol("300750")).isEqualTo("sz300750");
+        assertThat(StockCodeUtil.toSymbol("600001")).isEqualTo("sh600001");
+        assertThat(StockCodeUtil.toSymbol("900001")).isEqualTo("sh900001");
+        assertThat(StockCodeUtil.toSymbol("000001")).isEqualTo("sz000001");
+        assertThat(StockCodeUtil.toSymbol("300750")).isEqualTo("sz300750");
     }
 }

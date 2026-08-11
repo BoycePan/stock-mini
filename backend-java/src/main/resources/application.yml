@@ -66,6 +66,6 @@ app:
     http-proxy: ${FETCH_HTTP_PROXY:}
     # 每天 6:00 自动拉取全球指数并同步元数据；设 FETCH_AUTO=false 关闭
     auto-fetch: ${FETCH_AUTO:true}
-    # 指数快照定时刷新：默认 30s 批量拉最新点位落 quote_snapshot
+    # 指数/板块/资产快照定时刷新：默认 60s 批量拉最新点位落 quote_snapshot（63+ symbol，30s 会撞雅虎限流）
     snapshot-enabled: ${FETCH_SNAPSHOT_ENABLED:true}
-    snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:30000}
+    snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:60000}

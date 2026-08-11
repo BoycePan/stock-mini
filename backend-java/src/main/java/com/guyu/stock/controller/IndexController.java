@@ -18,7 +18,7 @@ import java.util.Map;
 
 /**
  * 指数数据接口：查询（列表/K线/实时行情）+ 拉取落库。
- * 列表基于 quote_snapshot 实时快照（定时 30s 刷新）+ stock_info 的 market 分组。
+ * 列表基于 quote_snapshot 实时快照（定时 60s 刷新）+ stock_info 的 market 分组。
  */
 @RestController
 @RequestMapping("/api/v1/index")
@@ -32,7 +32,7 @@ public class IndexController {
         this.yahooQuoteService = yahooQuoteService;
     }
 
-    /** 指数列表：stock_info 元数据 + 实时快照点位（30s 刷新，含 market 分组） */
+    /** 指数列表：stock_info 元数据 + 实时快照点位（60s 刷新，含 market 分组） */
     @GetMapping("/list")
     public ApiResponse<List<IndexQuote>> list() {
         return ApiResponse.success(yahooQuoteService.listIndexQuotes());

@@ -42,6 +42,18 @@ public class StockKlineRepository {
                 MAPPER, code, scale, limit);
     }
 
+    /** 查询某 code 的 K 线（since 为空则全部），按交易日期升序；供 index K线按 range 过滤。 */
+    public List<StockKline> queryByCodeSince(String code, String scale, LocalDate since) {
+        if (since == null) {
+            return jdbcTemplate.query(
+                    "SELECT * FROM stock_kline WHERE code=? AND scale=? ORDER BY trade_date ASC",
+                    MAPPER, code, scale);
+        }
+        return jdbcTemplate.query(
+                "SELECT * FROM stock_kline WHERE code=? AND scale=? AND trade_date>=? ORDER BY trade_date ASC",
+                MAPPER, code, scale, java.sql.Date.valueOf(since));
+    }
+
     public LocalDate getLatestDate(String code, String scale) {
         List<LocalDate> dates = jdbcTemplate.query(
                 "SELECT trade_date FROM stock_kline WHERE code=? AND scale=? ORDER BY trade_date DESC LIMIT 1",

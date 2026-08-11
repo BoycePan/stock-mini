@@ -1,7 +1,9 @@
 package com.guyu.stock.dao;
 
+import com.guyu.stock.model.AssetQuote;
 import com.guyu.stock.model.IndexQuote;
 import com.guyu.stock.model.QuoteSnapshot;
+import com.guyu.stock.model.SectorQuote;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -57,6 +59,86 @@ public class YahooQuoteRepository {
                         rs.getTimestamp("updated_at") != null
                                 ? rs.getTimestamp("updated_at").toLocalDateTime()
                                 : null));
+    }
+
+    /** 查询单个指数最新实时快照；无记录返回 null。 */
+    public QuoteSnapshot findByCode(String code) {
+        List<QuoteSnapshot> rows = jdbcTemplate.query("""
+                SELECT code, name, price, pct_change, updated_at FROM quote_snapshot WHERE code=?
+                """,
+                (rs, i) -> new QuoteSnapshot(
+                        rs.getString("code"),
+                        rs.getString("name"),
+                        rs.getDouble("price"),
+                        rs.getDouble("pct_change"),
+                        rs.getTimestamp("updated_at") != null
+                                ? rs.getTimestamp("updated_at").toLocalDateTime()
+                                : null),
+                code);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private static final org.springframework.jdbc.core.RowMapper<SectorQuote> SECTOR_MAPPER = (rs, i) -> new SectorQuote(
+            rs.getString("code"),
+            rs.getString("name"),
+            rs.getString("market"),
+            rs.getString("board"),
+            toDouble(rs.getObject("price")),
+            toDouble(rs.getObject("pct_change")),
+            rs.getTimestamp("updated_at") != null
+                    ? rs.getTimestamp("updated_at").toLocalDateTime()
+                    : null);
+
+    private static final org.springframework.jdbc.core.RowMapper<AssetQuote> ASSET_MAPPER = (rs, i) -> new AssetQuote(
+            rs.getString("code"),
+            rs.getString("name"),
+            rs.getString("type"),
+            rs.getString("market"),
+            rs.getString("board"),
+            toDouble(rs.getObject("price")),
+            toDouble(rs.getObject("pct_change")),
+            rs.getTimestamp("updated_at") != null
+                    ? rs.getTimestamp("updated_at").toLocalDateTime()
+                    : null);
+
+    /** 全球资产列表（商品/外汇/加密）：按 type 必查、market 可选过滤；含 type/market/board 供前端分组 */
+    public List<AssetQuote> queryAssetList(String type, String market) {
+        if (market == null || market.isBlank()) {
+            return jdbcTemplate.query("""
+                    SELECT s.code, s.name, s.type, s.market, s.board, q.price, q.pct_change, q.updated_at
+                    FROM stock_info s
+                    LEFT JOIN quote_snapshot q ON q.code = s.code
+                    WHERE s.type = ? AND s.is_active = true
+                    ORDER BY s.market, s.board, s.code
+                    """, ASSET_MAPPER, type);
+        }
+        return jdbcTemplate.query("""
+                SELECT s.code, s.name, s.type, s.market, s.board, q.price, q.pct_change, q.updated_at
+                FROM stock_info s
+                LEFT JOIN quote_snapshot q ON q.code = s.code
+                WHERE s.type = ? AND s.is_active = true AND s.market = ?
+                ORDER BY s.market, s.board, s.code
+                """, ASSET_MAPPER, type, market);
+    }
+
+    /** 板块列表：stock_info(type=sector) 为主，LEFT JOIN quote_snapshot 拿实时点位；market 为空返回全部，否则按市场过滤；按 market/board/code 排序 */
+    public List<SectorQuote> querySectorList(String market) {
+        if (market == null || market.isBlank()) {
+            return jdbcTemplate.query("""
+                    SELECT s.code, s.name, s.market, s.board, q.price, q.pct_change, q.updated_at
+                    FROM stock_info s
+                    LEFT JOIN quote_snapshot q ON q.code = s.code
+                    WHERE s.type = 'sector' AND s.is_active = true
+                    ORDER BY s.market, s.board, s.code
+                    """, SECTOR_MAPPER);
+        }
+        return jdbcTemplate.query("""
+                SELECT s.code, s.name, s.market, s.board, q.price, q.pct_change, q.updated_at
+                FROM stock_info s
+                LEFT JOIN quote_snapshot q ON q.code = s.code
+                WHERE s.type = 'sector' AND s.is_active = true AND s.market = ?
+                ORDER BY s.market, s.board, s.code
+                """, SECTOR_MAPPER, market);
     }
 
     private static Double toDouble(Object v) {

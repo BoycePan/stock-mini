@@ -1,6 +1,7 @@
 package com.guyu.stock.external.sina;
 
 import com.guyu.stock.common.fetcher.DataSource;
+import com.guyu.stock.common.util.StockCodeUtil;
 import com.guyu.stock.external.sina.SinaKlineClient.KLineResult;
 import org.junit.jupiter.api.Test;
 
@@ -35,9 +36,8 @@ class SinaKlineClientTest {
 
     @Test
     void toSymbolMapsMarkets() {
-        SinaKlineClient client = new SinaKlineClient(DataSource.sina(), 0);
-        assertThat(client.toSymbol("600001")).isEqualTo("sh600001");
-        assertThat(client.toSymbol("000001")).isEqualTo("sz000001");
+        assertThat(StockCodeUtil.toSymbol("600001")).isEqualTo("sh600001");
+        assertThat(StockCodeUtil.toSymbol("000001")).isEqualTo("sz000001");
     }
 
     @Test

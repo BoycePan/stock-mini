@@ -100,9 +100,10 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 工具库：仅用 hutool-core（NumberUtil 数值解析等），不再引全量 hutool-all -->
         <dependency>
             <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
+            <artifactId>hutool-core</artifactId>
             <version>5.8.47</version>
         </dependency>
     </dependencies>
@@ -118,6 +119,17 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <!-- 默认排除联网连通性探针（ExternalApiProbeTest 为诊断用途，打真实外网接口），
+                 需要手动跑：mvn test -Dtest=ExternalApiProbeTest -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/ExternalApiProbeTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

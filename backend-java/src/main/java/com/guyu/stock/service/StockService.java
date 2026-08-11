@@ -2,6 +2,7 @@ package com.guyu.stock.service;
 
 import com.guyu.stock.dao.StockInfoRepository;
 import com.guyu.stock.dao.StockKlineRepository;
+import com.guyu.stock.common.util.NumUtil;
 import com.guyu.stock.external.sina.SinaKlineClient;
 import com.guyu.stock.model.StockInfo;
 import com.guyu.stock.model.StockKline;
@@ -116,12 +117,12 @@ public class StockService {
             SinaKlineClient.KLine k = klines.get(i);
             // Sina 日线 day 字段形如 "2026-08-05"（前 10 位即 ISO 日期）
             LocalDate tradeDate = LocalDate.parse(k.time().substring(0, 10));
-            double amount = round2((k.open() + k.high() + k.low() + k.close()) / 4 * k.volume());
+            double amount = NumUtil.round2((k.open() + k.high() + k.low() + k.close()) / 4 * k.volume());
             double changeAmt = 0, pctChange = 0, amplitude = 0;
             if (i > 0 && prevClose != 0) {
-                changeAmt = round2(k.close() - prevClose);
-                pctChange = round2((k.close() - prevClose) / prevClose * 100);
-                amplitude = round2((k.high() - k.low()) / prevClose * 100);
+                changeAmt = NumUtil.round2(k.close() - prevClose);
+                pctChange = NumUtil.round2((k.close() - prevClose) / prevClose * 100);
+                amplitude = NumUtil.round2((k.high() - k.low()) / prevClose * 100);
             }
             result.add(new StockKline(code, dbScale, tradeDate, k.open(), k.high(), k.low(), k.close(), k.volume(),
                     amount, 0, pctChange, changeAmt, amplitude, "stock"));
@@ -137,11 +138,6 @@ public class StockService {
         result.put("klines", klines);
         result.put("count", klines.size());
         return result;
-    }
-
-    /** 对齐 Go round2：float64(int(v*100+0.5))/100，向零截断（负值 -1.235 → -1.23，与 Java Math.round 的 half-up 不同） */
-    private static double round2(double v) {
-        return (long) (v * 100 + 0.5) / 100.0;
     }
 
     /** 对齐 Go Search handler：返回 {keyword, count, stocks} */
