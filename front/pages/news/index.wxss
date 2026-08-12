@@ -85,3 +85,8 @@
 .page.theme-dark .load-more.end {
   color: #5b6a7f;
 }
+
+.page.theme-dark .retry-button {
+  background: #233046;
+  color: #6fa3ff;
+}

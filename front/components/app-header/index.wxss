@@ -54,6 +54,10 @@
   box-shadow: 0 8rpx 18rpx rgba(47, 141, 212, 0.13);
 }
 
+.no-brand .brand-title {
+  margin-left: 0;
+}
+
 .brand-title {
   margin-left: 16rpx;
   overflow: hidden;
@@ -107,4 +111,37 @@
 .mini-dot {
   color: #4c8dff;
   font-size: 31rpx;
+}
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.header.dark,
+.header.dark .share-button,
+.header.dark .system-actions {
+  background: rgba(24, 34, 49, 0.96);
+  border-color: #2a394e;
+  color: #f5f7fb;
+}
+
+.header.dark .back-button {
+  border-color: #2a394e;
+  background: rgba(24, 34, 49, 0.96);
+  color: #e8eef7;
+}
+
+.header.dark .brand-mark {
+  border-color: #38516e;
+  background: #1d3047;
+  color: #6eb7ff;
+}
+
+.header.dark .brand-title {
+  color: #f5f7fb;
+}
+
+.header.dark .divider {
+  color: #3d4f66;
+}
+
+.header.dark .mini-dot {
+  color: #6eb7ff;
 }

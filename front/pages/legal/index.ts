@@ -1,4 +1,5 @@
-import { getTheme, type ThemeMode } from '../../utils/storage'
+import { bindTheme, unbindTheme } from '../../utils/theme'
+import { rootStore } from '../../stores/root.store'
 
 interface LegalSection {
   heading: string
@@ -70,7 +71,7 @@ const LEGAL_DOCS: Record<string, LegalDoc> = {
     title: '用户协议',
     updatedAt: '2026-06-15',
     intro: [
-      '欢迎使用市场魔方助手小程序（以下简称"本小程序"）。在访问或使用本小程序前，请仔细阅读并充分理解本协议。你开始使用本小程序，即视为你已阅读、理解并同意本协议的全部内容。',
+      '欢迎使用全球市场追踪小程序（以下简称"本小程序"）。在访问或使用本小程序前，请仔细阅读并充分理解本协议。你开始使用本小程序，即视为你已阅读、理解并同意本协议的全部内容。',
     ],
     sections: [
       {
@@ -112,7 +113,7 @@ const LEGAL_DOCS: Record<string, LegalDoc> = {
       {
         heading: '七、联系我们',
         paragraphs: [
-          '如对本协议有任何疑问，可在小程序设置页关注公众号后留言，或通过开发者提供的联系方式与我们联系。',
+          '如对本协议有任何疑问，可添加微信wxid_17d7dcibooe021或BoycePan0606， 与我们联系。',
         ],
       },
     ],
@@ -161,7 +162,7 @@ const LEGAL_DOCS: Record<string, LegalDoc> = {
       {
         heading: '七、联系我们',
         paragraphs: [
-          '如对本政策有任何疑问，可在小程序设置页关注公众号后留言，或通过开发者提供的联系方式与我们联系。',
+          '如对本政策有任何疑问，可添加微信wxid_17d7dcibooe021或BoycePan0606，与我们联系。',
         ],
       },
     ],
@@ -176,7 +177,7 @@ const DEFAULT_DOC: LegalDoc = {
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     title: '',
     updatedAt: '',
     detailsHeading: '',
@@ -185,11 +186,12 @@ Page({
     closing: [] as string[],
   },
   onLoad(options: Record<string, string | undefined>) {
+    bindTheme(this)
     const type = options.type || ''
     this.applyDoc(LEGAL_DOCS[type] ?? DEFAULT_DOC)
   },
-  onShow() {
-    this.setData({ theme: getTheme() })
+  onUnload() {
+    unbindTheme(this)
   },
   applyDoc(doc: LegalDoc) {
     this.setData({

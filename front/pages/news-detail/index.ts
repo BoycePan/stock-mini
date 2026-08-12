@@ -1,15 +1,29 @@
-import { getTheme, getNewsDetail, type ThemeMode, type NewsDetail } from '../../utils/storage'
+import { getNewsDetail, type NewsDetail } from '../../utils/storage'
+import { rootStore } from '../../stores/root.store'
+import { bindTheme, unbindTheme } from '../../utils/theme'
+
+/** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
+function decodeQuery(value: string | undefined): string {
+  if (!value) return ''
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     loading: true,
     news: null as NewsDetail | null,
     error: '',
+    copied: false,
   },
   onLoad(options: Record<string, string | undefined>) {
-    const title = options.title || ''
-    const url = options.url || ''
+    bindTheme(this)
+    const title = decodeQuery(options.title)
+    const url = decodeQuery(options.url)
     const cached = getNewsDetail()
     const news =
       cached && cached.url === url ? cached : { title, summary: '', url, source: '', time: '' }
@@ -18,9 +32,6 @@ Page({
       news,
       error: news.title && news.url ? '' : '新闻详情缺失',
     })
-  },
-  onShow() {
-    this.setData({ theme: getTheme() })
   },
   onShare() {
     wx.showShareMenu({ withShareTicket: true })
@@ -31,8 +42,18 @@ Page({
     if (!url) return
     wx.setClipboardData({
       data: url,
-      success: () => wx.showToast({ title: '链接已复制', icon: 'success' }),
+      success: () => {
+        this.setData({ copied: true })
+        wx.showToast({
+          title: '已复制，请在浏览器打开',
+          icon: 'none',
+          duration: 2200,
+        })
+      },
     })
+  },
+  onUnload() {
+    unbindTheme(this)
   },
   onShareAppMessage() {
     const news = this.data.news

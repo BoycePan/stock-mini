@@ -1,4 +1,5 @@
 import type { KlinePoint } from '../../types/stock'
+import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 type CanvasNode = WechatMiniprogram.Canvas
 type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D
@@ -14,9 +15,16 @@ Component({
     },
   },
   lifetimes: {
+    attached() {
+      this.setData({ theme: getTheme() })
+      bindTheme(this)
+    },
     ready() {
       // 等组件就绪后查询画布实际尺寸并绘制（klines 晚于 ready 到达时由 observers 触发）
       this.draw(this.data.klines as KlinePoint[])
+    },
+    detached() {
+      unbindTheme(this)
     },
   },
   methods: {

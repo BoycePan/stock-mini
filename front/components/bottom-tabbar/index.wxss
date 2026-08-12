@@ -50,3 +50,22 @@
   font-size: 22rpx;
   line-height: 32rpx;
 }
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.tabbar.dark {
+  border-top-color: rgba(42, 57, 78, 0.9);
+  background: rgba(24, 34, 49, 0.96);
+  box-shadow: 0 -10rpx 30rpx rgba(0, 0, 0, 0.25);
+}
+
+.tabbar.dark .tab {
+  color: #9cacc0;
+}
+
+.tabbar.dark .tab.active {
+  color: #6eb7ff;
+}
+
+.tabbar.dark .tab.active .tab-icon {
+  background: #223248;
+}

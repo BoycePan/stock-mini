@@ -1,16 +1,23 @@
 import { newsApi } from '../../api/news'
+import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
-import { getTheme, saveNewsDetail, type ThemeMode } from '../../utils/storage'
+import { saveNewsDetail } from '../../utils/storage'
 import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
-import { formatChange } from '../../utils/formatter'
+import { formatChange, formatWan } from '../../utils/formatter'
+import { bindTheme, unbindTheme } from '../../utils/theme'
 
 const ANNOUNCEMENT_PAGE_SIZE = 20
 
-type QuoteView = StockQuote & { changeText: string; changeClass: string }
+type QuoteView = StockQuote & {
+  changeText: string
+  changeClass: string
+  volumeText: string
+  amountText: string
+}
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     code: '',
     loading: true,
     quote: null as QuoteView | null,
@@ -27,12 +34,10 @@ Page({
     error: '',
   },
   async onLoad(options: Record<string, string | undefined>) {
+    bindTheme(this)
     const code = options.code || ''
     this.setData({ code })
     await this.loadData(code)
-  },
-  onShow() {
-    this.setData({ theme: getTheme() })
   },
   async onPullDownRefresh() {
     try {
@@ -61,6 +66,8 @@ Page({
           ...quote,
           changeText: formatChange(quote.pct_change),
           changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+          volumeText: formatWan(quote.volume),
+          amountText: formatWan(quote.amount),
         },
         klines: klineResult.klines,
         news: newsResult,
@@ -122,7 +129,7 @@ Page({
       this.setData({ loadingMoreAnnouncements: false })
     }
   },
-  onScrollLower() {
+  onReachBottom() {
     // 到底后优先加载新闻，新闻加载完再加载公告
     if (this.data.newsHasMore) {
       this.onLoadMoreNews()
@@ -153,6 +160,9 @@ Page({
       data: url,
       success: () => wx.showToast({ title: '公告链接已复制', icon: 'success' }),
     })
+  },
+  onUnload() {
+    unbindTheme(this)
   },
   onShareAppMessage() {
     return { title: this.data.quote?.name || '股票详情' }

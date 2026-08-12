@@ -1,5 +1,5 @@
 <view class="page theme-{{theme}}">
-  <app-header title="股票搜索" showShare="{{false}}" showBack="{{true}}"></app-header>
+  <app-header title="股票搜索" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   <view class="search-bar">
     <input
       class="search-input"
@@ -39,6 +39,23 @@
         <text class="result-meta">{{item.industry || item.market}}</text>
       </view>
     </view>
-    <view wx:elif="{{!searched}}" class="hint">输入股票代码或名称搜索，如 000001 / 贵州茅台</view>
+    <block wx:elif="{{!searched}}">
+      <view wx:if="{{history.length}}" class="history-section">
+        <view class="history-header">
+          <text class="history-title">搜索记录</text>
+          <text class="history-clear" bindtap="onClearHistory">清空</text>
+        </view>
+        <view class="history-tags">
+          <view
+            class="history-tag"
+            wx:for="{{history}}"
+            wx:key="*this"
+            data-index="{{index}}"
+            bindtap="onHistoryTap"
+          >{{item}}</view>
+        </view>
+      </view>
+      <view wx:else class="hint">输入股票代码或名称搜索，如 000001 / 贵州茅台</view>
+    </block>
   </scroll-view>
 </view>

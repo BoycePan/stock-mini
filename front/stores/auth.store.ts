@@ -69,6 +69,8 @@ export class AuthStore {
     this.reset()
     clearToken()
     clearUser()
+    // 清空会话登录 Promise，允许下一次请求（ensureLogin）重新登录
+    loginPromise = null
   }
 
   reset() {

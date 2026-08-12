@@ -43,3 +43,15 @@
 .bottom-space {
   height: 150rpx;
 }
+
+/* 深色主题 */
+.page.theme-dark .page-status {
+  border-color: #2b4a3c;
+  background: #1e3a2e;
+  color: #6fd79a;
+}
+
+.page.theme-dark .status-dot {
+  background: #34d37d;
+  box-shadow: 0 0 0 5rpx rgba(52, 211, 125, 0.16);
+}

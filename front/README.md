@@ -16,9 +16,8 @@ http://100.90.180.33:18487
 
 ## 数据策略
 
-- 股票、板块、新闻和认证：调用 `../docs/API.md` 中已有的后端接口。
-- 全球、日韩、有色和部分 AI 指标：后端暂未提供时使用 `mocks/` 下的数据。
-- Mock 数据通过 Provider 入口返回，后续增加后端接口时只替换 `api/market.ts`，无需修改页面。
+- 所有页面数据（认证、股票、板块、新闻、全球/日韩/有色/财经行情）均来自后端接口
+  （见 `../docs/API.md`），请求路径集中在 `api/` 目录；接口失败或无数据时页面展示错误态。
 
 ## 依赖安装
 
@@ -37,7 +36,7 @@ pnpm --filter market-magic-mini lint
 - `/pages/global/index`：全球
 - `/pages/asia/index`：日韩
 - `/pages/metals/index`：有色
-- `/pages/ai/index`：AI
+- `/pages/finance/index`：财经
 - `/pages/settings/index`：设置
 - `/pages/search/index`：股票搜索（四个市场页头部入口）
 - `/pages/stock-detail/index?code=000001`：股票详情（行情 / K线图 / 新闻 / 公告，支持分页与下拉刷新）

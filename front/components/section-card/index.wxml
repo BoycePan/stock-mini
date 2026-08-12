@@ -1,4 +1,4 @@
-<view class="section-card {{section.tone}} {{compact ? 'compact' : ''}}">
+<view class="section-card {{section.tone}} {{compact ? 'compact' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="section-title-row">
     <view class="title-accent"></view>
     <text class="section-title">{{section.title}}</text>

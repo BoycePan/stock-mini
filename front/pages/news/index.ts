@@ -1,13 +1,15 @@
 import { newsApi } from '../../api/news'
-import { getTheme, saveNewsDetail, type ThemeMode } from '../../utils/storage'
+import { rootStore } from '../../stores/root.store'
+import { saveNewsDetail } from '../../utils/storage'
 import type { NewsItem } from '../../types/stock'
+import { bindTheme, unbindTheme } from '../../utils/theme'
 
 const FEED_PAGE_SIZE = 20
 const FEED_MAX = 100
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     loading: true,
     items: [] as NewsItem[],
     error: '',
@@ -17,14 +19,12 @@ Page({
     loadingMore: false,
   },
   async onLoad(options: Record<string, string | undefined>) {
+    bindTheme(this)
     this.setData({
       code: options.code || '',
       title: options.code ? `${options.code} 新闻` : '财经新闻',
     })
     await this.loadData(options.code)
-  },
-  onShow() {
-    this.setData({ theme: getTheme() })
   },
   async onPullDownRefresh() {
     try {
@@ -94,6 +94,9 @@ Page({
   },
   onScrollLower() {
     this.onLoadMore()
+  },
+  onUnload() {
+    unbindTheme(this)
   },
   onItemTap(event: WechatMiniprogram.BaseEvent) {
     const index = (event.currentTarget as unknown as { dataset: { index?: number } }).dataset.index

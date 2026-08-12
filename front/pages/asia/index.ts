@@ -1,11 +1,14 @@
-import { marketApi } from '../../api/market'
-import { getTheme, type ThemeMode } from '../../utils/storage'
-import type { MarketPageData, MarketSection } from '../../types/market'
+import { createStoreBindings } from 'mobx-miniprogram-bindings'
+import { rootStore } from '../../stores/root.store'
+import { startAutoRefresh, stopAutoRefresh } from '../../utils/auto-refresh'
+import type { MarketSection } from '../../types/market'
 import { metricViewModel } from '../../utils/market'
+import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
+import { bindTheme, unbindTheme } from '../../utils/theme'
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     activeTab: 'asia',
     loading: true,
     sections: [] as MarketSection[],
@@ -14,42 +17,59 @@ Page({
     updatedLabel: '',
     error: '',
   },
-  async onLoad() {
-    await this.loadData()
+  onLoad() {
+    bindTheme(this)
+    registerStoreBinding(
+      this,
+      createStoreBindings(this, {
+        store: rootStore.market,
+        fields: {
+          loading: () => rootStore.market.loading['asia'],
+          error: () => rootStore.market.errors['asia'],
+          statusLabel: () => rootStore.market.pages['asia']?.statusLabel ?? '',
+          statusTone: () => rootStore.market.pages['asia']?.statusTone ?? 'rest',
+          updatedLabel: () => rootStore.market.pages['asia']?.updatedLabel ?? '',
+          sections: () =>
+            (rootStore.market.pages['asia']?.sections ?? []).map((section) => ({
+              ...section,
+              metrics: section.metrics.map(metricViewModel),
+            })),
+        },
+        actions: [],
+      }),
+    )
+    void this.loadData()
   },
   async onPullDownRefresh() {
     try {
-      await this.loadData()
+      await this.loadData({ force: true })
     } finally {
       wx.stopPullDownRefresh()
     }
   },
   onShow() {
-    this.setData({ theme: getTheme() })
+    startAutoRefresh(this)
   },
-  async loadData() {
-    this.setData({ loading: true, error: '' })
+  onHide() {
+    stopAutoRefresh(this)
+  },
+  onUnload() {
+    stopAutoRefresh(this)
+    releaseStoreBindings(this)
+    unbindTheme(this)
+  },
+  async loadData(options?: { silent?: boolean; force?: boolean }) {
+    const { silent = false, force = false } = options ?? {}
     try {
-      const data = await marketApi.getPage('asia')
-      this.applyData(data)
+      await rootStore.market.loadPage('asia', { force: force || silent, silent })
     } catch (error) {
-      this.setData({
-        loading: false,
-        error: error instanceof Error ? error.message : '数据加载失败',
-      })
+      if (silent) {
+        console.warn('[asia] 自动刷新失败:', error)
+      }
     }
   },
-  applyData(data: MarketPageData) {
-    this.setData({
-      loading: false,
-      statusLabel: data.statusLabel,
-      statusTone: data.statusTone,
-      updatedLabel: data.updatedLabel,
-      sections: data.sections.map((section) => ({
-        ...section,
-        metrics: section.metrics.map(metricViewModel),
-      })),
-    })
+  onRetry() {
+    void this.loadData({ force: true })
   },
   onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
     const key = event.detail.key

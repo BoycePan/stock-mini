@@ -58,7 +58,6 @@ test('builds the global page with index/economy/industry/theme sections', () => 
     [asset('GC=F', '黄金', '贵金属'), asset('CL=F', 'WTI原油', '能源')],
   )
 
-  assert.equal(page.source, 'backend')
   assert.equal(page.statusTone, 'active')
   assert.deepEqual(
     page.sections.map((section) => section.title),

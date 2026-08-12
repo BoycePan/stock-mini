@@ -1,5 +1,5 @@
 <view class="page theme-{{theme}} legal-page">
-  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}"></app-header>
+  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
     <view class="legal-card">
       <text class="legal-title">{{title}}</text>

@@ -1,20 +1,54 @@
 <view class="page theme-{{theme}}">
-  <app-header title="新闻详情" showShare="{{true}}" showBack="{{true}}" bind:share="onShare"></app-header>
+  <app-header title="新闻详情" showShare="{{true}}" showBack="{{true}}" showBrand="{{false}}" bind:share="onShare"></app-header>
   <scroll-view scroll-y class="content-scroll">
     <view wx:if="{{loading}}" class="loading">加载中…</view>
     <view wx:elif="{{error && !news.title}}" class="empty-wrap">
       <empty-state title="新闻详情缺失"></empty-state>
     </view>
     <block wx:else>
+      <!-- 正文信息 -->
       <view class="detail-card" wx:if="{{news}}">
         <text class="detail-title">{{news.title}}</text>
-        <text class="detail-meta" wx:if="{{news.source || news.time}}">
-          <text wx:if="{{news.source}}">{{news.source}}</text>
-          <text wx:if="{{news.source && news.time}}"> · </text>
+        <view class="detail-meta" wx:if="{{news.source || news.time}}">
+          <text wx:if="{{news.source}}" class="detail-source">{{news.source}}</text>
+          <text wx:if="{{news.source && news.time}}" class="meta-dot">·</text>
           <text wx:if="{{news.time}}">{{news.time}}</text>
-        </text>
-        <text class="detail-summary" wx:if="{{news.summary}}">{{news.summary}}</text>
-        <button class="detail-link" bindtap="onCopyLink">复制原文链接</button>
+        </view>
+        <text wx:if="{{news.summary}}" class="detail-summary">{{news.summary}}</text>
+        <text wx:else class="detail-summary empty-summary">原文摘要暂未获取，可复制下方链接到浏览器查看全文。</text>
+      </view>
+
+      <!-- 原文链接 -->
+      <view class="link-card" wx:if="{{news.url}}">
+        <view class="link-head">
+          <text class="link-label">原文链接</text>
+          <text wx:if="{{copied}}" class="link-copied">已复制 ✓</text>
+        </view>
+        <view class="link-url" bindtap="onCopyLink" hover-class="link-url-hover">
+          <text class="link-url-text">{{news.url}}</text>
+          <text class="link-copy-icon">⧉</text>
+        </view>
+        <button class="detail-link {{copied ? 'detail-link-copied' : ''}}" bindtap="onCopyLink">
+          {{copied ? '已复制，去浏览器打开' : '复制原文链接'}}
+        </button>
+      </view>
+
+      <!-- 打开引导 -->
+      <view class="guide-card">
+        <text class="guide-title">如何在浏览器打开</text>
+        <view class="guide-step">
+          <text class="guide-num">1</text>
+          <text class="guide-text">点击上方按钮复制原文链接</text>
+        </view>
+        <view class="guide-step">
+          <text class="guide-num">2</text>
+          <text class="guide-text">打开手机浏览器（Safari / Chrome / 系统浏览器）</text>
+        </view>
+        <view class="guide-step">
+          <text class="guide-num">3</text>
+          <text class="guide-text">在地址栏粘贴链接，即可查看完整原文</text>
+        </view>
+        <text class="guide-note">小程序无法直接打开外部网页，请复制链接后在浏览器中访问。</text>
       </view>
     </block>
     <view class="bottom-space"></view>

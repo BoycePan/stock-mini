@@ -32,7 +32,7 @@
   box-shadow: 0 6rpx 12rpx rgba(76, 127, 245, 0.22);
 }
 
-.section-card.ai .title-accent {
+.section-card.finance .title-accent {
   background: linear-gradient(180deg, #a084ff 0%, #735ce5 100%);
   box-shadow: 0 6rpx 12rpx rgba(115, 92, 229, 0.22);
 }
@@ -154,8 +154,52 @@
   font-size: 26rpx;
 }
 
-.section-card.ai .metric-card {
+.section-card.finance .metric-card {
   min-height: 134rpx;
   border-color: #e5e1fa;
   background: linear-gradient(145deg, #fff 0%, #faf9ff 100%);
+}
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.section-card.theme-dark {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+}
+
+.section-card.theme-dark .section-title,
+.section-card.theme-dark .metric-value {
+  color: #f5f7fb;
+}
+
+.section-card.theme-dark .metric-name {
+  color: #e5ebf4;
+}
+
+.section-card.theme-dark .metric-card {
+  border-color: #34465e;
+  background: #223248;
+}
+
+.section-card.theme-dark .metric-change.flat {
+  color: #9cacc0;
+  border-color: rgba(156, 172, 192, 0.22);
+  background: rgba(156, 172, 192, 0.1);
+}
+
+.section-card.theme-dark .section-badge {
+  border-color: #7d4a56;
+  background: #382a34;
+  color: #ff9b9a;
+}
+
+.section-card.theme-dark.asia .metric-card,
+.section-card.theme-dark.metals .metric-card {
+  border-color: #34465e;
+  background: #223248;
+}
+
+.section-card.theme-dark.finance .metric-card {
+  border-color: #3a3358;
+  background: #2a2440;
 }

@@ -100,8 +100,7 @@
   font-size: 23rpx;
 }
 
-.promo-button,
-.primary-button {
+.promo-button {
   min-width: 142rpx;
   border-radius: 36rpx;
   background: linear-gradient(135deg, #ff776f 0%, #ed5857 100%);
@@ -176,47 +175,6 @@
   font-weight: 400;
 }
 
-.config-row {
-  display: flex;
-  align-items: center;
-  min-height: 76rpx;
-  border-bottom: 1rpx solid #edf1f6;
-  color: #34445a;
-  font-size: 25rpx;
-}
-
-.config-row input {
-  flex: 1;
-  margin-left: 20rpx;
-  color: #64758b;
-  font-size: 23rpx;
-  text-align: right;
-}
-
-.config-value {
-  margin-left: auto;
-  color: #8998aa;
-}
-
-.danger-button {
-  margin-top: 16rpx;
-  border: 1rpx solid #dce5ef;
-  border-radius: 34rpx;
-  background: #f9fbfd;
-  color: #5b6b80;
-  font-size: 24rpx;
-}
-
-.primary-button {
-  margin-top: 20rpx;
-}
-
-.danger-button {
-  border-color: #ffd0cd;
-  background: #fff8f7;
-  color: #e65551;
-}
-
 .follow-card {
   margin-top: 18rpx;
   padding: 32rpx 22rpx;
@@ -264,36 +222,109 @@
   opacity: 0.72;
 }
 
-/* 数据环境配置 */
-.config-section .config-row {
-  padding: 0 6rpx;
-}
-
-.config-row switch {
-  margin-left: auto;
-  transform: scale(0.85);
-}
-
-.outline-button {
-  margin-top: 16rpx;
-  border: 1rpx solid #dce5ef;
-  border-radius: 34rpx;
-  background: #f9fbfd;
-  color: #4278ed;
-  font-size: 24rpx;
-}
-
-.page.theme-dark .config-section .config-row {
-  border-bottom-color: #273349;
-  color: #c6d2e0;
-}
-
-.page.theme-dark .config-row input {
-  color: #8a97a8;
-}
-
-.page.theme-dark .outline-button {
-  border-color: #2a394e;
-  background: #1c2535;
+.page.theme-dark .theme-icon {
+  border: 1rpx solid #34465e;
+  background: #223248;
   color: #6fa3ff;
+}
+
+/* 用户信息卡片 */
+.user-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18rpx;
+  padding: 28rpx 24rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.user-guest {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.user-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #eef3f8;
+}
+
+.user-avatar.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b8ba1;
+  font-size: 48rpx;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+}
+
+.user-name {
+  display: block;
+  overflow: hidden;
+  color: #152338;
+  font-size: 31rpx;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-meta {
+  display: block;
+  margin-top: 8rpx;
+  color: #7b8ba1;
+  font-size: 22rpx;
+}
+
+.logout-button {
+  flex: 0 0 auto;
+  margin-left: 16rpx;
+  padding: 0 22rpx;
+  border: 1rpx solid #eb514d;
+  border-radius: 30rpx;
+  background: transparent;
+  color: #eb514d;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 56rpx;
+}
+
+.logout-button::after {
+  border: 0;
+}
+
+.page.theme-dark .user-card {
+  border-color: #2a394e;
+  background: #1a2637;
+}
+
+.page.theme-dark .user-avatar {
+  background: #223248;
+}
+
+.page.theme-dark .user-avatar.avatar-placeholder {
+  color: #9cacc0;
+}
+
+.page.theme-dark .user-name {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .user-meta {
+  color: #9cacc0;
+}
+
+.page.theme-dark .logout-button {
+  border-color: #eb514d;
+  color: #eb514d;
 }

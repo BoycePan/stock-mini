@@ -48,7 +48,6 @@ function quoteMetric(item: QuoteLike, index: number): MarketMetric {
     name: item.name,
     value: item.price == null ? '' : formatNumber(item.price),
     change: item.pctChange ?? 0,
-    source: 'backend',
     updatedAt: item.updatedAt,
   }
 }
@@ -118,9 +117,8 @@ export function buildGlobalPage(
   const all = [...usIndices, ...assets, ...industries, ...themes]
   return {
     ...pageStatus('全球', all),
-    updatedLabel: '已更新 · 后端实时行情',
+    updatedLabel: '已更新 · 数据每30秒刷新一次',
     sections,
-    source: 'backend',
   }
 }
 
@@ -140,9 +138,8 @@ export function buildAsiaPage(indices: GlobalIndex[]): MarketPageData {
   const all = indices.filter((item) => asiaMarkets.includes(item.market))
   return {
     ...pageStatus('亚太', all),
-    updatedLabel: '已更新 · 后端实时行情',
+    updatedLabel: '已更新 · 数据每30秒刷新一次',
     sections,
-    source: 'backend',
   }
 }
 
@@ -170,8 +167,7 @@ export function buildMetalsPage(assets: GlobalAsset[]): MarketPageData {
 
   return {
     ...pageStatus('有色', assets),
-    updatedLabel: '已更新 · 后端实时行情',
+    updatedLabel: '已更新 · 数据每30秒刷新一次',
     sections,
-    source: 'backend',
   }
 }

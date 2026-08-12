@@ -1,8 +1,9 @@
 import { sectorApi } from '../../api/sector'
+import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
-import { getTheme, type ThemeMode } from '../../utils/storage'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
 import { formatChange } from '../../utils/formatter'
+import { bindTheme, unbindTheme } from '../../utils/theme'
 
 const MEMBER_QUOTE_LIMIT = 20
 
@@ -16,7 +17,7 @@ interface MemberView {
 
 Page({
   data: {
-    theme: getTheme() as ThemeMode,
+    theme: rootStore.settings.theme,
     loading: true,
     title: '板块详情',
     code: '',
@@ -29,15 +30,13 @@ Page({
     error: '',
   },
   async onLoad(options: Record<string, string | undefined>) {
+    bindTheme(this)
     this.setData({
       code: options.code || '',
       cid: Number(options.cid || 0),
       title: options.name || '板块详情',
     })
     await this.loadData()
-  },
-  onShow() {
-    this.setData({ theme: getTheme() })
   },
   async onPullDownRefresh() {
     try {
@@ -97,6 +96,9 @@ Page({
     const board = this.data.boards[index]
     if (!board || board.plate_code === this.data.selectedBoard?.plate_code) return
     this.loadKlines(board)
+  },
+  onUnload() {
+    unbindTheme(this)
   },
   onMemberTap(event: WechatMiniprogram.BaseEvent) {
     const index = (event.currentTarget as unknown as { dataset: { index?: number } }).dataset.index

@@ -156,3 +156,8 @@
 .page.theme-dark .member-quote {
   color: #c6d2e0;
 }
+
+.page.theme-dark .error-card button {
+  background: #233046;
+  color: #6fa3ff;
+}
