@@ -2,7 +2,10 @@ package com.guyu.stock.external.yahoo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.guyu.stock.common.fetcher.FetchException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
@@ -15,11 +18,16 @@ import java.util.List;
  */
 public class YahooKlineClient {
 
+    private static final Logger log = LoggerFactory.getLogger(YahooKlineClient.class);
+
     public record KLine(String date, double open, double high, double low, double close, long volume) {}
     public record Quote(String symbol, double price, String currency, String exchange) {}
     public record BatchQuote(String symbol, double price, double prevClose, double pctChange) {}
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** 批量行情单批上限：控制在 sidecar 单次拉取远低于 30s 读超时（实测约 0.2~0.4s/标的，40 只约 8~15s） */
+    private static final int QUOTES_BATCH_SIZE = 40;
 
     private final RestClient restClient;
     private final String baseUrl;
@@ -71,8 +79,23 @@ public class YahooKlineClient {
         }
     }
 
-    /** 批量实时行情（供定时任务刷新快照）；sidecar 返回 [{symbol, price, prev_close, pct_change}] */
+    /** 批量实时行情（供定时任务刷新快照）；sidecar 返回 [{symbol, price, prev_close, pct_change}]。
+     *  拆批拉取：单批 ≤40 只，避免全量一次请求超 30s 读超时/撞雅虎限流；单批失败记日志跳过，不拖垮整轮刷新。 */
     public List<BatchQuote> getQuotes(List<String> symbols) {
+        List<BatchQuote> result = new ArrayList<>();
+        List<List<String>> batches = Lists.partition(symbols, QUOTES_BATCH_SIZE);
+        for (int i = 0; i < batches.size(); i++) {
+            try {
+                result.addAll(getQuotesOneBatch(batches.get(i)));
+            } catch (Exception e) {
+                log.warn("[yahoo] 批量行情第 {}/{} 批拉取失败（{} 只），跳过该批: {}",
+                        i + 1, batches.size(), batches.get(i).size(), e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    private List<BatchQuote> getQuotesOneBatch(List<String> symbols) {
         String url = baseUrl + "/quotes?symbols={symbols}";
         String body = restClient.get().uri(url, String.join(",", symbols)).retrieve().body(String.class);
         try {

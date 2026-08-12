@@ -147,7 +147,7 @@ def _quotes_impl(symbols):
                     closes = df[s, "Close"].dropna()
                 if not closes.empty:
                     price = float(closes.iloc[-1])
-                    prev = float(closes.iloc[-2]) if len(closes) >= 2 else price
+                    prev = float(closes.iloc[-2]) if len(closes) >= 2 else 0.0
         except Exception:
             pass
         if not price:
@@ -161,6 +161,14 @@ def _quotes_impl(symbols):
         if not price:
             # fast_info 兜底仍返回 0/NaN：视为失败，同样跳过
             continue
+        # prev 缺失（如下载只剩当日 bar，历史空洞）：用 fast_info.previous_close 兜底，
+        # 避免把"缺昨收"误算成平盘（pct_change=0 的假象）。
+        if not prev:
+            try:
+                info = yf.Ticker(s, session=_SESSION).fast_info
+                prev = _to_number(getattr(info, "previous_close", 0))
+            except Exception:
+                prev = 0.0
         pct = (price - prev) / prev * 100 if prev and price else 0.0
         result.append({
             "symbol": s,

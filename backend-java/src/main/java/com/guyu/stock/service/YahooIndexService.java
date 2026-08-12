@@ -161,9 +161,14 @@ public class YahooIndexService {
         double prevClose = 0;
         for (int i = 0; i < rows.size(); i++) {
             YahooKlineClient.KLine k = rows.get(i);
+            // 防御：yfinance 偶发返回 NaN（sidecar 已转 0），跳过无效 bar，避免零收盘污染 K 线与涨跌幅链
+            if (k.close() <= 0 || (k.open() == 0 && k.high() == 0 && k.low() == 0)) {
+                log.warn("[yahoo-index] 跳过无效日线 {} date={} close={}", code, k.date(), k.close());
+                continue;
+            }
             LocalDate tradeDate = LocalDate.parse(k.date().substring(0, 10));
             double changeAmt = 0, pctChange = 0, amplitude = 0;
-            if (i > 0 && prevClose != 0) {
+            if (prevClose != 0) {
                 changeAmt = NumUtil.round2(k.close() - prevClose);
                 pctChange = NumUtil.round2((k.close() - prevClose) / prevClose * 100);
                 amplitude = NumUtil.round2((k.high() - k.low()) / prevClose * 100);

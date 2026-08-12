@@ -21,7 +21,7 @@ class TradingHoursTest {
         assertThat(TradingHours.tradingHours("commodity", "global")).isEqualTo("06:00-05:00");
         assertThat(TradingHours.tradingHours("forex", "global")).isEqualTo("05:00-05:00");
         assertThat(TradingHours.tradingHours("index", "us")).isEqualTo("21:30-04:00");
-        assertThat(TradingHours.tradingHours("index", "cn")).isEqualTo("09:30-15:00");
+        assertThat(TradingHours.tradingHours("index", "cn")).isEqualTo("09:30-15:02");
         assertThat(TradingHours.tradingHours("sector", "us")).isEqualTo("21:30-04:00");
     }
 
@@ -49,12 +49,20 @@ class TradingHoursTest {
 
     @Test
     void nonCrossMidnightMarketUsesLocalWeekend() {
-        // A股 09:30-15:00 白天时段，北京时间周末=本地周末
+        // A股 09:30-15:02 白天时段，北京时间周末=本地周末
         assertThat(TradingHours.isTrading("index", "cn", LocalDateTime.of(2026, 8, 14, 10, 0))).isTrue();
         assertThat(TradingHours.isTrading("index", "cn", LocalDateTime.of(2026, 8, 15, 10, 0))).isFalse();
         // 欧洲 15:00-23:30 白天时段同理
         assertThat(TradingHours.isTrading("index", "de", LocalDateTime.of(2026, 8, 14, 16, 0))).isTrue();
         assertThat(TradingHours.isTrading("index", "de", LocalDateTime.of(2026, 8, 16, 16, 0))).isFalse();
+    }
+
+    @Test
+    void cnMarketHasCloseSettleBuffer() {
+        // 15:00 收盘后留 2 分钟结算缓冲（半开区间 [09:30, 15:02)）：15:00/15:01 仍算交易时段，让定时任务补刷收盘集合竞价最终价
+        assertThat(TradingHours.isTrading("index", "cn", LocalDateTime.of(2026, 8, 14, 15, 0))).isTrue();
+        assertThat(TradingHours.isTrading("index", "cn", LocalDateTime.of(2026, 8, 14, 15, 1))).isTrue();
+        assertThat(TradingHours.isTrading("index", "cn", LocalDateTime.of(2026, 8, 14, 15, 3))).isFalse();
     }
 
     @Test

@@ -12,7 +12,7 @@ public final class YahooAsset {
 
     public record Symbol(String code, String name, String market, String category) {}
 
-    /** 大宗商品/期货（17） */
+    /** 大宗商品/期货（15）；锌/铁矿石因雅虎无有效连续合约（chart 接口 401）已移除 */
     public static final List<Symbol> COMMODITIES = List.of(
             // 贵金属
             new Symbol("GC=F", "黄金", "global", "贵金属"),
@@ -22,9 +22,7 @@ public final class YahooAsset {
             // 工业/有色金属
             new Symbol("HG=F", "铜", "global", "有色金属"),
             new Symbol("ALI=F", "铝", "global", "有色金属"),
-            new Symbol("ZNC=F", "锌", "global", "有色金属"),
             new Symbol("LIT", "锂", "global", "有色金属"),
-            new Symbol("TIO=F", "铁矿石", "global", "黑色金属"),
             // 能源
             new Symbol("CL=F", "WTI原油", "global", "能源"),
             new Symbol("BZ=F", "布伦特原油", "global", "能源"),

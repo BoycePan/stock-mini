@@ -45,13 +45,13 @@ class GlobalAssetControllerTest {
 
     @Test
     void fetchByTypeReturnsCounts() throws Exception {
-        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(17);
+        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(15);
 
         mockMvc.perform(get("/api/v1/asset/fetch").param("type", "commodity").param("range", "1mo"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.ok").value(17))
-                .andExpect(jsonPath("$.data.total").value(17));
+                .andExpect(jsonPath("$.data.ok").value(15))
+                .andExpect(jsonPath("$.data.total").value(15));
     }
 
     @Test
