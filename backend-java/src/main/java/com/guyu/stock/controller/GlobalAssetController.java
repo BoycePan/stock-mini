@@ -34,12 +34,13 @@ public class GlobalAssetController {
         this.yahooQuoteService = yahooQuoteService;
     }
 
-    /** 资产列表：stock_info 元数据 + 实时快照点位；type 必传，market 可选过滤 */
+    /** 资产列表：stock_info 元数据 + 实时快照点位；type 必传，market 可选过滤；trading=true 只返回当前开市的资产 */
     @GetMapping("/list")
     public ApiResponse<List<AssetQuote>> list(@RequestParam("type") String type,
-                                              @RequestParam(value = "market", required = false) String market) {
+                                              @RequestParam(value = "market", required = false) String market,
+                                              @RequestParam(value = "trading", required = false) Boolean trading) {
         resolve(type); // 校验 type 合法性
-        return ApiResponse.success(yahooQuoteService.listAssetQuotes(storageType(type), market));
+        return ApiResponse.success(yahooQuoteService.listAssetQuotes(storageType(type), market, trading));
     }
 
     /** 资产 K线：DB 有则查库，无则经 sidecar 拉取落库并返回（带缓存防限流） */

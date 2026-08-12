@@ -120,7 +120,7 @@
 ### 1.2 指数列表
 
 ```
-GET /api/v1/index/list
+GET /api/v1/index/list?trading={trading}
 ```
 
 返回全部指数列表，按 `market` 分组展示，点位来自 `quote_snapshot` 实时快照（每 60s 刷新）。
@@ -129,7 +129,7 @@ GET /api/v1/index/list
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| （无） | — | — | 本接口无入参 |
+| trading | boolean | 否 | 按开市状态过滤：`true`=只返回当前开市，`false`=只返回闭市；不传返回全部 |
 
 **响应参数（Response Parameters）**
 
@@ -281,7 +281,7 @@ GET /api/v1/index/{code}/quote
 ### 2.1 全球板块列表
 
 ```
-GET /api/v1/global-sector/list?market={market}
+GET /api/v1/global-sector/list?market={market}&trading={trading}
 ```
 
 返回板块 ETF 列表，按 `market` + `board`（industry / theme）分组。共 **45 个**：us 行业 9 + us 主题 26 + global 行业 10。
@@ -291,6 +291,7 @@ GET /api/v1/global-sector/list?market={market}
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | market | string | 否 | 按市场过滤：`us` / `global`；不传返回全部 |
+| trading | boolean | 否 | 按开市状态过滤：`true`=只返回当前开市，`false`=只返回闭市；不传返回全部 |
 
 **响应参数（Response Parameters）**
 
@@ -375,7 +376,7 @@ GET /api/v1/global-sector/{code}/quote
 ### 2.4 全球资产列表
 
 ```
-GET /api/v1/asset/list?type={type}&market={market}
+GET /api/v1/asset/list?type={type}&market={market}&trading={trading}
 ```
 
 返回指定类型的全球资产列表（商品 / 外汇 / 加密 / 美债 / 美股个股），按 `type` + `board` 分组。共 **41 个**。
@@ -386,6 +387,7 @@ GET /api/v1/asset/list?type={type}&market={market}
 |------|------|------|------|
 | type | string | 是 | 资产类型，可选 `commodity` / `forex` / `crypto` / `bond` / `stock` |
 | market | string | 否 | 按市场过滤：`global` / `us`；不传返回全部 |
+| trading | boolean | 否 | 按开市状态过滤：`true`=只返回当前开市，`false`=只返回闭市；不传返回全部 |
 
 > 说明：`type=stock` 查询的是美股 / 中概个股（存储 type 为 `us-stock`，与 A 股 `stock` 区分）；`type` 非法或为空时返回 400。
 

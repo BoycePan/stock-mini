@@ -32,10 +32,10 @@ public class IndexController {
         this.yahooQuoteService = yahooQuoteService;
     }
 
-    /** 指数列表：stock_info 元数据 + 实时快照点位（60s 刷新，含 market 分组） */
+    /** 指数列表：stock_info 元数据 + 实时快照点位（60s 刷新，含 market 分组）；trading=true 只返回当前开市的指数 */
     @GetMapping("/list")
-    public ApiResponse<List<IndexQuote>> list() {
-        return ApiResponse.success(yahooQuoteService.listIndexQuotes());
+    public ApiResponse<List<IndexQuote>> list(@RequestParam(value = "trading", required = false) Boolean trading) {
+        return ApiResponse.success(yahooQuoteService.listIndexQuotes(trading));
     }
 
     /** 指数 K线：DB 有则查库，无则经 sidecar 拉取落库并返回（带缓存防限流） */
