@@ -1,0 +1,136 @@
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 24rpx 20rpx;
+}
+
+.search-input {
+  flex: 1;
+  height: 72rpx;
+  padding: 0 28rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 36rpx;
+  background: #ffffff;
+  color: #17191d;
+  font-size: 27rpx;
+  box-shadow: 0 8rpx 20rpx rgba(64, 86, 116, 0.06);
+}
+
+.search-placeholder {
+  color: #99a6b7;
+}
+
+.search-button {
+  height: 72rpx;
+  padding: 0 30rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(135deg, #4c8dff 0%, #3567d6 100%);
+  color: #ffffff;
+  font-size: 26rpx;
+  line-height: 72rpx;
+}
+
+.content-scroll {
+  flex: 1;
+  padding: 0 24rpx;
+}
+
+.result-list {
+  overflow: hidden;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f0f4f9;
+}
+
+.result-row:last-child {
+  border-bottom: 0;
+}
+
+.result-info {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
+}
+
+.result-name {
+  color: #17191d;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.result-code {
+  color: #99a6b7;
+  font-size: 23rpx;
+}
+
+.result-meta {
+  max-width: 240rpx;
+  overflow: hidden;
+  color: #718096;
+  font-size: 23rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  margin-top: 120rpx;
+  color: #99a6b7;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 24rpx;
+  padding: 60rpx 24rpx;
+  color: #718096;
+  font-size: 27rpx;
+}
+
+.error-card button {
+  margin-top: 24rpx;
+  border-radius: 34rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 25rpx;
+}
+
+/* 深色主题 */
+.page.theme-dark .search-input {
+  border-color: #2a394e;
+  background: #1c2535;
+  color: #f5f7fb;
+}
+
+.page.theme-dark .result-list {
+  border-color: #2a394e;
+  background: #1c2535;
+  box-shadow: none;
+}
+
+.page.theme-dark .result-row {
+  border-bottom-color: #273349;
+}
+
+.page.theme-dark .result-name {
+  color: #f5f7fb;
+}

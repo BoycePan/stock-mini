@@ -1,8 +1,18 @@
 import { makeAutoObservable } from 'mobx-miniprogram'
-import { getTheme, setTheme, type ThemeMode } from '../utils/storage'
+import {
+  getApiBaseUrl,
+  getMockFallback,
+  getTheme,
+  setApiBaseUrl,
+  setMockFallback,
+  setTheme,
+  type ThemeMode,
+} from '../utils/storage'
 
 export class SettingsStore {
   theme: ThemeMode = getTheme()
+  apiBaseUrl = getApiBaseUrl()
+  useMockFallback = getMockFallback()
 
   constructor() {
     makeAutoObservable(this)
@@ -21,8 +31,23 @@ export class SettingsStore {
     })
   }
 
+  saveApiBaseUrl(url: string) {
+    this.apiBaseUrl = url.trim().replace(/\/$/, '')
+    setApiBaseUrl(this.apiBaseUrl)
+  }
+
+  setMockFallback(enabled: boolean) {
+    this.useMockFallback = enabled
+    setMockFallback(enabled)
+  }
+
   reset() {
     this.theme = 'light'
+    this.apiBaseUrl = ''
+    this.useMockFallback = true
+    setTheme('light')
+    setApiBaseUrl('')
+    setMockFallback(true)
     wx.setNavigationBarColor({
       frontColor: '#17191D',
       backgroundColor: '#F3F6FA',

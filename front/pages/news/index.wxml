@@ -1,21 +1,28 @@
 <view class="page theme-{{theme}}">
   <app-header title="{{title}}" showShare="{{false}}"></app-header>
-  <scroll-view scroll-y class="content-scroll">
+  <scroll-view scroll-y class="content-scroll" bindscrolltolower="onScrollLower" lower-threshold="120">
     <view wx:if="{{loading}}" class="loading">加载中…</view>
-    <view wx:elif="{{error}}" class="error">{{error}}</view>
+    <view wx:elif="{{error}}" class="error">
+      <text>{{error}}</text>
+      <button class="retry-button" bindtap="onRetry">重新加载</button>
+    </view>
     <block wx:else>
       <view wx:if="{{items.length}}" class="news-list">
         <view
           wx:for="{{items}}"
-          wx:key="title"
+          wx:key="url"
           class="news-item"
-          data-url="{{item.url}}"
+          data-index="{{index}}"
           bindtap="onItemTap"
         >
           <text class="news-title">{{item.title}}</text>
           <text class="news-intro">{{item.summary}}</text>
           <text class="news-meta">{{item.source}} {{item.time}}</text>
         </view>
+        <view class="load-more" bindtap="onLoadMore" wx:if="{{hasMore}}">
+          {{loadingMore ? '加载中…' : '加载更多'}}
+        </view>
+        <view class="load-more end" wx:else>没有更多新闻</view>
       </view>
       <empty-state wx:else title="暂无新闻"></empty-state>
     </block>

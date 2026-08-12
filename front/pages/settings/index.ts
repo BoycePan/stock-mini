@@ -5,6 +5,8 @@ Page({
   data: {
     activeTab: 'settings',
     theme: 'light' as ThemeMode,
+    apiBaseUrl: '',
+    mockEnabled: true,
     loggedIn: false,
     userName: '未登录',
   },
@@ -18,6 +20,8 @@ Page({
     const { settings, auth } = rootStore
     this.setData({
       theme: settings.theme,
+      apiBaseUrl: settings.apiBaseUrl,
+      mockEnabled: settings.useMockFallback,
       loggedIn: auth.isLoggedIn,
       userName: auth.user?.nickname || (auth.isLoggedIn ? '已登录用户' : '未登录'),
     })
@@ -25,6 +29,18 @@ Page({
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
     rootStore.settings.setTheme(value as ThemeMode)
+    this.syncData()
+  },
+  onApiInput(event: WechatMiniprogram.BaseEvent & { detail: { value: string } }) {
+    this.setData({ apiBaseUrl: event.detail.value })
+  },
+  onSaveApi() {
+    rootStore.settings.saveApiBaseUrl(this.data.apiBaseUrl)
+    wx.showToast({ title: 'API 地址已保存', icon: 'success' })
+    this.syncData()
+  },
+  onToggleMock(event: WechatMiniprogram.BaseEvent & { detail: { value: boolean } }) {
+    rootStore.settings.setMockFallback(event.detail.value)
     this.syncData()
   },
   async onLogin() {
@@ -37,7 +53,6 @@ Page({
     wx.showLoading({ title: '登录中' })
     try {
       await rootStore.auth.login()
-      console.log('🏷️ index.ts ~ 56 => ', 123)
       wx.showToast({ title: '登录成功', icon: 'success' })
       this.syncData()
     } catch {
@@ -54,7 +69,7 @@ Page({
   onClearStorage() {
     wx.showModal({
       title: '清除本地数据',
-      content: '将清除登录状态和主题设置，确定继续吗？',
+      content: '将清除登录状态、主题和 API 配置，确定继续吗？',
       success: (result) => {
         if (!result.confirm) return
         wx.clearStorageSync()

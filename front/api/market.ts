@@ -1,4 +1,5 @@
 import type { MarketPageData } from '../types/market'
+import { getMockFallback } from '../utils/storage'
 import { getAsiaMarketMock } from '../mocks/asia-market'
 import { getAiMarketMock } from '../mocks/ai-market'
 import { getGlobalMarketMock } from '../mocks/global-market'
@@ -10,14 +11,15 @@ import { buildAsiaPage, buildGlobalPage, buildMetalsPage } from '../utils/global
 
 export type MarketPageKey = 'global' | 'asia' | 'metals' | 'ai'
 
-/** 后端优先：接口可用则用实时数据，失败/无数据时回退到 mock，保证页面可浏览 */
+/** 后端优先：接口可用则用实时数据；失败/无数据时仅在允许 mock fallback 时回退到 mock */
 async function backendFirst(
   load: () => Promise<MarketPageData>,
   fallback: () => MarketPageData,
 ): Promise<MarketPageData> {
   try {
     return await load()
-  } catch {
+  } catch (error) {
+    if (!getMockFallback()) throw error
     return fallback()
   }
 }

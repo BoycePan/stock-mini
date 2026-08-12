@@ -166,3 +166,23 @@
 .bottom-space {
   height: 40rpx;
 }
+
+/* 加载更多 */
+.load-more {
+  padding: 22rpx 0 6rpx;
+  color: #4278ed;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.load-more.end {
+  color: #99a6b7;
+}
+
+.page.theme-dark .load-more {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .load-more.end {
+  color: #5b6a7f;
+}

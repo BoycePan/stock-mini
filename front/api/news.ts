@@ -22,10 +22,10 @@ export const newsApi = {
     })
     return unwrapNewsItems(response)
   },
-  async getAnnouncements(code: string, page = 1) {
+  async getAnnouncements(code: string, page = 1, size = 20) {
     const response = await request<AnnouncementListResponse>({
       path: `/api/v1/stock/${code}/announcements`,
-      query: { page },
+      query: { page, size },
     })
     return unwrapAnnouncementItems(response)
   },

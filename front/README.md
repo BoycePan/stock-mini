@@ -39,6 +39,9 @@ pnpm --filter market-magic-mini lint
 - `/pages/metals/index`：有色
 - `/pages/ai/index`：AI
 - `/pages/settings/index`：设置
-- `/pages/stock-detail/index?code=000001`：股票详情
-- `/pages/sector-detail/index?cid=300382`：板块详情
-- `/pages/news/index`：新闻
+- `/pages/search/index`：股票搜索（四个市场页头部入口）
+- `/pages/stock-detail/index?code=000001`：股票详情（行情 / K线图 / 新闻 / 公告，支持分页与下拉刷新）
+- `/pages/sector-detail/index?cid=300382`：板块详情（板块K线图 / 成分股行情）
+- `/pages/news/index`：新闻（支持分页与下拉刷新）
+- `/pages/news-detail/index`：新闻详情
+- `/pages/legal/index?type=data-notice`：协议与说明

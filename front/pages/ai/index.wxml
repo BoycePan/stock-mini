@@ -1,5 +1,5 @@
 <view class="page theme-{{theme}} ai-page">
-  <app-header showShare="{{false}}"></app-header>
+  <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
   <view class="page-status">
     <text class="status-dot"></text>
     <text>{{statusLabel}}</text>

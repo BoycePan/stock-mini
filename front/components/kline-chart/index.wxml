@@ -1,0 +1,3 @@
+<view class="kline-chart">
+  <canvas type="2d" id="kline-canvas" class="kline-canvas"></canvas>
+</view>

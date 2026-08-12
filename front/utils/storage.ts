@@ -1,7 +1,9 @@
 const TOKEN_KEY = 'market_magic_token'
 const USER_KEY = 'market_magic_user'
 const THEME_KEY = 'market_magic_theme'
+const API_BASE_URL_KEY = 'market_magic_api_base_url'
 const NEWS_DETAIL_KEY = 'market_magic_news_detail'
+const MOCK_FALLBACK_KEY = 'market_magic_mock_fallback'
 
 export type ThemeMode = 'light' | 'dark'
 
@@ -52,6 +54,22 @@ export function setTheme(theme: ThemeMode): void {
   }
 }
 
+export function getApiBaseUrl(): string {
+  return read(API_BASE_URL_KEY, '')
+}
+
+export function setApiBaseUrl(url: string): void {
+  wx.setStorageSync(API_BASE_URL_KEY, url.trim().replace(/\/$/, ''))
+}
+
+export function getMockFallback(): boolean {
+  return read(MOCK_FALLBACK_KEY, true)
+}
+
+export function setMockFallback(enabled: boolean): void {
+  wx.setStorageSync(MOCK_FALLBACK_KEY, enabled)
+}
+
 export interface NewsDetail {
   title: string
   summary: string
@@ -72,4 +90,6 @@ export function clearAppStorage(): void {
   clearToken()
   clearUser()
   wx.removeStorageSync(THEME_KEY)
+  wx.removeStorageSync(API_BASE_URL_KEY)
+  wx.removeStorageSync(MOCK_FALLBACK_KEY)
 }

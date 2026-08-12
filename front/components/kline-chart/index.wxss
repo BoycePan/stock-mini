@@ -1,0 +1,8 @@
+.kline-chart {
+  width: 100%;
+}
+
+.kline-canvas {
+  width: 100%;
+  height: 400rpx;
+}

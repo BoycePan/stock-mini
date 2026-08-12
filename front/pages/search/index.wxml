@@ -1,0 +1,44 @@
+<view class="page theme-{{theme}}">
+  <app-header title="股票搜索" showShare="{{false}}" showBack="{{true}}"></app-header>
+  <view class="search-bar">
+    <input
+      class="search-input"
+      placeholder="输入股票代码或名称"
+      placeholder-class="search-placeholder"
+      value="{{keyword}}"
+      confirm-type="search"
+      focus="{{true}}"
+      bindinput="onKeywordInput"
+      bindconfirm="onSearch"
+    />
+    <button class="search-button" bindtap="onSearch">搜索</button>
+  </view>
+  <scroll-view scroll-y class="content-scroll">
+    <loading-state wx:if="{{loading}}"></loading-state>
+    <view wx:elif="{{error}}" class="error-card">
+      <text>{{error}}</text>
+      <button bindtap="onSearch">重新搜索</button>
+    </view>
+    <empty-state
+      wx:elif="{{searched && !results.length}}"
+      title="未找到相关股票"
+      description="换个关键词试试"
+    ></empty-state>
+    <view wx:elif="{{results.length}}" class="result-list">
+      <view
+        class="result-row"
+        wx:for="{{results}}"
+        wx:key="code"
+        data-index="{{index}}"
+        bindtap="onResultTap"
+      >
+        <view class="result-info">
+          <text class="result-name">{{item.name}}</text>
+          <text class="result-code">{{item.code}}</text>
+        </view>
+        <text class="result-meta">{{item.industry || item.market}}</text>
+      </view>
+    </view>
+    <view wx:elif="{{!searched}}" class="hint">输入股票代码或名称搜索，如 000001 / 贵州茅台</view>
+  </scroll-view>
+</view>

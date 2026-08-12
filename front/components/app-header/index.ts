@@ -1,8 +1,9 @@
 Component({
   properties: {
-    title: { type: String, value: '市场魔方助手' },
+    title: { type: String, value: '全球市场追踪' },
     showShare: { type: Boolean, value: true },
     showBack: { type: Boolean, value: false },
+    showSearch: { type: Boolean, value: false },
   },
   lifetimes: {
     attached() {
@@ -18,6 +19,9 @@ Component({
   methods: {
     onShare() {
       this.triggerEvent('share')
+    },
+    onSearch() {
+      wx.navigateTo({ url: '/pages/search/index' })
     },
     onBack() {
       const pages = getCurrentPages()

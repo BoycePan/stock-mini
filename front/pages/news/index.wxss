@@ -56,3 +56,32 @@
   text-align: center;
   box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
 }
+
+.retry-button {
+  margin-top: 20rpx;
+  border-radius: 34rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 25rpx;
+  line-height: 2.4;
+  padding: 0 36rpx;
+}
+
+.load-more {
+  padding: 26rpx 0 6rpx;
+  color: #4278ed;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.load-more.end {
+  color: #99a6b7;
+}
+
+.page.theme-dark .load-more {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .load-more.end {
+  color: #5b6a7f;
+}

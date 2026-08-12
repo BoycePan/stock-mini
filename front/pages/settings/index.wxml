@@ -82,6 +82,20 @@
       </view>
     </view>
 
+    <!-- 数据环境配置 -->
+    <view class="setting-section config-section">
+      <text class="setting-heading">数据环境</text>
+      <view class="config-row">
+        <text>API 地址</text>
+        <input value="{{ apiBaseUrl }}" bindinput="onApiInput" placeholder="使用环境默认地址" />
+      </view>
+      <button class="outline-button" bindtap="onSaveApi">保存 API 地址</button>
+      <view class="config-row">
+        <text>允许 Mock fallback</text>
+        <switch checked="{{ mockEnabled }}" bindchange="onToggleMock" color="#FF625F" />
+      </view>
+    </view>
+
     <!-- 账号与数据 -->
     <view class="setting-section">
       <text class="setting-heading">账号与数据</text>

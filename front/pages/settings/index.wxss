@@ -263,3 +263,37 @@
 .service-item-hover {
   opacity: 0.72;
 }
+
+/* 数据环境配置 */
+.config-section .config-row {
+  padding: 0 6rpx;
+}
+
+.config-row switch {
+  margin-left: auto;
+  transform: scale(0.85);
+}
+
+.outline-button {
+  margin-top: 16rpx;
+  border: 1rpx solid #dce5ef;
+  border-radius: 34rpx;
+  background: #f9fbfd;
+  color: #4278ed;
+  font-size: 24rpx;
+}
+
+.page.theme-dark .config-section .config-row {
+  border-bottom-color: #273349;
+  color: #c6d2e0;
+}
+
+.page.theme-dark .config-row input {
+  color: #8a97a8;
+}
+
+.page.theme-dark .outline-button {
+  border-color: #2a394e;
+  background: #1c2535;
+  color: #6fa3ff;
+}
