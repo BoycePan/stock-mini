@@ -1,6 +1,6 @@
 import { marketApi } from '../../api/market'
-import { getTheme, type ThemeMode } from '../../utils/storage'
-import type { MarketPageData, MarketSection } from '../../types/market'
+import { getTheme, saveNewsDetail, type ThemeMode } from '../../utils/storage'
+import type { MarketMetric, MarketPageData, MarketSection } from '../../types/market'
 import { metricViewModel } from '../../utils/market'
 
 Page({
@@ -47,6 +47,20 @@ Page({
         ...section,
         metrics: section.metrics.map(metricViewModel),
       })),
+    })
+  },
+  onMetricTap(event: WechatMiniprogram.CustomEvent<{ metric: MarketMetric }>) {
+    const detail = event.detail.metric.detail
+    if (!detail?.url || !detail.title) return
+    saveNewsDetail({
+      title: detail.title,
+      summary: detail.summary ?? '',
+      url: detail.url,
+      source: detail.source ?? '',
+      time: detail.time ?? '',
+    })
+    wx.navigateTo({
+      url: `/pages/news-detail/index?title=${encodeURIComponent(detail.title)}&url=${encodeURIComponent(detail.url)}`,
     })
   },
   onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {

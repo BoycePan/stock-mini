@@ -1,5 +1,5 @@
 <view class="page theme-{{theme}}">
-  <app-header title="股票详情" showShare="{{true}}"></app-header>
+  <app-header title="股票详情" showShare="{{true}}" showBack="{{true}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
     <loading-state wx:if="{{loading}}"></loading-state>
     <view wx:elif="{{error}}" class="error-card">

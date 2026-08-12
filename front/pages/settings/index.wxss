@@ -1,5 +1,6 @@
 .content-scroll {
-  height: calc(100vh - 112rpx);
+  flex: 1;
+  min-height: 0;
   padding: 12rpx 24rpx 0;
 }
 
@@ -197,7 +198,6 @@
   color: #8998aa;
 }
 
-.outline-button,
 .danger-button {
   margin-top: 16rpx;
   border: 1rpx solid #dce5ef;
@@ -258,4 +258,8 @@
 
 .bottom-space {
   height: 150rpx;
+}
+
+.service-item-hover {
+  opacity: 0.72;
 }

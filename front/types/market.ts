@@ -10,6 +10,8 @@ export interface MarketMetric {
   icon?: string
   source?: MarketDataSource
   updatedAt?: string
+  /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
+  detail?: Record<string, string | undefined>
 }
 
 export interface MarketSection {

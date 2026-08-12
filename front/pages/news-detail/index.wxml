@@ -1,0 +1,22 @@
+<view class="page theme-{{theme}}">
+  <app-header title="新闻详情" showShare="{{true}}" showBack="{{true}}" bind:share="onShare"></app-header>
+  <scroll-view scroll-y class="content-scroll">
+    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <view wx:elif="{{error && !news.title}}" class="empty-wrap">
+      <empty-state title="新闻详情缺失"></empty-state>
+    </view>
+    <block wx:else>
+      <view class="detail-card" wx:if="{{news}}">
+        <text class="detail-title">{{news.title}}</text>
+        <text class="detail-meta" wx:if="{{news.source || news.time}}">
+          <text wx:if="{{news.source}}">{{news.source}}</text>
+          <text wx:if="{{news.source && news.time}}"> · </text>
+          <text wx:if="{{news.time}}">{{news.time}}</text>
+        </text>
+        <text class="detail-summary" wx:if="{{news.summary}}">{{news.summary}}</text>
+        <button class="detail-link" bindtap="onCopyLink">复制原文链接</button>
+      </view>
+    </block>
+    <view class="bottom-space"></view>
+  </scroll-view>
+</view>

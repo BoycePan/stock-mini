@@ -1,4 +1,5 @@
 .page-status {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   margin: 4rpx 0 8rpx 32rpx;
@@ -27,7 +28,8 @@
 }
 
 .content-scroll {
-  height: calc(100vh - 186rpx);
+  flex: 1;
+  min-height: 0;
 }
 
 .bottom-space {

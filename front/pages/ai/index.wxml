@@ -12,7 +12,7 @@
       <button bindtap="loadData">重新加载</button>
     </view>
     <block wx:else>
-      <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}"></section-card>
+      <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}" bind:metrictap="onMetricTap"></section-card>
       <view class="ai-hint">AI 数据由后端股票、板块、新闻能力组合，缺失指标使用 mock fallback。</view>
     </block>
     <view class="bottom-space"></view>

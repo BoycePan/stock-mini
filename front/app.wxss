@@ -19,7 +19,10 @@ button::after {
 }
 
 .page {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(180deg, #f5f8fc 0%, #edf2f7 52%, #e9eff5 100%);
   color: #142033;
 }
@@ -36,6 +39,12 @@ button::after {
   background: rgba(24, 34, 49, 0.96);
   border-color: #2a394e;
   color: #f5f7fb;
+}
+
+.page.theme-dark .back-button {
+  border-color: #2a394e;
+  background: rgba(24, 34, 49, 0.96);
+  color: #e8eef7;
 }
 
 .page.theme-dark .brand-mark {
@@ -121,7 +130,6 @@ button::after {
   color: #d9a4a5;
 }
 
-.page.theme-dark .outline-button,
 .page.theme-dark .danger-button,
 .page.theme-dark .theme-option.selected {
   border-color: #435875;

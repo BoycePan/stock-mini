@@ -1,7 +1,7 @@
 const TOKEN_KEY = 'market_magic_token'
 const USER_KEY = 'market_magic_user'
 const THEME_KEY = 'market_magic_theme'
-const API_BASE_URL_KEY = 'market_magic_api_base_url'
+const NEWS_DETAIL_KEY = 'market_magic_news_detail'
 
 export type ThemeMode = 'light' | 'dark'
 
@@ -52,17 +52,24 @@ export function setTheme(theme: ThemeMode): void {
   }
 }
 
-export function getApiBaseUrl(): string {
-  return read(API_BASE_URL_KEY, '')
+export interface NewsDetail {
+  title: string
+  summary: string
+  url: string
+  source: string
+  time: string
 }
 
-export function setApiBaseUrl(url: string): void {
-  wx.setStorageSync(API_BASE_URL_KEY, url.trim().replace(/\/$/, ''))
+export function saveNewsDetail(detail: NewsDetail): void {
+  wx.setStorageSync(NEWS_DETAIL_KEY, detail)
+}
+
+export function getNewsDetail(): NewsDetail | null {
+  return read<NewsDetail | null>(NEWS_DETAIL_KEY, null)
 }
 
 export function clearAppStorage(): void {
   clearToken()
   clearUser()
   wx.removeStorageSync(THEME_KEY)
-  wx.removeStorageSync(API_BASE_URL_KEY)
 }

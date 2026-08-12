@@ -1,5 +1,9 @@
 <view class="header" style="{{headerStyle}}">
   <view class="brand">
+    <view wx:if="{{showBack}}" class="back-button" bindtap="onBack" hover-class="back-button-hover">
+      <text class="back-arrow">‹</text>
+      <text class="back-label">返回</text>
+    </view>
     <view class="brand-mark">◎</view>
     <text class="brand-title">{{title}}</text>
   </view>

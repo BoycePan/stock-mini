@@ -6,7 +6,7 @@
     <view wx:elif="{{error}}" class="error-card"><text>{{error}}</text><button bindtap="loadData">重新加载</button></view>
     <block wx:else>
       <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}"></section-card>
-      <view class="source-note">数据来源：{{sourceLabel}} · 部分全球指标等待后端数据源接入</view>
+      <view class="source-note">数据来源：{{sourceLabel}}</view>
     </block>
     <view class="bottom-space"></view>
   </scroll-view>

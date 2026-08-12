@@ -1,5 +1,5 @@
 <view class="page theme-{{theme}}">
-  <app-header title="{{title}}" showShare="{{false}}"></app-header>
+  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
     <loading-state wx:if="{{loading}}"></loading-state>
     <view wx:elif="{{error}}" class="error-card">{{error}}</view>
