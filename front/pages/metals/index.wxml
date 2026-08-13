@@ -1,6 +1,6 @@
 <view class="page theme-{{theme}} metals-page">
-  <app-header showShare="{{false}}"></app-header>
-  <view class="page-status">
+  <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
+  <view class="page-status {{statusTone}}">
     <text class="status-dot"></text>
     <text>{{statusLabel}}</text>
     <text class="updated">{{updatedLabel}}</text>
@@ -9,7 +9,7 @@
     <loading-state wx:if="{{loading}}"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
-      <button bindtap="loadData">重新加载</button>
+      <button bindtap="onRetry">重新加载</button>
     </view>
     <block wx:else>
       <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}"></section-card>

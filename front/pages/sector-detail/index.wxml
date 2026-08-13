@@ -1,23 +1,54 @@
 <view class="page theme-{{theme}}">
-  <app-header title="{{title}}" showShare="{{false}}"></app-header>
+  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
     <loading-state wx:if="{{loading}}"></loading-state>
-    <view wx:elif="{{error}}" class="error-card">{{error}}</view>
+    <view wx:elif="{{error}}" class="error-card">
+      <text>{{error}}</text>
+      <button bindtap="loadData">重新加载</button>
+    </view>
     <block wx:else>
       <view class="panel">
         <view class="panel-title"><text>热门板块</text></view>
-        <view class="board-row" wx:for="{{boards}}" wx:key="plate_code">
+        <view
+          class="board-row {{selectedBoard && selectedBoard.plate_code === item.plate_code ? 'selected' : ''}}"
+          wx:for="{{boards}}"
+          wx:key="plate_code"
+          data-index="{{index}}"
+          bindtap="onBoardTap"
+        >
           <text>{{item.plate_name}}</text>
-          <text>{{item.plate_code}}</text>
+          <text class="board-code">{{item.plate_code}}</text>
         </view>
       </view>
+
+      <view class="panel" wx:if="{{selectedBoard}}">
+        <view class="panel-title"><text>{{selectedBoard.plate_name}} · K线</text></view>
+        <kline-chart klines="{{klines}}" theme="{{theme}}"></kline-chart>
+      </view>
+
       <view class="panel">
         <view class="panel-title"><text>成分股</text></view>
-        <block wx:if="{{members.length}}">
-          <view class="member-row" wx:for="{{members}}" wx:key="*this">
-            <text>{{item}}</text>
+        <view wx:if="{{members.length}}">
+          <view
+            class="member-row"
+            wx:for="{{members}}"
+            wx:key="code"
+            data-index="{{index}}"
+            bindtap="onMemberTap"
+          >
+            <view class="member-info">
+              <text class="member-name">{{item.name}}</text>
+              <text class="member-code">{{item.code}}</text>
+            </view>
+            <view class="member-quote">
+              <text>{{item.priceText}}</text>
+              <text class="{{item.changeClass}}">{{item.changeText}}</text>
+            </view>
           </view>
-        </block>
+          <view class="member-note" wx:if="{{memberTotal > members.length}}">
+            仅展示前 {{members.length}} 只成分股行情
+          </view>
+        </view>
         <empty-state wx:else title="暂无成分股" description="请检查板块 cid 是否有效"></empty-state>
       </view>
     </block>

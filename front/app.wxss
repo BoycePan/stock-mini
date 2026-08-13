@@ -19,7 +19,10 @@ button::after {
 }
 
 .page {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(180deg, #f5f8fc 0%, #edf2f7 52%, #e9eff5 100%);
   color: #142033;
 }
@@ -36,6 +39,12 @@ button::after {
   background: rgba(24, 34, 49, 0.96);
   border-color: #2a394e;
   color: #f5f7fb;
+}
+
+.page.theme-dark .back-button {
+  border-color: #2a394e;
+  background: rgba(24, 34, 49, 0.96);
+  color: #e8eef7;
 }
 
 .page.theme-dark .brand-mark {
@@ -75,7 +84,6 @@ button::after {
 
 .page.theme-dark .metric-card,
 .page.theme-dark .theme-switch,
-.page.theme-dark .config-row,
 .page.theme-dark .service-item,
 .page.theme-dark .market-card {
   border-color: #34465e;
@@ -87,7 +95,6 @@ button::after {
 .page.theme-dark .quote-grid text:last-child,
 .page.theme-dark .member-row,
 .page.theme-dark .board-row,
-.page.theme-dark .config-row input,
 .page.theme-dark .service-item {
   color: #e5ebf4;
 }
@@ -98,7 +105,6 @@ button::after {
 .page.theme-dark .news-time,
 .page.theme-dark .news-meta,
 .page.theme-dark .quote-grid text:first-child,
-.page.theme-dark .config-value,
 .page.theme-dark .service-sub,
 .page.theme-dark .follow-subtitle,
 .page.theme-dark .follow-tip,
@@ -121,8 +127,6 @@ button::after {
   color: #d9a4a5;
 }
 
-.page.theme-dark .outline-button,
-.page.theme-dark .danger-button,
 .page.theme-dark .theme-option.selected {
   border-color: #435875;
   background: #25364d;

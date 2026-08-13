@@ -1,4 +1,5 @@
 .page-status {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   margin: 4rpx 0 8rpx 32rpx;
@@ -11,6 +12,13 @@
   font-weight: 600;
 }
 
+/* 休市（非交易时段）状态：灰色 */
+.page-status.rest {
+  border-color: #dce5f1;
+  background: #f2f6fb;
+  color: #617188;
+}
+
 .status-dot {
   width: 13rpx;
   height: 13rpx;
@@ -20,6 +28,11 @@
   box-shadow: 0 0 0 5rpx rgba(36, 184, 107, 0.12);
 }
 
+.page-status.rest .status-dot {
+  background: #a5b0bf;
+  box-shadow: 0 0 0 5rpx rgba(165, 176, 191, 0.14);
+}
+
 .updated {
   margin-left: 16rpx;
   color: #8a98aa;
@@ -27,9 +40,33 @@
 }
 
 .content-scroll {
-  height: calc(100vh - 186rpx);
+  flex: 1;
+  min-height: 0;
 }
 
 .bottom-space {
   height: 150rpx;
+}
+
+/* 深色主题 */
+.page.theme-dark .page-status {
+  border-color: #2b4a3c;
+  background: #1e3a2e;
+  color: #6fd79a;
+}
+
+.page.theme-dark .page-status.rest {
+  border-color: #2b3d57;
+  background: #1d2b40;
+  color: #9db4d4;
+}
+
+.page.theme-dark .status-dot {
+  background: #34d37d;
+  box-shadow: 0 0 0 5rpx rgba(52, 211, 125, 0.16);
+}
+
+.page.theme-dark .page-status.rest .status-dot {
+  background: #7e93b0;
+  box-shadow: 0 0 0 5rpx rgba(126, 147, 176, 0.18);
 }

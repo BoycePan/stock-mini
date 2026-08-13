@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "app-header": "/components/app-header/index",
+    "empty-state": "/components/empty-state/index"
+  },
+  "enablePullDownRefresh": false
+}

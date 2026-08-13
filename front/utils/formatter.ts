@@ -7,6 +7,11 @@ export function formatNumber(value: number, digits = 2): string {
   return Number.isFinite(value) ? value.toFixed(digits) : '--'
 }
 
+export function formatWan(value: number): string {
+  if (!Number.isFinite(value)) return '--'
+  return `${(value / 10000).toFixed(2)}万`
+}
+
 export function formatVolume(value: number): string {
   if (!Number.isFinite(value)) return '--'
   if (value >= 100000000) return `${(value / 100000000).toFixed(2)}亿`

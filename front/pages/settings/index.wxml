@@ -1,6 +1,30 @@
-<view class="page theme-{{theme}} settings-page">
-  <app-header showShare="{{false}}"></app-header>
+<view class="page theme-{{ theme }} settings-page">
+  <app-header showShare="{{ false }}"></app-header>
   <scroll-view scroll-y class="content-scroll">
+    <!-- 用户信息卡片（来自全局 auth store，登录/登出自动同步） -->
+    <view class="user-card">
+      <block wx:if="{{ isLoggedIn && user }}">
+        <image
+          wx:if="{{ user.avatar_url }}"
+          class="user-avatar"
+          src="{{ user.avatar_url }}"
+          mode="aspectFill"
+        />
+        <view wx:else class="user-avatar avatar-placeholder">👤</view>
+        <view class="user-info">
+          <text class="user-name">{{ user.nickname || '微信用户' }}</text>
+          <text class="user-meta">已登录 · 用户ID {{ user.id }}</text>
+        </view>
+        <!-- <button class="logout-button" size="mini" bindtap="onLogout">退出登录</button> -->
+      </block>
+      <view wx:else class="user-guest">
+        <view class="user-avatar avatar-placeholder">👤</view>
+        <view class="user-info">
+          <text class="user-name">未登录</text>
+          <text class="user-meta">打开行情页时将自动登录</text>
+        </view>
+      </view>
+    </view>
 
     <!-- 主题切换卡片 -->
     <view class="theme-card">
@@ -13,47 +37,60 @@
       </view>
       <view class="theme-switch">
         <text
-          class="theme-option {{theme === 'light' ? 'selected' : ''}}"
+          class="theme-option {{ theme === 'light' ? 'selected' : '' }}"
           data-value="light"
           bindtap="onThemeChange"
-        >☼ 浅色</text>
+          >☼ 浅色</text
+        >
         <text
-          class="theme-option {{theme === 'dark' ? 'selected' : ''}}"
+          class="theme-option {{ theme === 'dark' ? 'selected' : '' }}"
           data-value="dark"
           bindtap="onThemeChange"
-        >☾ 深色</text>
+          >☾ 深色</text
+        >
       </view>
-    </view>
-
-    <!-- 推广卡片 -->
-    <view class="promo-card">
-      <view>
-        <text class="promo-title">看美股基金估值 盘前预估查询</text>
-        <text class="promo-subtitle">美股综合、板块、估值参考</text>
-      </view>
-      <button class="promo-button">打开</button>
     </view>
 
     <!-- 更多服务 -->
     <view class="setting-section">
       <text class="setting-heading">更多服务</text>
       <view class="service-grid">
-        <view class="service-item">
+        <view
+          class="service-item"
+          hover-class="service-item-hover"
+          data-key="data-notice"
+          bindtap="onServiceTap"
+        >
           <text class="service-icon blue">▣</text>
           <text>数据说明</text>
           <text class="service-sub">了解数据来源</text>
         </view>
-        <view class="service-item">
+        <view
+          class="service-item"
+          hover-class="service-item-hover"
+          data-key="disclaimer"
+          bindtap="onServiceTap"
+        >
           <text class="service-icon orange">◆</text>
           <text>免责声明</text>
           <text class="service-sub">使用条款提示</text>
         </view>
-        <view class="service-item">
+        <view
+          class="service-item"
+          hover-class="service-item-hover"
+          data-key="agreement"
+          bindtap="onServiceTap"
+        >
           <text class="service-icon green">▤</text>
           <text>用户协议</text>
           <text class="service-sub">查看详细协议</text>
         </view>
-        <view class="service-item">
+        <view
+          class="service-item"
+          hover-class="service-item-hover"
+          data-key="privacy"
+          bindtap="onServiceTap"
+        >
           <text class="service-icon purple">▣</text>
           <text>隐私政策</text>
           <text class="service-sub">查看隐私政策</text>
@@ -61,35 +98,7 @@
       </view>
     </view>
 
-    <!-- 数据环境配置 -->
-    <view class="setting-section config-section">
-      <text class="setting-heading">数据环境</text>
-      <view class="config-row">
-        <text>API 地址</text>
-        <input value="{{apiBaseUrl}}" bindinput="onApiInput" placeholder="使用环境默认地址" />
-      </view>
-      <button class="outline-button" bindtap="onSaveApi">保存 API 地址</button>
-      <view class="config-row">
-        <text>允许 Mock fallback</text>
-        <switch checked="{{mockEnabled}}" bindchange="onToggleMock" color="#FF625F" />
-      </view>
-      <view class="config-row">
-        <text>登录状态</text>
-        <text class="config-value">{{userName}}</text>
-      </view>
-      <button class="primary-button" bindtap="onLogin">{{loggedIn ? '退出登录' : '微信登录'}}</button>
-      <button class="danger-button" bindtap="onClearStorage">清除本地数据</button>
-    </view>
-
-    <!-- 关注公众号 -->
-    <view class="follow-card">
-      <text class="follow-title">关注公众号</text>
-      <text class="follow-subtitle">关注公众号，获取更新通知、数据维护提醒。</text>
-      <view class="follow-placeholder">二维码区域</view>
-      <text class="follow-tip">长按二维码识别 · 关注公众号</text>
-    </view>
-
     <view class="bottom-space"></view>
   </scroll-view>
-  <bottom-tabbar active="{{activeTab}}" bind:change="onTabChange"></bottom-tabbar>
+  <bottom-tabbar active="{{ activeTab }}" bind:change="onTabChange"></bottom-tabbar>
 </view>

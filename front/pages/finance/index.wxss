@@ -1,0 +1,120 @@
+.page-status {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  margin: 4rpx 0 8rpx 32rpx;
+  padding: 10rpx 18rpx;
+  border: 1rpx solid #e3ddff;
+  border-radius: 30rpx;
+  background: #f6f3ff;
+  color: #735ce5;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 13rpx;
+  height: 13rpx;
+  margin-right: 10rpx;
+  border-radius: 50%;
+  background: #8368f5;
+  box-shadow: 0 0 0 5rpx rgba(131, 104, 245, 0.14);
+}
+
+.updated {
+  margin-left: 16rpx;
+  color: #8a98aa;
+  font-weight: 400;
+}
+
+.content-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24rpx;
+}
+
+.news-list {
+  margin-top: 18rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.news-item {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #edf1f6;
+}
+
+.news-item:last-child {
+  border-bottom: 0;
+}
+
+.news-title {
+  display: block;
+  color: #1c2a3e;
+  font-size: 29rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.news-intro {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 8rpx;
+  color: #718096;
+  font-size: 23rpx;
+  line-height: 34rpx;
+}
+
+.news-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  color: #99a6b7;
+  font-size: 21rpx;
+}
+
+.news-time {
+  margin-left: 16rpx;
+}
+
+.empty-hint {
+  margin-top: 18rpx;
+  padding: 120rpx 24rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  color: #8491a4;
+  text-align: center;
+}
+
+.bottom-space {
+  height: 150rpx;
+}
+
+/* 深色主题 */
+.page.theme-dark .page-status {
+  border-color: #40376b;
+  background: #2a2440;
+  color: #b3a1ff;
+}
+
+.page.theme-dark .status-dot {
+  background: #9a83f7;
+  box-shadow: 0 0 0 5rpx rgba(154, 131, 247, 0.18);
+}
+
+.page.theme-dark .empty-hint {
+  border-color: #2a394e;
+  background: #1a2637;
+  color: #9cacc0;
+}
+
+.page.theme-dark .error-card button {
+  background: #233046;
+  color: #6fa3ff;
+}

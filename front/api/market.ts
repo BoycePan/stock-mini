@@ -1,59 +1,73 @@
+import type { MarketPageData } from '../types/market'
+import { globalApi } from './global'
 import { newsApi } from './news'
-import { sectorApi } from './sector'
-import type { MarketMetric, MarketPageData } from '../types/market'
-import { getAsiaMarketMock } from '../mocks/asia-market'
-import { getAiMarketMock } from '../mocks/ai-market'
-import { getGlobalMarketMock } from '../mocks/global-market'
-import { getMetalsMarketMock } from '../mocks/metals-market'
+import { buildAsiaPage, buildGlobalPage, buildMetalsPage } from '../utils/global-market'
 
-export type MarketPageKey = 'global' | 'asia' | 'metals' | 'ai'
+export type MarketPageKey = 'global' | 'asia' | 'metals' | 'finance'
 
-function aiMetric(name: string, index: number, icon: string): MarketMetric {
-  return { id: `backend-ai-${index}`, name, value: '', change: 0, icon }
+/** 数据全部来自后端接口；接口失败或无数据时直接抛错，由页面展示错误态 */
+async function getGlobalMarketPage(): Promise<MarketPageData> {
+  const [indices, sectors, commodity, forex, bond, crypto] = await Promise.all([
+    globalApi.getIndices(),
+    globalApi.getSectors('us'),
+    globalApi.getAssets('commodity'),
+    globalApi.getAssets('forex'),
+    globalApi.getAssets('bond'),
+    globalApi.getAssets('crypto'),
+  ])
+  const assets = [...commodity, ...forex, ...bond, ...crypto]
+  if (!indices.length && !sectors.length && !assets.length) throw new Error('empty')
+  return buildGlobalPage(indices, sectors, assets)
 }
 
-async function getAiMarketPage(): Promise<MarketPageData> {
-  try {
-    const [boards, news] = await Promise.all([sectorApi.getBoards(8), newsApi.getFeed(4)])
-    if (boards.length || news.length) {
-      const boardMetrics = boards
-        .slice(0, 8)
-        .map((board, index) => aiMetric(board.plate_name, index, '✦'))
-      return {
-        statusLabel: 'AI',
-        statusTone: 'active',
-        updatedLabel: '已更新 · 后端板块/新闻',
-        source: 'backend',
-        sections: [
-          { id: 'ai-backend-concepts', title: '后端热门概念', tone: 'ai', metrics: boardMetrics },
-          {
-            id: 'ai-news',
-            title: 'AI 相关新闻',
-            tone: 'ai',
-            metrics: news
-              .slice(0, 4)
-              .map((item, index) => aiMetric(item.title.slice(0, 12), index + 8, '📰')),
-          },
-        ],
-      }
-    }
-  } catch {
-    // 现有后端服务不可用时继续使用 mock，页面仍然可浏览。
+async function getAsiaMarketPage(): Promise<MarketPageData> {
+  const indices = await globalApi.getIndices()
+  if (!indices.length) throw new Error('empty')
+  return buildAsiaPage(indices)
+}
+
+async function getMetalsMarketPage(): Promise<MarketPageData> {
+  const assets = await globalApi.getAssets('commodity')
+  if (!assets.length) throw new Error('empty')
+  return buildMetalsPage(assets)
+}
+
+async function getFinanceMarketPage(): Promise<MarketPageData> {
+  const news = await newsApi.getFeed(20)
+  if (!news.length) throw new Error('empty')
+  const newsMetrics = news.map((item, index) => ({
+    id: `finance-news-${index}`,
+    name: item.title,
+    value: '',
+    change: 0,
+    icon: '📰',
+    detail: {
+      title: item.title,
+      summary: item.summary ?? '',
+      url: item.url,
+      source: item.source ?? '',
+      time: item.time ?? '',
+    },
+  }))
+  return {
+    statusLabel: '财经',
+    statusTone: 'active',
+    updatedLabel: '已更新 · 财经新闻',
+    sections: [{ id: 'finance-news', title: '财经新闻', tone: 'finance', metrics: newsMetrics }],
   }
-  return getAiMarketMock()
 }
 
 export const marketApi = {
   async getPage(key: MarketPageKey): Promise<MarketPageData> {
     switch (key) {
       case 'global':
-        return getGlobalMarketMock()
+        return getGlobalMarketPage()
       case 'asia':
-        return getAsiaMarketMock()
+        return getAsiaMarketPage()
       case 'metals':
-        return getMetalsMarketMock()
-      case 'ai':
-        return getAiMarketPage()
+        return getMetalsMarketPage()
+      case 'finance':
+        return getFinanceMarketPage()
     }
   },
 }

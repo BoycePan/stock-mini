@@ -1,80 +1,47 @@
 import { rootStore } from '../../stores/root.store'
+import type { User } from '../../types/user'
 import type { ThemeMode } from '../../utils/storage'
+import {
+  bindGlobalAuth,
+  registerStoreBinding,
+  releaseStoreBindings,
+} from '../../utils/store-bindings'
+import { bindTheme, unbindTheme } from '../../utils/theme'
 
 Page({
   data: {
     activeTab: 'settings',
-    theme: 'light' as ThemeMode,
-    apiBaseUrl: '',
-    mockEnabled: true,
-    loggedIn: false,
-    userName: '未登录',
+    theme: rootStore.settings.theme,
+    user: null as User | null,
+    isLoggedIn: false,
   },
   onLoad() {
-    this.syncData()
-  },
-  onShow() {
-    this.syncData()
-  },
-  syncData() {
-    const { settings, auth } = rootStore
-    this.setData({
-      theme: settings.theme,
-      apiBaseUrl: settings.apiBaseUrl,
-      mockEnabled: settings.useMockFallback,
-      loggedIn: auth.isLoggedIn,
-      userName: auth.user?.nickname || (auth.isLoggedIn ? '已登录用户' : '未登录'),
-    })
+    bindTheme(this)
+    // 用户信息 / 登录态来自全局 auth store，登录、登出自动同步
+    registerStoreBinding(this, bindGlobalAuth(this))
   },
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
     rootStore.settings.setTheme(value as ThemeMode)
-    this.syncData()
   },
-  onApiInput(event: WechatMiniprogram.BaseEvent & { detail: { value: string } }) {
-    this.setData({ apiBaseUrl: event.detail.value })
+  onServiceTap(event: WechatMiniprogram.BaseEvent) {
+    const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
+    if (!key) return
+    wx.navigateTo({ url: `/pages/legal/index?type=${key}` })
   },
-  onSaveApi() {
-    rootStore.settings.saveApiBaseUrl(this.data.apiBaseUrl)
-    wx.showToast({ title: 'API 地址已保存', icon: 'success' })
-    this.syncData()
-  },
-  onToggleMock(event: WechatMiniprogram.BaseEvent & { detail: { value: boolean } }) {
-    rootStore.settings.useMockFallback = event.detail.value
-    this.syncData()
-  },
-  async onLogin() {
-    if (rootStore.auth.isLoggedIn) {
-      rootStore.auth.logout()
-      this.syncData()
-      wx.showToast({ title: '已退出登录', icon: 'none' })
-      return
-    }
-    wx.showLoading({ title: '登录中' })
-    try {
-      await rootStore.auth.login()
-      console.log('🏷️ index.ts ~ 56 => ', 123)
-      wx.showToast({ title: '登录成功', icon: 'success' })
-      this.syncData()
-    } catch {
-      wx.showToast({ title: rootStore.auth.error || '登录失败', icon: 'none' })
-    } finally {
-      wx.hideLoading()
-    }
-  },
-  onClearStorage() {
+  onLogout() {
     wx.showModal({
-      title: '清除本地数据',
-      content: '将清除登录、主题和 API 配置，确定继续吗？',
+      title: '退出登录',
+      content: '退出后再次进入行情页将自动重新登录',
+      confirmColor: '#EB514D',
       success: (result) => {
-        if (!result.confirm) return
-        wx.clearStorageSync()
-        rootStore.auth.reset()
-        rootStore.settings.reset()
-        wx.showToast({ title: '已清除', icon: 'success' })
-        this.syncData()
+        if (result.confirm) rootStore.auth.logout()
       },
     })
+  },
+  onUnload() {
+    releaseStoreBindings(this)
+    unbindTheme(this)
   },
   onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
     const key = event.detail.key

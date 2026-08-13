@@ -1,15 +1,21 @@
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .content-scroll {
-  height: calc(100vh - 104rpx);
+  flex: 1;
   padding: 0 24rpx;
 }
 
-.panel,
-.error-card {
-  margin-top: 18rpx;
-  padding: 26rpx 24rpx;
+.panel {
+  margin-top: 24rpx;
+  padding: 24rpx;
   border: 1rpx solid #e2eaf3;
   border-radius: 28rpx;
-  background: #fff;
+  background: #ffffff;
   box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
 }
 
@@ -17,46 +23,141 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #152338;
-  font-size: 31rpx;
+  margin-bottom: 18rpx;
+  color: #17191d;
+  font-size: 30rpx;
   font-weight: 700;
 }
 
-.board-row,
-.member-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12rpx;
-  padding: 22rpx 0;
-  border-bottom: 1rpx solid #edf1f6;
-  color: #46566b;
-  font-size: 26rpx;
+.board-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 18rpx;
+  border-radius: 16rpx;
+  color: #344257;
+  font-size: 27rpx;
 }
 
-.board-row:last-child,
+.board-row.selected {
+  background: #edf4ff;
+  color: #2f6fe4;
+}
+
+.board-code {
+  color: #99a6b7;
+  font-size: 22rpx;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 6rpx;
+  border-bottom: 1rpx solid #f0f4f9;
+}
+
 .member-row:last-child {
   border-bottom: 0;
 }
 
-.board-row text:last-child,
-.member-row text:nth-child(2) {
-  color: #8a98aa;
-  text-align: right;
+.member-info {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
 }
 
-.member-row {
-  grid-template-columns: 1fr 1fr 1fr;
+.member-name {
+  color: #17191d;
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
-.member-row text:last-child {
-  color: #eb514d;
-  text-align: right;
+.member-code {
+  color: #99a6b7;
+  font-size: 22rpx;
+}
+
+.member-quote {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
+  color: #344257;
+  font-size: 27rpx;
+}
+
+.member-quote .up {
+  color: #f04b45;
+}
+
+.member-quote .down {
+  color: #2db653;
+}
+
+.member-note {
+  padding-top: 18rpx;
+  color: #99a6b7;
+  font-size: 22rpx;
+  text-align: center;
 }
 
 .error-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 24rpx;
+  padding: 60rpx 24rpx;
   color: #718096;
   font-size: 27rpx;
+}
+
+.error-card button {
+  margin-top: 24rpx;
+  border-radius: 34rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 25rpx;
+}
+
+/* 深色主题 */
+.page.theme-dark .panel {
+  border-color: #2a394e;
+  background: #1c2535;
+  box-shadow: none;
+}
+
+.page.theme-dark .panel-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .board-row {
+  color: #c6d2e0;
+}
+
+.page.theme-dark .board-row.selected {
+  background: #233046;
+  color: #6fa3ff;
+}
+
+.page.theme-dark .board-code,
+.page.theme-dark .member-code,
+.page.theme-dark .member-note {
+  color: #5b6a7f;
+}
+
+.page.theme-dark .member-row {
+  border-bottom-color: #273349;
+}
+
+.page.theme-dark .member-name {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .member-quote {
+  color: #c6d2e0;
+}
+
+.page.theme-dark .error-card button {
+  background: #233046;
+  color: #6fa3ff;
 }

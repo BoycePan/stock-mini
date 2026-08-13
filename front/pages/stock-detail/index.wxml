@@ -1,6 +1,8 @@
 <view class="page theme-{{theme}}">
-  <app-header title="股票详情" showShare="{{true}}"></app-header>
-  <scroll-view scroll-y class="content-scroll">
+  <view class="page-header">
+    <app-header title="股票详情" showShare="{{true}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+  </view>
+  <view class="content-scroll">
     <loading-state wx:if="{{loading}}"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
@@ -39,11 +41,11 @@
           </view>
           <view>
             <text>成交量</text>
-            <text>{{quote.volume}}</text>
+            <text>{{quote.volumeText}}</text>
           </view>
           <view>
             <text>成交额</text>
-            <text>{{quote.amount}}</text>
+            <text>{{quote.amountText}}</text>
           </view>
         </view>
       </view>
@@ -65,11 +67,7 @@
             >周线</text>
           </view>
         </view>
-        <view class="kline-row" wx:for="{{klines}}" wx:key="time">
-          <text>{{item.time}}</text>
-          <text>{{item.closeText}}</text>
-          <text class="{{item.pctClass}}">{{item.pctText}}</text>
-        </view>
+        <kline-chart klines="{{klines}}" theme="{{theme}}"></kline-chart>
       </view>
 
       <!-- 相关新闻面板 -->
@@ -81,18 +79,46 @@
           <view
             class="news-row"
             wx:for="{{news}}"
-            wx:key="title"
-            data-url="{{item.url}}"
+            wx:key="url"
+            data-index="{{index}}"
             bindtap="onNewsTap"
           >
             <text class="news-title">{{item.title}}</text>
             <text class="news-time">{{item.time}}</text>
           </view>
+          <view class="load-more" bindtap="onLoadMoreNews" wx:if="{{newsHasMore}}">
+            {{loadingMoreNews ? '加载中…' : '加载更多新闻'}}
+          </view>
+          <view class="load-more end" wx:elif="{{news.length}}">没有更多新闻</view>
         </view>
         <empty-state wx:else title="暂无相关新闻"></empty-state>
       </view>
 
+      <!-- 相关公告面板 -->
+      <view class="panel">
+        <view class="panel-title">
+          <text>相关公告</text>
+        </view>
+        <view wx:if="{{announcements.length}}">
+          <view
+            class="news-row"
+            wx:for="{{announcements}}"
+            wx:key="id"
+            data-url="{{item.url}}"
+            bindtap="onAnnouncementTap"
+          >
+            <text class="news-title">{{item.title}}</text>
+            <text class="news-time">{{item.time}}</text>
+          </view>
+          <view class="load-more" bindtap="onLoadMoreAnnouncements" wx:if="{{announcementHasMore}}">
+            {{loadingMoreAnnouncements ? '加载中…' : '加载更多公告'}}
+          </view>
+          <view class="load-more end" wx:elif="{{announcements.length}}">没有更多公告</view>
+        </view>
+        <empty-state wx:else title="暂无公告"></empty-state>
+      </view>
+
     </block>
     <view class="bottom-space"></view>
-  </scroll-view>
+  </view>
 </view>

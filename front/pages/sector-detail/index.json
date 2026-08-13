@@ -2,6 +2,8 @@
   "usingComponents": {
     "app-header": "/components/app-header/index",
     "loading-state": "/components/loading-state/index",
-    "empty-state": "/components/empty-state/index"
-  }
+    "empty-state": "/components/empty-state/index",
+    "kline-chart": "/components/kline-chart/index"
+  },
+  "enablePullDownRefresh": true
 }

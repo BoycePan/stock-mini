@@ -1,5 +1,6 @@
 import { rootStore } from './stores/root.store'
 import { getTheme } from './utils/storage'
+import { syncWindowBackground } from './utils/theme'
 import { setLoginWaiter } from './utils/request'
 
 // 所有业务接口发送前都会先等待登录完成（登录接口自身跳过）
@@ -13,6 +14,7 @@ App({
   onLaunch() {
     const theme = getTheme()
     this.globalData.theme = theme
+    syncWindowBackground(theme)
     wx.setNavigationBarColor({
       frontColor: theme === 'dark' ? '#FFFFFF' : '#17191D',
       backgroundColor: theme === 'dark' ? '#151820' : '#F3F6FA',

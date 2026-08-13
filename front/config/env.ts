@@ -5,13 +5,11 @@ import { getApiBaseUrl } from '../utils/storage'
 export interface AppEnv {
   apiBaseUrl: string
   requestTimeout: number
-  useMockFallback: boolean
 }
 
 function isReleaseBuild() {
   try {
     return wx.getAccountInfoSync().miniProgram.envVersion !== 'develop'
-    // return wx.getAccountInfoSync().miniProgram.envVersion === 'release'
   } catch {
     return false
   }
@@ -19,6 +17,7 @@ function isReleaseBuild() {
 
 const currentEnv = isReleaseBuild() ? productionEnv : developmentEnv
 
+/** 环境默认地址优先，其次使用设置页保存的自定义 API 地址 */
 export function getEnv(): AppEnv {
   return {
     ...currentEnv,

@@ -1,0 +1,34 @@
+<view class="page theme-{{theme}} legal-page">
+  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+  <scroll-view scroll-y class="content-scroll">
+    <view class="legal-card">
+      <text class="legal-title">{{title}}</text>
+      <text wx:if="{{updatedAt}}" class="legal-updated">更新日期：{{updatedAt}}</text>
+      <view class="legal-paragraph" wx:for="{{intro}}" wx:key="*this">
+        <text class="legal-text">{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detailsHeading || sections.length}}" class="legal-card">
+      <text wx:if="{{detailsHeading}}" class="legal-details-heading">{{detailsHeading}}</text>
+      <view class="legal-section" wx:for="{{sections}}" wx:key="heading">
+        <text class="legal-section-heading">{{item.heading}}</text>
+        <view
+          class="legal-paragraph"
+          wx:for="{{item.paragraphs}}"
+          wx:for-item="paragraph"
+          wx:key="*this"
+        >
+          <text class="legal-text">{{paragraph}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{closing.length}}" class="legal-card closing-card">
+      <view class="legal-paragraph" wx:for="{{closing}}" wx:key="*this">
+        <text class="legal-text closing-text">{{item}}</text>
+      </view>
+    </view>
+    <view class="bottom-space"></view>
+  </scroll-view>
+</view>

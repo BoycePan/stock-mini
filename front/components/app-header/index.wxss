@@ -11,6 +11,34 @@
   min-width: 0;
 }
 
+.back-button {
+  display: flex;
+  align-items: center;
+  margin-right: 14rpx;
+  padding: 10rpx 20rpx 10rpx 14rpx;
+  border: 1rpx solid #e1e8f0;
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.88);
+  color: #344257;
+  box-shadow: 0 8rpx 20rpx rgba(62, 83, 111, 0.08);
+}
+
+.back-button-hover {
+  opacity: 0.7;
+}
+
+.back-arrow {
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.back-label {
+  margin-left: 6rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
 .brand-mark {
   width: 68rpx;
   height: 68rpx;
@@ -24,6 +52,10 @@
   font-size: 46rpx;
   font-weight: 700;
   box-shadow: 0 8rpx 18rpx rgba(47, 141, 212, 0.13);
+}
+
+.no-brand .brand-title {
+  margin-left: 0;
 }
 
 .brand-title {
@@ -79,4 +111,37 @@
 .mini-dot {
   color: #4c8dff;
   font-size: 31rpx;
+}
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.header.dark,
+.header.dark .share-button,
+.header.dark .system-actions {
+  background: rgba(24, 34, 49, 0.96);
+  border-color: #2a394e;
+  color: #f5f7fb;
+}
+
+.header.dark .back-button {
+  border-color: #2a394e;
+  background: rgba(24, 34, 49, 0.96);
+  color: #e8eef7;
+}
+
+.header.dark .brand-mark {
+  border-color: #38516e;
+  background: #1d3047;
+  color: #6eb7ff;
+}
+
+.header.dark .brand-title {
+  color: #f5f7fb;
+}
+
+.header.dark .divider {
+  color: #3d4f66;
+}
+
+.header.dark .mini-dot {
+  color: #6eb7ff;
 }

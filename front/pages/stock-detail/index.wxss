@@ -1,5 +1,24 @@
+/* 页面改为原生滚动：scroll-view 内的 2d canvas 在模拟器中不跟随滚动，
+   改用页面级滚动后 canvas 随页面正常滚动 */
+.page {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #f5f8fc;
+}
+
+.page.theme-dark .page-header {
+  background: #111827;
+}
+
 .content-scroll {
-  height: calc(100vh - 104rpx);
   padding: 0 24rpx;
 }
 
@@ -164,4 +183,37 @@
 
 .bottom-space {
   height: 40rpx;
+}
+
+/* 加载更多 */
+.load-more {
+  padding: 22rpx 0 6rpx;
+  color: #4278ed;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.load-more.end {
+  color: #99a6b7;
+}
+
+.page.theme-dark .load-more {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .load-more.end {
+  color: #5b6a7f;
+}
+
+.page.theme-dark .error-card button {
+  background: #233046;
+  color: #6fa3ff;
+}
+
+.page.theme-dark .scale-tabs {
+  color: #9cacc0;
+}
+
+.page.theme-dark .scale-tabs .selected {
+  color: #6fa3ff;
 }

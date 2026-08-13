@@ -3,11 +3,14 @@
     "pages/global/index",
     "pages/asia/index",
     "pages/metals/index",
-    "pages/ai/index",
+    "pages/finance/index",
     "pages/settings/index",
+    "pages/search/index",
     "pages/stock-detail/index",
     "pages/sector-detail/index",
-    "pages/news/index"
+    "pages/news/index",
+    "pages/news-detail/index",
+    "pages/legal/index"
   ],
   "window": {
     "navigationStyle": "custom",

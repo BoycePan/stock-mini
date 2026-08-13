@@ -30,3 +30,17 @@
   color: #8a98aa;
   font-size: 23rpx;
 }
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.empty-state.dark .empty-icon {
+  background: #223248;
+  color: #6fa3ff;
+}
+
+.empty-state.dark .empty-title {
+  color: #e5ebf4;
+}
+
+.empty-state.dark .empty-description {
+  color: #9cacc0;
+}

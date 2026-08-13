@@ -1,5 +1,4 @@
-export type MarketDataSource = 'backend' | 'mock' | 'cache'
-export type MarketTone = 'global' | 'asia' | 'metals' | 'ai'
+export type MarketTone = 'global' | 'asia' | 'metals' | 'finance'
 
 export interface MarketMetric {
   id: string
@@ -8,8 +7,9 @@ export interface MarketMetric {
   change: number
   unit?: string
   icon?: string
-  source?: MarketDataSource
   updatedAt?: string
+  /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
+  detail?: Record<string, string | undefined>
 }
 
 export interface MarketSection {
@@ -25,5 +25,4 @@ export interface MarketPageData {
   statusTone: 'active' | 'rest'
   updatedLabel: string
   sections: MarketSection[]
-  source: MarketDataSource
 }
