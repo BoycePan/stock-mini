@@ -26,6 +26,9 @@ jobs:
           docker push "${{ vars.ACR_REGISTRY }}/lilaiyun_guyu/guyu_info:latest"
 
       - name: Deploy on server
+        env:
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
