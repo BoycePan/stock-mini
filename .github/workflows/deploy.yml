@@ -22,8 +22,8 @@ jobs:
       - name: Build and push image
         run: |
           docker build -t stock-backend-java:latest ./backend-java
-          docker tag stock-backend-java:latest "${{ vars.ACR_REGISTRY }}/llaiyun_guyu/guyu_info:latest"
-          docker push "${{ vars.ACR_REGISTRY }}/llaiyun_guyu/guyu_info:latest"
+          docker tag stock-backend-java:latest "${{ vars.ACR_REGISTRY }}/lilaiyun_guyu/guyu_info:latest"
+          docker push "${{ vars.ACR_REGISTRY }}/lilaiyun_guyu/guyu_info:latest"
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1
@@ -36,7 +36,7 @@ jobs:
           script: |
             set -e
             REGISTRY="${{ vars.ACR_REGISTRY }}"
-            IMAGE="$REGISTRY/llaiyun_guyu/guyu_info:latest"
+            IMAGE="$REGISTRY/lilaiyun_guyu/guyu_info:latest"
 
             cd /apps/stock/backend-java
 
