@@ -15,10 +15,11 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 /**
- * 开发模式：Java 启动后拉起雅虎 Python sidecar（scripts/fetch_service.py）。
+ * Java 启动后拉起雅虎 Python sidecar（scripts/fetch_service.py）子进程，
+ * JVM shutdown hook 在 Java 退出时 destroy 它 → Java 与 Python 同生命周期。
  *
- * 生产环境建议 app.fetch.enabled=false，sidecar 单独部署（Docker Compose / systemd），
- * 避免 Java 强杀时 Python 变孤儿进程。
+ * 镜像已内置脚本与 /opt/venv 依赖，app.fetch.enabled=true（默认）时生产环境同样生效；
+ * 容器被 stop/kill 时进程命名空间随容器整体退出，不会留孤儿进程。
  */
 @Component
 public class FetchSidecarLauncher implements ApplicationRunner {

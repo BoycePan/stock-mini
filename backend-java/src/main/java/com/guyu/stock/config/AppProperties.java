@@ -68,7 +68,7 @@ public class AppProperties {
     /** 雅虎 Python sidecar（方案 A）启动配置，见 scripts/fetch_service.py */
     @Data
     public static class Fetch {
-        /** 是否在 Java 启动时拉起 Python 服务（生产建议 false，单独部署） */
+        /** 是否在 Java 启动时拉起 Python sidecar（默认 true；镜像已内置脚本与依赖） */
         private boolean enabled = true;
         /** Python 脚本路径（相对工作目录） */
         private String scriptPath = "scripts/fetch_service.py";

@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * 雅虎 sidecar 客户端：调用 scripts/fetch_service.py 暴露的 /kline /quote 接口。
- * sidecar 由 FetchSidecarLauncher 在本机拉起（开发模式），生产环境单独部署。
+ * sidecar 由 FetchSidecarLauncher 拉起（开发/生产容器内均生效），随 Java 同生命周期。
  */
 public class YahooKlineClient {
 
