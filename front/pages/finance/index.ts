@@ -18,6 +18,7 @@ Page({
     theme: rootStore.settings.theme,
     activeTab: 'finance',
     loading: true,
+    refreshing: false,
     news: [] as NewsItemView[],
     statusLabel: '',
     updatedLabel: '',
@@ -51,11 +52,12 @@ Page({
     )
     void this.loadData()
   },
-  async onPullDownRefresh() {
+  async onRefresherRefresh() {
+    this.setData({ refreshing: true })
     try {
       await this.loadData({ force: true })
     } finally {
-      wx.stopPullDownRefresh()
+      this.setData({ refreshing: false })
     }
     const failed = Boolean(rootStore.market.errors['finance'])
     wx.showToast({

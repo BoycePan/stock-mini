@@ -5,7 +5,15 @@
     <text>{{statusLabel}}</text>
     <text class="updated">{{updatedLabel}}</text>
   </view>
-  <scroll-view scroll-y class="content-scroll">
+  <scroll-view
+  scroll-y
+  class="content-scroll"
+  refresher-enabled="{{true}}"
+  refresher-triggered="{{refreshing}}"
+  refresher-default-style="{{theme === 'dark' ? 'white' : 'black'}}"
+  refresher-background="{{theme === 'dark' ? '#151e2d' : '#eef3f8'}}"
+  bindrefresherrefresh="onRefresherRefresh"
+>
     <loading-state wx:if="{{loading}}"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
