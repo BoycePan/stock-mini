@@ -6,52 +6,52 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── 构建镜像并部署到服务器（scp 直传，不走镜像仓库） ──
+  # ── 构建镜像 → 推送到阿里云 ACR → 服务器 docker pull（增量）部署 ──
+  # 镜像仓库地址由仓库 Variable ACR_REGISTRY 控制：
+  #   公网: crpi-s4cng3rcywy97jox.cn-hangzhou.personal.cr.aliyuncs.com（当前，已确认 ECS 走公网）
+  #   内网: crpi-s4cng3rcywy97jox-vpc.cn-hangzhou.personal.cr.aliyuncs.com
+  #   （ECS 与 ACR 同为杭州；将来 ACR 控制台开通 VPC 内网访问后，改这个变量即可走内网、不占公网带宽）
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t stock-backend-java:latest ./backend-java
+      - name: Login to ACR
+        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ vars.ACR_REGISTRY }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
 
-      - name: Save image to tar
-        run: docker save stock-backend-java:latest | gzip > stock-backend-java.tar.gz
-
-      - name: Setup SSH key
+      - name: Build and push image
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Create remote dir
-        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /apps/stock/backend-java"
-
-      - name: Copy image to server
-        run: scp stock-backend-java.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/apps/stock/backend-java/
+          docker build -t stock-backend-java:latest ./backend-java
+          docker tag stock-backend-java:latest "${{ vars.ACR_REGISTRY }}/lilaiyun_guyu/guyu_info:latest"
+          docker push "${{ vars.ACR_REGISTRY }}/lilaiyun_guyu/guyu_info:latest"
 
       - name: Deploy on server
+        env:
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # 把 ACR 登录信息作为环境变量传给远端脚本（appleboy/ssh-action 的 envs 机制）
+          envs: ACR_USERNAME,ACR_PASSWORD
           script: |
+            set -e
+            REGISTRY="${{ vars.ACR_REGISTRY }}"
+            IMAGE="$REGISTRY/lilaiyun_guyu/guyu_info:latest"
+
             cd /apps/stock/backend-java
 
             # 配置不打包进镜像：服务器上必须有 .env（git 忽略，无法从仓库带过来）
-            # 首次部署前手动创建：ssh 到服务器后
-            #   mkdir -p /apps/stock/backend-java
-            #   把本地 backend-java/.env 内容拷到 /apps/stock/backend-java/.env
             if [ ! -f .env ]; then
               echo ".env 不存在，请先创建 /apps/stock/backend-java/.env（模板见仓库 backend-java/.env.example）" >&2
               exit 1
             fi
 
-            # 加载新镜像
-            docker load < stock-backend-java.tar.gz
-            rm stock-backend-java.tar.gz
+            # 登录 ACR 并拉取新镜像（增量：只拉变化的层，不再全量 scp）
+            echo "$ACR_PASSWORD" | docker login "$REGISTRY" -u "$ACR_USERNAME" --password-stdin
+            docker pull "$IMAGE"
 
             # 滚动重启
             docker stop stock-backend-java 2>/dev/null || true
@@ -61,7 +61,7 @@ jobs:
               --restart unless-stopped \
               --network host \
               --env-file .env \
-              stock-backend-java:latest
+              "$IMAGE"
 
             # 等待健康检查（最多 60s）
             echo "=== 等待启动 ==="
