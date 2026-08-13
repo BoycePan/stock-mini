@@ -1,6 +1,6 @@
 <view class="page theme-{{theme}} metals-page">
   <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
-  <view class="page-status">
+  <view class="page-status {{statusTone}}">
     <text class="status-dot"></text>
     <text>{{statusLabel}}</text>
     <text class="updated">{{updatedLabel}}</text>

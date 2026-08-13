@@ -26,6 +26,12 @@ Page({
   },
   onKeywordInput(event: WechatMiniprogram.BaseEvent & { detail: { value: string } }) {
     const keyword = event.detail.value
+    // 清空关键词时立即重置搜索态，避免残留上一轮结果与错误
+    if (!keyword.trim()) {
+      this.setData({ keyword, loading: false, searched: false, results: [], error: '' })
+      if (searchTimer) clearTimeout(searchTimer)
+      return
+    }
     this.setData({ keyword })
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => this.doSearch(keyword), 300)

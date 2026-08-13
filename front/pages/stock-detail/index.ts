@@ -93,7 +93,17 @@ Page({
     const scale = (event.currentTarget as unknown as { dataset: { value?: string } }).dataset.value
     if (!scale || scale === this.data.scale) return
     this.setData({ scale })
-    await this.loadData()
+    // 切周期只重拉 K 线，避免连带刷新行情/新闻/公告
+    await this.loadKlines(this.data.code, scale)
+  },
+  async loadKlines(code: string, scale: string) {
+    if (!code) return
+    try {
+      const result = await stockApi.getKlines(code, scale, 30)
+      this.setData({ klines: result.klines })
+    } catch (error) {
+      wx.showToast({ title: 'K线加载失败', icon: 'none' })
+    }
   },
   async onLoadMoreNews() {
     if (this.data.loadingMoreNews || !this.data.newsHasMore) return
@@ -130,10 +140,12 @@ Page({
     }
   },
   onReachBottom() {
-    // 到底后优先加载新闻，新闻加载完再加载公告
+    // 新闻与公告各自独立分页，触底时分别加载各自的下一页
+    // （各自 onLoadMoreX 内有 loadingMoreX 防重入，滚动连续触发不会重复请求）
     if (this.data.newsHasMore) {
       this.onLoadMoreNews()
-    } else if (this.data.announcementHasMore) {
+    }
+    if (this.data.announcementHasMore) {
       this.onLoadMoreAnnouncements()
     }
   },

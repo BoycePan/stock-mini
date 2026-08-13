@@ -117,7 +117,7 @@ export function buildGlobalPage(
   const all = [...usIndices, ...assets, ...industries, ...themes]
   return {
     ...pageStatus('全球', all),
-    updatedLabel: '已更新 · 数据每30秒刷新一次',
+    updatedLabel: '已更新 · 数据每60秒刷新一次',
     sections,
   }
 }
@@ -138,7 +138,7 @@ export function buildAsiaPage(indices: GlobalIndex[]): MarketPageData {
   const all = indices.filter((item) => asiaMarkets.includes(item.market))
   return {
     ...pageStatus('亚太', all),
-    updatedLabel: '已更新 · 数据每30秒刷新一次',
+    updatedLabel: '已更新 · 数据每60秒刷新一次',
     sections,
   }
 }
@@ -167,7 +167,7 @@ export function buildMetalsPage(assets: GlobalAsset[]): MarketPageData {
 
   return {
     ...pageStatus('有色', assets),
-    updatedLabel: '已更新 · 数据每30秒刷新一次',
+    updatedLabel: '已更新 · 数据每60秒刷新一次',
     sections,
   }
 }

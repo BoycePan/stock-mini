@@ -13,6 +13,7 @@ Page({
     loading: true,
     sections: [] as MarketSection[],
     statusLabel: '',
+    statusTone: 'rest',
     updatedLabel: '',
     error: '',
   },
@@ -26,6 +27,7 @@ Page({
           loading: () => rootStore.market.loading['metals'],
           error: () => rootStore.market.errors['metals'],
           statusLabel: () => rootStore.market.pages['metals']?.statusLabel ?? '',
+          statusTone: () => rootStore.market.pages['metals']?.statusTone ?? 'rest',
           updatedLabel: () => rootStore.market.pages['metals']?.updatedLabel ?? '',
           sections: () =>
             (rootStore.market.pages['metals']?.sections ?? []).map((section) => ({
