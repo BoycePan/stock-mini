@@ -124,3 +124,11 @@ logs/
 wx-app-stock.iml
 
 .superpowers
+
+# ====================
+# 小程序 CI 上传（miniprogram-ci）
+# ====================
+/keys/
+/keys/*.key
+/front/keys/*.key
+/front/keys/private.key
