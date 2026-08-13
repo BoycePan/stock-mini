@@ -57,6 +57,11 @@ Page({
     } finally {
       wx.stopPullDownRefresh()
     }
+    const failed = Boolean(rootStore.market.errors['finance'])
+    wx.showToast({
+      title: failed ? '刷新失败' : '刷新成功',
+      icon: failed ? 'none' : 'success',
+    })
   },
   onShow() {
     startAutoRefresh(this)

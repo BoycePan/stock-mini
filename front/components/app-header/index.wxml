@@ -1,4 +1,7 @@
-<view class="header {{theme === 'dark' ? 'dark' : ''}} {{showBrand ? '' : 'no-brand'}}" style="{{ headerStyle }}">
+<view
+  class="header {{ theme === 'dark' ? 'dark' : '' }} {{ showBrand ? '' : 'no-brand' }}"
+  style="{{ headerStyle }}"
+>
   <view class="brand">
     <view
       wx:if="{{ showBack }}"
@@ -14,7 +17,7 @@
   </view>
   <view wx:if="{{ showShare || showSearch }}" class="header-actions">
     <button wx:if="{{ showSearch }}" class="share-button" bindtap="onSearch">🔍 搜索</button>
-    <button wx:if="{{ showShare }}" class="share-button" bindtap="onShare">↗ 分享</button>
+    <!-- <button wx:if="{{ showShare }}" class="share-button" bindtap="onShare">↗ 分享</button> -->
     <view class="system-actions"
       ><text>•••</text><text class="divider">|</text><text>−</text><text class="divider">|</text
       ><text class="mini-dot">◉</text></view
