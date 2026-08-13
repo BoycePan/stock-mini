@@ -3,6 +3,5 @@
     "app-header": "/components/app-header/index",
     "bottom-tabbar": "/components/bottom-tabbar/index",
     "loading-state": "/components/loading-state/index"
-  },
-  "enablePullDownRefresh": true
+  }
 }

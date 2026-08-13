@@ -162,7 +162,7 @@
   display: block;
   margin-top: 8rpx;
   color: #99a6b7;
-  font-size: 21rpx;
+  font-size: 24rpx;
 }
 
 .error-card {

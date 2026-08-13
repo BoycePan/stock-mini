@@ -35,7 +35,7 @@
   align-items: center;
   justify-content: center;
   margin-right: 16rpx;
-  border-radius: 21rpx;
+  border-radius: 24rpx;
   background: linear-gradient(145deg, #eaf2ff 0%, #dce9ff 100%);
   color: #4c7ff5;
   font-size: 40rpx;

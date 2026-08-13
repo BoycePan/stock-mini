@@ -11,7 +11,9 @@
     "format": "prettier --write --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "type-check": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\""
+    "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
+    "upload": "node --experimental-strip-types scripts/upload.ts",
+    "upload:preview": "node --experimental-strip-types scripts/upload.ts --preview"
   },
   "dependencies": {
     "dayjs": "^1.11.19",
@@ -26,6 +28,7 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.0.0",
     "miniprogram-api-typings": "^3.12.0",
+    "miniprogram-ci": "2.1.31",
     "prettier": "^3.0.0",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.0.0"

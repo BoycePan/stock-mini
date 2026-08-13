@@ -50,7 +50,7 @@
   border-radius: 24rpx;
   background: #fff5f4;
   color: #e65551;
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 
