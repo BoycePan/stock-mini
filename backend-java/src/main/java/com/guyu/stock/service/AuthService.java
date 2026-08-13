@@ -5,6 +5,7 @@ import com.guyu.stock.common.ErrCode;
 import com.guyu.stock.config.AppProperties;
 import com.guyu.stock.dao.UserRepository;
 import com.guyu.stock.model.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -14,6 +15,7 @@ import java.util.Map;
  * 微信登录编排（对齐 Go service.NewAuthService）。
  * 吸收原 AuthController 的登录逻辑：code2Session → 用户 find-or-create → 签发 JWT → 组装响应。
  */
+@Slf4j
 @Service
 public class AuthService {
 
@@ -65,6 +67,7 @@ public class AuthService {
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
+            log.error("微信登录失败 ", e);
             throw new BizException(ErrCode.WX_LOGIN_FAIL, ErrCode.msg(ErrCode.WX_LOGIN_FAIL));
         }
     }
