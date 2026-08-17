@@ -1,6 +1,8 @@
 /**
  * TabBar 三个行情页（全球 / 日韩 / 有色）的标的配置（docs/tabbar-api.md 四）。
  *
+ * 本文件只承载「接口参数」：行情代码、新浪/东财 key、价格区间、代理股等，会用于构造外部请求。
+ * 展示用图标（Emoji）不放在这里，统一维护在 utils/quote-pages.ts 的 QUOTE_ICONS（按 code 映射）。
  * 美股代理股默认市场号为 105.（文档示例 105.NVDA；106.COHR / 107.ROBO 按原文保留）。
  */
 

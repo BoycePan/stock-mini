@@ -145,6 +145,7 @@ async function fetchAsiaIndices(): Promise<QuoteItem[]> {
       results[index] = {
         code: cfg.code,
         name: cfg.name,
+
         price: quote.price,
         pct: quote.changePercent,
       }
@@ -219,6 +220,21 @@ function normalizeRatePct(pct: number | null | undefined): number | null {
   return Math.abs(pct) < 5 ? 0 : pct
 }
 
+/** 汇率条目（东财兜底价格 ÷100；|pct| < 5 归零） */
+function rateItem(
+  cfg: AsiaRateConfig,
+  price: number | null,
+  pct: number | null | undefined,
+): QuoteItem {
+  return {
+    code: cfg.code,
+    name: cfg.name,
+
+    price,
+    pct: normalizeRatePct(pct),
+  }
+}
+
 async function fetchAsiaRates(): Promise<QuoteItem[]> {
   // ① 新浪批量 1 次（4 个汇率 key）
   const rows = await fetchSinaQuotes(ASIA_RATES.map((cfg) => cfg.sinaKey))
@@ -229,12 +245,7 @@ async function fetchAsiaRates(): Promise<QuoteItem[]> {
   ASIA_RATES.forEach((cfg, index) => {
     const quote = byKey.get(cfg.sinaKey)
     if (quote && quote.price !== null && quote.price > 0) {
-      results[index] = {
-        code: cfg.code,
-        name: cfg.name,
-        price: quote.price,
-        pct: normalizeRatePct(quote.changePercent),
-      }
+      results[index] = rateItem(cfg, quote.price, quote.changePercent)
     } else {
       fallback.push({ cfg, index })
     }
@@ -246,14 +257,9 @@ async function fetchAsiaRates(): Promise<QuoteItem[]> {
       const em = await fetchEastmoneyQuote(cfg.emSecid)
       if (em && em.latestPrice !== null) {
         const price = cfg.code === 'USDKRW' ? em.latestPrice : em.latestPrice / 100
-        results[index] = {
-          code: cfg.code,
-          name: cfg.name,
-          price,
-          pct: normalizeRatePct(em.changePercent),
-        }
+        results[index] = rateItem(cfg, price, em.changePercent)
       } else {
-        results[index] = { code: cfg.code, name: cfg.name, price: null, pct: null }
+        results[index] = rateItem(cfg, null, null)
       }
     }),
   )
@@ -301,6 +307,7 @@ async function resolveMetal(
   metal: MetalConfig,
   ctx: { sinaBatch: Map<string, SinaQuote>; tcMap: Map<string, TencentQuote>; useA: boolean },
 ): Promise<QuoteItem> {
+  const base = { code: metal.code, name: metal.name }
   // ① 新浪批量：优先国内或外盘 key 列表（取决于 useA），区间校验通过即采用
   const preferred = ctx.useA ? [...metal.aKeys, ...metal.usKeys] : [...metal.usKeys, ...metal.aKeys]
   for (const key of preferred) {
@@ -308,7 +315,7 @@ async function resolveMetal(
     if (!quote || quote.price === null) continue
     const range = metal.aKeys.includes(key) ? metal.aRange : metal.usRange
     if (validateQuote(quote.price, range?.[0], range?.[1])) {
-      return { code: metal.code, name: metal.name, price: quote.price, pct: quote.changePercent }
+      return { ...base, price: quote.price, pct: quote.changePercent }
     }
   }
 
@@ -317,7 +324,7 @@ async function resolveMetal(
     const quote = ctx.tcMap.get(metal.tc)
     if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
       return {
-        code: metal.code,
+        ...base,
         name: displayName(quote.name, metal.name),
         price: quote.latestPrice,
         pct: quote.changePercent,
@@ -345,11 +352,11 @@ async function resolveMetal(
   if (sources.length) {
     const quote = await fetchAccurate(sources, {}, { parallel: 2 })
     if (quote && quote.price !== null) {
-      return { code: metal.code, name: metal.name, price: quote.price, pct: quote.changePercent }
+      return { ...base, price: quote.price, pct: quote.changePercent }
     }
   }
 
-  return { code: metal.code, name: metal.name, price: null, pct: null }
+  return { ...base, price: null, pct: null }
 }
 
 async function getMetalsMarketPage(): Promise<MarketPageData> {
