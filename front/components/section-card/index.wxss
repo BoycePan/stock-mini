@@ -71,18 +71,39 @@
   background: linear-gradient(145deg, #f8fafc 0%, #f2f6fa 100%);
 }
 
-.metric-name {
+.metric-name-row {
+  display: flex;
+  align-items: center;
   width: 100%;
+}
+
+/* 图标块：Emoji 展示容器，仅装饰用途 */
+.metric-icon-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46rpx;
+  height: 46rpx;
+  margin-right: 12rpx;
+  border-radius: 14rpx;
+  background: rgba(66, 120, 237, 0.1);
+}
+
+.metric-icon {
+  font-size: 26rpx;
+  line-height: 1;
+}
+
+.metric-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: #46566b;
   font-size: 28rpx;
   line-height: 40rpx;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.metric-icon {
-  margin-right: 8rpx;
 }
 
 .metric-value {
@@ -174,6 +195,10 @@
 
 .section-card.theme-dark .metric-name {
   color: #e5ebf4;
+}
+
+.section-card.theme-dark .metric-icon-chip {
+  background: rgba(111, 163, 255, 0.16);
 }
 
 .section-card.theme-dark .metric-card {
