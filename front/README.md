@@ -16,8 +16,36 @@ http://100.90.180.33:18487
 
 ## 数据策略
 
-- 所有页面数据（认证、股票、板块、新闻、全球/日韩/有色/财经行情）均来自后端接口
-  （见 `../docs/API.md`），请求路径集中在 `api/` 目录；接口失败或无数据时页面展示错误态。
+- **全球 / 日韩 / 有色** 三个 TabBar 行情页的数据**不再走后端**，全部直连
+  `docs/tabbar-api.md` 中的外部行情接口：
+  - ① 腾讯行情 `https://qt.gtimg.cn`（文本）
+  - ② 新浪行情 `https://hq.sinajs.cn`（文本）
+  - ③ 东财个股行情 `push2delay.eastmoney.com/api/qt/stock/get`
+  - ④ 东财列表行情 `push2delay.eastmoney.com/api/qt/ulist.np/get`
+  - ⑤ 跳转小程序配置 `douyin.aaaa5.cn`（设置页使用，已一并封装）
+- 封装分层（新增文件）：
+  - `api/quote.ts`：5 个外部接口的单接口封装（失败降级为空数据，不抛错）；
+  - `utils/quote.ts`：多源聚合 `fetchAccurate`（共识取中位数）、板块涨跌幅
+    `fetchAShareBoardChangeMap` / `fetchUsProxyChangeMap`；
+  - `utils/market-session.ts` + `utils/market-clock.ts`：A股/美股会话判定（30s 缓存）；
+  - `config/tabbar.ts`：三个页面（全球指数/宏观资产/行业板块 24 项、日韩指数/个股/汇率、
+    有色金属）的标的与数据源配置；
+  - `utils/quote-parser.ts` / `utils/quote-consensus.ts`：纯解析 / 共识纯函数（可单测）。
+- **财经（新闻）、搜索、个股/板块详情、新闻列表**等仍走后端接口
+  （`api/news.ts`、`api/stock.ts`、`api/sector.ts`）。
+- 请求路径集中在 `api/` 目录；外部接口失败时按「新浪 → 腾讯 → 东财」兜底链补齐，
+  全部失败时页面展示错误态。
+
+### 外部域名配置（必读）
+
+小程序直连外部行情接口需要：
+
+1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
+   `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
+   `https://douyin.aaaa5.cn`（若用到跳转配置）；
+2. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
+3. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
+   会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
 
 ## 依赖安装
 
