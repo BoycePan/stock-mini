@@ -169,6 +169,7 @@ export const ASIA_INDICES: AsiaIndexConfig[] = [
 
 export interface AsiaStockConfig {
   code: string
+  /** 中文公司名（页面固定展示，忽略外部源返回的英文名，如 Samsung Electronics） */
   name: string
   /** 腾讯行情代码 */
   tc: string
@@ -177,25 +178,25 @@ export interface AsiaStockConfig {
 }
 
 export const ASIA_KR_STOCKS: AsiaStockConfig[] = [
-  { code: '005930', name: '存储', tc: 'kr005930', emSecid: '116.005930' },
-  { code: '000660', name: '半导体', tc: 'kr000660', emSecid: '116.000660' },
-  { code: '373220', name: '电池', tc: 'kr373220', emSecid: '116.373220' },
-  { code: '066570', name: '消费电子', tc: 'kr066570', emSecid: '116.066570' },
-  { code: '035420', name: '互联网', tc: 'kr035420', emSecid: '116.035420' },
-  { code: '005380', name: '汽车', tc: 'kr005380', emSecid: '116.005380' },
-  { code: '068270', name: '生物医药', tc: 'kr068270', emSecid: '116.068270' },
-  { code: '051910', name: '化工材料', tc: 'kr051910', emSecid: '116.051910' },
+  { code: '005930', name: '三星电子', tc: 'kr005930', emSecid: '116.005930' }, // 存储
+  { code: '000660', name: 'SK海力士', tc: 'kr000660', emSecid: '116.000660' }, // 半导体
+  { code: '373220', name: 'LG新能源', tc: 'kr373220', emSecid: '116.373220' }, // 电池
+  { code: '066570', name: 'LG电子', tc: 'kr066570', emSecid: '116.066570' }, // 消费电子
+  { code: '035420', name: 'NAVER', tc: 'kr035420', emSecid: '116.035420' }, // 互联网
+  { code: '005380', name: '现代汽车', tc: 'kr005380', emSecid: '116.005380' }, // 汽车
+  { code: '068270', name: '赛尔群', tc: 'kr068270', emSecid: '116.068270' }, // 生物医药
+  { code: '051910', name: 'LG化学', tc: 'kr051910', emSecid: '116.051910' }, // 化工材料
 ]
 
 export const ASIA_JP_STOCKS: AsiaStockConfig[] = [
-  { code: '8035', name: '半导体设备', tc: 'jp8035', emSecid: '151.8035' },
-  { code: '6954', name: '工业自动化', tc: 'jp6954', emSecid: '151.6954' },
-  { code: '6861', name: '精密制造', tc: 'jp6861', emSecid: '151.6861' },
-  { code: '7203', name: '汽车产业链', tc: 'jp7203', emSecid: '151.7203' },
-  { code: '6758', name: '消费电子', tc: 'jp6758', emSecid: '151.6758' },
-  { code: '4063', name: '半导体材料', tc: 'jp4063', emSecid: '151.4063' },
-  { code: '6981', name: '电子元件', tc: 'jp6981', emSecid: '151.6981' },
-  { code: '7974', name: '游戏娱乐', tc: 'jp7974', emSecid: '151.7974' },
+  { code: '8035', name: '东京电子', tc: 'jp8035', emSecid: '151.8035' }, // 半导体设备
+  { code: '6954', name: '发那科', tc: 'jp6954', emSecid: '151.6954' }, // 工业自动化
+  { code: '6861', name: '基恩士', tc: 'jp6861', emSecid: '151.6861' }, // 精密制造
+  { code: '7203', name: '丰田汽车', tc: 'jp7203', emSecid: '151.7203' }, // 汽车产业链
+  { code: '6758', name: '索尼', tc: 'jp6758', emSecid: '151.6758' }, // 消费电子
+  { code: '4063', name: '信越化学', tc: 'jp4063', emSecid: '151.4063' }, // 半导体材料
+  { code: '6981', name: '村田制作所', tc: 'jp6981', emSecid: '151.6981' }, // 电子元件
+  { code: '7974', name: '任天堂', tc: 'jp7974', emSecid: '151.7974' }, // 游戏娱乐
 ]
 
 export interface AsiaRateConfig {

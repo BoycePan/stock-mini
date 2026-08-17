@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 132rpx 0;
+  padding: 160rpx 0;
   color: #728197;
   font-size: 26rpx;
 }

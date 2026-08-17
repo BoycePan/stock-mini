@@ -186,7 +186,8 @@ async function fetchAsiaStocks(configs: AsiaStockConfig[]): Promise<QuoteItem[]>
     if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
       results[index] = {
         code: cfg.code,
-        name: displayName(quote.name, cfg.name),
+        // 韩/日个股固定展示配置的中文名（腾讯等源返回英文名，如 Samsung Electronics Co., Ltd.）
+        name: cfg.name,
         price: quote.latestPrice,
         pct: quote.changePercent,
       }
@@ -202,7 +203,8 @@ async function fetchAsiaStocks(configs: AsiaStockConfig[]): Promise<QuoteItem[]>
       if (em && em.latestPrice !== null) {
         results[index] = {
           code: cfg.code,
-          name: displayName(em.name, cfg.name),
+          // 同上：东财兜底也统一用配置的中文名
+          name: cfg.name,
           price: em.latestPrice,
           pct: em.changePercent,
         }
