@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+
 export function formatChange(change: number): string {
   const sign = change > 0 ? '+' : ''
   return `${sign}${change.toFixed(2)}%`
@@ -26,13 +28,9 @@ export function formatUpdatedAt(value = new Date()): string {
 }
 
 /** 完整时间戳 yyyy-MM-dd HH:mm:ss（用于「数据更新时间」展示） */
-export function formatDateTime(value: Date | number | string = new Date()): string {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const pad = (n: number): string => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+export function formatDateTime(value?: string | number | Date): string {
+  const date = dayjs(value)
+  return date.isValid() ? date.format('YYYY-MM-DD HH:mm:ss') : ''
 }
 
 export function calculatePercentChange(current: number, previous?: number): number | null {

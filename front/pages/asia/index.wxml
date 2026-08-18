@@ -1,5 +1,6 @@
 <view class="page theme-{{ theme }} asia-page">
   <app-header showSearch="{{ true }}" showShare="{{ false }}"></app-header>
+  <view class="update-time">{{updatedLabel}}</view>
   <view class="page-status {{statusTone}}">
     <text class="status-dot"></text>
     <text>{{ statusLabel }}</text>
@@ -12,7 +13,6 @@
     </view>
     <block wx:else>
       <section-card wx:for="{{ sections }}" wx:key="id" section="{{ item }}"></section-card>
-      <view class="source-note">{{ updatedLabel }}</view>
     </block>
     <view class="bottom-space"></view>
   </scroll-view>

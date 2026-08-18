@@ -21,10 +21,11 @@
   box-shadow: 0 0 0 5rpx rgba(131, 104, 245, 0.14);
 }
 
-.updated {
-  margin-left: 16rpx;
+.update-time {
+  margin: 4rpx 32rpx 6rpx;
   color: #8a98aa;
-  font-weight: 400;
+  font-size: 22rpx;
+  line-height: 30rpx;
 }
 
 .content-scroll {

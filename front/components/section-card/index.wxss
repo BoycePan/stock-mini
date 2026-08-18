@@ -111,9 +111,9 @@
   margin-top: 6rpx;
   overflow: hidden;
   color: #152338;
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 700;
-  line-height: 42rpx;
+  line-height: 44rpx;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -201,14 +201,34 @@
   align-self: center;
   margin-top: 0;
   margin-left: 8rpx;
-  padding: 3rpx 10rpx;
+  /* 板块只展示涨跌幅文本：去掉胶囊边框/背景，把空间让给名称 */
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   flex-shrink: 0;
-  font-size: 20rpx;
+  font-size: 24rpx;
+  line-height: 32rpx;
+}
+
+.section-card .single-line-metric .metric-change.up,
+.section-card .single-line-metric .metric-change.down,
+.section-card .single-line-metric .metric-change.flat {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* 深色主题下同样去边框（避免 .theme-dark .metric-change.flat 的胶囊样式回填） */
+.section-card.theme-dark .single-line-metric .metric-change.up,
+.section-card.theme-dark .single-line-metric .metric-change.down,
+.section-card.theme-dark .single-line-metric .metric-change.flat {
+  border-color: transparent;
+  background: transparent;
 }
 
 .section-card .single-line-metric .metric-change text:first-child {
   margin-right: 4rpx;
-  font-size: 17rpx;
+  font-size: 20rpx;
 }
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */

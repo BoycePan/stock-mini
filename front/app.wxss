@@ -99,8 +99,7 @@ button::after {
   color: #e5ebf4;
 }
 
-.page.theme-dark .source-note,
-.page.theme-dark .updated,
+.page.theme-dark .update-time,
 .page.theme-dark .theme-subtitle,
 .page.theme-dark .news-time,
 .page.theme-dark .news-meta,

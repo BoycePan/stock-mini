@@ -47,19 +47,12 @@
   box-shadow: 0 0 0 5rpx rgba(165, 176, 191, 0.14);
 }
 
-.updated {
-  margin-left: 16rpx;
-  color: #8a98aa;
-  font-weight: 400;
-}
-
-/* 数据更新时间 / 更新说明 */
-.source-note {
-  margin: 24rpx 40rpx;
+/* 数据更新时间（页面顶部） */
+.update-time {
+  margin: 4rpx 32rpx 6rpx;
   color: #8a98aa;
   font-size: 22rpx;
-  line-height: 34rpx;
-  text-align: center;
+  line-height: 30rpx;
 }
 
 /* 底部占位：避免内容被悬浮 TabBar 遮挡（TabBar 122rpx + 安全区 + 呼吸间距） */
