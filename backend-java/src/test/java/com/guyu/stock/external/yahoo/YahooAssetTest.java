@@ -7,12 +7,12 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** 全球资产清单合法性：commodity 17 / forex 5 / crypto 2 / bond 3 / stock 16，合并 43，code 唯一，category 非空。 */
+/** 全球资产清单合法性：commodity 15 / forex 5 / crypto 2 / bond 3 / stock 16，合并 41，code 唯一，category 非空。 */
 class YahooAssetTest {
 
     @Test
-    void commodityHas17() {
-        assertThat(YahooAsset.COMMODITIES).hasSize(17);
+    void commodityHas15() {
+        assertThat(YahooAsset.COMMODITIES).hasSize(15);
     }
 
     @Test
@@ -36,8 +36,8 @@ class YahooAssetTest {
     }
 
     @Test
-    void allMergesTo43() {
-        assertThat(YahooAsset.ALL).hasSize(43);
+    void allMergesTo41() {
+        assertThat(YahooAsset.ALL).hasSize(41);
     }
 
     @Test

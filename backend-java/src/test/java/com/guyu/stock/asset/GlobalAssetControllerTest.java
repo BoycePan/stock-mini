@@ -32,7 +32,7 @@ class GlobalAssetControllerTest {
 
     @Test
     void listByTypeReturnsAssets() throws Exception {
-        when(yahooQuoteService.listAssetQuotes("commodity", null)).thenReturn(List.of(
+        when(yahooQuoteService.listAssetQuotes("commodity", null, null)).thenReturn(List.of(
                 new AssetQuote("GC=F", "黄金", "commodity", "global", "贵金属", 4401.9, 1.2, null, "06:00-05:00", true)));
 
         mockMvc.perform(get("/api/v1/asset/list").param("type", "commodity"))
@@ -44,14 +44,26 @@ class GlobalAssetControllerTest {
     }
 
     @Test
+    void listByTypeForwardsTradingParam() throws Exception {
+        when(yahooQuoteService.listAssetQuotes("commodity", null, true)).thenReturn(List.of(
+                new AssetQuote("GC=F", "黄金", "commodity", "global", "贵金属", 4401.9, 1.2, null, "06:00-05:00", true)));
+
+        mockMvc.perform(get("/api/v1/asset/list").param("type", "commodity").param("trading", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].code").value("GC=F"))
+                .andExpect(jsonPath("$.data[0].isTrading").value(true));
+    }
+
+    @Test
     void fetchByTypeReturnsCounts() throws Exception {
-        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(17);
+        when(yahooAssetService.fetchAssets(anyList(), eq("commodity"), eq("1mo"))).thenReturn(15);
 
         mockMvc.perform(get("/api/v1/asset/fetch").param("type", "commodity").param("range", "1mo"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.ok").value(17))
-                .andExpect(jsonPath("$.data.total").value(17));
+                .andExpect(jsonPath("$.data.ok").value(15))
+                .andExpect(jsonPath("$.data.total").value(15));
     }
 
     @Test

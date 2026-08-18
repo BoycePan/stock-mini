@@ -106,18 +106,21 @@ public class YahooQuoteService {
         return snapshots.size();
     }
 
-    /** 指数列表（stock_info 元数据 + 实时快照点位，查询只读库） */
-    public List<IndexQuote> listIndexQuotes() {
-        return quoteRepository.queryIndexList();
+    /** 指数列表（stock_info 元数据 + 实时快照点位，查询只读库）；trading=true 只返回当前开市、false 只返回闭市、null 返回全部 */
+    public List<IndexQuote> listIndexQuotes(Boolean trading) {
+        List<IndexQuote> all = quoteRepository.queryIndexList();
+        return trading == null ? all : all.stream().filter(q -> q.isTrading() == trading).toList();
     }
 
-    /** 板块列表（stock_info 元数据 + 实时快照点位，按 market/board 分组，查询只读库）；market 为空返回全部 */
-    public List<SectorQuote> listSectorQuotes(String market) {
-        return quoteRepository.querySectorList(market);
+    /** 板块列表（stock_info 元数据 + 实时快照点位，按 market/board 分组，查询只读库）；market 为空返回全部；trading 过滤同上 */
+    public List<SectorQuote> listSectorQuotes(String market, Boolean trading) {
+        List<SectorQuote> all = quoteRepository.querySectorList(market);
+        return trading == null ? all : all.stream().filter(q -> q.isTrading() == trading).toList();
     }
 
-    /** 全球资产列表（商品/外汇/加密）：type 必传，market 可选过滤 */
-    public List<AssetQuote> listAssetQuotes(String type, String market) {
-        return quoteRepository.queryAssetList(type, market);
+    /** 全球资产列表（商品/外汇/加密）：type 必传，market 可选过滤；trading 过滤同上 */
+    public List<AssetQuote> listAssetQuotes(String type, String market, Boolean trading) {
+        List<AssetQuote> all = quoteRepository.queryAssetList(type, market);
+        return trading == null ? all : all.stream().filter(q -> q.isTrading() == trading).toList();
     }
 }

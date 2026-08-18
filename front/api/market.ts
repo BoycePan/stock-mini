@@ -218,13 +218,17 @@ async function fetchAsiaStocks(configs: AsiaStockConfig[]): Promise<QuoteItem[]>
   return results.filter((item): item is QuoteItem => item !== null)
 }
 
-/** 汇率涨跌幅：|pct| < 5 归零（docs 日韩页汇率规则） */
+/**
+ * 汇率涨跌幅：仅丢弃异常值（|pct| >= 80，与 fetchAccurate 同款护栏）。
+ * 外汇日间波动通常 <1%（实测 -0.3% ~ +0.05%），正常小波动原样保留，
+ * 不再做「|pct|<5 归零」（旧规则会把所有真实涨跌压成 0）。
+ */
 function normalizeRatePct(pct: number | null | undefined): number | null {
   if (pct === null || pct === undefined) return null
-  return Math.abs(pct) < 5 ? 0 : pct
+  return isAbnormalPct(pct) ? null : pct
 }
 
-/** 汇率条目（东财兜底价格 ÷100；|pct| < 5 归零） */
+/** 汇率条目（东财兜底价格 ÷100；涨跌幅仅做异常护栏） */
 function rateItem(
   cfg: AsiaRateConfig,
   price: number | null,
@@ -255,12 +259,13 @@ async function fetchAsiaRates(): Promise<QuoteItem[]> {
     }
   })
 
-  // ② 东财汇率兜底：价格 ÷100（USDKRW 除外，直接用原值）
+  // ② 东财汇率兜底：价格 ÷100（119 汇率 f43 为 10^4 倍精度，
+  //    normalizeEastmoneyQuote 按 f152=2 已 ÷100，这里需再 ÷100；USDKRW 同样适用）
   await Promise.all(
     fallback.map(async ({ cfg, index }) => {
       const em = await fetchEastmoneyQuote(cfg.emSecid)
       if (em && em.latestPrice !== null) {
-        const price = cfg.code === 'USDKRW' ? em.latestPrice : em.latestPrice / 100
+        const price = em.latestPrice / 100
         results[index] = rateItem(cfg, price, em.changePercent)
       } else {
         results[index] = rateItem(cfg, null, null)

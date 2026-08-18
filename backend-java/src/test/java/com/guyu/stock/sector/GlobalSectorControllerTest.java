@@ -33,7 +33,7 @@ class GlobalSectorControllerTest {
 
     @Test
     void listReturnsSectorQuotesGrouped() throws Exception {
-        when(yahooQuoteService.listSectorQuotes(null)).thenReturn(List.of(
+        when(yahooQuoteService.listSectorQuotes(null, null)).thenReturn(List.of(
                 new SectorQuote("XLK", "科技", "us", "industry", 200.5, 1.2, null, "21:30-04:00", true),
                 new SectorQuote("SMH", "半导体", "us", "theme", 250.0, 0.8, null, "21:30-04:00", true)));
 
@@ -48,7 +48,7 @@ class GlobalSectorControllerTest {
 
     @Test
     void listFiltersByMarket() throws Exception {
-        when(yahooQuoteService.listSectorQuotes("us")).thenReturn(List.of(
+        when(yahooQuoteService.listSectorQuotes("us", null)).thenReturn(List.of(
                 new SectorQuote("GLD", "黄金", "us", "theme", 402.5, 1.0, null, "21:30-04:00", true)));
 
         mockMvc.perform(get("/api/v1/global-sector/list").param("market", "us"))
@@ -56,6 +56,18 @@ class GlobalSectorControllerTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[0].code").value("GLD"))
                 .andExpect(jsonPath("$.data[0].market").value("us"));
+    }
+
+    @Test
+    void listForwardsTradingParam() throws Exception {
+        when(yahooQuoteService.listSectorQuotes(null, true)).thenReturn(List.of(
+                new SectorQuote("XLK", "科技", "us", "industry", 200.5, 1.2, null, "21:30-04:00", true)));
+
+        mockMvc.perform(get("/api/v1/global-sector/list").param("trading", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].code").value("XLK"))
+                .andExpect(jsonPath("$.data[0].isTrading").value(true));
     }
 
     @Test

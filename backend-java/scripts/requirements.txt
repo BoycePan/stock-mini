@@ -1,0 +1,7 @@
+# 雅虎 Python sidecar（scripts/fetch_service.py）依赖。
+# 版本与开发机一致（2026-08-13 实测），保证开发/生产行为一致。
+# 装进容器内 /opt/venv，见 backend-java/Dockerfile。
+fastapi==0.128.8
+uvicorn==0.39.0
+yfinance==1.2.0
+curl_cffi==0.13.0

@@ -76,8 +76,7 @@
   gap: 14rpx;
 }
 
-.share-button,
-.system-actions {
+.share-button {
   height: 66rpx;
   border: 1rpx solid #e1e8f0;
   border-radius: 34rpx;
@@ -92,32 +91,9 @@
   line-height: 66rpx;
 }
 
-.system-actions {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 0 18rpx;
-  font-size: 27rpx;
-}
-
-.system-actions.solo {
-  margin-left: auto;
-}
-
-.divider {
-  color: #c5ceda;
-  font-size: 24rpx;
-}
-
-.mini-dot {
-  color: #4c8dff;
-  font-size: 31rpx;
-}
-
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
 .header.dark,
-.header.dark .share-button,
-.header.dark .system-actions {
+.header.dark .share-button {
   background: rgba(24, 34, 49, 0.96);
   border-color: #2a394e;
   color: #f5f7fb;

@@ -132,7 +132,7 @@ export function parseSinaQuote(key: string, fields: string[]): SinaQuote {
   if (key.startsWith('gb_')) {
     return sinaGb(key, fields)
   }
-  // 外汇 fx_*：现价 [1]、昨收 [3]
+  // 外汇 fx_*：现价 [1]、昨收 [3]；新浪自带 [10] 涨跌幅(%)、[11] 涨跌额（缺失时反推）
   if (key.startsWith('fx_')) {
     return sinaFx(key, fields)
   }
@@ -191,10 +191,23 @@ function sinaGb(key: string, fields: string[]): SinaQuote {
   return { key, price, previousClose, change, changePercent }
 }
 
+/**
+ * 新浪 fx_ 外汇：现价 [1]、昨收 [3]；新浪自带 [10] 涨跌幅(%)、[11] 涨跌额，
+ * 缺失时由 现价-昨收 反推（实测 4 个汇率 key，[11] = 现价-昨收、[10] = 涨跌幅均吻合）。
+ */
 function sinaFx(key: string, fields: string[]): SinaQuote {
   const price = numAt(fields, 1)
   const previousClose = numAt(fields, 3)
-  return sinaWithPrevCloseValues(key, price, previousClose)
+  if (price === null) {
+    return { key, price, previousClose, change: null, changePercent: null }
+  }
+  let change = numAt(fields, 11)
+  let changePercent = numAt(fields, 10)
+  if (changePercent === null && previousClose !== null && previousClose !== 0) {
+    if (change === null) change = price - previousClose
+    changePercent = (change / previousClose) * 100
+  }
+  return { key, price, previousClose, change, changePercent }
 }
 
 /** 美股代理股涨跌幅（fetchUsProxyChangeMap 消费方）：直接取 [2]（docs ② gb_ 差异说明） */

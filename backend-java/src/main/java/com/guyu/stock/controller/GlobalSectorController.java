@@ -32,10 +32,11 @@ public class GlobalSectorController {
         this.yahooQuoteService = yahooQuoteService;
     }
 
-    /** 板块列表：stock_info 元数据 + 实时快照点位（60s 刷新）；market 不传返回全部，否则按市场过滤（如 us）。含 market/board 分组字段 */
+    /** 板块列表：stock_info 元数据 + 实时快照点位（60s 刷新）；market 不传返回全部，否则按市场过滤（如 us）。含 market/board 分组字段；trading=true 只返回当前开市的板块 */
     @GetMapping("/list")
-    public ApiResponse<List<SectorQuote>> list(@RequestParam(value = "market", required = false) String market) {
-        return ApiResponse.success(yahooQuoteService.listSectorQuotes(market));
+    public ApiResponse<List<SectorQuote>> list(@RequestParam(value = "market", required = false) String market,
+                                               @RequestParam(value = "trading", required = false) Boolean trading) {
+        return ApiResponse.success(yahooQuoteService.listSectorQuotes(market, trading));
     }
 
     /** 板块 K线：DB 有则查库，无则经 sidecar 拉取落库并返回（带缓存防限流） */

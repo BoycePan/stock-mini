@@ -123,7 +123,7 @@ function metricOf(
     name: item.name,
     value: item.price === null ? '' : formatNumber(item.price),
     change: item.pct ?? 0,
-    // 汇率等场景：无涨跌幅（缺失或归零）时隐藏涨跌徽标，避免展示无意义的 "— —"
+    // 汇率等场景：涨跌幅缺失或恰好为 0 时隐藏涨跌徽标，避免展示无意义的 "— —"
     hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],

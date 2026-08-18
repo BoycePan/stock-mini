@@ -72,3 +72,41 @@ pnpm --filter market-magic-mini lint
 - `/pages/news/index`：新闻（支持分页与下拉刷新）
 - `/pages/news-detail/index`：新闻详情
 - `/pages/legal/index?type=data-notice`：协议与说明
+
+## 自动上传 / 预览（miniprogram-ci）
+
+使用 `miniprogram-ci@2.1.31`（最新稳定版）集成 CI 上传脚本，可在本地命令行或 GitHub Actions 中
+自动上传开发版本 / 生成预览二维码，无需手动打开微信开发者工具。
+
+### 前置条件
+
+1. 在「微信公众平台 → 开发管理 → 开发设置 → 小程序代码上传」生成上传密钥，
+   并将执行环境出口 IP 加入白名单；
+2. 将密钥放到仓库根目录 `keys/private.<appid>.key` 或 `front/keys/private.key`（均已 gitignore），
+   或通过环境变量 `WX_PRIVATE_KEY` 传入密钥内容。
+
+### 常用命令（仓库根目录执行）
+
+```bash
+pnpm upload                        # 上传开发版本（默认 1 号机器人，版本号取仓库根 package.json）
+pnpm upload -- --version=1.2.0 --desc=发版   # 自定义版本号与备注
+pnpm upload -- --dry-run           # 只校验配置与密钥，不真正上传
+pnpm upload:preview -- --page=pages/global/index   # 生成预览二维码
+```
+
+详细参数见 `scripts/upload.ts` 头部的注释（或 `pnpm upload -- --help`）。
+
+### GitHub Actions
+
+`.github/workflows/frontend-upload.yml` 会在 main 分支的 `front/` 变更时自动上传。
+首次使用需在仓库配置：
+
+| 名称 | 类型 | 说明 |
+| --- | --- | --- |
+| `WX_PRIVATE_KEY` | Secret | 上传密钥文件内容（推荐） |
+| `WX_UPLOAD_VERSION` | Variable | 上传版本号，如 `1.0.1`；留空时自动生成 `1.0.<run_number>` |
+| `WX_ROBOT` | Variable | 机器人编号 1-30，默认 1 |
+| `WX_APPID` | Variable | 可选，默认读 `project.config.json` |
+
+> 注意：GitHub 托管运行器出口 IP 会变化，若密钥 IP 白名单无法覆盖，请改用自托管 runner
+> 或通过 `WX_CI_PROXY` 指定固定出口 IP 的 HTTP 代理。

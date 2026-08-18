@@ -54,7 +54,7 @@ app:
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     referer: "https://q.10jqka.com.cn/"
   fetch:
-    # 雅虎 Python sidecar（方案 A）。开发模式默认拉起；生产设 FETCH_ENABLED=false，单独部署 sidecar。
+    # 雅虎 Python sidecar（方案 A）。镜像内已内置脚本与依赖，Java 启动自动拉起、退出随之销毁。
     enabled: ${FETCH_ENABLED:true}
     script-path: ${FETCH_SCRIPT_PATH:scripts/fetch_service.py}
     python: ${FETCH_PYTHON:python3}

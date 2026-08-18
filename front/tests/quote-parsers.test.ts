@@ -152,11 +152,40 @@ test('新浪 gb_ 美股代理（fetchUsProxyChangeMap 消费方）：涨跌幅�
   assert.equal(sinaGbProxyPct(['x', 'x', '95.0']), null) // |pct|>=80 丢弃
 })
 
-test('新浪 fx_ 外汇：现价 [1]、昨收 [3]，涨跌幅由差值反推', () => {
+test('新浪 fx_ 外汇：优先用新浪自带 [10] 涨跌幅 / [11] 涨跌额（实测 fx_ 字段布局）', () => {
+  const fields = [
+    '22:17:43', // [0] 时间
+    '1411.15', // [1] 现价
+    '1411.37', // [2] 卖价
+    '1415.48', // [3] 昨收
+    '88800', // [4] 成交量
+    '1415.53', // [5] 今开
+    '1416.68', // [6] 最高
+    '1407.80', // [7] 最低
+    '1411.15', // [8]
+    '美元兑韩元即期汇率', // [9] 名称
+    '-0.31', // [10] 涨跌幅(%)
+    '-4.33', // [11] 涨跌额
+    '0.006273', // [12]
+    '',
+    '1561.50', // [14] 区间高
+    '1407.12', // [15] 区间低
+    '',
+    '2026-08-18', // [17] 日期
+  ]
+  const quote = parseSinaQuote('fx_susdkrw', fields)
+  assert.equal(quote.price, 1411.15)
+  assert.equal(quote.previousClose, 1415.48)
+  assert.equal(quote.change, -4.33)
+  assert.equal(quote.changePercent, -0.31)
+})
+
+test('新浪 fx_ 外汇：涨跌字段缺失时按 现价-昨收 反推', () => {
   const fields = ['人民币/韩元', '191.2', 'x', '190.8']
   const quote = parseSinaQuote('fx_scnykrw', fields)
   assert.equal(quote.price, 191.2)
   assert.equal(quote.previousClose, 190.8)
+  assert.ok(Math.abs((quote.change as number) - 0.4) < 1e-9)
   assert.ok(Math.abs((quote.changePercent as number) - 0.2096) < 0.001)
 })
 

@@ -154,7 +154,7 @@
 
 ### 4.3 魔法数字散落
 
-- **现状**：`10_000`(auto-refresh)、`30_000 / 60_000`(缓存 TTL)、`90min`(FRESH_MS)、`pct<5 归零`、`÷100`、`÷1000`、`parallel` 等散在多个文件。
+- **现状**：`10_000`(auto-refresh)、`30_000 / 60_000`(缓存 TTL)、`90min`(FRESH_MS)、汇率 `÷100`、`÷1000`、`parallel` 等散在多个文件。
 - **建议**：集中到 `config/constants.ts`，并加注释对齐文档索引。
 
 ### 4.4 标的配置硬编码
@@ -235,7 +235,7 @@
 ### 8.1 测试覆盖集中在纯函数，编排层零测试
 
 - **现状**：`quote-parsers.test.ts`、`quote-consensus`、`market-clock` 覆盖很好，但 `api/market.ts`（串行 / 兜底 / 共识 / 板块均值编排）无测试。
-- **建议**：把 `getGlobalMarketPage` 等做成「注入 fetcher 的纯编排函数」，用 fixture 覆盖「全失败」「部分源失败」「板块均值」「汇率归零」等分支。
+- **建议**：把 `getGlobalMarketPage` 等做成「注入 fetcher 的纯编排函数」，用 fixture 覆盖「全失败」「部分源失败」「板块均值」「汇率异常涨跌幅」等分支。
 
 ### 8.2 建议补请求层测试
 

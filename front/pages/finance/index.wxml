@@ -1,32 +1,45 @@
-<view class="page theme-{{theme}} finance-page">
-  <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
+<view class="page theme-{{ theme }} finance-page">
+  <app-header showSearch="{{ true }}" showShare="{{ false }}"></app-header>
   <view class="page-meta">
     <view class="page-status">
       <text class="status-dot"></text>
-      <text>{{statusLabel}}</text>
+      <text>{{ statusLabel }}</text>
     </view>
-    <view class="update-time">{{updatedLabel}}</view>
+    <view class="update-time">{{ updatedLabel }}</view>
   </view>
-  <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}" text="正在加载财经资讯" desc="正在为您获取最新财经快讯，请稍候…"></loading-state>
-    <view wx:elif="{{error}}" class="error-card">
-      <text>{{error}}</text>
+  <scroll-view
+    scroll-y
+    class="content-scroll"
+    refresher-enabled="{{ true }}"
+    refresher-triggered="{{ refreshing }}"
+    refresher-default-style="{{ theme === 'dark' ? 'white' : 'black' }}"
+    refresher-background="{{ theme === 'dark' ? '#151e2d' : '#eef3f8' }}"
+    bindrefresherrefresh="onRefresherRefresh"
+  >
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载财经资讯"
+      desc="正在为您获取最新财经快讯，请稍候…"
+    ></loading-state>
+
+    <view wx:elif="{{ error }}" class="error-card">
+      <text>{{ error }}</text>
       <button bindtap="onRetry">重新加载</button>
     </view>
     <block wx:else>
-      <view wx:if="{{news.length}}" class="news-list">
+      <view wx:if="{{ news.length }}" class="news-list">
         <view
-          wx:for="{{news}}"
+          wx:for="{{ news }}"
           wx:key="url"
           class="news-item"
-          data-index="{{index}}"
+          data-index="{{ index }}"
           bindtap="onItemTap"
         >
-          <text class="news-title">{{item.title}}</text>
-          <text class="news-intro">{{item.summary}}</text>
+          <text class="news-title">{{ item.title }}</text>
+          <text class="news-intro">{{ item.summary }}</text>
           <view class="news-meta">
-            <text wx:if="{{item.source}}" class="news-source">{{item.source}}</text>
-            <text wx:if="{{item.time}}" class="news-time">{{item.time}}</text>
+            <text wx:if="{{ item.source }}" class="news-source">{{ item.source }}</text>
+            <text wx:if="{{ item.time }}" class="news-time">{{ item.time }}</text>
           </view>
         </view>
       </view>
@@ -34,5 +47,5 @@
     </block>
     <view class="bottom-space"></view>
   </scroll-view>
-  <bottom-tabbar active="{{activeTab}}" bind:change="onTabChange"></bottom-tabbar>
+  <bottom-tabbar active="{{ activeTab }}" bind:change="onTabChange"></bottom-tabbar>
 </view>

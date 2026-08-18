@@ -34,7 +34,6 @@ button::after {
 
 .page.theme-dark .header,
 .page.theme-dark .share-button,
-.page.theme-dark .system-actions,
 .page.theme-dark .tabbar {
   background: rgba(24, 34, 49, 0.96);
   border-color: #2a394e;

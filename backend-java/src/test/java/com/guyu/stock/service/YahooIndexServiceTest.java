@@ -7,6 +7,7 @@ import com.guyu.stock.external.yahoo.YahooKlineClient;
 import com.guyu.stock.model.QuoteSnapshot;
 import com.guyu.stock.model.StockKline;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -95,5 +96,25 @@ class YahooIndexServiceTest {
         Map<String, Object> result = service.getKlines("^GSPC", "1y");
 
         assertThat(result.get("latest")).isNull();
+    }
+
+    @Test
+    void fetchIndexSkipsZeroCloseBars() {
+        YahooKlineClient.KLine valid1 = new YahooKlineClient.KLine("2026-08-10 00:00", 100, 105, 99, 102, 1000L);
+        YahooKlineClient.KLine zeroBar = new YahooKlineClient.KLine("2026-08-11 00:00", 0, 0, 0, 0, 1000L);
+        YahooKlineClient.KLine valid2 = new YahooKlineClient.KLine("2026-08-12 00:00", 102, 104, 101, 103, 1000L);
+        when(client.getKLine("^TEST", "1y", "1d")).thenReturn(List.of(valid1, zeroBar, valid2));
+
+        int saved = service.fetchIndex("^TEST", "1y");
+
+        assertThat(saved).isEqualTo(2);
+        ArgumentCaptor<List<StockKline>> captor = ArgumentCaptor.forClass(List.class);
+        verify(klineRepository).batchUpsert(captor.capture());
+        List<StockKline> rows = captor.getValue();
+        assertThat(rows).hasSize(2);
+        assertThat(rows.get(0).tradeDate()).isEqualTo(LocalDate.of(2026, 8, 10));
+        assertThat(rows.get(1).tradeDate()).isEqualTo(LocalDate.of(2026, 8, 12));
+        // 跨过零 bar 后，涨跌幅基于上一个有效收盘（102→103 ≈ +0.98%），而非被 0 污染
+        assertThat(rows.get(1).pctChange()).isEqualTo(0.98);
     }
 }

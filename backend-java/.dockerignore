@@ -1,0 +1,7 @@
+# 构建上下文精简：.env 含数据库密码/JWT/微信密钥，不进构建上下文
+.env
+.env.*
+target/
+.idea/
+*.iml
+*.log

@@ -8,7 +8,7 @@ export interface MarketMetric {
   unit?: string
   icon?: string
   updatedAt?: string
-  /** 无涨跌幅时隐藏涨跌徽标（如汇率无有效涨跌幅数据） */
+  /** 无涨跌幅（缺失或恰好为 0）时隐藏涨跌徽标，避免展示无意义的「— —」 */
   hideChange?: boolean
   /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
   detail?: Record<string, string | undefined>

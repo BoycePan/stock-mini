@@ -1,2 +1,8 @@
 packages:
   - front
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  less: true
+  protobufjs: true

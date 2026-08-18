@@ -33,7 +33,7 @@ public final class TradingHours {
     private static final Map<String, Window> BY_MARKET = Map.ofEntries(
             Map.entry("us", window("21:30", "04:00")),
             Map.entry("global", window("21:30", "04:00")), // iShares 全球行业，美股交易
-            Map.entry("cn", window("09:30", "15:00")),
+            Map.entry("cn", window("09:30", "15:02")), // 15:00 收盘，留 2 分钟结算缓冲吃收盘集合竞价最终价
             Map.entry("hk", window("09:30", "16:00")),
             Map.entry("tw", window("09:00", "13:30")),
             Map.entry("jp", window("08:00", "14:30")),
