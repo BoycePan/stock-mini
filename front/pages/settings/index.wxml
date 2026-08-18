@@ -51,6 +51,18 @@
       </view>
     </view>
 
+    <!-- 全新上线公告 -->
+    <view class="launch-card">
+      <view class="launch-copy">
+        <text class="launch-icon">🚀</text>
+        <view>
+          <text class="launch-title">小程序全新上线</text>
+          <text class="launch-subtitle">更多模块持续更新中</text>
+        </view>
+      </view>
+      <view class="launch-badge">敬请期待</view>
+    </view>
+
     <!-- 更多服务 -->
     <view class="setting-section">
       <text class="setting-heading">更多服务</text>

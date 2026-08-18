@@ -7,6 +7,8 @@ export interface MarketMetric {
   change: number
   unit?: string
   icon?: string
+  /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序展示 */
+  tags?: string[]
   updatedAt?: string
   /** 无涨跌幅（缺失或恰好为 0）时隐藏涨跌徽标，避免展示无意义的「— —」 */
   hideChange?: boolean

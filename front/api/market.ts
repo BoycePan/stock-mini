@@ -312,6 +312,9 @@ async function getAsiaMarketPage(): Promise<MarketPageData> {
 // 有色页：金银 / 工业金属 / 其他金属
 // ---------------------------------------------------------------------------
 
+/** 多源兜底命中的来源是否属于 A 股个股（腾讯 / 新浪A股 / 东财个股接口） */
+const A_SHARE_SOURCES = new Set(['tencent', 'sina_ashare', 'em'])
+
 async function resolveMetal(
   metal: MetalConfig,
   ctx: { sinaBatch: Map<string, SinaQuote>; tcMap: Map<string, TencentQuote>; useA: boolean },
@@ -328,7 +331,7 @@ async function resolveMetal(
     }
   }
 
-  // ② 腾讯批量命中（tc 类金属股 / 钨 sh600549）
+  // ② 腾讯批量命中（tc 类金属股 / 钨 sh600549）：展示的是个股股价，打「个股」标
   if (metal.tc) {
     const quote = ctx.tcMap.get(metal.tc)
     if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
@@ -337,6 +340,8 @@ async function resolveMetal(
         name: displayName(quote.name, metal.name),
         price: quote.latestPrice,
         pct: quote.changePercent,
+        // 展示的是个股股价：标「个股」+ 所代表的金属
+        tags: ['个股', metal.name],
       }
     }
   }
@@ -361,7 +366,13 @@ async function resolveMetal(
   if (sources.length) {
     const quote = await fetchAccurate(sources, {}, { parallel: 2 })
     if (quote && quote.price !== null) {
-      return { ...base, price: quote.price, pct: quote.changePercent }
+      return {
+        ...base,
+        price: quote.price,
+        pct: quote.changePercent,
+        // 命中个股来源（如钼/锗/铟/锑的 tc 兜底）时标「个股」+ 代表金属；外盘 hf_ 等金属报价不加标
+        tags: A_SHARE_SOURCES.has(quote.source) ? ['个股', metal.name] : undefined,
+      }
     }
   }
 
@@ -388,6 +399,7 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   const groups: QuoteGroup[] = METAL_SECTIONS.map((section) => ({
     id: `metal-${section.id}`,
     title: section.title,
+    tip: section.tip,
     items: section.codes.flatMap((code) => {
       const item = itemByCode.get(code)
       return item ? [item] : []

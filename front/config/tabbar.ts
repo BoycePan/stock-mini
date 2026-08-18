@@ -272,6 +272,8 @@ export interface MetalSectionConfig {
   id: string
   title: string
   codes: string[]
+  /** 标题右侧「i」说明文案 */
+  tip?: string
 }
 
 export const METAL_SECTIONS: MetalSectionConfig[] = [
@@ -281,6 +283,7 @@ export const METAL_SECTIONS: MetalSectionConfig[] = [
     id: 'other',
     title: '其他金属',
     codes: ['TUNGSTEN', 'MOLY', 'GERMANIUM', 'INDIUM', 'ANTIMONY'],
+    tip: '钼/锗/铟/锑暂无统一现货报价，展示的是对应 A 股上市公司（个股）的股价',
   },
 ]
 

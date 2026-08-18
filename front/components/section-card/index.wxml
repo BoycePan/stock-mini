@@ -30,6 +30,9 @@
             ><text class="metric-icon">{{ item.icon }}</text></view
           >
           <text class="metric-name">{{ item.name }}</text>
+          <block wx:for="{{ item.tags }}" wx:for-item="tag" wx:key="*this">
+            <view class="metric-tag"><text>{{ tag }}</text></view>
+          </block>
           <view
             wx:if="{{ section.singleLine && !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"

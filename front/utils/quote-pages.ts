@@ -17,12 +17,16 @@ export interface QuoteItem {
   pct: number | null
   unit?: string
   icon?: string
+  /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序随指标展示 */
+  tags?: string[]
 }
 
 export interface QuoteGroup {
   id: string
   title: string
   items: QuoteItem[]
+  /** 标题右侧「i」说明文案，透传到 MarketSection.tip */
+  tip?: string
 }
 
 /**
@@ -127,6 +131,7 @@ function metricOf(
     hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
+    tags: item.tags,
   }
 }
 
@@ -140,6 +145,7 @@ function sectionOf(
     id: group.id,
     title: group.title,
     tone,
+    tip: group.tip,
     metrics: group.items.map((item, index) => metricOf(item, offset + index, opts)),
   }
 }

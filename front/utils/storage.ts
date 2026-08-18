@@ -1,3 +1,5 @@
+import type { MarketPageData } from '../types/market'
+
 const TOKEN_KEY = 'market_magic_token'
 const USER_KEY = 'market_magic_user'
 const THEME_KEY = 'market_magic_theme'
@@ -5,6 +7,7 @@ const API_BASE_URL_KEY = 'market_magic_api_base_url'
 const NEWS_DETAIL_KEY = 'market_magic_news_detail'
 const SEARCH_HISTORY_KEY = 'market_magic_search_history'
 const SEARCH_HISTORY_LIMIT = 10
+const FINANCE_CACHE_KEY = 'market_magic_finance_cache'
 
 export type ThemeMode = 'light' | 'dark'
 
@@ -94,6 +97,18 @@ export function saveNewsDetail(detail: NewsDetail): void {
 
 export function getNewsDetail(): NewsDetail | null {
   return read<NewsDetail | null>(NEWS_DETAIL_KEY, null)
+}
+
+/**
+ * 财经资讯页数据缓存：接口响应慢，进入页面先展示本地缓存，
+ * 再后台刷新最新数据，刷新成功后覆盖缓存。
+ */
+export function getFinanceCache(): MarketPageData | null {
+  return read<MarketPageData | null>(FINANCE_CACHE_KEY, null)
+}
+
+export function setFinanceCache(data: MarketPageData): void {
+  wx.setStorageSync(FINANCE_CACHE_KEY, data)
 }
 
 export function getSearchHistory(): string[] {

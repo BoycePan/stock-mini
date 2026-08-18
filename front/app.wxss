@@ -73,6 +73,7 @@ button::after {
 .page.theme-dark .setting-section,
 .page.theme-dark .follow-card,
 .page.theme-dark .theme-card,
+.page.theme-dark .launch-card,
 .page.theme-dark .news-list,
 .page.theme-dark .loading,
 .page.theme-dark .error {

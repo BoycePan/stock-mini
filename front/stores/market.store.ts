@@ -28,6 +28,17 @@ export class MarketStore {
     makeAutoObservable(this)
   }
 
+  /**
+   * 用本地缓存填充页面数据（缓存优先展示场景）。
+   * 仅当 store 中尚无该页数据时调用；调用后页面立即展示缓存，
+   * 再通过 loadPage 的 force 参数后台刷新最新数据。
+   */
+  hydratePage(key: MarketPageKey, data: MarketPageData): void {
+    this.pages[key] = data
+    this.loading[key] = false
+    this.errors[key] = ''
+  }
+
   async loadPage(key: MarketPageKey, options: LoadPageOptions = {}) {
     const { force = false, silent = false } = options
     if (this.pages[key] && !force) return this.pages[key]

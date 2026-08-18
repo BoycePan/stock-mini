@@ -6,6 +6,7 @@
 
 .theme-card,
 .promo-card,
+.launch-card,
 .setting-section,
 .follow-card {
   border: 1rpx solid #e2eaf3;
@@ -222,10 +223,79 @@
   opacity: 0.72;
 }
 
+.launch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+  padding: 25rpx 24rpx;
+}
+
+.launch-copy {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.launch-icon {
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(145deg, #e7f3ff 0%, #d3e9ff 100%);
+  font-size: 40rpx;
+}
+
+.launch-title {
+  display: block;
+  color: #152338;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.launch-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: #7b8ba1;
+  font-size: 23rpx;
+}
+
+.launch-badge {
+  flex: 0 0 auto;
+  padding: 10rpx 22rpx;
+  border-radius: 26rpx;
+  background: linear-gradient(135deg, #7db4ff 0%, #4c7ff0 100%);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
 .page.theme-dark .theme-icon {
   border: 1rpx solid #34465e;
   background: #223248;
   color: #6fa3ff;
+}
+
+.page.theme-dark .launch-icon {
+  border: 1rpx solid #34465e;
+  background: #223248;
+}
+
+.page.theme-dark .launch-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .launch-subtitle {
+  color: #9cacc0;
+}
+
+.page.theme-dark .launch-badge {
+  background: linear-gradient(135deg, #3a6bd0 0%, #2a56b4 100%);
+  color: #eef4ff;
 }
 
 /* 用户信息卡片 */
