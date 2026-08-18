@@ -22,6 +22,7 @@ import { aShareSecid, bareCode } from '../utils/quote-consensus'
 import { fetchAccurate, fetchAShareBoardChangeMap, fetchUsProxyChangeMap } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
+import { formatDateTime } from '../utils/formatter'
 import {
   buildQuoteAsiaPage,
   buildQuoteGlobalPage,
@@ -421,7 +422,7 @@ async function getFinanceMarketPage(): Promise<MarketPageData> {
   return {
     statusLabel: '财经',
     statusTone: 'active',
-    updatedLabel: '已更新 · 财经新闻',
+    updatedLabel: `数据更新时间：${formatDateTime()}`,
     sections: [{ id: 'finance-news', title: '财经新闻', tone: 'finance', metrics: newsMetrics }],
   }
 }

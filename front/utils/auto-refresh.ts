@@ -1,11 +1,11 @@
 /**
  * tabbar 数据页的自动刷新：
- * - 页面可见（onShow）时启动：立即静默刷新一次，之后每 60s 刷新一次；
+ * - 页面可见（onShow）时启动：立即静默刷新一次，之后每 10s 刷新一次；
  * - 页面不可见（onHide/onUnload）时停止，不占用资源、不产生请求；
  * - 已有加载进行中（下拉刷新/首屏）时跳过，避免并发重复请求。
  */
 
-const AUTO_REFRESH_INTERVAL = 60_000
+const AUTO_REFRESH_INTERVAL = 10_000
 
 type TimerId = ReturnType<typeof setInterval>
 

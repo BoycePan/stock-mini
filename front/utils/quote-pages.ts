@@ -6,7 +6,7 @@
  */
 
 import type { MarketMetric, MarketPageData, MarketSection } from '../types/market'
-import { formatNumber } from './formatter'
+import { formatDateTime, formatNumber } from './formatter'
 
 /** 页面行情条目（外部数据归一化后的展示单元） */
 export interface QuoteItem {
@@ -113,23 +113,34 @@ export const QUOTE_ICONS: Record<string, string> = {
   ANTIMONY: '🧪',
 }
 
-function metricOf(item: QuoteItem, index: number): MarketMetric {
+function metricOf(
+  item: QuoteItem,
+  index: number,
+  opts?: { hideFlatChange?: boolean },
+): MarketMetric {
   return {
     id: `q-${item.code}-${index}`,
     name: item.name,
     value: item.price === null ? '' : formatNumber(item.price),
     change: item.pct ?? 0,
+    // 汇率等场景：无涨跌幅（缺失或归零）时隐藏涨跌徽标，避免展示无意义的 "— —"
+    hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
   }
 }
 
-function sectionOf(group: QuoteGroup, offset: number, tone: MarketSection['tone']): MarketSection {
+function sectionOf(
+  group: QuoteGroup,
+  offset: number,
+  tone: MarketSection['tone'],
+  opts?: { hideFlatChange?: boolean },
+): MarketSection {
   return {
     id: group.id,
     title: group.title,
     tone,
-    metrics: group.items.map((item, index) => metricOf(item, offset + index)),
+    metrics: group.items.map((item, index) => metricOf(item, offset + index, opts)),
   }
 }
 
@@ -156,15 +167,20 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
     groups.push({ id: 'global-economy', title: '宏观经济', items: params.macro })
   }
   if (params.sectors.length) {
-    groups.push({ id: 'industry-board', title: '行业板块', items: params.sectors })
+    // 板块本体为东方财富 A 股行业板块（BK 代码），标题标注国家以便与美股/日韩板块区分
+    groups.push({ id: 'industry-board', title: '中国行业板块', items: params.sectors })
   }
 
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of groups) {
     const section = sectionOf(group, offset, 'global')
-    if (group.id === 'industry-board' && params.sectorBadge) {
-      section.badge = params.sectorBadge
+    if (group.id === 'industry-board') {
+      // 行业板块无价格，只有涨跌幅：单行展示
+      section.singleLine = true
+      if (params.sectorBadge) {
+        section.badge = params.sectorBadge
+      }
     }
     sections.push(section)
     offset += group.items.length
@@ -173,7 +189,7 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
   return {
     statusLabel: params.statusLabel,
     statusTone: params.statusTone,
-    updatedLabel: '已更新 · 数据来源：腾讯/新浪/东方财富',
+    updatedLabel: `数据更新时间：${formatDateTime()}`,
     sections,
   }
 }
@@ -197,13 +213,17 @@ export function buildQuoteAsiaPage(params: QuoteAsiaPageParams): MarketPageData 
     offset += group.items.length
   }
   if (params.rates.length) {
-    sections.push(sectionOf({ id: 'asia-fx', title: '汇率', items: params.rates }, offset, 'asia'))
+    sections.push(
+      sectionOf({ id: 'asia-fx', title: '汇率', items: params.rates }, offset, 'asia', {
+        hideFlatChange: true,
+      }),
+    )
   }
 
   return {
     statusLabel: '亚太',
     statusTone: params.statusTone,
-    updatedLabel: '已更新 · 数据来源：腾讯/新浪/东方财富',
+    updatedLabel: `数据更新时间：${formatDateTime()}`,
     sections,
   }
 }
@@ -234,7 +254,7 @@ export function buildQuoteMetalsPage(params: QuoteMetalsPageParams): MarketPageD
   return {
     statusLabel: '有色',
     statusTone: params.statusTone,
-    updatedLabel: '已更新 · 数据来源：腾讯/新浪/东方财富',
+    updatedLabel: `数据更新时间：${formatDateTime()}`,
     sections,
   }
 }

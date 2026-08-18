@@ -15,7 +15,6 @@ Page({
     statusLabel: '',
     statusTone: 'rest',
     updatedLabel: '',
-    sourceLabel: '腾讯/新浪/东方财富',
     error: '',
   },
   onLoad() {
