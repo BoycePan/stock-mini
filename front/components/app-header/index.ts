@@ -13,20 +13,7 @@ Component({
     attached() {
       this.setData({ theme: getTheme() })
       bindTheme(this)
-      const windowInfo = wx.getWindowInfo()
-      const safeTop = windowInfo.safeArea?.top ?? 0
-      const basePaddingTop = (26 * windowInfo.windowWidth) / 750
-      const basePaddingRight = (32 * windowInfo.windowWidth) / 750
-      const menuButton = wx.getMenuButtonBoundingClientRect()
-      // 右侧预留微信胶囊区域，避免头部右侧内容（搜索/分享按钮）被胶囊遮挡
-      const paddingRight =
-        menuButton && menuButton.width > 0
-          ? Math.max(windowInfo.windowWidth - menuButton.left + 8, basePaddingRight)
-          : basePaddingRight
-
-      this.setData({
-        headerStyle: `padding-top: ${basePaddingTop + safeTop}px; padding-right: ${paddingRight}px;`,
-      })
+      this.updateHeaderStyle()
     },
     detached() {
       unbindTheme(this)
