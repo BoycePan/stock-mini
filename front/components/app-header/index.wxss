@@ -2,7 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 26rpx 32rpx 18rpx;
+  box-sizing: border-box;
+  padding: 26rpx 12rpx 18rpx;
 }
 
 .brand {

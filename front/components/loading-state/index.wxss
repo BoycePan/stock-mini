@@ -1,27 +1,74 @@
 .loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 160rpx 0;
-  color: #728197;
-  font-size: 26rpx;
+  padding: 180rpx 48rpx;
 }
 
-.loading-dot {
-  width: 24rpx;
-  height: 24rpx;
-  margin-right: 14rpx;
-  border: 4rpx solid #dce6f2;
-  border-top-color: #4c8dff;
+/* 转圈 spinner（比普通 loading 更大、更醒目） */
+.loading-spinner {
+  width: 72rpx;
+  height: 72rpx;
+  border: 6rpx solid #dbe5f1;
+  border-top-color: #4278ed;
   border-radius: 50%;
+  -webkit-animation: loading-spin 0.9s linear infinite;
+  animation: loading-spin 0.9s linear infinite;
+}
+
+@-webkit-keyframes loading-spin {
+  from {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 30rpx;
+}
+
+.loading-text {
+  color: #33465e;
+  font-size: 29rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.loading-desc {
+  margin-top: 10rpx;
+  color: #8a98aa;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  text-align: center;
 }
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
-.loading-state.dark {
-  color: #9cacc0;
+.loading-state.dark .loading-spinner {
+  border-color: #2a394e;
+  border-top-color: #6fa3ff;
 }
 
-.loading-state.dark .loading-dot {
-  border-color: #2a394e;
-  border-top-color: #4c8dff;
+.loading-state.dark .loading-text {
+  color: #f5f7fb;
+}
+
+.loading-state.dark .loading-desc {
+  color: #9cacc0;
 }

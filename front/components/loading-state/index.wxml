@@ -1,1 +1,7 @@
-<view class="loading-state {{theme === 'dark' ? 'dark' : ''}}"><view class="loading-dot"></view><text>{{text}}</text></view>
+<view class="loading-state {{theme === 'dark' ? 'dark' : ''}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-copy">
+    <text class="loading-text">{{text}}</text>
+    <text wx:if="{{desc}}" class="loading-desc">{{desc}}</text>
+  </view>
+</view>

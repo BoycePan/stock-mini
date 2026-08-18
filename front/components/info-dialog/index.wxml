@@ -1,0 +1,11 @@
+<view wx:if="{{ visible }}" class="info-mask" catchtap="onClose">
+  <view
+    class="info-dialog {{ theme === 'dark' ? 'theme-dark' : '' }}"
+    catchtap="noop"
+    aria-role="dialog"
+  >
+    <text class="info-title">{{ title }}</text>
+    <text class="info-content">{{ content }}</text>
+    <button class="info-confirm" catchtap="onClose">知道了</button>
+  </view>
+</view>

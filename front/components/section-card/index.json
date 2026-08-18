@@ -1,1 +1,7 @@
-{ "component": true, "componentGenerics": {} }
+{
+  "component": true,
+  "componentGenerics": {},
+  "usingComponents": {
+    "info-dialog": "/components/info-dialog/index"
+  }
+}

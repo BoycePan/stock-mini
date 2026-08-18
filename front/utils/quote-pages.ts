@@ -156,6 +156,8 @@ export interface QuoteGlobalPageParams {
   statusTone: 'active' | 'rest'
   /** 板块数据源会话徽标（如 A股时段 / 美股时段） */
   sectorBadge?: string
+  /** 板块标题：随数据源会话切换（A股时段 → 中国行业板块；美股时段 → 美股行业板块） */
+  sectorTitle?: string
 }
 
 export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageData {
@@ -167,8 +169,13 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
     groups.push({ id: 'global-economy', title: '宏观经济', items: params.macro })
   }
   if (params.sectors.length) {
-    // 板块本体为东方财富 A 股行业板块（BK 代码），标题标注国家以便与美股/日韩板块区分
-    groups.push({ id: 'industry-board', title: '中国行业板块', items: params.sectors })
+    // 板块本体为东方财富 A 股行业板块（BK 代码）；A股时段展示东财板块数据，标题为「中国行业板块」；
+    // 非 A 股时段展示美股代理股涨跌幅均值，标题随之切换为「美股行业板块」。
+    groups.push({
+      id: 'industry-board',
+      title: params.sectorTitle ?? '中国行业板块',
+      items: params.sectors,
+    })
   }
 
   const sections: MarketSection[] = []
@@ -181,6 +188,7 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
       if (params.sectorBadge) {
         section.badge = params.sectorBadge
       }
+      section.tip = '全球产业数据根据公开产业信息整理,用于展示不同产业的发展变化,仅供信息参考。'
     }
     sections.push(section)
     offset += group.items.length

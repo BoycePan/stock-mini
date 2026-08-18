@@ -45,7 +45,6 @@
   font-size: 21rpx;
 }
 
-.loading,
 .error {
   margin-top: 18rpx;
   padding: 120rpx 24rpx;

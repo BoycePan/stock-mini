@@ -14,7 +14,7 @@
     <button class="search-button" bindtap="onSearch">搜索</button>
   </view>
   <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}"></loading-state>
+    <loading-state wx:if="{{loading}}" text="正在为您搜索" desc="正在查找相关股票，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
       <button bindtap="onSearch">重新搜索</button>

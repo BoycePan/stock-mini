@@ -3,7 +3,7 @@
     <app-header title="股票详情" showShare="{{true}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   </view>
   <view class="content-scroll">
-    <loading-state wx:if="{{loading}}"></loading-state>
+    <loading-state wx:if="{{loading}}" text="正在加载股票详情" desc="正在为您获取行情、K线与相关资讯，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
       <button bindtap="onRefresh">重新加载</button>

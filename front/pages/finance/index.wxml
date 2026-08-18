@@ -1,12 +1,14 @@
 <view class="page theme-{{theme}} finance-page">
   <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
-  <view class="update-time">{{updatedLabel}}</view>
-  <view class="page-status">
-    <text class="status-dot"></text>
-    <text>{{statusLabel}}</text>
+  <view class="page-meta">
+    <view class="page-status">
+      <text class="status-dot"></text>
+      <text>{{statusLabel}}</text>
+    </view>
+    <view class="update-time">{{updatedLabel}}</view>
   </view>
   <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}"></loading-state>
+    <loading-state wx:if="{{loading}}" text="正在加载财经资讯" desc="正在为您获取最新财经快讯，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
       <button bindtap="onRetry">重新加载</button>

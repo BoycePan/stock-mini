@@ -21,6 +21,7 @@ Component({
   },
   data: {
     bumpMap: {} as Record<string, boolean>,
+    tipVisible: false,
   },
   observers: {
     section(section: MarketSection) {
@@ -70,6 +71,14 @@ Component({
           bumpTimers.delete(this)
         }, BUMP_DURATION_MS),
       )
+    },
+    onTipTap() {
+      if (this.data.section?.tip) {
+        this.setData({ tipVisible: true })
+      }
+    },
+    onCloseTip() {
+      this.setData({ tipVisible: false })
     },
     onMetricTap(event: WechatMiniprogram.TouchEvent) {
       const index = event.currentTarget.dataset.index as number | undefined

@@ -19,6 +19,8 @@ export interface MarketSection {
   title: string
   tone: MarketTone
   badge?: string
+  /** 有值时标题右侧显示「i」说明图标，点击弹窗展示该提示文案 */
+  tip?: string
   metrics: MarketMetric[]
   /** 单行布局：无价格条目（如行业板块只有涨跌幅）时，名称与涨跌幅并排一行展示 */
   singleLine?: boolean

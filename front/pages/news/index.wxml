@@ -1,7 +1,7 @@
 <view class="page theme-{{theme}}">
   <app-header title="{{title}}" showShare="{{false}}"></app-header>
   <scroll-view scroll-y class="content-scroll" bindscrolltolower="onScrollLower" lower-threshold="120">
-    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <loading-state wx:if="{{loading}}" text="正在加载新闻" desc="正在为您获取最新财经新闻，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error">
       <text>{{error}}</text>
       <button class="retry-button" bindtap="onRetry">重新加载</button>

@@ -54,6 +54,27 @@
   font-weight: 600;
 }
 
+/* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
+.section-tip + .section-badge {
+  margin-left: 14rpx;
+}
+
+.section-tip {
+  margin-left: auto;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #c6d2e0;
+  border-radius: 50%;
+  background: #f4f7fb;
+  color: #7d8fa6;
+  font-size: 24rpx;
+  font-weight: 700;
+  font-family: Georgia, serif;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -266,6 +287,12 @@
   border-color: #7d4a56;
   background: #382a34;
   color: #ff9b9a;
+}
+
+.section-card.theme-dark .section-tip {
+  border-color: #43536a;
+  background: #2b3a4e;
+  color: #9cacc0;
 }
 
 .section-card.theme-dark.asia .metric-card,

@@ -1,6 +1,7 @@
 {
   "usingComponents": {
     "app-header": "/components/app-header/index",
+    "loading-state": "/components/loading-state/index",
     "empty-state": "/components/empty-state/index"
   },
   "enablePullDownRefresh": true

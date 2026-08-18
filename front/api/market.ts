@@ -126,6 +126,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     statusLabel: '全球市场',
     statusTone: session.statusTone,
     sectorBadge: session.useA ? 'A股时段' : '美股时段',
+    sectorTitle: session.useA ? '中国行业板块' : '美股行业板块',
   })
 }
 
@@ -294,8 +295,8 @@ async function getAsiaMarketPage(): Promise<MarketPageData> {
   return buildQuoteAsiaPage({
     indexGroups,
     stockGroups: [
-      { id: 'asia-kr-stock', title: '韩国个股', items: krStocks },
-      { id: 'asia-jp-stock', title: '日本个股', items: jpStocks },
+      { id: 'asia-kr-stock', title: '韩国核心个股', items: krStocks },
+      { id: 'asia-jp-stock', title: '日本核心个股', items: jpStocks },
     ],
     rates,
     statusTone: hasLiveQuote(all) ? 'active' : 'rest',

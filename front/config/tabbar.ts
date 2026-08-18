@@ -3,7 +3,7 @@
  *
  * 本文件只承载「接口参数」：行情代码、新浪/东财 key、价格区间、代理股等，会用于构造外部请求。
  * 展示用图标（Emoji）不放在这里，统一维护在 utils/quote-pages.ts 的 QUOTE_ICONS（按 code 映射）。
- * 美股代理股默认市场号为 105.（文档示例 105.NVDA；106.COHR / 107.ROBO 按原文保留）。
+ * 美股代理股市场号按东财实际归属：105.=纳斯达克（NVDA 等）、106.=纽交所（JPM 等）、107.=美交所（BATT 等 ETF）。
  */
 
 import type { QuoteSource } from '../types/quote'
@@ -102,38 +102,38 @@ export const INDUSTRY_BOARDS: IndustryBoardConfig[] = [
   {
     code: 'BK1128',
     name: 'CPO',
-    proxies: ['106.COHR', '105.LITE', '105.AAOI', '105.FN', '105.CIEN'],
+    proxies: ['106.COHR', '105.LITE', '105.AAOI', '106.FN', '106.CIEN'],
   },
   { code: 'BK0917', name: '半导体', proxies: ['105.SOXX'] },
   { code: 'BK1137', name: '存储', proxies: ['105.MU', '105.WDC', '105.STX'] },
-  { code: 'BK0922', name: '数据中心', proxies: ['105.DLR', '105.EQIX'] },
+  { code: 'BK0922', name: '数据中心', proxies: ['106.DLR', '105.EQIX'] },
   {
     code: 'BK0579',
     name: '云计算',
-    proxies: ['105.VRT', '105.VST', '105.SMCI', '105.CRM', '105.NOW', '105.SNOW', '105.ORCL'],
+    proxies: ['106.VRT', '106.VST', '105.SMCI', '106.CRM', '106.NOW', '106.SNOW', '106.ORCL'],
   },
-  { code: 'BK0963', name: '商业航天', proxies: ['105.RKLB', '105.ASTS', '105.RDW', '105.LUNR'] },
+  { code: 'BK0963', name: '商业航天', proxies: ['105.RKLB', '105.ASTS', '106.RDW', '105.LUNR'] },
   { code: 'BK0921', name: '卫星', proxies: ['105.ASTS', '105.IRDM', '105.GSAT', '105.VSAT'] },
   { code: 'BK1090', name: '机器人', proxies: ['107.ROBO'] },
   { code: 'BK0802', name: '自动驾驶', proxies: ['105.DRIV'] },
-  { code: 'BK0577', name: '核电', proxies: ['105.OKLO', '105.SMR'] },
+  { code: 'BK0577', name: '核电', proxies: ['106.OKLO', '106.SMR'] },
   {
     code: 'BK1647',
     name: '电网',
-    proxies: ['105.CEG', '105.VST', '105.GEV', '105.NEE', '105.PWR', '105.ETN'],
+    proxies: ['105.CEG', '106.VST', '106.GEV', '106.NEE', '106.PWR', '106.ETN'],
   },
-  { code: 'BK0490', name: '军工', proxies: ['105.LMT', '105.RTX', '105.NOC', '105.GD'] },
+  { code: 'BK0490', name: '军工', proxies: ['106.LMT', '106.RTX', '106.NOC', '106.GD'] },
   { code: 'BK0493', name: '新能源', proxies: ['105.ENPH', '105.FSLR', '105.RIVN', '105.SEDG'] },
-  { code: 'BK0588', name: '光伏', proxies: ['105.TAN'] },
-  { code: 'BK0574', name: '锂电池', proxies: ['105.BATT'] },
-  { code: 'BK0464', name: '石油', proxies: ['105.XLE'] },
-  { code: 'BK0843', name: '天然气', proxies: ['105.FCG'] },
-  { code: 'BK0478', name: '铜/有色', proxies: ['105.FCX', '105.SCCO', '105.TECK', '105.AA'] },
-  { code: 'BK0547', name: '黄金', proxies: ['105.GDX'] },
-  { code: 'BK0475', name: '银行金融', proxies: ['105.JPM', '105.BAC', '105.WFC', '105.GS'] },
-  { code: 'BK1216', name: '生物医药', proxies: ['105.LLY', '105.PFE', '105.MRK', '105.ABBV'] },
-  { code: 'BK0438', name: '消费', proxies: ['105.KO', '105.PG', '105.WMT', '105.COST'] },
-  { code: 'BK1016', name: '稀土', proxies: ['105.MP', '105.REMX', '105.UUUU'] },
+  { code: 'BK0588', name: '光伏', proxies: ['107.TAN'] },
+  { code: 'BK0574', name: '锂电池', proxies: ['107.BATT'] },
+  { code: 'BK0464', name: '石油', proxies: ['107.XLE'] },
+  { code: 'BK0843', name: '天然气', proxies: ['107.FCG'] },
+  { code: 'BK0478', name: '铜/有色', proxies: ['106.FCX', '106.SCCO', '106.TECK', '106.AA'] },
+  { code: 'BK0547', name: '黄金', proxies: ['107.GDX'] },
+  { code: 'BK0475', name: '银行金融', proxies: ['106.JPM', '106.BAC', '106.WFC', '106.GS'] },
+  { code: 'BK1216', name: '生物医药', proxies: ['106.LLY', '106.PFE', '106.MRK', '106.ABBV'] },
+  { code: 'BK0438', name: '消费', proxies: ['106.KO', '106.PG', '105.WMT', '105.COST'] },
+  { code: 'BK1016', name: '稀土', proxies: ['106.MP', '107.REMX', '107.UUUU'] },
 ]
 
 // ---------------------------------------------------------------------------

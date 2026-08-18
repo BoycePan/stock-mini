@@ -1,22 +1,63 @@
-<view class="section-card {{section.tone}} {{compact ? 'compact' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
+<view
+  class="section-card {{ section.tone }} {{ compact ? 'compact' : '' }} {{
+    theme === 'dark' ? 'theme-dark' : ''
+  }}"
+>
   <view class="section-title-row">
     <view class="title-accent"></view>
-    <text class="section-title">{{section.title}}</text>
-    <text wx:if="{{section.badge}}" class="section-badge">{{section.badge}}</text>
+    <text class="section-title">{{ section.title }}</text>
+    <view
+      wx:if="{{ section.tip }}"
+      class="section-tip"
+      catchtap="onTipTap"
+      aria-role="button"
+      aria-label="查看说明"
+      ><text>i</text></view
+    >
+    <text wx:if="{{ section.badge }}" class="section-badge">{{ section.badge }}</text>
   </view>
   <view class="metric-grid">
-    <block wx:for="{{section.metrics}}" wx:key="id">
-      <view class="metric-card {{compact ? 'compact-metric' : ''}} {{section.singleLine ? 'single-line-metric' : ''}}" data-index="{{index}}" bindtap="onMetricTap">
+    <block wx:for="{{ section.metrics }}" wx:key="id">
+      <view
+        class="metric-card {{ compact ? 'compact-metric' : '' }} {{
+          section.singleLine ? 'single-line-metric' : ''
+        }}"
+        data-index="{{ index }}"
+        bindtap="onMetricTap"
+      >
         <view class="metric-name-row">
-          <view wx:if="{{item.icon}}" class="metric-icon-chip"><text class="metric-icon">{{item.icon}}</text></view>
-          <text class="metric-name">{{item.name}}</text>
-          <view wx:if="{{section.singleLine && !item.hideChange}}" class="metric-change {{item.changeClass}} {{bumpMap[item.id] ? 'bump' : ''}}"><text>{{item.direction}}</text><text>{{item.changeText}}</text></view>
+          <view wx:if="{{ item.icon }}" class="metric-icon-chip"
+            ><text class="metric-icon">{{ item.icon }}</text></view
+          >
+          <text class="metric-name">{{ item.name }}</text>
+          <view
+            wx:if="{{ section.singleLine && !item.hideChange }}"
+            class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
+            ><text>{{ item.direction }}</text
+            ><text>{{ item.changeText }}</text></view
+          >
         </view>
-        <block wx:if="{{!section.singleLine}}">
-          <text wx:if="{{item.value}}" class="metric-value {{bumpMap[item.id] ? 'bump' : ''}}">{{item.value}}</text>
-          <view wx:if="{{!item.hideChange}}" class="metric-change {{item.changeClass}} {{bumpMap[item.id] ? 'bump' : ''}}"><text>{{item.direction}}</text><text>{{item.changeText}}</text></view>
+        <block wx:if="{{ !section.singleLine }}">
+          <text
+            wx:if="{{ item.value }}"
+            class="metric-value {{ bumpMap[item.id] ? 'bump' : '' }}"
+            >{{ item.value }}</text
+          >
+          <view
+            wx:if="{{ !item.hideChange }}"
+            class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
+            ><text>{{ item.direction }}</text
+            ><text>{{ item.changeText }}</text></view
+          >
         </block>
       </view>
     </block>
   </view>
+
+  <info-dialog
+    visible="{{ tipVisible }}"
+    title="{{ section.title }}"
+    content="{{ section.tip }}"
+    bind:close="onCloseTip"
+  ></info-dialog>
 </view>

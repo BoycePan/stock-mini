@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --import ./tests/register.mjs --experimental-strip-types --test tests/*.test.ts",
     "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\""
   },
   "dependencies": {
