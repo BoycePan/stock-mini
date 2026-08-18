@@ -5,6 +5,11 @@ spring:
     username: sa
     password:
 
+# 测试日志落到 target/test-logs，避免写容器/开发机根目录 /apps/logs
+logging:
+  file:
+    path: target/test-logs
+
 # 测试专用配置（非生产值）：让 @SpringBootTest 能完整加载 JwtService/SinaClient bean
 app:
   collector:

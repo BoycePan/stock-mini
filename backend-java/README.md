@@ -140,6 +140,8 @@ bash scripts/deploy.sh --run
 
 采集试运行：部署后可用 `run-sample-on-start=true` 触发一次小样本采集验证链路（见上文 `app.collector.run-sample-on-start`）。
 
+日志：`logback-spring.xml` 双通道输出——控制台（`docker logs` 可看）+ 文件落盘。文件按天滚动（`stock-backend.log` + 带日期的历史文件），只保留最近 3 天。容器内目录 `/apps/logs`，`deploy.sh --run` 默认挂载到宿主机 `/apps/stock/backend-java/logs`（可用 `LOG_DIR` 覆盖）；手动 `docker run` 时请同样挂载 `-v <宿主目录>:/apps/logs`，否则日志只进匿名卷，容器删除后难以找回。
+
 > 与 Go 版 `backend/` 并存时注意端口：两者默认都监听 `18487`（host 网络），并存验证请用 `PORT` 给其中一方换端口。
 
 ## 部署前检查

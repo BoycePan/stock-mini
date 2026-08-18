@@ -3,6 +3,12 @@
 server:
   port: 18487
 
+# 日志落盘目录（logback-spring.xml 读取，按天滚动、保留 3 天）。
+# 容器内默认 /apps/logs，由 deploy.sh 挂载宿主目录；本机调试可设 LOG_DIR=logs
+logging:
+  file:
+    path: ${LOG_DIR:/apps/logs}
+
 spring:
   application:
     name: stock-backend
@@ -73,3 +79,8 @@ app:
     # 指数/板块/资产快照定时刷新：默认 60s 批量拉最新点位落 quote_snapshot（63+ symbol，30s 会撞雅虎限流）
     snapshot-enabled: ${FETCH_SNAPSHOT_ENABLED:true}
     snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:60000}
+  logging:
+    # 每个 HTTP 请求的耗时日志（方法/URI/状态码/耗时ms/IP/uid），见 RequestLogFilter
+    request-enabled: ${REQUEST_LOG_ENABLED:true}
+    # 慢请求阈值（毫秒）：>0 时耗时 ≥ 该值的请求升级为 WARN 日志，0 表示全部按 INFO
+    slow-request-ms: ${SLOW_REQUEST_MS:0}

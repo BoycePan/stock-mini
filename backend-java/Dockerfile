@@ -40,6 +40,10 @@ COPY --from=builder /app/target/stock-backend-*.jar app.jar
 
 EXPOSE 18487
 
+# 日志落盘目录（logback-spring.xml 默认写 /apps/logs，按天滚动保留 3 天）。
+# 匿名卷兜底；deploy.sh 会显式 -v 挂载宿主目录以便持久化与查看
+VOLUME ["/apps/logs"]
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -q --spider http://localhost:18487/api/health || exit 1
 
