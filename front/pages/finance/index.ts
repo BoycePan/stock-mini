@@ -27,6 +27,11 @@ function toNewsView(page?: MarketPageData | null): NewsItemView[] {
   }))
 }
 
+/** 财经请求防抖：两次请求的最小间隔（毫秒），接口响应慢时避免被高频请求打爆 */
+const MIN_REQUEST_INTERVAL = 5000
+/** 模块级共享（跨页面实例），保证切页重建后依然生效 */
+let lastFinanceRequestAt = 0
+
 Page({
   data: {
     theme: rootStore.settings.theme,
@@ -77,15 +82,19 @@ Page({
   async onRefresherRefresh() {
     this.setData({ refreshing: true })
     try {
-      await this.loadData({ force: true })
+      const requested = await this.loadData({ force: true })
+      // 防抖：5s 内已请求过，本次未发起请求，不提示
+      if (!requested) return
+      const failed = Boolean(rootStore.market.errors['finance'])
+      if (this.isCurrentPage()) {
+        wx.showToast({
+          title: failed ? '刷新失败' : '已更新',
+          icon: 'none',
+        })
+      }
     } finally {
       this.setData({ refreshing: false })
     }
-    const failed = Boolean(rootStore.market.errors['finance'])
-    wx.showToast({
-      title: failed ? '刷新失败' : '刷新成功',
-      icon: 'none',
-    })
   },
   onShow() {
     startAutoRefresh(this)
@@ -98,22 +107,43 @@ Page({
     releaseStoreBindings(this)
     unbindTheme(this)
   },
-  async loadData(options?: { silent?: boolean; force?: boolean; toast?: boolean }) {
+  /**
+   * 请求财经数据。
+   * - 防抖：距上次请求不足 5s 时跳过本次请求，返回 false；
+   * - toast 仅在页面仍为当前展示页时弹出（切走/卸载后不提示，避免弹在别的页面上）；
+   * - 每次请求成功后把最新数据写入本地缓存。
+   * @returns 是否真正发起了请求
+   */
+  async loadData(options?: {
+    silent?: boolean
+    force?: boolean
+    toast?: boolean
+  }): Promise<boolean> {
     const { silent = false, force = false, toast = false } = options ?? {}
+    const now = Date.now()
+    if (now - lastFinanceRequestAt < MIN_REQUEST_INTERVAL) return false
+    lastFinanceRequestAt = now
     try {
       await rootStore.market.loadPage('finance', { force: force || silent, silent })
       this.saveFinanceCache()
-      if (toast) {
+      if (toast && this.isCurrentPage()) {
         wx.showToast({ title: '刷新成功', icon: 'none' })
       }
     } catch (error) {
       if (silent) {
         console.warn('[finance] 自动刷新失败:', error)
       }
-      if (toast) {
+      if (toast && this.isCurrentPage()) {
         wx.showToast({ title: '刷新失败', icon: 'none' })
       }
     }
+    return true
+  },
+  /** 页面是否仍为当前展示页（页面栈最后一项） */
+  isCurrentPage(): boolean {
+    const pages = getCurrentPages()
+    const current = pages[pages.length - 1] as WechatMiniprogram.Page.TrivialInstance | undefined
+    return current === (this as unknown as WechatMiniprogram.Page.TrivialInstance)
   },
   /** 将最新页面数据写入本地缓存，供下次进入页面时优先展示 */
   saveFinanceCache() {

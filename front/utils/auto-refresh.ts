@@ -13,7 +13,7 @@ const timers = new WeakMap<object, TimerId>()
 
 export interface AutoRefreshPage {
   data: { loading?: boolean }
-  loadData: (options?: { silent?: boolean }) => Promise<void>
+  loadData: (options?: { silent?: boolean }) => Promise<boolean | void>
 }
 
 export function startAutoRefresh(page: AutoRefreshPage): void {

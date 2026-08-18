@@ -1,7 +1,44 @@
 {
-  "description": "市场魔方助手",
+  "description": "全球市场追踪",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "scripts"
+      },
+      {
+        "type": "folder",
+        "value": "tests"
+      },
+      {
+        "type": "folder",
+        "value": "keys"
+      },
+      {
+        "type": "folder",
+        "value": "c31a093133b62d97cc8f273dff196f19"
+      },
+      {
+        "type": "file",
+        "value": "eslint.config.js"
+      },
+      {
+        "type": "file",
+        "value": "prettier.config.js"
+      },
+      {
+        "type": "file",
+        "value": "project.private.config.json"
+      },
+      {
+        "type": "suffix",
+        "value": ".md"
+      },
+      {
+        "type": "suffix",
+        "value": ".DS_Store"
+      }
+    ],
     "include": []
   },
   "setting": {
@@ -9,7 +46,7 @@
     "es6": true,
     "enhance": true,
     "postcss": true,
-    "minified": false,
+    "minified": true,
     "compileHotReLoad": true,
     "minifyWXSS": true,
     "minifyWXML": true,
@@ -17,7 +54,7 @@
       "typescript"
     ],
     "compileWorklet": false,
-    "uglifyFileName": false,
+    "uglifyFileName": true,
     "uploadWithSourceMap": true,
     "packNpmManually": false,
     "packNpmRelationList": [],
