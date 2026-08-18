@@ -179,10 +179,10 @@
 | --- | --- | --- | --- |
 | 0 | `resolveGlobalMarketSession`（会话判定） | **并发 8 路**：①腾讯直连 `sh000001`、`sz399001`、`usQQQ`、`usSPY`；`api.fetchQuoteBySecid` 传 `1.000001`、`105.QQQ`、`100.NDX`、`0.399001`（其中市场 0/1 的 `1.000001`/`0.399001` 内部仍走①腾讯） | 判定 A股/美股开闭状态，带 30s 缓存 + in-flight 去重；首次观测 400ms 后重拉确认 |
 | 1 | ②新浪批量预取 1 次 | 宏观资产全部新浪 key：`hf_OIL,znb_VIX,DINIW,hf_GC,hf_XAU,hf_SI,hf_XAG,hf_HG,hf_NG`（`gb_TLT` 不在此批，逐项拉取） | 供后续逐项解析复用，避免重复请求 |
-| 2 | 宏观资产 8 项逐项 `quote.fetchAccurate` 多源并发现拉 | 见下表 A（新浪→腾讯→东财兜底，`parallel=min(2,n)`） | 共识聚合取中位数 |
+| 2 | 宏观资产 9 项逐项 `quote.fetchAccurate` 多源并发现拉 | 见下表 A（新浪→腾讯→东财兜底，`parallel=min(2,n)`） | 共识聚合取中位数 |
 | 3 | 行业板块：A 股时段 `fetchAShareBoardChangeMap(24 个板块代码)` 1 次；非 A 股时段 `fetchUsProxyChangeMap(全部 proxies, usMode)`（②新浪 + ④东财各 1 次） | 见下表 B | 板块涨跌幅；非 A 股时段取美股代理股涨跌幅均值 |
 
-**A. 宏观资产 8 项（code / name / 数据源）**
+**A. 宏观资产 9 项（code / name / 数据源）**
 
 | code | name | 数据源（kind:key / secid） |
 | --- | --- | --- |
@@ -194,6 +194,7 @@
 | SI | 白银盎司 | 新浪 `hf_SI`、`hf_XAG` |
 | HG | 铜 | 新浪 `hf_HG` |
 | NG | 天然气 | 新浪 `hf_NG` |
+| SOX | 费城半导体指数 | 东财 `251.SOX` |
 
 **B. 行业板块 24 项（code / name / aSecid / 美股代理 proxies）**
 
@@ -397,7 +398,7 @@
 
 | 页面 | 数据字段 | 来源 |
 | --- | --- | --- |
-| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 8 项 + 行业板块 24 项 + 会话 |
+| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 9 项 + 行业板块 24 项 + 会话 |
 | 日韩 | `krIndexes/jpIndexes/asiaIndexes/krStocks/jpStocks/forexRates[]`（code/name/price/rawPct/change/changeText/toneClass/arrow） | 指数 6 + 个股 16 + 汇率 4 |
 | 有色 | `sections[]`（title + cards[]（name/value/toneClass/arrow/changeText）） | 金银 2 + 工业金属 5 + 其他金属 5 |
 | AI | `productItems[]`（name/price/pct）、`deviceItems[]` | A 股产品标的 + 美股设备标的（当前为空） |

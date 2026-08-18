@@ -253,6 +253,27 @@ test('东财：港股/韩股（f107=116）恒除 1000', () => {
   assert.equal(quote.previousClose, 228)
 })
 
+test('东财：费城半导体指数（f107=251）按 10^2 除、市场名「指数」', () => {
+  const quote = normalizeEastmoneyQuote('251.SOX', {
+    f57: 'SOX',
+    f58: '费城半导体指数',
+    f43: 1186839,
+    f60: 1262100,
+    f169: -75261,
+    f170: -596,
+    f152: 2,
+    f86: Math.floor(Date.now() / 1000) - 60,
+    f107: 251,
+  })
+  assert.ok(quote)
+  assert.equal(quote.latestPrice, 11868.39)
+  assert.equal(quote.previousClose, 12621)
+  assert.equal(quote.change, -752.61)
+  assert.equal(quote.changePercent, -5.96)
+  assert.equal(quote.marketName, '指数')
+  assert.equal(quote.isStale, false)
+})
+
 test('东财：f57/f58 为空视为行情为空', () => {
   assert.equal(normalizeEastmoneyQuote('105.QQQ', null), null)
   assert.equal(normalizeEastmoneyQuote('105.QQQ', { f57: '', f58: 'x' }), null)

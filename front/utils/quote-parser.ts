@@ -366,6 +366,7 @@ const MARKET_NAMES: Record<string, string> = {
   '116': '韩股',
   '119': '汇率',
   '151': '日股',
+  '251': '指数',
 }
 
 export function marketNameOf(market: string | number): string {

@@ -48,6 +48,7 @@ export const QUOTE_ICONS: Record<string, string> = {
   SI: '🥈',
   HG: '⚙️',
   NG: '🔥',
+  SOX: '🔬', // 费城半导体指数
   // 行业板块
   BK1134: '🧠', // AI算力
   BK1128: '💡', // CPO

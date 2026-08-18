@@ -25,7 +25,7 @@ export const GLOBAL_INDICES: GlobalIndexConfig[] = [
   { code: 'usQQQ', name: '纳斯达克' },
 ]
 
-/** 宏观资产 8 项（docs 表 A：code / name / 数据源） */
+/** 宏观资产 9 项（docs 表 A：code / name / 数据源） */
 export interface MacroAssetConfig {
   code: string
   name: string
@@ -34,11 +34,6 @@ export interface MacroAssetConfig {
 
 export const MACRO_ASSETS: MacroAssetConfig[] = [
   {
-    code: 'BRT',
-    name: '布伦特原油',
-    sources: [{ kind: 'sina_hf', key: 'hf_OIL', min: 20, max: 400 }],
-  },
-  {
     code: 'VIX',
     name: '恐慌指数',
     sources: [
@@ -46,6 +41,19 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
       { kind: 'tencent', key: 'usVIX', min: 5, max: 200 },
       { kind: 'em', secid: '100.VIX', min: 5, max: 200 },
     ],
+  },
+  {
+    code: 'SOX',
+    name: '费城半导体指数',
+    // 东财 secid 251.SOX（市场号 251，非 100/105）：腾讯 usSOX 无效、新浪 gb_/znb_ 字段布局
+    // 与解析器不兼容（会产生 previousClose=涨跌幅、changePercent=时间戳的错值），仅东财可靠。
+    sources: [{ kind: 'em', secid: '251.SOX', min: 300, max: 60000 }],
+  },
+
+  {
+    code: 'BRT',
+    name: '布伦特原油',
+    sources: [{ kind: 'sina_hf', key: 'hf_OIL', min: 20, max: 400 }],
   },
   {
     code: 'UDI',
@@ -84,6 +92,7 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
     name: '天然气',
     sources: [{ kind: 'sina_hf', key: 'hf_NG', min: 0.5, max: 50 }],
   },
+
 ]
 
 /** 行业板块 24 项（docs 表 B：aSecid 固定 90.BKxxxx，proxies 为美股代理股） */
