@@ -40,7 +40,7 @@
             ><text>{{ item.changeText }}</text></view
           >
         </view>
-        <block wx:if="{{ !section.singleLine }}">
+        <view wx:if="{{ !section.singleLine }}" class="metric-value-row">
           <text
             wx:if="{{ item.value }}"
             class="metric-value {{ bumpMap[item.id] ? 'bump' : '' }}"
@@ -52,7 +52,7 @@
             ><text>{{ item.direction }}</text
             ><text>{{ item.changeText }}</text></view
           >
-        </block>
+        </view>
       </view>
     </block>
   </view>

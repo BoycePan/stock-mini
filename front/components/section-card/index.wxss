@@ -142,9 +142,18 @@
   white-space: nowrap;
 }
 
+/* 价格 + 涨跌幅同行容器 */
+.metric-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  gap: 8rpx;
+}
+
 .metric-value {
-  width: 100%;
-  margin-top: 6rpx;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: #152338;
   font-size: 36rpx;
@@ -157,15 +166,19 @@
 .metric-change {
   display: inline-flex;
   align-items: center;
-  align-self: flex-start;
-  margin-top: 10rpx;
-  padding: 5rpx 14rpx;
+  align-self: center;
+  flex-shrink: 1;
+  margin-top: 0;
+  margin-left: auto;
+  padding: 3rpx 10rpx;
   border: 1rpx solid transparent;
-  border-radius: 24rpx;
-  font-size: 22rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
   font-weight: 650;
-  line-height: 30rpx;
+  line-height: 28rpx;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-change.up {
@@ -193,13 +206,11 @@
 
 .section-card.asia .metric-card,
 .section-card.metals .metric-card {
-  min-height: 126rpx;
-  padding-top: 16rpx;
-  padding-bottom: 14rpx;
+  padding-top: 12rpx;
+  padding-bottom: 12rpx;
 }
 
 .section-card.finance .metric-card {
-  min-height: 126rpx;
   border-color: #e5e1fa;
   background: linear-gradient(145deg, #fff 0%, #faf9ff 100%);
 }
