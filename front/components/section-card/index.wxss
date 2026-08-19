@@ -170,11 +170,11 @@
   flex-shrink: 1;
   margin-top: 0;
   margin-left: auto;
-  padding: 5rpx 14rpx;
+  padding: 5rpx 8rpx;
   border: 1rpx solid transparent;
   border-radius: 24rpx;
-  font-size: 26rpx;
-  font-weight: 700;
+  font-size: 24rpx;
+  font-weight: 500;
   line-height: 34rpx;
   white-space: nowrap;
   overflow: hidden;

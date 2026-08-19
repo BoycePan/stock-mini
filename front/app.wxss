@@ -1,3 +1,5 @@
+@import './styles/font.wxss';
+
 page {
   background: #eef3f8;
   color: #142033;
