@@ -1,23 +1,37 @@
 /**
  * market-page 组件样式
- * 复用 market-page.wxss 中的共享样式，但需要在组件内重新定义深色主题选择器
- * （因为组件样式隔离，pages 的 .page.theme-dark 不会穿透进来）
+ * 所有行情页公共样式统一维护在此，不再依赖外部 styles/market-page.wxss。
+ * 浅色/深色双主题，深色选择器从 .market-page.theme-dark 开始（组件样式隔离）。
  */
 
-/* 根节点布局 */
+/* 自定义组件宿主选择器：确保组件在父容器 flex 布局中占满 100% 高度并约束子 scroll-view */
+:host,
+market-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 根节点布局：flex 列方向，撑满父容器，内部 scroll 区自适应剩余高度 */
 .market-page {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-/* 内容滚动区 */
-.content-scroll {
   flex: 1;
   min-height: 0;
 }
 
-/* 顶部信息行：状态标题 pill 与更新时间同一排（pill 靠左、时间靠右） */
+/* 内容滚动区：显式声明 height: 0 触发微信小程序 Flex 下 scroll-view 滚动 */
+.content-scroll {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+}
+
+/* 顶部信息行：状态 pill 靠左、更新时间靠右 */
 .page-meta {
   display: flex;
   align-items: center;
@@ -25,7 +39,7 @@
   padding: 8rpx 32rpx 10rpx;
 }
 
-/* 交易状态 pill（开市=绿 / 休市=灰） */
+/* 交易状态 pill（开市=绿） */
 .page-status {
   display: inline-flex;
   align-items: center;
@@ -61,7 +75,7 @@
   box-shadow: 0 0 0 5rpx rgba(165, 176, 191, 0.14);
 }
 
-/* 数据更新时间（与状态标题同一排，右对齐） */
+/* 数据更新时间（右对齐，长文本省略） */
 .update-time {
   min-width: 0;
   margin-left: 24rpx;
@@ -74,13 +88,13 @@
   text-overflow: ellipsis;
 }
 
-/* 底部占位：避免内容被悬浮 TabBar 遮挡（TabBar 122rpx + 安全区 + 呼吸间距） */
+/* 底部占位：避免内容被悬浮 TabBar 遮挡 */
 .bottom-space {
   height: 150rpx;
   height: calc(122rpx + env(safe-area-inset-bottom) + 24rpx);
 }
 
-/* 深色主题（组件样式隔离，选择器从 .market-page.theme-dark 开始） */
+/* 深色主题（选择器从 .market-page.theme-dark 开始，组件样式隔离） */
 .market-page.theme-dark .page-status {
   border-color: #2b4a3c;
   background: #1e3a2e;

@@ -170,12 +170,12 @@
   flex-shrink: 1;
   margin-top: 0;
   margin-left: auto;
-  padding: 3rpx 10rpx;
+  padding: 5rpx 14rpx;
   border: 1rpx solid transparent;
-  border-radius: 20rpx;
-  font-size: 20rpx;
-  font-weight: 650;
-  line-height: 28rpx;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 34rpx;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -201,7 +201,7 @@
 
 .metric-change text:first-child {
   margin-right: 4rpx;
-  font-size: 18rpx;
+  font-size: 22rpx;
 }
 
 .section-card.asia .metric-card,
@@ -241,8 +241,9 @@
   border-radius: 0;
   background: transparent;
   flex-shrink: 0;
-  font-size: 24rpx;
-  line-height: 32rpx;
+  font-size: 26rpx;
+  line-height: 34rpx;
+  font-weight: 700;
 }
 
 .section-card .single-line-metric .metric-change.up,
@@ -262,7 +263,7 @@
 
 .section-card .single-line-metric .metric-change text:first-child {
   margin-right: 4rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
 }
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */

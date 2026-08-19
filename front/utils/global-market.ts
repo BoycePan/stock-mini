@@ -37,9 +37,21 @@ export function marketName(market: string): string {
   return marketNames[market] ?? market.toUpperCase()
 }
 
-/** 与 utils/formatter 同逻辑；此处内联以避免小程序端 .ts 后缀导入问题 */
+function stripTrailingZeros(value: string): string {
+  if (!value || typeof value !== 'string') return value
+  const cleaned = value.replace(/\s+/g, '')
+  if (cleaned.includes('.')) {
+    return cleaned.replace(/\.?0+$/, '')
+  }
+  return cleaned
+}
+
+/** 与 utils/formatter 同逻辑，包含裁切尾随0 */
 function formatNumber(value: number, digits = 2): string {
-  return Number.isFinite(value) ? value.toFixed(digits) : '--'
+  if (!Number.isFinite(value)) return '--'
+  const fixed = value.toFixed(digits)
+  const stripped = stripTrailingZeros(fixed)
+  return stripped === '' ? '0' : stripped
 }
 
 function quoteMetric(item: QuoteLike, index: number): MarketMetric {

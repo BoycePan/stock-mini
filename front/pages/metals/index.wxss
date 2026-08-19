@@ -1,1 +1,1 @@
-@import '../../styles/market-page.wxss';
+/* 行情页公共样式已移入 components/market-page/index.wxss，无需额外引入 */

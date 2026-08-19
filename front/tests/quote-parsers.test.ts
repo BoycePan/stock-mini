@@ -484,3 +484,19 @@ test('getMarketSession：A股盘中时 useA=true', () => {
   assert.equal(session.statusTone, 'active')
   assert.ok(session.label.includes('A股盘中'))
 })
+
+test('stripTrailingZeros 与 formatNumber/formatChange 格式化清洗测试', async () => {
+  const { stripTrailingZeros, formatNumber, formatChange } = await import('../utils/formatter')
+  assert.equal(stripTrailingZeros('1.00 00'), '1')
+  assert.equal(stripTrailingZeros('1.50'), '1.5')
+  assert.equal(stripTrailingZeros('1.23'), '1.23')
+
+  assert.equal(formatNumber(1.00), '1')
+  assert.equal(formatNumber(1.50), '1.5')
+  assert.equal(formatNumber(1.23), '1.23')
+  assert.equal(formatNumber(100.0), '100')
+
+  assert.equal(formatChange(0.0), '0%')
+  assert.equal(formatChange(1.5), '+1.5%')
+  assert.equal(formatChange(1.0), '+1%')
+})

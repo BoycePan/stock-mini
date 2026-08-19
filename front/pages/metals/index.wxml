@@ -12,6 +12,6 @@
     bind:retry="onRetry"
     bind:share="onShare"
     bind:tabchange="onTabChange"
-    style="flex: 1; min-height: 0;"
   ></market-page>
 </view>
+

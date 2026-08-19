@@ -34,15 +34,16 @@ import { fileURLToPath } from 'node:url'
 
 // miniprogram-ci 是 CommonJS 包，用 createRequire 引入，运行时行为与类型声明都可确定
 const require = createRequire(import.meta.url)
-const ci = require('miniprogram-ci') as typeof import('miniprogram-ci')
+// @ts-ignore
+const ci = require('miniprogram-ci') as any
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..')
 const REPO_ROOT = path.resolve(PROJECT_ROOT, '..')
 
-type ProjectOptions = ConstructorParameters<typeof ci.Project>[0]
-type UploadOptions = Parameters<typeof ci.upload>[0]
-type ProgressTask = NonNullable<UploadOptions['onProgressUpdate']>
+type ProjectOptions = any
+type UploadOptions = any
+type ProgressTask = any
 
 interface CliOptions {
   mode: 'upload' | 'preview'
@@ -152,7 +153,7 @@ function printHelp(): void {
   WX_ROBOT WX_CI_MODE WX_NO_MINIFY WX_CI_PROXY`)
 }
 
-const onProgressUpdate: ProgressTask = (task) => {
+const onProgressUpdate: ProgressTask = (task: any) => {
   if (typeof task === 'string') {
     console.log(`[ci] ${task}`)
     return

@@ -12,7 +12,8 @@ import type { EastmoneyQuote, JumpMpConfig, SinaQuote, TencentQuote } from '../t
 
 function toNumber(value: string | number | undefined): number | null {
   if (value === undefined || value === null || value === '') return null
-  const num = typeof value === 'number' ? value : Number(value)
+  const cleaned = typeof value === 'string' ? value.replace(/\s+/g, '') : value
+  const num = typeof cleaned === 'number' ? cleaned : Number(cleaned)
   return Number.isFinite(num) ? num : null
 }
 

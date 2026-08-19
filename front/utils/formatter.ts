@@ -1,12 +1,28 @@
 import dayjs from 'dayjs'
 
+/** 剔除字符串中的内部空格，并裁切末尾无意义的 .00 或尾随 0 */
+export function stripTrailingZeros(value: string): string {
+  if (!value || typeof value !== 'string') return value
+  const cleaned = value.replace(/\s+/g, '')
+  if (cleaned.includes('.')) {
+    return cleaned.replace(/\.?0+$/, '')
+  }
+  return cleaned
+}
+
 export function formatChange(change: number): string {
+  if (!Number.isFinite(change)) return '--'
   const sign = change > 0 ? '+' : ''
-  return `${sign}${change.toFixed(2)}%`
+  const fixed = Math.abs(change) < 0.0001 && change !== 0 ? change.toFixed(4) : change.toFixed(2)
+  const stripped = stripTrailingZeros(fixed)
+  return `${sign}${stripped === '' ? '0' : stripped}%`
 }
 
 export function formatNumber(value: number, digits = 2): string {
-  return Number.isFinite(value) ? value.toFixed(digits) : '--'
+  if (!Number.isFinite(value)) return '--'
+  const fixed = value.toFixed(digits)
+  const stripped = stripTrailingZeros(fixed)
+  return stripped === '' ? '0' : stripped
 }
 
 export function formatWan(value: number): string {
