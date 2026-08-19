@@ -196,19 +196,6 @@
   min-height: 126rpx;
   padding-top: 16rpx;
   padding-bottom: 14rpx;
-  border-color: #e2eaf3;
-  background: #fff;
-}
-
-.section-card.asia .metric-name,
-.section-card.metals .metric-name {
-  font-size: 30rpx;
-  font-weight: 600;
-}
-
-.section-card.asia .metric-change,
-.section-card.metals .metric-change {
-  font-size: 26rpx;
 }
 
 .section-card.finance .metric-card {
@@ -314,12 +301,6 @@
   border-color: rgba(111, 163, 255, 0.4);
   background: rgba(111, 163, 255, 0.14);
   color: #6fa3ff;
-}
-
-.section-card.theme-dark.asia .metric-card,
-.section-card.theme-dark.metals .metric-card {
-  border-color: #34465e;
-  background: #223248;
 }
 
 .section-card.theme-dark.finance .metric-card {

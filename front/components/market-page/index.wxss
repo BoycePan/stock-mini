@@ -1,0 +1,105 @@
+/**
+ * market-page 组件样式
+ * 复用 market-page.wxss 中的共享样式，但需要在组件内重新定义深色主题选择器
+ * （因为组件样式隔离，pages 的 .page.theme-dark 不会穿透进来）
+ */
+
+/* 根节点布局 */
+.market-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 内容滚动区 */
+.content-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 顶部信息行：状态标题 pill 与更新时间同一排（pill 靠左、时间靠右） */
+.page-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 32rpx 10rpx;
+}
+
+/* 交易状态 pill（开市=绿 / 休市=灰） */
+.page-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 20rpx;
+  border: 1rpx solid #cdeedb;
+  border-radius: 30rpx;
+  background: #effaf3;
+  color: #1c9d59;
+  font-size: 24rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(28, 157, 89, 0.1);
+}
+
+/* 休市（非交易时段）状态：灰色 */
+.page-status.rest {
+  border-color: #dce5f1;
+  background: #f2f6fb;
+  color: #617188;
+  box-shadow: 0 4rpx 12rpx rgba(97, 113, 136, 0.08);
+}
+
+.status-dot {
+  width: 13rpx;
+  height: 13rpx;
+  margin-right: 10rpx;
+  border-radius: 50%;
+  background: #24b86b;
+  box-shadow: 0 0 0 5rpx rgba(36, 184, 107, 0.12);
+}
+
+.page-status.rest .status-dot {
+  background: #a5b0bf;
+  box-shadow: 0 0 0 5rpx rgba(165, 176, 191, 0.14);
+}
+
+/* 数据更新时间（与状态标题同一排，右对齐） */
+.update-time {
+  min-width: 0;
+  margin-left: 24rpx;
+  color: #8a98aa;
+  font-size: 22rpx;
+  line-height: 30rpx;
+  text-align: right;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 底部占位：避免内容被悬浮 TabBar 遮挡（TabBar 122rpx + 安全区 + 呼吸间距） */
+.bottom-space {
+  height: 150rpx;
+  height: calc(122rpx + env(safe-area-inset-bottom) + 24rpx);
+}
+
+/* 深色主题（组件样式隔离，选择器从 .market-page.theme-dark 开始） */
+.market-page.theme-dark .page-status {
+  border-color: #2b4a3c;
+  background: #1e3a2e;
+  color: #6fd79a;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.18);
+}
+
+.market-page.theme-dark .page-status.rest {
+  border-color: #2b3d57;
+  background: #1d2b40;
+  color: #9db4d4;
+}
+
+.market-page.theme-dark .status-dot {
+  background: #34d37d;
+  box-shadow: 0 0 0 5rpx rgba(52, 211, 125, 0.16);
+}
+
+.market-page.theme-dark .page-status.rest .status-dot {
+  background: #7e93b0;
+  box-shadow: 0 0 0 5rpx rgba(126, 147, 176, 0.18);
+}

@@ -1,21 +1,18 @@
 <view class="page theme-{{ theme }} global-page">
-  <app-header showSearch="{{ true }}" bind:share="onShare"></app-header>
-  <view class="page-meta">
-    <view class="page-status {{ statusTone }}"
-      ><text class="status-dot"></text><text>{{ statusLabel }}</text></view
-    >
-    <view class="update-time">{{ updatedLabel }}</view>
-  </view>
-  <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{ loading }}" text="正在加载全球行情" desc="正在为您同步全球主要市场最新数据，请稍候…"></loading-state>
-    <view wx:elif="{{ error }}" class="error-card"
-      ><text>{{ error }}</text
-      ><button bindtap="onRetry">重新加载</button></view
-    >
-    <block wx:else>
-      <section-card wx:for="{{ sections }}" wx:key="id" section="{{ item }}"></section-card>
-    </block>
-    <view class="bottom-space"></view>
-  </scroll-view>
-  <bottom-tabbar active="{{ activeTab }}" bind:change="onTabChange"></bottom-tabbar>
+  <market-page
+    activeTab="{{ activeTab }}"
+    showShare="{{ true }}"
+    loading="{{ loading }}"
+    error="{{ error }}"
+    loadingText="正在加载全球行情"
+    loadingDesc="正在为您同步全球主要市场最新数据，请稍候…"
+    statusLabel="{{ statusLabel }}"
+    statusTone="{{ statusTone }}"
+    updatedLabel="{{ updatedLabel }}"
+    sections="{{ sections }}"
+    bind:retry="onRetry"
+    bind:share="onShare"
+    bind:tabchange="onTabChange"
+    style="flex: 1; min-height: 0;"
+  ></market-page>
 </view>
