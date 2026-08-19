@@ -10,10 +10,12 @@
 import { createStoreBindings } from 'mobx-miniprogram-bindings'
 import { rootStore } from '../stores/root.store'
 import { startAutoRefresh, stopAutoRefresh } from './auto-refresh'
-import type { MarketSection } from '../types/market'
+import type { MarketMetric, MarketSection } from '../types/market'
 import { metricViewModel } from './market'
+import { hasMinuteSources } from '../config/minute'
 import { registerStoreBinding, releaseStoreBindings } from './store-bindings'
 import { bindTheme, unbindTheme } from './theme'
+import { redirectFromShare } from './share'
 
 export type MarketPageKey = 'asia' | 'metals' | 'global'
 
@@ -30,6 +32,10 @@ export interface MarketPageOptions {
 
 export function createMarketPage(opts: MarketPageOptions) {
   const { pageKey, enableShare = false } = opts
+
+  // 分享中转：分享卡片先进首页再自动跳转目标页时，标记该页面实例，跳转完成前
+  // 不再执行首页的数据加载 / 自动刷新（避免中转瞬间多打一次首页请求）
+  const shareRedirectedPages = new WeakSet<object>()
 
   const shareHandlers = enableShare
     ? {
@@ -59,7 +65,12 @@ export function createMarketPage(opts: MarketPageOptions) {
       return rootStore.market.loading[pageKey]
     },
 
-    onLoad() {
+    onLoad(options: Record<string, string | undefined> = {}) {
+      // 分享中转：所有分享统一先进首页，识别到 target 后自动跳转目标页（见 utils/share.ts）
+      if (redirectFromShare(options)) {
+        shareRedirectedPages.add(this)
+        return
+      }
       bindTheme(this)
       registerStoreBinding(
         this,
@@ -74,7 +85,11 @@ export function createMarketPage(opts: MarketPageOptions) {
             sections: () =>
               (rootStore.market.pages[pageKey]?.sections ?? []).map((section) => ({
                 ...section,
-                metrics: section.metrics.map(metricViewModel),
+                metrics: section.metrics.map((metric) => ({
+                  ...metricViewModel(metric),
+                  // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）
+                  minuteAvailable: hasMinuteSources(metric.code ?? ''),
+                })),
               })),
           },
           actions: [],
@@ -92,6 +107,8 @@ export function createMarketPage(opts: MarketPageOptions) {
     },
 
     onShow() {
+      // 分享中转跳转中的页面不再启动首页自动刷新
+      if (shareRedirectedPages.has(this)) return
       // 距上次真正发起的请求超过 5s 才在 onShow 立即补一次刷新
       // （lastRequestAt 由 store 在 loadPage 实际请求处记录，缓存命中不更新）
       startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey])
@@ -125,6 +142,22 @@ export function createMarketPage(opts: MarketPageOptions) {
     onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
       const key = event.detail.key
       if (key !== this.data.activeTab) wx.redirectTo({ url: `/pages/${key}/index` })
+    },
+
+    /**
+     * 点击行情卡片 → 查看当日分时图（纯前端，直连外部接口）。
+     * 无分时源的卡片（如金店金价、财经新闻）提示后忽略。
+     */
+    onMetricTap(event: WechatMiniprogram.CustomEvent<{ metric?: MarketMetric }>) {
+      const metric = event.detail.metric
+      const code = metric?.code ?? ''
+      if (!code || !hasMinuteSources(code)) {
+        wx.showToast({ title: '该指标暂无分时数据', icon: 'none' })
+        return
+      }
+      wx.navigateTo({
+        url: `/pages/minute/index?code=${encodeURIComponent(code)}&name=${encodeURIComponent(metric?.name ?? '')}`,
+      })
     },
 
     ...shareHandlers,

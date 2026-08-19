@@ -1,8 +1,9 @@
 <view
   class="section-card {{ section.tone }} {{ compact ? 'compact' : '' }} {{
-    theme === 'dark' ? 'theme-dark' : ''
-  }}"
+    section.minuteCorner ? 'minute-corner' : ''
+  }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
 >
+  <view wx:if="{{ section.minuteCorner }}" class="minute-corner-badge"><text>分时</text></view>
   <view class="section-title-row">
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
@@ -34,6 +35,11 @@
             <view class="metric-tag"><text>{{ tag }}</text></view>
           </block>
           <view
+            wx:if="{{ item.minuteAvailable && !section.minuteCorner }}"
+            class="metric-tag minute-tag"
+            ><text>分时</text></view
+          >
+          <view
             wx:if="{{ section.singleLine && !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
             ><text>{{ item.direction }}</text
@@ -53,6 +59,7 @@
             ><text>{{ item.changeText }}</text></view
           >
         </view>
+        <view wx:if="{{ item.updatedAt }}" class="metric-updated">{{ item.updatedAt }}</view>
       </view>
     </block>
   </view>

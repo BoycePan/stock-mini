@@ -2,6 +2,8 @@ export type MarketTone = 'global' | 'asia' | 'metals' | 'finance'
 
 export interface MarketMetric {
   id: string
+  /** 行情代码（如 sh000001 / KS11 / GOLD），用于卡片点击查看日K时定位数据源；新闻等无行情条目缺省 */
+  code?: string
   name: string
   value: string
   change: number
@@ -26,6 +28,11 @@ export interface MarketSection {
   metrics: MarketMetric[]
   /** 单行布局：无价格条目（如行业板块只有涨跌幅）时，名称与涨跌幅并排一行展示 */
   singleLine?: boolean
+  /**
+   * 整个面板右上角以单个「分时」角标提示（如行业板块），
+   * 代替逐卡片内联「分时」标签；仅在该面板内指标支持分时图时置 true。
+   */
+  minuteCorner?: boolean
 }
 
 export interface MarketPageData {

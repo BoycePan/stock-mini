@@ -32,6 +32,7 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
   assert.ok(board)
   assert.equal(board.title, '中国行业板块')
   assert.equal(board.badge, 'A股时段')
+  assert.equal(board.minuteCorner, true, '行业板块应以面板右上角角标提示分时')
   assert.ok(board.tip && board.tip.length > 0, '行业板块应附带说明文案')
 })
 
@@ -50,6 +51,7 @@ test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」
   assert.ok(board)
   assert.equal(board.title, '美股行业板块')
   assert.equal(board.badge, '美股时段')
+  assert.equal(board.minuteCorner, true, '行业板块应以面板右上角角标提示分时')
 })
 
 test('buildQuoteGlobalPage：未传 sectorTitle 时默认「中国行业板块」', () => {

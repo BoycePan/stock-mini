@@ -19,6 +19,8 @@ export interface QuoteItem {
   icon?: string
   /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序随指标展示 */
   tags?: string[]
+  /** 条目更新时间文案（如「09:53 更新」），有值时才在卡片上展示 */
+  updatedAt?: string
 }
 
 export interface QuoteGroup {
@@ -27,6 +29,8 @@ export interface QuoteGroup {
   items: QuoteItem[]
   /** 标题右侧「i」说明文案，透传到 MarketSection.tip */
   tip?: string
+  /** 涨跌幅缺失或为 0 时隐藏涨跌徽标（如金店金价上游不保证提供涨跌幅） */
+  hideFlatChange?: boolean
 }
 
 /**
@@ -125,6 +129,7 @@ function metricOf(
 ): MarketMetric {
   return {
     id: `q-${item.code}-${index}`,
+    code: item.code,
     name: item.name,
     value: item.price === null ? '' : formatNumber(item.price),
     change: item.pct ?? 0,
@@ -133,6 +138,7 @@ function metricOf(
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
     tags: item.tags,
+    updatedAt: item.updatedAt,
   }
 }
 
@@ -192,6 +198,8 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
     if (group.id === 'industry-board') {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
+      // 24 个板块均支持分时图：整面板右上角以单个「分时」角标提示，代替逐卡片内联标签
+      section.minuteCorner = true
       if (params.sectorBadge) {
         section.badge = params.sectorBadge
       }
@@ -258,7 +266,9 @@ export function buildQuoteMetalsPage(params: QuoteMetalsPageParams): MarketPageD
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of params.groups) {
-    const section = sectionOf(group, offset, 'metals')
+    const section = sectionOf(group, offset, 'metals', {
+      hideFlatChange: group.hideFlatChange,
+    })
     if (params.badge && offset === 0) {
       section.badge = params.badge
     }

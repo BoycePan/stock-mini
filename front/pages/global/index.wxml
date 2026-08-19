@@ -13,6 +13,7 @@
     bind:retry="onRetry"
     bind:share="onShare"
     bind:tabchange="onTabChange"
+    bind:metrictap="onMetricTap"
   ></market-page>
 </view>
 

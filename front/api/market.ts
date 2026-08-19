@@ -16,13 +16,21 @@ import {
   type AsiaStockConfig,
   type MetalConfig,
 } from '../config/tabbar'
+import {
+  GOLD_SHOP_BRANDS,
+  GOLD_SHOP_CATALOG,
+  goldShopItemLabel,
+  pickGoldShopItem,
+} from '../config/gold-shop'
+import { PHYSICAL_GOLD_CATALOG, type PhysicalGoldItemConfig } from '../config/physical-gold'
+import { fetchGoldShopQuotes, fetchPhysicalGoldQuotes } from './gold-shop'
 import { newsApi } from './news'
 import { fetchEastmoneyQuote, fetchSinaQuotes, fetchTencentQuotes } from './quote'
 import { aShareSecid, bareCode } from '../utils/quote-consensus'
 import { fetchAccurate, fetchAShareBoardChangeMap, fetchUsProxyChangeMap } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
-import { formatDateTime } from '../utils/formatter'
+import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
 import {
   buildQuoteAsiaPage,
   buildQuoteGlobalPage,
@@ -38,6 +46,7 @@ export type MarketPageKey = 'global' | 'asia' | 'metals' | 'finance'
  * 行情页数据（全球 / 日韩 / 有色）全部来自 docs/tabbar-api.md 的外部接口：
  *   ① 腾讯 qt.gtimg.cn   ② 新浪 hq.sinajs.cn
  *   ③ 东财 stock/get     ④ 东财 ulist.np/get
+ * 有色页额外有 ⑥ 金投网金店金价（api.jijinhao.com，见 api/gold-shop.ts）。
  * 由 api/quote.ts（单接口）+ utils/quote.ts（多源聚合）+ utils/market-session.ts（会话）封装。
  * 财经页（新闻）仍走后端 news 接口。
  */
@@ -380,6 +389,9 @@ async function resolveMetal(
 }
 
 async function getMetalsMarketPage(): Promise<MarketPageData> {
+  // 金店金价 / 实物黄金价格与行情拉取并行；失败返回 null（页面跳过对应分区，不影响整页）
+  const goldShopPromise = fetchGoldShopGroup()
+  const physicalGoldPromise = fetchPhysicalGoldGroup()
   const session = await resolveNonferrousMarketSession()
 
   // ① 新浪批量 1 次（全部 nf_*/hf_* key；useA 只影响解析顺序，批量一次拉全）
@@ -406,7 +418,23 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
     }),
   }))
 
-  if (!items.some((item) => item.price !== null)) {
+  // ④ 实物黄金价格分区（上海黄金交易所现货基准价，优先于金店金价）
+  const physicalGoldGroup = await physicalGoldPromise
+  if (physicalGoldGroup && physicalGoldGroup.items.length) {
+    groups.push(physicalGoldGroup)
+  }
+
+  // ⑤ 金店金价分区（真实金店零售价，独立外部源，失败自动隐藏）
+  const goldShopGroup = await goldShopPromise
+  if (goldShopGroup && goldShopGroup.items.length) {
+    groups.push(goldShopGroup)
+  }
+
+  if (
+    !items.some((item) => item.price !== null) &&
+    !goldShopGroup?.items.length &&
+    !physicalGoldGroup?.items.length
+  ) {
     throw new Error('暂无行情数据')
   }
   return buildQuoteMetalsPage({
@@ -414,6 +442,95 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
     statusTone: session.statusTone,
     badge: session.useA ? '国内盘' : '外盘',
   })
+}
+
+/**
+ * 拉取金店金价并组装为分区（每品牌一行，展示足金/零售口径）。
+ * 任何失败都返回 null，由调用方决定是否展示，绝不让该分区拖垮整页。
+ */
+async function fetchGoldShopGroup(): Promise<QuoteGroup | null> {
+  try {
+    const quotes = await fetchGoldShopQuotes()
+    if (!quotes.length) return null
+    const byCode = new Map(quotes.map((quote) => [quote.code, quote]))
+    const items: QuoteItem[] = []
+    for (const shop of GOLD_SHOP_BRANDS) {
+      const configs = GOLD_SHOP_CATALOG[shop] ?? []
+      if (!configs.length) continue
+      const chosen = pickGoldShopItem(configs, byCode)
+      if (!chosen) continue
+      // 标签用目录品类名（如「零售价」→「零售」），不用上游 showName（可能是一长串）
+      const config = configs.find((item) => item.code === chosen.code)
+      items.push({
+        code: `GS-${shop}`,
+        name: shop,
+        price: chosen.price,
+        pct: chosen.pct,
+        icon: '🏬',
+        tags: [goldShopItemLabel(config?.item ?? chosen.item)],
+        // 上游每条报价带 time（epoch ms），展示为「HH:mm 更新」（跨天补日期）
+        updatedAt: formatItemUpdatedAt(chosen.time),
+      })
+    }
+    if (!items.length) return null
+    return {
+      id: 'metal-gold-shop',
+      title: '金店金价',
+      tip: '金店足金饰品零售价（元/克），来源：金投网金店金价，仅供参考，以门店实际挂牌价为准',
+      items,
+      // 上游不保证提供涨跌幅（常为 0），为 0 时隐藏涨跌徽标，避免展示无意义的 0.00%
+      hideFlatChange: true,
+    }
+  } catch (error) {
+    console.warn('[metals] 金店金价分区构建失败，跳过:', error)
+    return null
+  }
+}
+
+/**
+ * 拉取上海黄金交易所实物黄金价格并组装为分区（黄金9999 为基准价）。
+ * 失败或全部无价时返回 null，由调用方决定是否展示。
+ */
+async function fetchPhysicalGoldGroup(): Promise<QuoteGroup | null> {
+  try {
+    const quotes = await fetchPhysicalGoldQuotes()
+    if (!quotes.length) return null
+    const byCode = new Map(quotes.map((quote) => [quote.code, quote]))
+    const items: QuoteItem[] = []
+    for (const cfg of PHYSICAL_GOLD_CATALOG) {
+      const quote = byCode.get(cfg.code)
+      // 区间校验防上游异常快照（如金条50g 无报价返回 0）
+      if (!quote || !validateQuote(quote.price, cfg.min, cfg.max)) continue
+      items.push(physicalGoldItemOf(cfg, quote))
+    }
+    if (!items.length) return null
+    return {
+      id: 'metal-physical-gold',
+      title: '实物黄金价格',
+      tip: '上海黄金交易所现货价格：黄金/铂金为元/克，白银为元/千克；来源：网络公开数据，仅供参考',
+      items,
+      // 部分品种（如金条100g）上游涨跌幅为 0，为 0 时隐藏涨跌徽标
+      hideFlatChange: true,
+    }
+  } catch (error) {
+    console.warn('[metals] 实物黄金价格分区构建失败，跳过:', error)
+    return null
+  }
+}
+
+/** 单个 SGE 品种 → 展示条目；单位非「元/克」时（白银 元/千克）加单位标签防误解 */
+function physicalGoldItemOf(
+  cfg: PhysicalGoldItemConfig,
+  quote: { price: number; pct: number },
+): QuoteItem {
+  return {
+    code: `SGE-${cfg.code}`,
+    name: cfg.name,
+    price: quote.price,
+    pct: quote.pct,
+    icon: '🏛️',
+    tags: cfg.unit && cfg.unit !== '元/克' ? [cfg.unit] : undefined,
+  }
 }
 
 // ---------------------------------------------------------------------------

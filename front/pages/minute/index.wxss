@@ -1,0 +1,256 @@
+/* 与 stock-detail 同风格：页面级滚动（2d canvas 在 scroll-view 内模拟器不跟随滚动） */
+.page {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #f5f8fc;
+}
+
+.page.theme-dark .page-header {
+  background: #111827;
+}
+
+.content-scroll {
+  padding: 0 24rpx;
+}
+
+/* 数据延迟免责提示 */
+.data-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-top: 18rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid #f3e6c8;
+  border-radius: 20rpx;
+  background: #fffaf0;
+}
+
+.notice-icon {
+  flex-shrink: 0;
+  width: 34rpx;
+  height: 34rpx;
+  margin-top: 2rpx;
+  border-radius: 50%;
+  background: #e8b04c;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 34rpx;
+  text-align: center;
+}
+
+.notice-text {
+  flex: 1;
+  color: #8a6d3b;
+  font-size: 23rpx;
+  line-height: 36rpx;
+}
+
+.page.theme-dark .data-notice {
+  border-color: #4a4430;
+  background: #26241a;
+}
+
+.page.theme-dark .notice-icon {
+  background: #d9a54a;
+  color: #1d1c14;
+}
+
+.page.theme-dark .notice-text {
+  color: #d9c9a3;
+}
+
+.panel,
+.quote-card,
+.error-card {
+  margin-top: 18rpx;
+  padding: 28rpx 24rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.quote-card {
+  background: linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+}
+
+.quote-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.quote-title {
+  min-width: 0;
+}
+
+.stock-name {
+  display: block;
+  color: #152338;
+  font-size: 35rpx;
+  font-weight: 700;
+}
+
+.stock-code {
+  display: block;
+  margin-top: 8rpx;
+  color: #8a98aa;
+  font-size: 23rpx;
+}
+
+.quote-price {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.price {
+  display: block;
+  font-size: 47rpx;
+  font-weight: 750;
+  line-height: 56rpx;
+}
+
+.quote-change {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 27rpx;
+  font-weight: 650;
+}
+
+.up {
+  color: #eb514d;
+}
+
+.down {
+  color: #20a66a;
+}
+
+.flat {
+  color: #34445a;
+}
+
+.quote-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx 10rpx;
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #edf1f6;
+}
+
+.quote-grid view {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.quote-grid text:first-child {
+  color: #8a98aa;
+  font-size: 22rpx;
+}
+
+.quote-grid text:last-child {
+  color: #34445a;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.panel-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+  color: #152338;
+  font-size: 31rpx;
+  font-weight: 700;
+}
+
+.minute-note {
+  margin-top: 12rpx;
+  padding: 14rpx 18rpx;
+  border: 1rpx solid #e6eef7;
+  border-radius: 16rpx;
+  background: #f5f8fc;
+  color: #718096;
+  font-size: 22rpx;
+  line-height: 34rpx;
+}
+
+.page.theme-dark .minute-note {
+  border-color: #2a394e;
+  background: #223248;
+  color: #9cacc0;
+}
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #718096;
+  font-size: 27rpx;
+}
+
+.error-card button {
+  margin-top: 24rpx;
+  border-radius: 34rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 25rpx;
+}
+
+.bottom-space {
+  height: 40rpx;
+}
+
+.page.theme-dark .panel-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .error-card {
+  color: #9cacc0;
+}
+
+.page.theme-dark .error-card button {
+  background: #233046;
+  color: #6fa3ff;
+}
+
+/* 深色主题 · 基本信息卡片 */
+.page.theme-dark .quote-card {
+  border-color: #2a394e;
+  background: linear-gradient(145deg, #1a2637 0%, #1e2c40 100%);
+}
+
+.page.theme-dark .stock-name {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .stock-code {
+  color: #9cacc0;
+}
+
+.page.theme-dark .price.flat {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .quote-grid {
+  border-top-color: #2a394e;
+}
+
+.page.theme-dark .quote-grid text:first-child {
+  color: #9cacc0;
+}
+
+.page.theme-dark .quote-grid text:last-child {
+  color: #e5ebf4;
+}

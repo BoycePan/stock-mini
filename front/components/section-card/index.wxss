@@ -1,4 +1,5 @@
 .section-card {
+  position: relative;
   margin: 16rpx 20rpx 0;
   padding: 22rpx 18rpx 20rpx;
   border: 1rpx solid #e2eaf3;
@@ -142,6 +143,35 @@
   white-space: nowrap;
 }
 
+/* 「分时」角标：示意卡片可点击查看当日分时，虚线描边与来源徽标区分 */
+.minute-tag {
+  border-style: dashed;
+  color: #6a8fe0;
+}
+
+/* 面板右上角「分时」小角标（行业板块等整面板场景）：代替逐卡片内联标签，
+   贴在面板右上角，虚线描边与「i」说明、来源徽标区分 */
+.minute-corner-badge {
+  position: absolute;
+  top: -2rpx;
+  right: -2rpx;
+  z-index: 2;
+  padding: 6rpx 12rpx 6rpx;
+  border: 1rpx dashed rgba(66, 120, 237, 0.5);
+  border-radius: 0 27rpx 0 18rpx;
+  background: rgba(66, 120, 237, 0.1);
+  color: #4278ed;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+  white-space: nowrap;
+}
+
+/* 有右上角角标时，标题行让出右侧空间，避免与「A股时段」等徽标重叠 */
+.section-card.minute-corner .section-title-row {
+  padding-right: 50rpx;
+}
+
 /* 价格 + 涨跌幅同行容器 */
 .metric-value-row {
   display: flex;
@@ -161,6 +191,18 @@
   line-height: 44rpx;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* 条目更新时间（如「09:53 更新」）：价格下方的次要小字，右对齐（对齐涨跌徽标），仅在有值时渲染 */
+.metric-updated {
+  margin-top: 4rpx;
+  color: #99a6b7;
+  font-size: 20rpx;
+  line-height: 30rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
 }
 
 .metric-change {
@@ -243,7 +285,7 @@
   flex-shrink: 0;
   font-size: 26rpx;
   line-height: 34rpx;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .section-card .single-line-metric .metric-change.up,
@@ -276,6 +318,10 @@
 .section-card.theme-dark .section-title,
 .section-card.theme-dark .metric-value {
   color: #f5f7fb;
+}
+
+.section-card.theme-dark .metric-updated {
+  color: #9cacc0;
 }
 
 .section-card.theme-dark .metric-name {
@@ -311,6 +357,12 @@
 
 .section-card.theme-dark .metric-tag {
   border-color: rgba(111, 163, 255, 0.4);
+  background: rgba(111, 163, 255, 0.14);
+  color: #6fa3ff;
+}
+
+.section-card.theme-dark .minute-corner-badge {
+  border-color: rgba(111, 163, 255, 0.5);
   background: rgba(111, 163, 255, 0.14);
   color: #6fa3ff;
 }

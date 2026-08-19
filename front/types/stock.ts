@@ -36,6 +36,26 @@ export interface KlinePoint {
   pct_change?: number
 }
 
+/** 当日分时图数据点（分钟级） */
+export interface MinutePoint {
+  /** 时间，如 "09:30"（东财/腾讯）或 "2026-08-19 09:31"（Yahoo epoch 转本地） */
+  time: string
+  /** 现价 */
+  price: number
+  /** 均价（累计成交额/累计成交量）；源未提供时为空 */
+  avg: number | null
+  /** 该分钟成交量 */
+  volume: number
+  amount?: number
+}
+
+/** 当日分时图数据（含昨收基准） */
+export interface MinuteResult {
+  /** 昨收（分时基准线），源未提供时为空 */
+  preClose: number | null
+  points: MinutePoint[]
+}
+
 export interface KlineResult {
   code: string
   scale: string

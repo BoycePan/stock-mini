@@ -43,8 +43,12 @@ http://100.90.180.33:18487
 1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
    `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
    `https://douyin.aaaa5.cn`（若用到跳转配置）；
-2. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
-3. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
+2. **首页卡片点击查看当日分时**（`pages/minute/index`，纯前端直连）还需追加：
+   `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
+   （Yahoo 1分钟，仅韩股/日股/汇率/VIX/KOSDAQ 等东财腾讯无分时的标的，见 `docs/minute-api.md`，
+   不加则这几个卡片不显示「分时」角标）；东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
+3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
+4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
 
 ## 依赖安装

@@ -6,6 +6,7 @@
     "pages/finance/index",
     "pages/settings/index",
     "pages/search/index",
+    "pages/minute/index",
     "pages/stock-detail/index",
     "pages/sector-detail/index",
     "pages/news/index",
