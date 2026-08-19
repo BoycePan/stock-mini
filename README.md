@@ -23,8 +23,8 @@ pnpm check
 也可以通过 workspace filter 直接运行前端 package：
 
 ```bash
-pnpm --filter market-magic-mini test
-pnpm --filter market-magic-mini type-check
+pnpm --filter market-tracker-mini test
+pnpm --filter market-tracker-mini type-check
 ```
 
 使用微信开发者工具打开 `front/` 目录。

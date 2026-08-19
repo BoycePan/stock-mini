@@ -1,4 +1,4 @@
-# 市场魔方助手小程序
+# 市场追踪助手小程序
 
 原生微信小程序前端，使用 TypeScript + MobX，服务于仓库中的股票行情后端。
 
@@ -53,8 +53,8 @@ http://100.90.180.33:18487
 
 ```bash
 pnpm install
-pnpm --filter market-magic-mini type-check
-pnpm --filter market-magic-mini lint
+pnpm --filter market-tracker-mini type-check
+pnpm --filter market-tracker-mini lint
 ```
 
 当前执行环境无法访问 npm registry，因此依赖版本沿用当前 lockfile 中记录的稳定版本，并按项目约束将 TypeScript 目标提升到 5.8+、ESLint 使用 9 flat config。联网后建议重新运行 `pnpm view <package> version` 校验版本。

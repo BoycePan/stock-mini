@@ -78,7 +78,7 @@ Page({
     wx.showToast({ title: '请使用右上角分享', icon: 'none' })
   },
   onShareAppMessage() {
-    return { title: '全球市场追踪', path: '/pages/global/index' }
+    return { title: '市场追踪助手', path: '/pages/global/index' }
   },
   onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
     const key = event.detail.key

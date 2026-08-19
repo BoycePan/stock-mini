@@ -1,18 +1,40 @@
 <view class="page theme-{{theme}} legal-page">
   <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <view class="legal-card">
-      <text class="legal-title">{{title}}</text>
-      <text wx:if="{{updatedAt}}" class="legal-updated">更新日期：{{updatedAt}}</text>
-      <view class="legal-paragraph" wx:for="{{intro}}" wx:key="*this">
-        <text class="legal-text">{{item}}</text>
+
+    <!-- 主标题卡片 -->
+    <view class="legal-card intro-card">
+      <view class="legal-header">
+        <view class="legal-icon-wrap">
+          <text class="legal-icon-emoji">{{docIcon}}</text>
+        </view>
+        <view class="legal-header-text">
+          <text class="legal-title">{{title}}</text>
+          <text wx:if="{{updatedAt}}" class="legal-updated">📅 最近更新：{{updatedAt}}</text>
+        </view>
+      </view>
+      <view class="intro-divider"></view>
+      <view class="intro-quote-block">
+        <view class="intro-quote-bar"></view>
+        <view class="intro-quote-content">
+          <view class="legal-paragraph" wx:for="{{intro}}" wx:key="*this">
+            <text class="legal-text intro-text">{{item}}</text>
+          </view>
+        </view>
       </view>
     </view>
 
-    <view wx:if="{{detailsHeading || sections.length}}" class="legal-card">
-      <text wx:if="{{detailsHeading}}" class="legal-details-heading">{{detailsHeading}}</text>
-      <view class="legal-section" wx:for="{{sections}}" wx:key="heading">
-        <text class="legal-section-heading">{{item.heading}}</text>
+    <!-- 详细条款卡片 -->
+    <view wx:if="{{detailsHeading || sections.length}}" class="legal-card sections-card">
+      <view wx:if="{{detailsHeading}}" class="legal-details-header">
+        <text class="legal-details-heading">{{detailsHeading}}</text>
+        <text class="sections-count">共 {{sections.length}} 条</text>
+      </view>
+      <view class="legal-section" wx:for="{{sections}}" wx:key="heading" wx:for-index="sIdx">
+        <view class="legal-section-title-row">
+          <view class="section-num">{{sIdx + 1}}</view>
+          <text class="legal-section-heading">{{item.heading}}</text>
+        </view>
         <view
           class="legal-paragraph"
           wx:for="{{item.paragraphs}}"
@@ -21,14 +43,19 @@
         >
           <text class="legal-text">{{paragraph}}</text>
         </view>
+        <view class="section-divider"></view>
       </view>
     </view>
 
+    <!-- 结语卡片 -->
     <view wx:if="{{closing.length}}" class="legal-card closing-card">
+      <view class="closing-badge">已阅提示</view>
+      <view class="closing-icon">✅</view>
       <view class="legal-paragraph" wx:for="{{closing}}" wx:key="*this">
         <text class="legal-text closing-text">{{item}}</text>
       </view>
     </view>
+
     <view class="bottom-space"></view>
   </scroll-view>
 </view>

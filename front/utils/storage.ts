@@ -1,13 +1,13 @@
 import type { MarketPageData } from '../types/market'
 
-const TOKEN_KEY = 'market_magic_token'
-const USER_KEY = 'market_magic_user'
-const THEME_KEY = 'market_magic_theme'
-const API_BASE_URL_KEY = 'market_magic_api_base_url'
-const NEWS_DETAIL_KEY = 'market_magic_news_detail'
-const SEARCH_HISTORY_KEY = 'market_magic_search_history'
+const TOKEN_KEY = 'market_tracker_token'
+const USER_KEY = 'market_tracker_user'
+const THEME_KEY = 'market_tracker_theme'
+const API_BASE_URL_KEY = 'market_tracker_api_base_url'
+const NEWS_DETAIL_KEY = 'market_tracker_news_detail'
+const SEARCH_HISTORY_KEY = 'market_tracker_search_history'
 const SEARCH_HISTORY_LIMIT = 10
-const FINANCE_CACHE_KEY = 'market_magic_finance_cache'
+const FINANCE_CACHE_KEY = 'market_tracker_finance_cache'
 
 export type ThemeMode = 'light' | 'dark'
 

@@ -1,7 +1,10 @@
 {
   "usingComponents": {
     "app-header": "/components/app-header/index",
-    "bottom-tabbar": "/components/bottom-tabbar/index"
+    "bottom-tabbar": "/components/bottom-tabbar/index",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-icon": "tdesign-miniprogram/icon/icon"
   },
   "enablePullDownRefresh": false
 }

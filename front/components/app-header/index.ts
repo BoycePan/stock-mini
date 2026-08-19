@@ -2,7 +2,7 @@ import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 Component({
   properties: {
-    title: { type: String, value: '全球市场追踪' },
+    title: { type: String, value: '市场追踪助手' },
     showShare: { type: Boolean, value: true },
     showBack: { type: Boolean, value: false },
     showSearch: { type: Boolean, value: false },

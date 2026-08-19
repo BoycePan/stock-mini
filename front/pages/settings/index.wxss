@@ -1,326 +1,39 @@
+/* ============ 滚动区 ============ */
 .content-scroll {
   flex: 1;
   min-height: 0;
-  padding: 12rpx 24rpx 0;
+  padding: 16rpx 24rpx 0;
 }
 
-.theme-card,
-.promo-card,
-.launch-card,
-.setting-section,
-.follow-card {
-  border: 1rpx solid #e2eaf3;
-  border-radius: 28rpx;
-  background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
-}
-
-.theme-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 25rpx 24rpx;
-}
-
-.theme-copy {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.theme-icon {
-  width: 68rpx;
-  height: 68rpx;
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(145deg, #eaf2ff 0%, #dce9ff 100%);
-  color: #4c7ff5;
-  font-size: 40rpx;
-}
-
-.theme-title {
-  display: block;
-  color: #152338;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.theme-subtitle {
-  display: block;
-  margin-top: 6rpx;
-  color: #7b8ba1;
-  font-size: 23rpx;
-}
-
-.theme-switch {
-  display: flex;
-  flex: 0 0 auto;
-  padding: 6rpx;
-  border-radius: 34rpx;
-  background: #eef3f8;
-}
-
-.theme-option {
-  padding: 14rpx 16rpx;
-  border-radius: 27rpx;
-  color: #65748a;
-  font-size: 23rpx;
-}
-
-.theme-option.selected {
-  background: #fff;
-  color: #4278ed;
-  box-shadow: 0 5rpx 14rpx rgba(76, 127, 255, 0.14);
-}
-
-.promo-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 18rpx;
-  padding: 30rpx 26rpx;
-  border-color: #ffd5d1;
-  background: linear-gradient(135deg, #fff8f6 0%, #fff1ef 100%);
-}
-
-.promo-title {
-  display: block;
-  color: #793d3a;
-  font-size: 29rpx;
-  font-weight: 700;
-}
-
-.promo-subtitle {
-  display: block;
-  margin-top: 10rpx;
-  color: #a06e6a;
-  font-size: 23rpx;
-}
-
-.promo-button {
-  min-width: 142rpx;
-  border-radius: 36rpx;
-  background: linear-gradient(135deg, #ff776f 0%, #ed5857 100%);
-  color: #fff;
-  font-size: 26rpx;
-  box-shadow: 0 8rpx 16rpx rgba(237, 88, 87, 0.2);
-}
-
-.setting-section {
-  margin-top: 18rpx;
-  padding: 26rpx 22rpx;
-}
-
-.setting-heading {
-  display: block;
-  margin-bottom: 20rpx;
-  color: #152338;
-  font-size: 31rpx;
-  font-weight: 700;
-}
-
-.service-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10rpx;
-}
-
-.service-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 164rpx;
-  padding: 16rpx 4rpx;
-  border: 1rpx solid #e8eef5;
-  border-radius: 20rpx;
-  color: #27374d;
-  font-size: 24rpx;
-  font-weight: 600;
-}
-
-.service-icon {
-  width: 58rpx;
-  height: 58rpx;
-  margin-bottom: 10rpx;
-  border-radius: 18rpx;
-  color: #fff;
-  font-size: 33rpx;
-  line-height: 58rpx;
-  text-align: center;
-}
-
-.service-icon.blue {
-  background: linear-gradient(135deg, #6b9cf8, #4c7ff0);
-}
-
-.service-icon.orange {
-  background: linear-gradient(135deg, #ffad55, #f47d38);
-}
-
-.service-icon.green {
-  background: linear-gradient(135deg, #45c99b, #1fae78);
-}
-
-.service-icon.purple {
-  background: linear-gradient(135deg, #9c84f5, #765be2);
-}
-
-.service-sub {
-  margin-top: 8rpx;
-  color: #8b99ab;
-  font-size: 19rpx;
-  font-weight: 400;
-}
-
-.follow-card {
-  margin-top: 18rpx;
-  padding: 32rpx 22rpx;
-  text-align: center;
-}
-
-.follow-title {
-  display: block;
-  color: #152338;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.follow-subtitle {
-  display: block;
-  margin-top: 10rpx;
-  color: #7b8ba1;
-  font-size: 23rpx;
-}
-
-.follow-placeholder {
-  width: 280rpx;
-  height: 280rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 24rpx auto 16rpx;
-  border: 2rpx dashed #cbd7e5;
-  border-radius: 20rpx;
-  background: #f8fafc;
-  color: #9aa8b9;
-  font-size: 25rpx;
-}
-
-.follow-tip {
-  color: #7b8ba1;
-  font-size: 23rpx;
-}
-
-.bottom-space {
-  height: 150rpx;
-}
-
-.service-item-hover {
-  opacity: 0.72;
-}
-
-.launch-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 18rpx;
-  padding: 25rpx 24rpx;
-}
-
-.launch-copy {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.launch-icon {
-  width: 68rpx;
-  height: 68rpx;
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(145deg, #e7f3ff 0%, #d3e9ff 100%);
-  font-size: 40rpx;
-}
-
-.launch-title {
-  display: block;
-  color: #152338;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.launch-subtitle {
-  display: block;
-  margin-top: 6rpx;
-  color: #7b8ba1;
-  font-size: 23rpx;
-}
-
-.launch-badge {
-  flex: 0 0 auto;
-  padding: 10rpx 22rpx;
-  border-radius: 26rpx;
-  background: linear-gradient(135deg, #7db4ff 0%, #4c7ff0 100%);
-  color: #fff;
-  font-size: 22rpx;
-  font-weight: 600;
-}
-
-.page.theme-dark .theme-icon {
-  border: 1rpx solid #34465e;
-  background: #223248;
-  color: #6fa3ff;
-}
-
-.page.theme-dark .launch-icon {
-  border: 1rpx solid #34465e;
-  background: #223248;
-}
-
-.page.theme-dark .launch-title {
-  color: #f5f7fb;
-}
-
-.page.theme-dark .launch-subtitle {
-  color: #9cacc0;
-}
-
-.page.theme-dark .launch-badge {
-  background: linear-gradient(135deg, #3a6bd0 0%, #2a56b4 100%);
-  color: #eef4ff;
-}
-
-/* 用户信息卡片 */
+/* ============ 用户卡片 ============ */
 .user-card {
   display: flex;
   align-items: center;
-  margin-bottom: 18rpx;
-  padding: 28rpx 24rpx;
+  padding: 32rpx 28rpx;
   border: 1rpx solid #e2eaf3;
-  border-radius: 28rpx;
+  border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(64, 86, 116, 0.08);
 }
 
 .user-guest {
   display: flex;
   align-items: center;
-  min-width: 0;
   flex: 1;
+  min-width: 0;
+}
+
+.avatar-ring {
+  flex: 0 0 auto;
+  padding: 4rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6b9cf8 0%, #9c84f5 100%);
 }
 
 .user-avatar {
   width: 96rpx;
   height: 96rpx;
-  flex: 0 0 auto;
+  display: block;
   border-radius: 50%;
   background: #eef3f8;
 }
@@ -336,14 +49,14 @@
 .user-info {
   flex: 1;
   min-width: 0;
-  margin-left: 20rpx;
+  margin-left: 24rpx;
 }
 
 .user-name {
   display: block;
   overflow: hidden;
   color: #152338;
-  font-size: 31rpx;
+  font-size: 32rpx;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -356,26 +69,264 @@
   font-size: 22rpx;
 }
 
-.logout-button {
+.user-status {
   flex: 0 0 auto;
   margin-left: 16rpx;
-  padding: 0 22rpx;
-  border: 1rpx solid #eb514d;
-  border-radius: 30rpx;
-  background: transparent;
-  color: #eb514d;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.user-status.online {
+  background: #e6f7ee;
+  color: #1fae78;
+}
+
+.user-status.offline {
+  background: #eef3f8;
+  color: #8a98aa;
+}
+
+/* ============ 上线公告横幅 ============ */
+.banner {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+  padding: 24rpx 26rpx;
+  border: 1rpx solid #dbe7f8;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #f3f8ff 0%, #eef4ff 100%);
+  box-shadow: 0 8rpx 24rpx rgba(64, 86, 116, 0.06);
+}
+
+.banner-icon {
+  flex: 0 0 auto;
+  width: 76rpx;
+  height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, #7db4ff 0%, #4c7ff0 100%);
+  font-size: 40rpx;
+}
+
+.banner-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-title {
+  display: block;
+  color: #1f3a63;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.banner-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: #6a83a3;
+  font-size: 22rpx;
+}
+
+.banner-badge {
+  flex: 0 0 auto;
+  margin-left: 16rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, #ff8f6b 0%, #ff5f6d 100%);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+/* ============ 分组标题 ============ */
+.section-heading {
+  display: block;
+  margin: 32rpx 14rpx 14rpx;
+  color: #8a98aa;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  text-transform: uppercase;
+}
+
+/* ============ 设置分组 ============ */
+.setting-group {
+  border: 1rpx solid #e2eaf3;
+  border-radius: 32rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 28rpx rgba(64, 86, 116, 0.07);
+  overflow: hidden;
+}
+
+/* ============ 设置行通用 ============ */
+.setting-row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  min-height: 100rpx;
+  box-sizing: border-box;
+}
+
+/* 主题行：图标区 + row-main 占满剩余空间 */
+.theme-row {
+  gap: 0;
+}
+
+/* 可点击行 */
+.setting-row.clickable {
+  cursor: pointer;
+}
+
+/* ============ 图标 ============ */
+.row-icon-wrap {
+  flex: 0 0 auto;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 22rpx;
+  border-radius: 20rpx;
+  font-size: 34rpx;
+}
+
+.row-icon-wrap.theme {
+  background: linear-gradient(135deg, #eaf2ff 0%, #dce9ff 100%);
+  color: #4c7ff5;
+}
+
+.row-icon-wrap.blue  { background: #e8f1ff; }
+.row-icon-wrap.orange { background: #fff3e8; }
+.row-icon-wrap.green  { background: #e6f7ef; }
+.row-icon-wrap.purple { background: #f0ebff; }
+.row-icon-wrap.gray   { background: #eef2f6; }
+
+.row-emoji {
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+/* tdesign icon 颜色继承父容器 */
+.row-icon-svg {
+  color: #4c7ff5;
+}
+
+/* ============ 文字区 ============ */
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-label {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  color: #152338;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.row-desc {
+  display: block;
+  margin-top: 6rpx;
+  color: #8b99ab;
+  font-size: 22rpx;
+}
+
+/* ============ 右侧装饰 ============ */
+/* tdesign chevron-right icon */
+.row-arrow-icon {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  color: #c3cdd9 !important;
+}
+
+.row-value {
+  flex: 0 0 auto;
+  margin-left: 16rpx;
+  color: #8b99ab;
+  font-size: 26rpx;
+}
+
+/* ============ 分割线 ============ */
+.row-divider {
+  height: 1rpx;
+  margin-left: 122rpx;
+  background: #edf1f6;
+}
+
+/* ============ 主题切换 ============ */
+.theme-switch {
+  display: flex;
+  flex: 0 0 auto;
+  padding: 5rpx;
+  border-radius: 32rpx;
+  background: #eef3f8;
+}
+
+.theme-option {
+  padding: 12rpx 24rpx;
+  border-radius: 28rpx;
+  color: #65748a;
+  font-size: 24rpx;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.theme-option.selected {
+  background: #fff;
+  color: #4278ed;
+  font-weight: 700;
+  box-shadow: 0 4rpx 14rpx rgba(76, 127, 255, 0.18);
+}
+
+/* ============ 页脚 ============ */
+.footer {
+  margin-top: 48rpx;
+  text-align: center;
+}
+
+.footer-title {
+  display: block;
+  color: #9aa8b9;
   font-size: 24rpx;
   font-weight: 600;
-  line-height: 56rpx;
 }
 
-.logout-button::after {
-  border: 0;
+.footer-sub {
+  display: block;
+  margin-top: 8rpx;
+  color: #b3bfcc;
+  font-size: 20rpx;
 }
 
-.page.theme-dark .user-card {
+/* ============ 通用交互 ============ */
+.row-hover {
+  opacity: 0.68;
+}
+
+.bottom-space {
+  height: 150rpx;
+}
+
+/* ============================================================
+   深色主题
+   ============================================================ */
+.page.theme-dark .user-card,
+.page.theme-dark .setting-group {
   border-color: #2a394e;
   background: #1a2637;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+}
+
+.page.theme-dark .avatar-ring {
+  background: linear-gradient(135deg, #3a6bd0 0%, #765be2 100%);
 }
 
 .page.theme-dark .user-avatar {
@@ -386,15 +337,76 @@
   color: #9cacc0;
 }
 
-.page.theme-dark .user-name {
+.page.theme-dark .user-name,
+.page.theme-dark .row-label {
   color: #f5f7fb;
 }
 
-.page.theme-dark .user-meta {
+.page.theme-dark .user-meta,
+.page.theme-dark .row-desc {
   color: #9cacc0;
 }
 
-.page.theme-dark .logout-button {
-  border-color: #eb514d;
-  color: #eb514d;
+.page.theme-dark .user-status.online {
+  background: #1d3a2e;
+  color: #4fd08a;
 }
+
+.page.theme-dark .user-status.offline {
+  background: #223248;
+  color: #9cacc0;
+}
+
+.page.theme-dark .banner {
+  border-color: #2a3d55;
+  background: linear-gradient(135deg, #1b2a40 0%, #1d2740 100%);
+  box-shadow: 0 8rpx 28rpx rgba(0, 0, 0, 0.2);
+}
+
+.page.theme-dark .banner-icon {
+  background: linear-gradient(135deg, #3a6bd0 0%, #2a56b4 100%);
+}
+
+.page.theme-dark .banner-title  { color: #e8eef7; }
+.page.theme-dark .banner-subtitle { color: #8fa3bd; }
+
+.page.theme-dark .banner-badge {
+  background: linear-gradient(135deg, #d16a4e 0%, #c24552 100%);
+}
+
+.page.theme-dark .section-heading { color: #7f92a9; }
+
+.page.theme-dark .row-icon-wrap.theme {
+  border: 1rpx solid #34465e;
+  background: #223248;
+}
+
+.page.theme-dark .row-icon-svg { color: #6fa3ff; }
+
+.page.theme-dark .row-icon-wrap.blue   { background: #1d3047; }
+.page.theme-dark .row-icon-wrap.orange { background: #3a2c20; }
+.page.theme-dark .row-icon-wrap.green  { background: #1d352b; }
+.page.theme-dark .row-icon-wrap.purple { background: #2c2740; }
+.page.theme-dark .row-icon-wrap.gray   { background: #2a3442; }
+
+.page.theme-dark .row-arrow-icon {
+  color: #4a5c74 !important;
+}
+
+.page.theme-dark .row-value { color: #6f8299; }
+
+.page.theme-dark .row-divider { background: #2c3d53; }
+
+.page.theme-dark .theme-switch { background: #223248; }
+
+.page.theme-dark .theme-option { color: #9cacc0; }
+
+.page.theme-dark .theme-option.selected {
+  border: 1rpx solid #435875;
+  background: #25364d;
+  color: #e8eef7;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.28);
+}
+
+.page.theme-dark .footer-title { color: #7f92a9; }
+.page.theme-dark .footer-sub   { color: #5f7188; }

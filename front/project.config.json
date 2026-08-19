@@ -1,42 +1,42 @@
 {
-  "description": "全球市场追踪",
+  "description": "市场追踪助手",
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "scripts"
+        "value": "scripts",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "tests"
+        "value": "tests",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "keys"
+        "value": "keys",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "c31a093133b62d97cc8f273dff196f19"
+        "value": "c31a093133b62d97cc8f273dff196f19",
+        "type": "folder"
       },
       {
-        "type": "file",
-        "value": "eslint.config.js"
+        "value": "eslint.config.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "prettier.config.js"
+        "value": "prettier.config.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "project.private.config.json"
+        "value": "project.private.config.json",
+        "type": "file"
       },
       {
-        "type": "suffix",
-        "value": ".md"
+        "value": ".md",
+        "type": "suffix"
       },
       {
-        "type": "suffix",
-        "value": ".DS_Store"
+        "value": ".DS_Store",
+        "type": "suffix"
       }
     ],
     "include": []
@@ -70,9 +70,9 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "3.9.0",
+  "libVersion": "3.17.1",
   "appid": "wx2cfd1556edf21a24",
-  "projectname": "market-magic-mini",
+  "projectname": "market-tracker-mini",
   "condition": {},
   "simulatorPluginLibVersion": {},
   "editorSetting": {}
