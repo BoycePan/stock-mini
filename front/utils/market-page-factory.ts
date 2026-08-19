@@ -1,4 +1,4 @@
-﻿/**
+/**
  * createMarketPage — 行情页工厂函数
  *
  * asia / metals / global 三个页面逻辑完全对称，仅 pageKey 与加载文案不同。
@@ -47,12 +47,16 @@ export function createMarketPage(opts: MarketPageOptions) {
     data: {
       theme: rootStore.settings.theme,
       activeTab: pageKey,
-      loading: true,
+      loading: !rootStore.market.pages[pageKey],
       sections: [] as MarketSection[],
       statusLabel: '',
       statusTone: 'rest' as string,
       updatedLabel: '',
       error: '',
+    },
+
+    isLoading() {
+      return rootStore.market.loading[pageKey]
     },
 
     onLoad() {
@@ -88,7 +92,9 @@ export function createMarketPage(opts: MarketPageOptions) {
     },
 
     onShow() {
-      startAutoRefresh(this)
+      // 距上次真正发起的请求超过 5s 才在 onShow 立即补一次刷新
+      // （lastRequestAt 由 store 在 loadPage 实际请求处记录，缓存命中不更新）
+      startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey])
     },
 
     onHide() {

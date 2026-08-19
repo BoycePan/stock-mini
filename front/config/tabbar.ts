@@ -92,7 +92,6 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
     name: '天然气',
     sources: [{ kind: 'sina_hf', key: 'hf_NG', min: 0.5, max: 50 }],
   },
-
 ]
 
 /** 行业板块 24 项（docs 表 B：aSecid 固定 90.BKxxxx，proxies 为美股代理股） */

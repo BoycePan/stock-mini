@@ -23,6 +23,22 @@ Page({
     this.setData({ version: getAppVersion() })
     // 用户信息 / 登录态来自全局 auth store，登录、登出自动同步
     registerStoreBinding(this, bindGlobalAuth(this))
+    this.ensureAutoLogin()
+  },
+
+  ensureAutoLogin() {
+    if (!rootStore.auth.isLoggedIn) {
+      rootStore.auth.ensureLogin().catch((err: unknown) => {
+        console.warn('[settings] 自动登录失败:', err)
+      })
+    }
+  },
+  onLoginTap() {
+    if (!rootStore.auth.isLoggedIn) {
+      rootStore.auth.login().catch((err: unknown) => {
+        console.warn('[settings] 登录失败:', err)
+      })
+    }
   },
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value

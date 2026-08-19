@@ -36,12 +36,15 @@ Page({
   data: {
     theme: rootStore.settings.theme,
     activeTab: 'finance',
-    loading: true,
+    loading: !rootStore.market.pages['finance'] && !getFinanceCache(),
     refreshing: false,
     news: [] as NewsItemView[],
     statusLabel: '',
     updatedLabel: '',
     error: '',
+  },
+  isLoading() {
+    return rootStore.market.loading['finance']
   },
   onLoad() {
     bindTheme(this)
@@ -97,7 +100,8 @@ Page({
     }
   },
   onShow() {
-    startAutoRefresh(this)
+    // 距上次请求超过 5s 才立即补刷新（lastFinanceRequestAt 与 loadData 内 5s 防抖共用同一时间源）
+    startAutoRefresh(this, lastFinanceRequestAt)
   },
   onHide() {
     stopAutoRefresh(this)

@@ -101,7 +101,7 @@ Page({
     try {
       const result = await stockApi.getKlines(code, scale, 30)
       this.setData({ klines: result.klines })
-    } catch (error) {
+    } catch {
       wx.showToast({ title: 'K线加载失败', icon: 'none' })
     }
   },

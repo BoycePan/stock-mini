@@ -191,7 +191,9 @@ const LEGAL_DOCS: Record<string, LegalDoc> = {
       },
       {
         heading: '六、政策更新',
-        paragraphs: ['本政策可能适时更新，更新后将在本页面公布。继续使用本小程序即视为接受更新后的政策。'],
+        paragraphs: [
+          '本政策可能适时更新，更新后将在本页面公布。继续使用本小程序即视为接受更新后的政策。',
+        ],
       },
       {
         heading: '七、联系我们',

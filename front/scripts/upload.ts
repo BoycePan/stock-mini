@@ -34,7 +34,6 @@ import { fileURLToPath } from 'node:url'
 
 // miniprogram-ci 是 CommonJS 包，用 createRequire 引入，运行时行为与类型声明都可确定
 const require = createRequire(import.meta.url)
-// @ts-ignore
 const ci = require('miniprogram-ci') as any
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))

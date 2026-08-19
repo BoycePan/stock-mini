@@ -491,8 +491,8 @@ test('stripTrailingZeros 与 formatNumber/formatChange 格式化清洗测试', a
   assert.equal(stripTrailingZeros('1.50'), '1.5')
   assert.equal(stripTrailingZeros('1.23'), '1.23')
 
-  assert.equal(formatNumber(1.00), '1')
-  assert.equal(formatNumber(1.50), '1.5')
+  assert.equal(formatNumber(1.0), '1')
+  assert.equal(formatNumber(1.5), '1.5')
   assert.equal(formatNumber(1.23), '1.23')
   assert.equal(formatNumber(100.0), '100')
 

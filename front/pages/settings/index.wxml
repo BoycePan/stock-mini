@@ -18,17 +18,16 @@
           <text class="user-name">{{ user.nickname || '微信用户' }}</text>
           <text class="user-meta">用户ID {{ user.id }}</text>
         </view>
-        <view class="user-status online">已登录</view>
       </block>
-      <view wx:else class="user-guest">
+      <view wx:else class="user-guest" bindtap="onLoginTap">
         <view class="avatar-ring">
           <view class="user-avatar avatar-placeholder">👤</view>
         </view>
         <view class="user-info">
           <text class="user-name">未登录</text>
-          <text class="user-meta">打开行情页时将自动登录</text>
+          <text class="user-meta">点击可重新登录</text>
         </view>
-        <view class="user-status offline">未登录</view>
+        <view class="user-status offline">去登录</view>
       </view>
     </view>
 

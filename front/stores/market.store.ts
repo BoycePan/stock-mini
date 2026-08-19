@@ -23,6 +23,17 @@ export class MarketStore {
     finance: false,
   }
   errors: Record<MarketPageKey, string> = { global: '', asia: '', metals: '', finance: '' }
+  /**
+   * 各页最近一次**真正发起**数据请求的时间戳（毫秒，0 = 从未请求过）。
+   * 仅在实际调用 marketApi.getPage 前更新（缓存命中不更新）；
+   * 供页面 onShow 判断「距上次请求是否超过 5s」以决定是否立即补刷新（见 utils/auto-refresh.ts）。
+   */
+  lastRequestAt: Record<MarketPageKey, number> = {
+    global: 0,
+    asia: 0,
+    metals: 0,
+    finance: 0,
+  }
 
   constructor() {
     makeAutoObservable(this)
@@ -47,6 +58,7 @@ export class MarketStore {
       this.errors[key] = ''
     }
     try {
+      this.lastRequestAt[key] = Date.now()
       const data = await marketApi.getPage(key)
       runInAction(() => {
         this.pages[key] = data
