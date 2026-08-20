@@ -12,7 +12,7 @@ const DOWN_COLOR = '#20a66a'
  * 当日分时图（canvas 2d）：
  * - 价格线（以昨收 0% 为基准分段着色：突破 0% 用涨色红、跌破 0% 用跌色绿，穿越处换色）
  * - 均价线（橙色）
- * - 昨收基准虚线（不绘制文字标签）
+ * - 零轴：纵轴以昨收 0% 对称，中间网格线即零轴（实线高亮 + 「0%」标签）
  * - 下方成交量柱（每分钟柱按该分钟收盘价相对开盘价分色：涨红、跌绿、平盘白/灰；无成交量数据时整块隐藏，价格区占满）
  * - 点击 / 拖动 canvas 显示十字光标 + 信息框（时间 / 价格 / 涨跌 / 均价 / 成交量），同花顺式交互
  * - 画布内不展示「当前价格」「昨收」常驻标签；价格刻度绘制在左侧留白，不遮挡图形
@@ -109,39 +109,51 @@ Component({
       const avgColor = isDark ? '#f5b94a' : '#f0a020'
       const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(20,32,51,0.08)'
       const textColor = isDark ? '#8a97a8' : '#718096'
-      const baseColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(20,32,51,0.3)'
+      const zeroColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(20,32,51,0.55)'
 
       const hasPre = Number.isFinite(preClose) && preClose > 0
       const n = points.length
 
-      // 纵轴范围：现价 + 均价 + 昨收（若有），留 6% 边距
-      let min = Infinity
-      let max = -Infinity
-      for (const p of points) {
-        if (Number.isFinite(p.price)) {
-          min = Math.min(min, p.price)
-          max = Math.max(max, p.price)
-        }
-        if (p.avg !== null && Number.isFinite(p.avg)) {
-          min = Math.min(min, p.avg)
-          max = Math.max(max, p.avg)
-        }
-      }
+      // 纵轴范围：有昨收时以昨收 0% 为对称中心（取现价/均价相对昨收的最大偏离，上下幅度一致，留 8% 边距）
+      let minP: number
+      let maxP: number
       if (hasPre) {
-        min = Math.min(min, preClose)
-        max = Math.max(max, preClose)
+        let dev = 0
+        for (const p of points) {
+          if (Number.isFinite(p.price)) dev = Math.max(dev, Math.abs(p.price - preClose))
+          if (p.avg !== null && Number.isFinite(p.avg))
+            dev = Math.max(dev, Math.abs(p.avg - preClose))
+        }
+        // 平盘无波动时给一个最小对称幅度（昨收的 1%），避免 0 范围
+        dev = Math.max(dev, preClose * 0.01)
+        const margin = dev * 0.08
+        minP = preClose - dev - margin
+        maxP = preClose + dev + margin
+      } else {
+        let min = Infinity
+        let max = -Infinity
+        for (const p of points) {
+          if (Number.isFinite(p.price)) {
+            min = Math.min(min, p.price)
+            max = Math.max(max, p.price)
+          }
+          if (p.avg !== null && Number.isFinite(p.avg)) {
+            min = Math.min(min, p.avg)
+            max = Math.max(max, p.avg)
+          }
+        }
+        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+          min = 0
+          max = 1
+        }
+        if (min === max) {
+          min -= 1
+          max += 1
+        }
+        const range = max - min
+        minP = min - range * 0.06
+        maxP = max + range * 0.06
       }
-      if (!Number.isFinite(min) || !Number.isFinite(max)) {
-        min = 0
-        max = 1
-      }
-      if (min === max) {
-        min -= 1
-        max += 1
-      }
-      const range = max - min
-      const minP = min - range * 0.06
-      const maxP = max + range * 0.06
 
       // 左侧留白按价格刻度文字宽度自适应（右侧留小边距，无常驻标签）
       ctx.font = '10px sans-serif'
@@ -175,29 +187,19 @@ Component({
       const xOf = (i: number) => padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW)
 
       // 横向网格 + 价格刻度（右对齐在左侧留白内）
-      ctx.strokeStyle = gridColor
+      // 纵轴已以昨收 0% 对称，中间网格线（i=2）即零轴：实线高亮 + 「0%」标签
       ctx.lineWidth = 1
-      ctx.fillStyle = textColor
       ctx.textAlign = 'right'
       for (let i = 0; i <= 4; i += 1) {
         const y = padT + (priceH / 4) * i
+        const isZero = hasPre && i === 2
+        ctx.strokeStyle = isZero ? zeroColor : gridColor
         ctx.beginPath()
         ctx.moveTo(padL, y)
         ctx.lineTo(width - padR, y)
         ctx.stroke()
-        ctx.fillText(gridLabels[i] ?? '', padL - 8, y + 3)
-      }
-
-      // 昨收基准虚线（无文字标签）
-      if (hasPre) {
-        const y = priceY(preClose)
-        ctx.strokeStyle = baseColor
-        ctx.setLineDash([4, 4])
-        ctx.beginPath()
-        ctx.moveTo(padL, y)
-        ctx.lineTo(width - padR, y)
-        ctx.stroke()
-        ctx.setLineDash([])
+        ctx.fillStyle = isZero ? zeroColor : textColor
+        ctx.fillText(isZero ? '0%' : (gridLabels[i] ?? ''), padL - 8, y + 3)
       }
 
       // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%
