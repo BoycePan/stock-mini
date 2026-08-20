@@ -16,6 +16,8 @@
 #   cp backend-java/.env.example backend-java/.env   # 再填入真实值
 #
 # 注意：--run 会启动一个占 18487 端口的容器（与运行中的 Go 版冲突时请用 PORT 改端口）。
+# 日志：容器内 /apps/logs（logback-spring.xml，按天滚动保留 3 天），
+#       默认挂载到宿主机 ${LOG_DIR:-/apps/stock/backend-java/logs}，可用 LOG_DIR 覆盖。
 
 set -euo pipefail
 
@@ -26,6 +28,7 @@ ENV_FILE="$BACKEND_JAVA/.env"
 RUN=0
 TAG="latest"
 PORT="${PORT:-18487}"
+LOG_DIR="${LOG_DIR:-/apps/stock/backend-java/logs}"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --run) RUN=1 ;;
@@ -65,12 +68,16 @@ if [ "$RUN" -ne 1 ]; then
 fi
 
 echo "==> 启动容器 stock-backend-java (port ${PORT}, network host)"
+echo "    日志挂载: ${LOG_DIR} -> /apps/logs (按天滚动，保留 3 天)"
+mkdir -p "$LOG_DIR"
 docker rm -f stock-backend-java 2>/dev/null || true
 docker run -d \
   --name stock-backend-java \
   --restart unless-stopped \
   --network host \
   -e SERVER_PORT="$PORT" \
+  -e LOG_DIR=/apps/logs \
+  -v "$LOG_DIR:/apps/logs" \
   --env-file "$ENV_FILE" \
   "stock-backend-java:$TAG"
 

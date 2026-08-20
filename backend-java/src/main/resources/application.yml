@@ -3,6 +3,12 @@
 server:
   port: 18487
 
+# 日志落盘目录（logback-spring.xml 读取，按天滚动、保留 3 天）。
+# 容器内默认 /apps/logs，由 deploy.sh 挂载宿主目录；本机调试可设 LOG_DIR=logs
+logging:
+  file:
+    path: ${LOG_DIR:/Users/lilaiyun/Downloads/logs}
+
 spring:
   application:
     name: stock-backend
@@ -32,6 +38,10 @@ app:
     timeout-seconds: ${SINA_TIMEOUT:30}
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     referer: "https://finance.sina.com.cn"
+    # 通用新闻 feed 定时拉取（SinaFeedScheduler，每 5 分钟）。/news/feed 接口只查库，不再实时打新浪。
+    feed-enabled: ${SINA_FEED_ENABLED:true}
+    feed-keyword: ${SINA_FEED_KEYWORD:A股}
+    feed-count: ${SINA_FEED_COUNT:20}
   eastmoney:
     # 对齐 Go config.yaml stock.eastmoney（限流最保守，4s/次，只做按需补充）
     rate-limit-seconds: ${EASTMONEY_RATE_LIMIT:4.0}
@@ -73,3 +83,18 @@ app:
     # 指数/板块/资产快照定时刷新：默认 60s 批量拉最新点位落 quote_snapshot（63+ symbol，30s 会撞雅虎限流）
     snapshot-enabled: ${FETCH_SNAPSHOT_ENABLED:true}
     snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:60000}
+  rss:
+    # RSS 新闻定时拉取（RssNewsScheduler，每分钟）。源列表在数据库 rss_source 表（见 scripts/rss_source.sql），
+    # 本段只放运行参数与 Worker 凭据。
+    enabled: ${RSS_ENABLED:true}
+    # 每个源每轮最多取多少条（实际入库因去重通常远少于此）
+    max-items-per-feed: ${RSS_MAX_ITEMS:20}
+    # Cloudflare Worker 转发通道：配了才能拉 via_worker=true 的源（海外源）。
+    # 不配 RSS_WORKER_BASE/RSS_AUTH_TOKEN 时自动沿用 FETCH_*（Yahoo sidecar 同款 Worker，见上方 app.fetch）。
+    worker-base: ${RSS_WORKER_BASE:${FETCH_WORKER_BASE:}}
+    auth-token: ${RSS_AUTH_TOKEN:${FETCH_AUTH_TOKEN:}}
+  logging:
+    # 每个 HTTP 请求的耗时日志（方法/URI/状态码/耗时ms/IP/uid），见 RequestLogFilter
+    request-enabled: ${REQUEST_LOG_ENABLED:true}
+    # 慢请求阈值（毫秒）：>0 时耗时 ≥ 该值的请求升级为 WARN 日志，0 表示全部按 INFO
+    slow-request-ms: ${SLOW_REQUEST_MS:0}

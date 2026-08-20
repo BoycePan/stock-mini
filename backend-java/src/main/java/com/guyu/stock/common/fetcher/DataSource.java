@@ -23,12 +23,21 @@ public class DataSource {
     private final int connectTimeoutMs;
     private final int readTimeoutMs;
     private final RateLimiter limiter;
+    /** Cloudflare Worker 反向代理基址（如 https://proxy.lilaiyun.online），null=直连 */
+    private final String workerBase;
+    /** Worker 鉴权 token，随请求带 X-Auth-Token 头 */
+    private final String authToken;
 
     public DataSource(String name, double rateLimitSeconds, int maxRetries, String userAgent, String referer) {
         this(name, rateLimitSeconds, maxRetries, userAgent, referer, 30);
     }
 
     public DataSource(String name, double rateLimitSeconds, int maxRetries, String userAgent, String referer, int timeoutSeconds) {
+        this(name, rateLimitSeconds, maxRetries, userAgent, referer, timeoutSeconds, null, null);
+    }
+
+    public DataSource(String name, double rateLimitSeconds, int maxRetries, String userAgent, String referer,
+                      int timeoutSeconds, String workerBase, String authToken) {
         this.name = name;
         this.rateLimitSeconds = rateLimitSeconds;
         this.maxRetries = Math.max(0, maxRetries);
@@ -38,6 +47,8 @@ public class DataSource {
         this.connectTimeoutMs = timeoutMs;
         this.readTimeoutMs = timeoutMs;
         this.limiter = rateLimitSeconds > 0 ? RateLimiter.create(1.0 / rateLimitSeconds) : null;
+        this.workerBase = workerBase;
+        this.authToken = authToken;
     }
 
     public static DataSource sina() {
@@ -48,6 +59,11 @@ public class DataSource {
 
     public String name() { return name; }
     public int maxRetries() { return maxRetries; }
+
+    /** 是否配置了 Cloudflare Worker 转发通道（via-worker 的源依赖它，未配置时退化为直连） */
+    public boolean viaWorker() {
+        return workerBase != null && !workerBase.isBlank();
+    }
 
     public byte[] getBytes(String url) {
         RuntimeException last = null;
@@ -103,12 +119,18 @@ public class DataSource {
     }
 
     private HttpURLConnection open(String url) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        // Cloudflare Worker 通道：请求重写为 workerBase + "/" + 原始URL，并带 X-Auth-Token（与 fetch_service.py 契约一致）
+        String target = url;
+        if (viaWorker()) {
+            target = workerBase + "/" + url;
+        }
+        HttpURLConnection conn = (HttpURLConnection) new URL(target).openConnection();
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setInstanceFollowRedirects(true);
         if (userAgent != null && !userAgent.isBlank()) conn.setRequestProperty("User-Agent", userAgent);
         if (referer != null && !referer.isBlank()) conn.setRequestProperty("Referer", referer);
+        if (authToken != null && !authToken.isBlank()) conn.setRequestProperty("X-Auth-Token", authToken);
         return conn;
     }
 

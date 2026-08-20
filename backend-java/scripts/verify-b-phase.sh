@@ -87,8 +87,8 @@ check "分钟线 scale=60"      "$BASE/api/v1/stock/600519/klines?scale=60&count
 check "分钟线 klines"        "$BASE/api/v1/stock/600519/klines?scale=60&count=5" '"klines"'
 check "个股新闻 结构"         "$BASE/api/v1/stock/600519/news"                 '"code":200'
 check "个股新闻 news"         "$BASE/api/v1/stock/600519/news"                 '"news"'
-check "新闻 feed 结构"        "$BASE/api/v1/news/feed?q=A股&count=3"           '"code":200'
-check "新闻 feed news"        "$BASE/api/v1/news/feed?q=A股&count=3"           '"news"'
+check "新闻 feed 结构"        "$BASE/api/v1/news/feed?page=1&size=3"            '"code":200'
+check "新闻 feed news"        "$BASE/api/v1/news/feed?page=1&size=3"            '"news"'
 check "公告 结构"             "$BASE/api/v1/stock/600519/announcements"        '"code":200'
 check "公告 items"            "$BASE/api/v1/stock/600519/announcements"        '"items"'
 

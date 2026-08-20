@@ -5,6 +5,11 @@ spring:
     username: sa
     password:
 
+# 测试日志落到 target/test-logs，避免写容器/开发机根目录 /apps/logs
+logging:
+  file:
+    path: target/test-logs
+
 # 测试专用配置（非生产值）：让 @SpringBootTest 能完整加载 JwtService/SinaClient bean
 app:
   collector:
@@ -22,6 +27,8 @@ app:
     timeout-seconds: 5
     user-agent: "test-agent"
     referer: "https://test.local"
+    # 测试关闭新浪 feed 定时拉取：避免 @SpringBootTest 上下文加载触发真实网络请求
+    feed-enabled: false
   eastmoney:
     rate-limit-seconds: 0.0
     max-retries: 1
@@ -40,3 +47,7 @@ app:
     timeout-seconds: 5
     user-agent: "test-agent"
     referer: "https://test.local"
+  rss:
+    # 测试关闭 RSS 定时拉取：@SpringBootTest 启动时 RssNewsScheduler 会种子+首轮拉取，
+    # 避免测试上下文触发真实网络请求。
+    enabled: false

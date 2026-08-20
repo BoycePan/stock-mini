@@ -648,7 +648,7 @@ function physicalGoldItemOf(
 // ---------------------------------------------------------------------------
 
 async function getFinanceMarketPage(): Promise<MarketPageData> {
-  const news = await newsApi.getFeed(20)
+  const news = await newsApi.getFeed(1, 20)
   if (!news.length) throw new Error('暂无新闻')
   const newsMetrics = news.map((item, index) => ({
     id: `finance-news-${index}`,

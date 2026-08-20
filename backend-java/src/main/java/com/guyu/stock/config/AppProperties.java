@@ -15,6 +15,7 @@ public class AppProperties {
     private Cninfo cninfo = new Cninfo();
     private Ths ths = new Ths();
     private Fetch fetch = new Fetch();
+    private Logging logging = new Logging();
 
     @Data
     public static class Jwt {
@@ -36,6 +37,12 @@ public class AppProperties {
         private int timeoutSeconds;
         private String userAgent;
         private String referer;
+        /** 通用新闻 feed 定时拉取开关（SinaFeedScheduler，每 5 分钟） */
+        private boolean feedEnabled = true;
+        /** feed 关键词，默认「A股」（与原 /news/feed 默认一致） */
+        private String feedKeyword = "A股";
+        /** 每轮拉取条数 */
+        private int feedCount = 20;
     }
 
     @Data
@@ -93,5 +100,14 @@ public class AppProperties {
         private boolean snapshotEnabled = true;
         /** 快照刷新间隔（毫秒），默认 60s（防雅虎限流） */
         private long snapshotIntervalMs = 60000;
+    }
+
+    /** HTTP 请求耗时日志配置（RequestLogFilter 使用） */
+    @Data
+    public static class Logging {
+        /** 是否记录每个请求的耗时日志，默认 true；false 时 RequestLogFilter 不输出 */
+        private boolean requestEnabled = true;
+        /** 慢请求阈值（毫秒），&gt;0 时耗时 ≥ 该值的请求以 WARN 记录，0 表示全部按 INFO */
+        private int slowRequestMs = 0;
     }
 }

@@ -52,4 +52,24 @@ class NewsRepositoryTest {
         assertThat(rows).hasSize(1);
         assertThat(rows.get(0).title()).isEqualTo("重复标题");
     }
+
+    @Test
+    void queryFeedOnlyReturnsGeneralNewsOrderedDescWithPagination() {
+        repo.batchSave(List.of(
+                new NewsRow("", "通用1", "", "http://u/1", "新浪", "2026-08-05 10:30"),
+                new NewsRow("", "通用2", "", "http://u/2", "新浪", "2026-08-06 09:00"),
+                new NewsRow("", "通用3", "", "http://u/3", "新浪", "2026-08-06 10:00"),
+                new NewsRow("600519", "个股", "", "http://u/4", "新浪", "2026-08-06 11:00")));
+
+        // 只返回 stock_code='' 的通用新闻，按时间倒序
+        List<NewsRow> page1 = repo.queryFeed(2, 0);
+        assertThat(page1).hasSize(2);
+        assertThat(page1.get(0).title()).isEqualTo("通用3");
+        assertThat(page1.get(1).title()).isEqualTo("通用2");
+
+        // 第二页只剩通用1
+        List<NewsRow> page2 = repo.queryFeed(2, 2);
+        assertThat(page2).hasSize(1);
+        assertThat(page2.get(0).title()).isEqualTo("通用1");
+    }
 }

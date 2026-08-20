@@ -5,7 +5,6 @@ import type { NewsItem } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 
 const FEED_PAGE_SIZE = 20
-const FEED_MAX = 100
 
 Page({
   data: {
@@ -45,7 +44,7 @@ Page({
           hasMore: items.length > 0,
         })
       } else {
-        const items = await newsApi.getFeed(FEED_PAGE_SIZE)
+        const items = await newsApi.getFeed(1, FEED_PAGE_SIZE)
         this.setData({
           loading: false,
           error: '',
@@ -73,14 +72,12 @@ Page({
           hasMore: items.length > 0,
         })
       } else {
-        // 通用 feed 不支持分页参数，扩大 count 重新拉取并去重
-        const count = Math.min(this.data.items.length + FEED_PAGE_SIZE, FEED_MAX)
-        const items = await newsApi.getFeed(count)
-        const seen = new Set(this.data.items.map((item) => item.url))
-        const appended = items.filter((item) => !seen.has(item.url))
+        // 通用 feed 分页追加
+        const page = Math.ceil((this.data.items.length + 1) / FEED_PAGE_SIZE)
+        const items = await newsApi.getFeed(page, FEED_PAGE_SIZE)
         this.setData({
-          items: [...this.data.items, ...appended],
-          hasMore: items.length >= count && count < FEED_MAX,
+          items: [...this.data.items, ...items],
+          hasMore: items.length >= FEED_PAGE_SIZE,
         })
       }
     } catch (error) {

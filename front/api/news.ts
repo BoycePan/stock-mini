@@ -8,10 +8,10 @@ import { unwrapAnnouncementItems, unwrapNewsItems } from '../utils/api-normalize
 import { request } from './client'
 
 export const newsApi = {
-  async getFeed(limit = 20) {
+  async getFeed(page = 1, size = 20) {
     const response = await request<NewsListResponse>({
       path: '/api/v1/news/feed',
-      query: { count: limit },
+      query: { page, size },
     })
     return unwrapNewsItems(response)
   },

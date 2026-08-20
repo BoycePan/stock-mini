@@ -9,6 +9,7 @@ import com.guyu.stock.external.sina.SinaInfoClient;
 import com.guyu.stock.external.sina.SinaKlineClient;
 import com.guyu.stock.external.sina.SinaNewsClient;
 import com.guyu.stock.external.ths.ThsClient;
+import com.guyu.stock.external.rss.RssNewsClient;
 import com.guyu.stock.external.yahoo.YahooKlineClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -94,5 +95,31 @@ public class BeanConfig {
     public YahooKlineClient yahooKlineClient(AppProperties appProperties) {
         AppProperties.Fetch cfg = appProperties.getFetch();
         return new YahooKlineClient("http://" + cfg.getHost() + ":" + cfg.getPort());
+    }
+
+    // ---------- RSS 新闻源 ----------
+    // 源列表在数据库 rss_source 表（见 scripts/rss_source.sql）；这里只装配抓取通道：
+    // rssDirectSource 直连（中文源），rssWorkerSource 走 Cloudflare Worker（海外源，未配置时退化为直连）。
+    private static final String RSS_UA =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+    @Bean
+    public DataSource rssDirectSource() {
+        return new DataSource("rss", 1.0, 3, RSS_UA, null, 20);
+    }
+
+    @Bean
+    public DataSource rssWorkerSource(RssProperties rssProperties) {
+        String base = rssProperties.getWorkerBase();
+        if (base == null || base.isBlank()) {
+            // 未配置 Worker：退化为直连（RssNewsClient.hasWorker()=false，via-worker 源会被跳过并打 warn）
+            return new DataSource("rss-worker", 1.0, 3, RSS_UA, null, 20);
+        }
+        return new DataSource("rss-worker", 1.0, 3, RSS_UA, null, 20, base, rssProperties.getAuthToken());
+    }
+
+    @Bean
+    public RssNewsClient rssNewsClient(DataSource rssDirectSource, DataSource rssWorkerSource) {
+        return new RssNewsClient(rssDirectSource, rssWorkerSource);
     }
 }

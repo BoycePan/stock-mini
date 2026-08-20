@@ -53,6 +53,9 @@ jobs:
             echo "$ACR_PASSWORD" | docker login "$REGISTRY" -u "$ACR_USERNAME" --password-stdin
             docker pull "$IMAGE"
 
+            # 日志目录（挂载到 /apps/logs；提前创建，便于后续设置读写权限）
+            mkdir -p /apps/stock/backend-java/logs
+
             # 滚动重启
             docker stop stock-backend-java 2>/dev/null || true
             docker rm stock-backend-java 2>/dev/null || true
@@ -60,6 +63,8 @@ jobs:
               --name stock-backend-java \
               --restart unless-stopped \
               --network host \
+              -e LOG_DIR=/apps/logs \
+              -v /apps/stock/backend-java/logs:/apps/logs \
               --env-file .env \
               "$IMAGE"
 

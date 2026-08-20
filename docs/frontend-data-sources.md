@@ -230,7 +230,7 @@ var hq_str_nf_CU0="铜连续,003745,108010.000,108140.000,107130.000,0.000,10732
 | 股票 K 线（分钟/日/周） | 新浪 K线 API，东财备用 | `GET /api/v1/stock/:code/klines` | 📄 生产使用 |
 | 概念板块列表/成分股 | 同花顺（0.5s/次限流） | `GET /api/v1/sector/boards` | 📄 生产使用 |
 | 板块 K 线 | 同花顺 `d.10jqka.com.cn` | `GET /api/v1/sector/board/:code/klines` | 📄 生产使用 |
-| 通用/个股新闻 | 新浪 `feed.mix.sina.com.cn` | `GET /api/v1/news/feed` | 📄 30s/60s 缓存 |
+| 通用/个股新闻 | 新浪 feed（后台 5min 拉取落库）+ RSS 源 | `GET /api/v1/news/feed` | 📄 查库分页 |
 | 个股公告 | 巨潮资讯 `cninfo.com.cn` | `GET /api/v1/stock/:code/announcements` | 📄 5min 缓存 |
 
 详细字段见 `API.md`。

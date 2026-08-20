@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Spring Boot 日志配置（logback-spring.xml 才能使用 <springProperty> 等 Spring 扩展）。
+
+  双通道输出：
+    1. CONSOLE —— stdout，容器内 docker logs 可实时查看；
+    2. FILE    —— 落盘，按天滚动一个文件，只保留最近 3 天（maxHistory=3）。
+
+  日志目录默认 /apps/logs（Docker 容器内），可通过标准属性 logging.file.path
+  或环境变量 LOG_DIR 覆盖（见 application.yml）。
+-->
+<configuration>
+    <springProperty scope="context" name="LOG_DIR" source="logging.file.path" defaultValue="/apps/logs"/>
+
+    <!-- 控制台：docker logs 查看 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 文件：每天一个文件，保留最近 3 个历史文件 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/stock-backend.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 每天滚动出一个带日期的文件 -->
+            <fileNamePattern>${LOG_DIR}/stock-backend.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 只保留最近 3 天（历史文件数），当前文件 stock-backend.log 不计入 -->
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
