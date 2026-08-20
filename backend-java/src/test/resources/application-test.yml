@@ -27,6 +27,8 @@ app:
     timeout-seconds: 5
     user-agent: "test-agent"
     referer: "https://test.local"
+    # 测试关闭新浪 feed 定时拉取：避免 @SpringBootTest 上下文加载触发真实网络请求
+    feed-enabled: false
   eastmoney:
     rate-limit-seconds: 0.0
     max-retries: 1

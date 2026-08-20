@@ -23,9 +23,9 @@ public class NewsController {
     }
 
     @GetMapping("/news/feed")
-    public ApiResponse<Map<String, Object>> feed(@RequestParam(value = "q", required = false) String q,
-                                                 @RequestParam(value = "count", required = false) Integer count) {
-        return ApiResponse.success(newsService.feed(q, count));
+    public ApiResponse<Map<String, Object>> feed(@RequestParam(value = "page", required = false) Integer page,
+                                                 @RequestParam(value = "size", required = false) Integer size) {
+        return ApiResponse.success(newsService.feed(page, size));
     }
 
     @GetMapping("/stock/{code}/announcements")

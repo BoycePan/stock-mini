@@ -84,7 +84,7 @@ C 阶段在 B 阶段基础上新增：同花顺概念板块（板块列表 / 板
 | `GET` | `/api/v1/sector/board/{code}/klines?count=30` | 板块 K 线（同花顺；`count` 默认 30） |
 | `GET` | `/api/v1/sector/members/{cid}` | 板块成分股（库内优先，回退同花顺；`cid` 为同花顺概念 ID） |
 | `GET` | `/api/v1/stock/{code}/news?page=1` | 个股新闻（新浪；`page` 默认 1） |
-| `GET` | `/api/v1/news/feed?q=A股&count=20` | 新闻聚合 feed（新浪；`q` 默认 `A股`，`count` 默认 20、最多 100） |
+| `GET` | `/api/v1/news/feed?page=1&size=20` | 通用新闻 feed（查库；`page` 默认 1，`size` 默认 20、最多 100；新浪源由 SinaFeedScheduler 每 5 分钟拉取落库） |
 | `GET` | `/api/v1/stock/{code}/announcements?page=1&size=20` | 巨潮公告（`page` 默认 1，`size` 默认 20、最多 100） |
 
 `GET /api/v1/stock/{code}/klines` 的 `scale` 参数在 C 阶段扩展：

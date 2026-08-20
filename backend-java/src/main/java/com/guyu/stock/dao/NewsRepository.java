@@ -42,4 +42,18 @@ public class NewsRepository {
                 FROM news_feed WHERE stock_code = ? ORDER BY published_at DESC LIMIT ?
                 """, MAPPER, code, limit);
     }
+
+    /**
+     * 通用新闻 feed 分页查询（stock_code 为空串：新浪 feed + RSS 来源）。
+     * 按 published_at 倒序，limit 为每页条数、offset 为偏移。
+     */
+    public List<NewsRow> queryFeed(int limit, int offset) {
+        if (limit <= 0) limit = 20;
+        if (offset < 0) offset = 0;
+        return jdbcTemplate.query("""
+                SELECT stock_code, title, summary, url, source,
+                       to_char(published_at, 'YYYY-MM-DD HH24:MI') AS published_at
+                FROM news_feed WHERE stock_code = '' ORDER BY published_at DESC LIMIT ? OFFSET ?
+                """, MAPPER, limit, offset);
+    }
 }

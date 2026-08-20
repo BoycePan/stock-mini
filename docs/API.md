@@ -72,7 +72,7 @@
 | A 股实时行情 | 内存 | 3s |
 | 概念板块 K 线 | 内存 | 60s |
 | 个股新闻 | 内存 | 60s |
-| 通用新闻 | 内存 | 30s |
+| 通用新闻 | PostgreSQL | 永久（后台 5min 拉取） |
 | 个股公告 | 内存 | 5min |
 
 ---
@@ -718,18 +718,21 @@ GET /api/v1/stock/{code}/news?page={页码}
 ### 5.2 通用财经新闻
 
 ```
-GET /api/v1/news/feed?q={关键词}&count={条数}
+GET /api/v1/news/feed?page={页码}&size={每页条数}
 ```
 
-默认关键词「A股」，30s 缓存，同时异步存入 news_feed。**入参：** `q`（可选，默认「A股」）、`count`（可选，默认 20，最大 100）。**响应示例：**
+通用新闻（新浪 feed + RSS 来源，`stock_code` 为空的记录）按发布时间倒序分页返回，只查 `news_feed` 表。
+新浪 feed 由后台定时任务（SinaFeedScheduler）每 5 分钟拉取落库，接口本身不再实时打新浪。**入参：** `page`（可选，默认 1）、`size`（可选，默认 20，最大 100）。**响应示例：**
 
 ```json
 {
   "code": 200,
   "msg": "success",
   "data": {
-    "keyword": "A股",
+    "page": 1,
+    "size": 20,
     "count": 2,
+    "hasMore": false,
     "news": [
       {"title": "*ST萃华俩股东被立案调查", "summary": "...", "url": "https://...", "time": "2026-08-05 21:00", "source": "市场资讯"}
     ]

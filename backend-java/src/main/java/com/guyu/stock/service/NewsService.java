@@ -2,6 +2,7 @@ package com.guyu.stock.service;
 
 import com.guyu.stock.common.BizException;
 import com.guyu.stock.common.ErrCode;
+import com.guyu.stock.dao.NewsRepository;
 import com.guyu.stock.external.cninfo.Announcement;
 import com.guyu.stock.external.cninfo.CninfoClient;
 import com.guyu.stock.external.sina.SinaNewsClient;
@@ -23,11 +24,14 @@ public class NewsService {
     private final SinaNewsClient sinaNewsClient;
     private final CninfoClient cninfoClient;
     private final AsyncNewsSaver asyncNewsSaver;
+    private final NewsRepository newsRepository;
 
-    public NewsService(SinaNewsClient sinaNewsClient, CninfoClient cninfoClient, AsyncNewsSaver asyncNewsSaver) {
+    public NewsService(SinaNewsClient sinaNewsClient, CninfoClient cninfoClient,
+                       AsyncNewsSaver asyncNewsSaver, NewsRepository newsRepository) {
         this.sinaNewsClient = sinaNewsClient;
         this.cninfoClient = cninfoClient;
         this.asyncNewsSaver = asyncNewsSaver;
+        this.newsRepository = newsRepository;
     }
 
     public Map<String, Object> stockNews(String code, Integer page) {
@@ -42,14 +46,31 @@ public class NewsService {
         return result;
     }
 
-    public Map<String, Object> feed(String q, Integer count) {
-        String keyword = (q == null || q.isBlank()) ? "A股" : q;
-        int n = (count == null || count <= 0) ? 20 : Math.min(count, 100);
-        List<SinaNewsClient.NewsItem> items = sinaNewsClient.fetchFeedNews(keyword, n);
-        asyncNewsSaver.save(toNewsRows("", items));
+    public Map<String, Object> feed(Integer page, Integer size) {
+        int p = (page == null || page <= 0) ? 1 : page;
+        int s = (size == null || size <= 0) ? 20 : Math.min(size, 100);
+        int offset = (p - 1) * s;
+        // 多取一条用于判断是否有下一页，再按 s 截断
+        List<NewsRow> rows = newsRepository.queryFeed(s + 1, offset);
+        boolean hasMore = rows.size() > s;
+        if (hasMore) rows = rows.subList(0, s);
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (NewsRow row : rows) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("title", row.title());
+            item.put("summary", row.summary());
+            item.put("url", row.url());
+            item.put("source", row.source());
+            item.put("time", row.publishedAt());
+            items.add(item);
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("keyword", keyword);
+        result.put("page", p);
+        result.put("size", s);
         result.put("count", items.size());
+        result.put("hasMore", hasMore);
         result.put("news", items);
         return result;
     }

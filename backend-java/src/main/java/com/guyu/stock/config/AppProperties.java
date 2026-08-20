@@ -37,6 +37,12 @@ public class AppProperties {
         private int timeoutSeconds;
         private String userAgent;
         private String referer;
+        /** 通用新闻 feed 定时拉取开关（SinaFeedScheduler，每 5 分钟） */
+        private boolean feedEnabled = true;
+        /** feed 关键词，默认「A股」（与原 /news/feed 默认一致） */
+        private String feedKeyword = "A股";
+        /** 每轮拉取条数 */
+        private int feedCount = 20;
     }
 
     @Data

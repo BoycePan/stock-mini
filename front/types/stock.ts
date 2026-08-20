@@ -87,8 +87,10 @@ export interface NewsItem {
 
 export interface NewsListResponse {
   code?: string
-  keyword?: string
+  page?: number
+  size?: number
   count: number
+  hasMore?: boolean
   news: NewsItem[]
 }
 

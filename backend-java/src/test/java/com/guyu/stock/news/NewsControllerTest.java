@@ -1,8 +1,10 @@
 package com.guyu.stock.news;
 
+import com.guyu.stock.dao.NewsRepository;
 import com.guyu.stock.external.cninfo.Announcement;
 import com.guyu.stock.external.cninfo.CninfoClient;
 import com.guyu.stock.external.sina.SinaNewsClient;
+import com.guyu.stock.model.NewsRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NewsControllerTest {
 
     @Autowired private MockMvc mockMvc;
+    @Autowired private NewsRepository newsRepository;
     @MockBean private SinaNewsClient sinaNewsClient;
     @MockBean private CninfoClient cninfoClient;
 
@@ -46,5 +49,33 @@ class NewsControllerTest {
         mockMvc.perform(get("/api/v1/stock/600519/announcements"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].title").value("年报"));
+    }
+
+    @Test
+    void feedQueriesDatabaseWithPagination() throws Exception {
+        newsRepository.batchSave(List.of(
+                new NewsRow("", "旧闻", "", "http://u/1", "新浪", "2026-08-05 10:30"),
+                new NewsRow("", "新闻B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
+                new NewsRow("", "新闻A", "", "http://u/3", "新浪", "2026-08-06 10:00"),
+                // 个股新闻不应混入通用 feed
+                new NewsRow("600519", "茅台新闻", "", "http://u/4", "新浪", "2026-08-06 11:00")));
+
+        mockMvc.perform(get("/api/v1/news/feed?page=1&size=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.count").value(2))
+                .andExpect(jsonPath("$.data.hasMore").value(true))
+                .andExpect(jsonPath("$.data.news[0].title").value("新闻A"))
+                .andExpect(jsonPath("$.data.news[1].title").value("新闻B"))
+                .andExpect(jsonPath("$.data.news[0].time").value("2026-08-06 10:00"));
+
+        // 第二页只剩一条旧闻
+        mockMvc.perform(get("/api/v1/news/feed?page=2&size=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(1))
+                .andExpect(jsonPath("$.data.hasMore").value(false))
+                .andExpect(jsonPath("$.data.news[0].title").value("旧闻"));
     }
 }

@@ -38,6 +38,10 @@ app:
     timeout-seconds: ${SINA_TIMEOUT:30}
     user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     referer: "https://finance.sina.com.cn"
+    # 通用新闻 feed 定时拉取（SinaFeedScheduler，每 5 分钟）。/news/feed 接口只查库，不再实时打新浪。
+    feed-enabled: ${SINA_FEED_ENABLED:true}
+    feed-keyword: ${SINA_FEED_KEYWORD:A股}
+    feed-count: ${SINA_FEED_COUNT:20}
   eastmoney:
     # 对齐 Go config.yaml stock.eastmoney（限流最保守，4s/次，只做按需补充）
     rate-limit-seconds: ${EASTMONEY_RATE_LIMIT:4.0}
