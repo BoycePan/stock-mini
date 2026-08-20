@@ -8,11 +8,17 @@
  * 标注文案中代理股给出中文名（东财名，英文名用 US_PROXY_NAMES 补充表）。
  */
 
-import type { MinuteResult } from '../types/stock'
+import type { MinutePoint, MinuteResult } from '../types/stock'
 import { minuteApi } from '../api/minute'
 import { US_PROXY_NAMES, resolveMinuteSources, type MinuteSources } from '../config/minute'
+import type { MinuteSessionKind } from './minute-session'
 import { bareCode } from './quote-consensus'
-import { buildCompositePoints, MIN_MINUTE_POINTS, type CompositeSeries } from './minute-parser'
+import {
+  buildCompositePoints,
+  buildCrossPoints,
+  MIN_MINUTE_POINTS,
+  type CompositeSeries,
+} from './minute-parser'
 
 export interface MinuteFetchResult extends MinuteResult {
   /** 命中的源：'em' | 'tc' | 'yahoo' */
@@ -31,6 +37,28 @@ const SOURCE_LABELS: Record<MinuteFetchResult['source'], string> = {
 
 /** 代理股合成图的数据来源标签 */
 const COMPOSITE_SOURCE_LABEL = '东方财富分时（美股代理合成）'
+/** 交叉汇率合成图的数据来源标签 */
+const CROSS_SOURCE_LABEL = '东方财富分时（交叉汇率合成）'
+
+/**
+ * 东财境外市场（韩股/日股）分钟量稀疏口径提示：
+ * 东财 KRX/JPX 分钟源只在有成交记录的分钟挂量（实测三星电子约 43% 分钟量=0、东京电子约 36%，
+ * 与 A 股同端点约 0% 不同）；命中东财源且无成交分钟占比 ≥20% 时给出口径提示，
+ * 避免把「无成交记录」误读为「零成交」。Yahoo 兜底源逐分钟聚合，无需提示。
+ */
+export function sparseVolumeNote(
+  points: MinutePoint[],
+  source: MinuteFetchResult['source'],
+  session: MinuteSessionKind,
+): string {
+  if (source !== 'em') return ''
+  if (session !== 'kr' && session !== 'jp-yahoo') return ''
+  const n = points.length
+  if (!n) return ''
+  const withVolume = points.filter((p) => (p.volume || 0) > 0).length
+  if (withVolume / n >= 0.8) return ''
+  return '成交量按东财逐笔聚合，部分分钟无成交记录'
+}
 
 /** 该卡片 code 是否支持当日分时图（任一源可用，供卡片「分时」角标展示） */
 export { hasMinuteSources } from '../config/minute'
@@ -53,6 +81,18 @@ export async function fetchMinuteData(code: string): Promise<MinuteFetchResult |
       source: 'em',
       sourceLabel: COMPOSITE_SOURCE_LABEL,
       note: composite.note,
+    }
+  }
+
+  // 交叉汇率合成（如 CNYKRW = 美元/韩元 ÷ 美元/离岸人民币，东财 119/133 大陆可访问）
+  if (sources.emCross) {
+    const cross = await fetchCrossMinute(sources.emCross)
+    if (!cross) return null
+    return {
+      ...cross,
+      source: 'em',
+      sourceLabel: CROSS_SOURCE_LABEL,
+      note: sources.note,
     }
   }
 
@@ -160,6 +200,36 @@ function proxyDisplayName(ticker: string, apiName?: string): string {
 }
 
 export type { MinuteSources }
+
+/**
+ * 交叉汇率分时合成：并发拉取两腿东财 trends2（keepFullTime 完整时间戳），
+ * 分子 ÷ 分母 逐分钟相除；昨收 = 两腿昨收相除（与首点大致衔接）。
+ * 任一条腿失败/点数不足返回 null（由调用方展示错误/重试）。
+ */
+async function fetchCrossMinute(cross: {
+  numerator: string
+  denominator: string
+}): Promise<MinuteResult | null> {
+  const [num, den] = await Promise.all([
+    minuteApi.eastmoney(cross.numerator, { keepFullTime: true }),
+    minuteApi.eastmoney(cross.denominator, { keepFullTime: true }),
+  ])
+  if (!num || !den) return null
+  const points = buildCrossPoints(
+    { points: num.points.map((p) => ({ time: p.time, price: p.price })) },
+    { points: den.points.map((p) => ({ time: p.time, price: p.price })) },
+  )
+  if (points.length < MIN_MINUTE_POINTS) return null
+  const preClose =
+    num.preClose !== null &&
+    Number.isFinite(num.preClose) &&
+    den.preClose !== null &&
+    Number.isFinite(den.preClose) &&
+    den.preClose !== 0
+      ? num.preClose / den.preClose
+      : null
+  return { preClose, points }
+}
 
 export type MinuteVolumeDirection = 'up' | 'down' | 'flat'
 

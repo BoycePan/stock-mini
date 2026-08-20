@@ -138,8 +138,10 @@ Component({
       if (hasPre) {
         let dev = 0
         for (const p of points) {
-          if (Number.isFinite(p.price)) dev = Math.max(dev, Math.abs(p.price - preClose))
-          if (p.avg !== null && Number.isFinite(p.avg))
+          // 只统计正价格/正均价：0 价或 0 均价（无成交分钟）会让 |0-昨收| 撑爆纵轴
+          if (Number.isFinite(p.price) && p.price > 0)
+            dev = Math.max(dev, Math.abs(p.price - preClose))
+          if (p.avg !== null && Number.isFinite(p.avg) && p.avg > 0)
             dev = Math.max(dev, Math.abs(p.avg - preClose))
         }
         // 平盘无波动时给一个最小对称幅度（昨收的 1%），避免 0 范围
@@ -151,11 +153,11 @@ Component({
         let min = Infinity
         let max = -Infinity
         for (const p of points) {
-          if (Number.isFinite(p.price)) {
+          if (Number.isFinite(p.price) && p.price > 0) {
             min = Math.min(min, p.price)
             max = Math.max(max, p.price)
           }
-          if (p.avg !== null && Number.isFinite(p.avg)) {
+          if (p.avg !== null && Number.isFinite(p.avg) && p.avg > 0) {
             min = Math.min(min, p.avg)
             max = Math.max(max, p.avg)
           }
@@ -274,7 +276,7 @@ Component({
       let avgDrawn = false
       for (let i = 0; i < n; i += 1) {
         const avg = points[i]?.avg
-        if (avg === null || avg === undefined || !Number.isFinite(avg)) continue
+        if (avg === null || avg === undefined || !Number.isFinite(avg) || avg <= 0) continue
         const y = priceY(avg)
         if (!avgDrawn) {
           ctx.moveTo(xOf(i), y)
@@ -412,7 +414,7 @@ Component({
       ctx.beginPath()
       ctx.arc(x, y, 3.5, 0, Math.PI * 2)
       ctx.fill()
-      if (p.avg !== null && Number.isFinite(p.avg)) {
+      if (p.avg !== null && Number.isFinite(p.avg) && p.avg > 0) {
         ctx.fillStyle = avgColor
         ctx.beginPath()
         ctx.arc(x, priceY(p.avg), 3, 0, Math.PI * 2)
@@ -431,7 +433,7 @@ Component({
           color: up ? UP_COLOR : DOWN_COLOR,
         })
       }
-      if (p.avg !== null && Number.isFinite(p.avg)) {
+      if (p.avg !== null && Number.isFinite(p.avg) && p.avg > 0) {
         rows.push({ text: `均价 ${p.avg.toFixed(2)}`, color: avgColor })
       }
       if ((p.volume || 0) > 0) {

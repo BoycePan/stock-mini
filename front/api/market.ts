@@ -359,8 +359,18 @@ async function getAsiaMarketPage(): Promise<MarketPageData> {
   const allIndexItems = await fetchAsiaIndices()
   const byCode = new Map(allIndexItems.map((item) => [item.code, item]))
   const indexGroups: QuoteGroup[] = [
-    { id: 'asia-kr-index', title: '韩国指数', items: pickItems(byCode, ['KS11', 'KQ11']) },
-    { id: 'asia-jp-index', title: '日本指数', items: pickItems(byCode, ['N225', 'TPX']) },
+    {
+      id: 'asia-kr-index',
+      title: '韩国指数',
+      items: pickItems(byCode, ['KS11', 'KQ11']),
+      region: 'kr',
+    },
+    {
+      id: 'asia-jp-index',
+      title: '日本指数',
+      items: pickItems(byCode, ['N225', 'TPX']),
+      region: 'jp',
+    },
     { id: 'asia-asia-index', title: '亚洲指数', items: pickItems(byCode, ['VNINDEX', 'SENSEX']) },
   ]
 
@@ -374,8 +384,8 @@ async function getAsiaMarketPage(): Promise<MarketPageData> {
   return buildQuoteAsiaPage({
     indexGroups,
     stockGroups: [
-      { id: 'asia-kr-stock', title: '韩国核心个股', items: krStocks },
-      { id: 'asia-jp-stock', title: '日本核心个股', items: jpStocks },
+      { id: 'asia-kr-stock', title: '韩国核心个股', items: krStocks, region: 'kr' },
+      { id: 'asia-jp-stock', title: '日本核心个股', items: jpStocks, region: 'jp' },
     ],
     rates,
     statusTone: hasLiveQuote(all) ? 'active' : 'rest',

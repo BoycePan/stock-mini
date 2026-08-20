@@ -37,14 +37,18 @@ export function parseEastmoneyTrends(
   for (const row of rows) {
     const f = row.split(',')
     const price = Number(f[1])
-    if (f.length < 8 || !Number.isFinite(price)) continue
+    // 价格为 0 / 空字段（Number('')=0）视为该分钟无成交，跳过：
+    // 外汇等 24h 标的个别分钟可能无成交，0 价会污染价格线与纵轴（|0-昨收| 撑爆刻度）
+    if (f.length < 8 || !Number.isFinite(price) || price <= 0) continue
     const volume = Number(f[5])
     const amount = Number(f[6])
     const avg = Number(f[7])
     points.push({
       time: keepFull ? (f[0] ?? '') : shortTime(f[0] ?? ''),
       price,
-      avg: Number.isFinite(avg) ? avg : null,
+      // 均价 > 0 才有效：东财对无成交分钟（如外汇成交量恒 0）返回 0.00000，
+      // 0 均价没有意义（真实均价必为正），置 null 避免污染纵轴与均价线
+      avg: avg > 0 ? avg : null,
       volume: Number.isFinite(volume) ? volume : 0,
       amount: Number.isFinite(amount) ? amount : undefined,
     })
@@ -235,4 +239,50 @@ export function buildCompositePoints(series: CompositeSeries[]): MinutePoint[] {
     const agg = byTime.get(time) as { sum: number; count: number; volume: number }
     return { time: shortTime(time), price: agg.sum / agg.count, avg: null, volume: agg.volume }
   })
+}
+
+// ---------------------------------------------------------------------------
+// 交叉汇率合成（人民币/韩元等东财无直盘货币对）
+// ---------------------------------------------------------------------------
+
+/** 交叉汇率一条腿的分时序列（东财 keepFullTime 保留完整时间戳） */
+export interface CrossLegSeries {
+  points: Array<{
+    /** 完整时间戳（"YYYY-MM-DD HH:mm"，字典序即时间序） */
+    time: string
+    /** 现价 */
+    price: number
+  }>
+}
+
+/**
+ * 交叉汇率合成：numerator / denominator 逐分钟相除。
+ * - 以分子（如 美元/韩元）的时间序列为主，分母（如 美元/离岸人民币）缺分钟时跳过该点；
+ * - 输出 price 按 4 位小数取整（外汇常见精度），无成交量/均价口径（volume=0、avg=null）；
+ * - 输出 time 为 HH:mm，序列保持升序（分子已按时间升序输入）。
+ */
+export function buildCrossPoints(
+  numerator: CrossLegSeries,
+  denominator: CrossLegSeries,
+): MinutePoint[] {
+  if (!numerator.points.length || !denominator.points.length) return []
+  const denByTime = new Map<string, number>()
+  for (const p of denominator.points) {
+    denByTime.set(p.time, p.price)
+  }
+  const points: MinutePoint[] = []
+  for (const p of numerator.points) {
+    const den = denByTime.get(p.time)
+    if (den === undefined || !Number.isFinite(den) || den === 0) continue
+    const price = p.price / den
+    if (!Number.isFinite(price)) continue
+    points.push({
+      time: shortTime(p.time),
+      // 四舍五入到 4 位小数，避免浮点噪声（如 1392.8/6.7225=207.1863…）
+      price: Math.round(price * 10000) / 10000,
+      avg: null,
+      volume: 0,
+    })
+  }
+  return points
 }

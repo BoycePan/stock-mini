@@ -80,7 +80,8 @@ export function resolveMinuteSession(code: string): MinuteSessionKind {
   if (code === 'N225') return 'jp-em'
   if (code === 'SENSEX') return 'in'
   if (code === 'VNINDEX') return 'vn'
-  // 韩/日个股（Yahoo）：用配置里的 Yahoo 符号后缀区分市场
+  // 韩/日个股：用配置里的 Yahoo 符号后缀区分市场（分时源可能已是东财 177/176，
+  // 但 Yahoo 符号仍保留用于识别市场，东财与 Yahoo 的韩/日时段形状一致）
   if (/^\d+$/.test(code)) {
     const symbol = MINUTE_SOURCES[code]?.yahoo ?? ''
     if (symbol.endsWith('.KS')) return 'kr'

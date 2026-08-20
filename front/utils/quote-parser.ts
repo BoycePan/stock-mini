@@ -350,9 +350,15 @@ export interface EastmoneyRaw {
   f48?: number
 }
 
-/** 价格除数：10^(f152||2)；港股/韩股（f107=116）恒除 1000 */
+/** 价格除数：10^(f152||2)；部分市场恒除数（实测，见 docs/tabbar-api.md「④ 东财个股行情」）：
+ * - 116 港股：恒除 1000（如 00700 f43=451400 → 451.4）
+ * - 177 韩股：原值不除（如 005930 f43=271000 → 271000，KRW 整元）
+ * - 176 日股：恒除 10（如 8035 f43=540200 → 54020，10 日元为单位）
+ * 其余市场按 10^(f152||2)。 */
 export function priceDivisor(f152: number | undefined, market: number | undefined): number {
   if (market === 116) return 1000
+  if (market === 177) return 1
+  if (market === 176) return 10
   return Math.pow(10, f152 ?? 2)
 }
 
@@ -364,9 +370,10 @@ const MARKET_NAMES: Record<string, string> = {
   '105': '美股',
   '106': '美股',
   '107': '美股',
-  '116': '韩股',
+  '116': '港股',
   '119': '汇率',
-  '151': '日股',
+  '176': '日股',
+  '177': '韩股',
   '251': '指数',
 }
 

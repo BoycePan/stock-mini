@@ -7,6 +7,7 @@
 
 import type { MarketMetric, MarketPageData, MarketSection } from '../types/market'
 import { formatDateTime, formatNumber } from './formatter'
+import { getRegionStatus, type MarketRegion } from './market-clock'
 
 /** 页面行情条目（外部数据归一化后的展示单元） */
 export interface QuoteItem {
@@ -38,6 +39,8 @@ export interface QuoteGroup {
   tip?: string
   /** 涨跌幅缺失或为 0 时隐藏涨跌徽标（如金店金价上游不保证提供涨跌幅） */
   hideFlatChange?: boolean
+  /** 市场区域：有值时板块标题右侧展示盘面状态（盘中/休市等，见 utils/market-clock.ts） */
+  region?: MarketRegion
 }
 
 /**
@@ -160,15 +163,22 @@ function sectionOf(
   group: QuoteGroup,
   offset: number,
   tone: MarketSection['tone'],
-  opts?: { hideFlatChange?: boolean },
+  opts?: { hideFlatChange?: boolean; now?: Date },
 ): MarketSection {
-  return {
+  const section: MarketSection = {
     id: group.id,
     title: group.title,
     tone,
     tip: group.tip,
     metrics: group.items.map((item, index) => metricOf(item, offset + index, opts)),
   }
+  // 板块右侧盘面状态：按市场区域实时时钟 + 节假日日历判定
+  if (group.region) {
+    const status = getRegionStatus(group.region, opts?.now)
+    section.marketStatus = status.label
+    section.marketTone = status.tone
+  }
+  return section
 }
 
 // ---------------------------------------------------------------------------
@@ -190,13 +200,16 @@ export interface QuoteGlobalPageParams {
   sectorTitle?: string
 }
 
-export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageData {
+export function buildQuoteGlobalPage(
+  params: QuoteGlobalPageParams,
+  now: Date = new Date(),
+): MarketPageData {
   const groups: QuoteGroup[] = []
   if (params.cnIndices.length) {
-    groups.push({ id: 'cn-index', title: 'A股指数', items: params.cnIndices })
+    groups.push({ id: 'cn-index', title: 'A股指数', items: params.cnIndices, region: 'cn' })
   }
   if (params.usIndices.length) {
-    groups.push({ id: 'us-index', title: '美股指数', items: params.usIndices })
+    groups.push({ id: 'us-index', title: '美股指数', items: params.usIndices, region: 'us' })
   }
   if (params.macro.length) {
     groups.push({ id: 'global-economy', title: '宏观经济', items: params.macro })
@@ -214,7 +227,7 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of groups) {
-    const section = sectionOf(group, offset, 'global')
+    const section = sectionOf(group, offset, 'global', { now })
     if (group.id === 'industry-board') {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
@@ -255,17 +268,21 @@ export interface QuoteAsiaPageParams {
   statusTone: 'active' | 'rest'
 }
 
-export function buildQuoteAsiaPage(params: QuoteAsiaPageParams): MarketPageData {
+export function buildQuoteAsiaPage(
+  params: QuoteAsiaPageParams,
+  now: Date = new Date(),
+): MarketPageData {
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of [...params.indexGroups, ...params.stockGroups]) {
-    sections.push(sectionOf(group, offset, 'asia'))
+    sections.push(sectionOf(group, offset, 'asia', { now }))
     offset += group.items.length
   }
   if (params.rates.length) {
     sections.push(
       sectionOf({ id: 'asia-fx', title: '汇率', items: params.rates }, offset, 'asia', {
         hideFlatChange: true,
+        now,
       }),
     )
   }

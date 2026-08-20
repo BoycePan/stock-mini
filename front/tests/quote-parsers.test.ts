@@ -266,19 +266,60 @@ test('东财：价格按 10^(f152||2) 除、涨跌幅 ÷100', () => {
   assert.equal(quote.marketName, '美股')
 })
 
-test('东财：港股/韩股（f107=116）恒除 1000', () => {
-  const quote = normalizeEastmoneyQuote('116.005930', {
-    f57: '005930',
-    f58: '三星电子',
-    f43: 230000,
-    f60: 228000,
-    f152: 0,
+test('东财：港股（f107=116）恒除 1000', () => {
+  const quote = normalizeEastmoneyQuote('116.00700', {
+    f57: '00700',
+    f58: '腾讯控股',
+    f43: 451400,
+    f60: 447200,
+    f152: 2,
     f86: Math.floor(Date.now() / 1000) - 60,
     f107: 116,
   })
   assert.ok(quote)
-  assert.equal(quote.latestPrice, 230)
-  assert.equal(quote.previousClose, 228)
+  assert.equal(quote.latestPrice, 451.4)
+  assert.equal(quote.previousClose, 447.2)
+  assert.equal(quote.marketName, '港股')
+})
+
+test('东财：韩股（f107=177）价格原值不除（KRW 整元）', () => {
+  const quote = normalizeEastmoneyQuote('177.005930', {
+    f57: '005930',
+    f58: '三星电子',
+    f43: 271000,
+    f60: 247500,
+    f169: 23500,
+    f170: 949,
+    f152: 2,
+    f86: Math.floor(Date.now() / 1000) - 60,
+    f107: 177,
+  })
+  assert.ok(quote)
+  assert.equal(quote.latestPrice, 271000)
+  assert.equal(quote.previousClose, 247500)
+  assert.equal(quote.change, 23500)
+  assert.equal(quote.changePercent, 9.49)
+  assert.equal(quote.marketName, '韩股')
+})
+
+test('东财：日股（f107=176）恒除 10', () => {
+  const quote = normalizeEastmoneyQuote('176.8035', {
+    f57: '8035',
+    f58: 'Tokyo Electron',
+    f43: 540200,
+    f60: 546600,
+    f169: -6400,
+    f170: -117,
+    f152: 2,
+    f86: Math.floor(Date.now() / 1000) - 60,
+    f107: 176,
+  })
+  assert.ok(quote)
+  assert.equal(quote.latestPrice, 54020)
+  assert.equal(quote.previousClose, 54660)
+  assert.equal(quote.change, -640)
+  assert.equal(quote.changePercent, -1.17)
+  assert.equal(quote.marketName, '日股')
 })
 
 test('东财：费城半导体指数（f107=251）按 10^2 除、市场名「指数」', () => {
@@ -327,6 +368,8 @@ test('东财：价格除数规则', () => {
   assert.equal(priceDivisor(undefined, undefined), 100)
   assert.equal(priceDivisor(3, 105), 1000)
   assert.equal(priceDivisor(0, 116), 1000)
+  assert.equal(priceDivisor(2, 177), 1, '韩股原值不除')
+  assert.equal(priceDivisor(2, 176), 10, '日股恒除 10')
 })
 
 // ---------------------------------------------------------------------------

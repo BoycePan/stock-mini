@@ -1,7 +1,7 @@
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { startAutoRefresh, stopAutoRefresh } from '../../utils/auto-refresh'
-import { fetchMinuteData, hasMinuteSources } from '../../utils/minute'
+import { fetchMinuteData, hasMinuteSources, sparseVolumeNote } from '../../utils/minute'
 import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
 import type { MinutePoint } from '../../types/stock'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
@@ -95,14 +95,17 @@ Page({
     try {
       const result = await fetchMinuteData(this.data.mcode || this.data.code)
       if (result) {
+        // 完整时段铺空白：按取数 code 确定交易时段（日股口径已在分类中区分）
+        const session = resolveMinuteSession(this.data.mcode || this.data.code)
+        // 东财韩/日市场分钟量稀疏（部分分钟量=0），附加数据口径提示（见 utils/minute.ts sparseVolumeNote）
+        const dataNote = sparseVolumeNote(result.points, result.source, session)
         this.setData({
           loading: false,
           points: result.points,
           preClose: result.preClose ?? 0,
           sourceLabel: `数据来源：${result.sourceLabel}`,
-          minuteNote: result.note ?? '',
-          // 完整时段铺空白：按取数 code 确定交易时段（日股口径已在分类中区分）
-          session: resolveMinuteSession(this.data.mcode || this.data.code),
+          minuteNote: [result.note, dataNote].filter(Boolean).join('；'),
+          session,
           quote: this.buildQuote(result.points, result.preClose),
         })
       } else if (!silent) {

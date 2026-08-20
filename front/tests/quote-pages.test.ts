@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { buildQuoteGlobalPage, buildQuoteMetalsPage, type QuoteItem } from '../utils/quote-pages.ts'
+import {
+  buildQuoteAsiaPage,
+  buildQuoteGlobalPage,
+  buildQuoteMetalsPage,
+  type QuoteItem,
+} from '../utils/quote-pages.ts'
 
 const sector = (code: string, name: string, pct: number | null): QuoteItem => ({
   code,
@@ -151,4 +156,102 @@ test('buildQuoteMetalsPage：指标透传「个股」+金属 tags，分组透传
   assert.equal(other.metrics[0]?.tags, undefined, '金属报价不加标签')
   assert.deepEqual(other.metrics[1]?.tags, ['个股', '钼'], '个股来源需标「个股」+ 所代表金属')
   assert.equal(other.metrics[1]?.name, '洛阳钼业')
+})
+
+// ---------------------------------------------------------------------------
+// 板块标题右侧盘面状态（A股 / 美股 / 日韩）
+// ---------------------------------------------------------------------------
+
+test('buildQuoteGlobalPage：A股指数 / 美股指数 板块附加盘面状态', () => {
+  // 2026-08-20 02:00 UTC = 北京 10:00（盘中）、美东 8/19 22:00（休市）
+  const page = buildQuoteGlobalPage(
+    {
+      cnIndices: [index('sh000001', '上证指数', 3421.5)],
+      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      macro: [{ code: 'VIX', name: '恐慌指数', price: 18.5, pct: -2 }],
+      sectors: [],
+      statusLabel: '全球市场',
+      statusTone: 'active',
+    },
+    new Date('2026-08-20T02:00:00Z'),
+  )
+
+  const cn = page.sections.find((section) => section.id === 'cn-index')
+  const us = page.sections.find((section) => section.id === 'us-index')
+  assert.ok(cn)
+  assert.ok(us)
+  assert.equal(cn.marketStatus, '盘中')
+  assert.equal(cn.marketTone, 'active')
+  assert.equal(us.marketStatus, '休市')
+  assert.equal(us.marketTone, 'rest')
+  // 无 region 的板块不展示盘面状态
+  const economy = page.sections.find((section) => section.id === 'global-economy')
+  assert.ok(economy)
+  assert.equal(economy.marketStatus, undefined)
+})
+
+test('buildQuoteGlobalPage：美股盘中时段状态为「盘中」', () => {
+  // 2026-08-20 14:30 UTC = 美东 10:30（盘中）、北京 22:30（休市）
+  const page = buildQuoteGlobalPage(
+    {
+      cnIndices: [index('sh000001', '上证指数', 3421.5)],
+      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      macro: [],
+      sectors: [],
+      statusLabel: '全球市场',
+      statusTone: 'active',
+    },
+    new Date('2026-08-20T14:30:00Z'),
+  )
+
+  const us = page.sections.find((section) => section.id === 'us-index')
+  const cn = page.sections.find((section) => section.id === 'cn-index')
+  assert.ok(us)
+  assert.ok(cn)
+  assert.equal(us.marketStatus, '盘中')
+  assert.equal(us.marketTone, 'active')
+  assert.equal(cn.marketStatus, '休市')
+})
+
+test('buildQuoteAsiaPage：韩国/日本板块附加盘面状态，午休与无午休区分', () => {
+  const jpIndex: QuoteItem = { code: 'N225', name: '日经225', price: 40000, pct: 1 }
+  const krIndex: QuoteItem = { code: 'KS11', name: 'KOSPI', price: 3000, pct: 1 }
+
+  // 2026-08-20 03:00 UTC = 东京/首尔 12:00：日股午休、韩股无午休仍盘中
+  const page = buildQuoteAsiaPage(
+    {
+      indexGroups: [
+        { id: 'asia-jp-index', title: '日本指数', items: [jpIndex], region: 'jp' },
+        { id: 'asia-kr-index', title: '韩国指数', items: [krIndex], region: 'kr' },
+      ],
+      stockGroups: [],
+      rates: [],
+      statusTone: 'active',
+    },
+    new Date('2026-08-20T03:00:00Z'),
+  )
+
+  const jp = page.sections.find((section) => section.id === 'asia-jp-index')
+  const kr = page.sections.find((section) => section.id === 'asia-kr-index')
+  assert.ok(jp)
+  assert.ok(kr)
+  assert.equal(jp.marketStatus, '午休')
+  assert.equal(jp.marketTone, 'quiet')
+  assert.equal(kr.marketStatus, '盘中')
+  assert.equal(kr.marketTone, 'active')
+
+  // 2026-06-03（韩国地方选举日）→ 韩股休市
+  const electionDay = buildQuoteAsiaPage(
+    {
+      indexGroups: [{ id: 'asia-kr-index', title: '韩国指数', items: [krIndex], region: 'kr' }],
+      stockGroups: [],
+      rates: [],
+      statusTone: 'active',
+    },
+    new Date('2026-06-03T01:00:00Z'),
+  )
+  const krHoliday = electionDay.sections.find((section) => section.id === 'asia-kr-index')
+  assert.ok(krHoliday)
+  assert.equal(krHoliday.marketStatus, '休市')
+  assert.equal(krHoliday.marketTone, 'rest')
 })

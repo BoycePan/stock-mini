@@ -4,13 +4,14 @@ import test from 'node:test'
 import {
   MIN_MINUTE_POINTS,
   buildCompositePoints,
+  buildCrossPoints,
   parseEastmoneyTrends,
   parseTencentMinuteNode,
   parseYahooMinuteResult,
   shortTime,
 } from '../utils/minute-parser.ts'
 import { MINUTE_SOURCES, US_PROXY_NAMES, hasMinuteSources } from '../config/minute.ts'
-import { computeMinuteVolumeDirections } from '../utils/minute.ts'
+import { computeMinuteVolumeDirections, sparseVolumeNote } from '../utils/minute.ts'
 import {
   ASIA_INDICES,
   ASIA_JP_STOCKS,
@@ -58,6 +59,31 @@ test('东财：空数据 / 非法行 / 点数不足返回 null', () => {
     null,
     '非法行被跳过后点数不足',
   )
+})
+
+test('东财：外汇均价 0（无成交量）→ null；0 价 / 空价格行跳过，避免撑爆纵轴', () => {
+  // 外汇 24h 分钟量恒为 0，东财均价字段返回 0.00000；若按 0 参与纵轴计算，
+  // |0-昨收| 会把刻度对称撑到 [-1.88, 48.87]（实测复现），必须置 null
+  const data = {
+    preClose: 23.4957,
+    trends: [
+      // 正常行（成交量 0、均价 0）
+      '2026-08-20 05:00,23.4957,23.4957,23.4957,23.4957,0,0.0000,0.00000',
+      // 0 价行（无成交分钟）应跳过
+      '2026-08-20 05:01,0,0,0,0,0,0.0000,0.00000',
+      // 空价格字段（Number('')=0）应跳过
+      '2026-08-20 05:02,,23.5,23.5,23.4,0,0.0000,0.00000',
+      // 正常行
+      '2026-08-20 05:03,23.52,23.52,23.53,23.51,0,0.0000,0.00000',
+    ],
+  }
+  const result = parseEastmoneyTrends(data)
+  assert.ok(result)
+  assert.equal(result!.points.length, 2, '0 价/空价行被跳过')
+  assert.equal(result!.points[0]!.price, 23.4957)
+  assert.equal(result!.points[0]!.avg, null, '均价 0 → null（避免纵轴被撑爆）')
+  assert.equal(result!.points[1]!.price, 23.52)
+  assert.equal(result!.points[1]!.avg, null)
 })
 
 test('东财：keepFullTime 保留完整时间戳，name 透传证券中文名', () => {
@@ -119,6 +145,45 @@ test('合成：多只代理股按完整时间戳对齐取均值，跨零点顺�
 
 test('合成：无任何序列返回空数组', () => {
   assert.deepEqual(buildCompositePoints([]), [])
+})
+
+// ---------------------------------------------------------------------------
+// 交叉汇率合成（buildCrossPoints）：人民币/韩元 = 美元/韩元 ÷ 美元/离岸人民币
+// ---------------------------------------------------------------------------
+
+test('交叉汇率：分子÷分母逐分钟相除，分母缺分钟跳过，输出 HH:mm 且无成交量', () => {
+  const points = buildCrossPoints(
+    {
+      points: [
+        { time: '2026-08-20 05:00', price: 1388.7175 },
+        { time: '2026-08-20 05:01', price: 1389.46 },
+        { time: '2026-08-20 05:02', price: 1389.5225 },
+      ],
+    },
+    {
+      points: [
+        { time: '2026-08-20 05:00', price: 6.7306 },
+        // 05:01 缺分钟（应跳过）
+        { time: '2026-08-20 05:02', price: 6.7312 },
+      ],
+    },
+  )
+  assert.equal(points.length, 2)
+  assert.equal(points[0]!.time, '05:00')
+  assert.equal(points[0]!.price, Math.round((1388.7175 / 6.7306) * 10000) / 10000, '分子÷分母')
+  assert.equal(points[1]!.time, '05:02')
+  assert.equal(points[1]!.volume, 0, '合成序列无成交量')
+  assert.equal(points[1]!.avg, null, '合成序列无均价')
+})
+
+test('交叉汇率：任一腿为空返回空数组，分母为 0 跳过', () => {
+  assert.deepEqual(buildCrossPoints({ points: [] }, { points: [{ time: 't', price: 1 }] }), [])
+  assert.deepEqual(buildCrossPoints({ points: [{ time: 't', price: 1 }] }, { points: [] }), [])
+  assert.deepEqual(
+    buildCrossPoints({ points: [{ time: 't', price: 1 }] }, { points: [{ time: 't', price: 0 }] }),
+    [],
+    '分母为 0 跳过',
+  )
 })
 
 // ---------------------------------------------------------------------------
@@ -234,6 +299,33 @@ test('shortTime：ISO / 带秒 / 腾讯 HHmm 统一为 HH:mm', () => {
   assert.equal(shortTime(''), '')
 })
 
+test('sparseVolumeNote：东财韩/日市场分钟量稀疏时给出口径提示', () => {
+  const sparse = Array.from({ length: 10 }, (_, i) => ({
+    time: `${String(i).padStart(2, '0')}:00`,
+    price: 100,
+    volume: i % 2 === 0 ? 0 : 100,
+    avg: 100,
+  }))
+  const note = sparseVolumeNote(sparse, 'em', 'kr')
+  assert.ok(note && note.includes('东财'), '韩股东财源、半数分钟无量应提示')
+  assert.equal(sparseVolumeNote(sparse, 'em', 'jp-yahoo'), note, '日股东财源同样提示')
+
+  // 有量分钟 ≥80% 不提示（如 KS11 实测仅 3% 分钟为 0）
+  const dense = Array.from({ length: 10 }, () => ({
+    time: '09:00',
+    price: 100,
+    volume: 100,
+    avg: 100,
+  }))
+  assert.equal(sparseVolumeNote(dense, 'em', 'kr'), '')
+  // 非东财源（Yahoo 逐分钟聚合）不提示
+  assert.equal(sparseVolumeNote(sparse, 'yahoo', 'kr'), '')
+  // 非韩/日市场不提示
+  assert.equal(sparseVolumeNote(sparse, 'em', 'ashare'), '')
+  // 空数据不提示
+  assert.equal(sparseVolumeNote([], 'em', 'kr'), '')
+})
+
 test('MIN_MINUTE_POINTS 至少为 2（过滤腾讯外股单点数据）', () => {
   assert.ok(MIN_MINUTE_POINTS >= 2)
 })
@@ -269,10 +361,53 @@ test('覆盖性：有色页全部金属 code 均有分时源', () => {
   assert.deepEqual(missing, [], `缺少分时源: ${missing.join(', ')}`)
 })
 
+test('覆盖性：韩股/日股分时以东财为主源，Yahoo 保留兜底（大陆访问 Yahoo 被墙）', () => {
+  // 韩股市场号 177 / 日股 176 为东财真实市场号（旧配置 116/151 实测 data:null）
+  for (const stock of [...ASIA_KR_STOCKS, ...ASIA_JP_STOCKS]) {
+    const sources = MINUTE_SOURCES[stock.code]
+    assert.ok(sources, `${stock.code} 缺少分时源`)
+    assert.ok(sources.em, `${stock.code} 应配置东财分时源`)
+    assert.ok(sources.yahoo, `${stock.code} 应保留 Yahoo 兜底`)
+    const expected = ASIA_KR_STOCKS.some((item) => item.code === stock.code) ? '177' : '176'
+    assert.ok(
+      sources.em!.startsWith(`${expected}.`),
+      `${stock.code} 的 em 市场号应为 ${expected}: ${sources.em}`,
+    )
+    // 卡片报价兜底 emSecid 与分时 em 同源（口径一致）
+    assert.equal(stock.emSecid, sources.em, `${stock.code} 卡片兜底与分时源不一致`)
+  }
+  // 汇率：东财可覆盖的 USDKRW/USDJPY 同样东财优先 + Yahoo 兜底
+  for (const code of ['USDKRW', 'USDJPY']) {
+    const sources = MINUTE_SOURCES[code]
+    assert.ok(sources?.em, `${code} 应配置东财分时源`)
+    assert.ok(sources?.yahoo, `${code} 应保留 Yahoo 兜底`)
+  }
+})
+
+test('覆盖性：汇率分时以东财系为主源（大陆可访问），Yahoo 仅兜底', () => {
+  // 东财 119/133 或交叉合成在大陆可直连；Yahoo 被墙，只作大陆外兜底
+  for (const code of ['CNYKRW', 'CNYJPY', 'USDCNY']) {
+    const sources = MINUTE_SOURCES[code]
+    assert.ok(sources, `${code} 缺少分时源`)
+    assert.ok(sources.em || sources.emCross, `${code} 应配置东财系主源（大陆可访问）`)
+    assert.ok(sources.yahoo, `${code} 应保留 Yahoo 兜底`)
+  }
+  // 交叉合成两腿均为东财 secid，且与卡片报价/直盘同源
+  const cross = MINUTE_SOURCES.CNYKRW?.emCross
+  assert.ok(cross, 'CNYKRW 应配置交叉汇率合成')
+  assert.equal(cross!.numerator, '119.USDKRW', '分子=美元/韩元（东财 119）')
+  assert.equal(cross!.denominator, '133.USDCNH', '分母=美元/离岸人民币（东财 133）')
+  assert.equal(MINUTE_SOURCES.CNYJPY?.em, '133.CNHJPY', 'CNYJPY 用离岸人民币兑日元')
+  assert.equal(MINUTE_SOURCES.USDCNY?.em, '133.USDCNH', 'USDCNY 用离岸美元/人民币')
+})
+
 test('覆盖性：每个 code 至少配置一个源，且源格式合法', () => {
   for (const [code, sources] of Object.entries(MINUTE_SOURCES)) {
     const hasProxies = (sources.emProxies?.length ?? 0) > 0
-    assert.ok(sources.em || sources.tc || sources.yahoo || hasProxies, `${code} 未配置任何源`)
+    assert.ok(
+      sources.em || sources.tc || sources.yahoo || hasProxies || sources.emCross,
+      `${code} 未配置任何源`,
+    )
     if (sources.em) {
       assert.match(sources.em, /^\d+\.[A-Za-z0-9_]+$/, `${code} 的 em 格式非法: ${sources.em}`)
     }
@@ -287,6 +422,18 @@ test('覆盖性：每个 code 至少配置一个源，且源格式合法', () =>
       for (const secid of sources.emProxies) {
         assert.match(secid, /^\d+\.[A-Za-z0-9_]+$/, `${code} 的 emProxies 格式非法: ${secid}`)
       }
+    }
+    if (sources.emCross) {
+      assert.match(
+        sources.emCross.numerator,
+        /^\d+\.[A-Za-z0-9_]+$/,
+        `${code} 的 emCross.numerator 格式非法: ${sources.emCross.numerator}`,
+      )
+      assert.match(
+        sources.emCross.denominator,
+        /^\d+\.[A-Za-z0-9_]+$/,
+        `${code} 的 emCross.denominator 格式非法: ${sources.emCross.denominator}`,
+      )
     }
   }
 })

@@ -7,6 +7,10 @@
   <view class="section-title-row">
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
+    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
+      <view class="market-status-dot"></view>
+      <text>{{ section.marketStatus }}</text>
+    </view>
     <view
       wx:if="{{ section.tip }}"
       class="section-tip"

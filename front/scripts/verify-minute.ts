@@ -14,6 +14,7 @@
 import { MINUTE_SOURCES } from '../config/minute.ts'
 import {
   buildCompositePoints,
+  buildCrossPoints,
   parseEastmoneyTrends,
   parseTencentMinuteNode,
   parseYahooMinuteResult,
@@ -117,6 +118,32 @@ async function verifyOne(code: string): Promise<{ code: string; ok: boolean; det
   }
 
   const tries: Array<[string, () => Promise<MinuteResult | null>]> = []
+  // 交叉汇率合成：两腿东财 trends2（keepFullTime）逐分钟相除，与 utils/minute.ts 同口径
+  if (sources.emCross) {
+    const [num, den] = await Promise.all([
+      emMinute(sources.emCross.numerator, true),
+      emMinute(sources.emCross.denominator, true),
+    ])
+    if (num && den) {
+      const points = buildCrossPoints(
+        { points: num.points.map((p) => ({ time: p.time, price: p.price })) },
+        { points: den.points.map((p) => ({ time: p.time, price: p.price })) },
+      )
+      if (points.length >= 2) {
+        return {
+          code,
+          ok: true,
+          detail: `东财交叉(${sources.emCross.numerator}÷${sources.emCross.denominator}) ${points.length}点 昨收=${
+            num.preClose !== null && den.preClose
+              ? Math.round((num.preClose / den.preClose) * 10000) / 10000
+              : '?'
+          }`,
+        }
+      }
+    }
+    await sleep(SLEEP_MS)
+  }
+
   if (sources.em) tries.push([`东财(${sources.em})`, () => emMinute(sources.em as string)])
   if (sources.tc) tries.push([`腾讯(${sources.tc})`, () => tcMinute(sources.tc as string)])
   if (sources.yahoo)

@@ -41,15 +41,15 @@
         </view>
         <view class="quote-grid">
           <view>
-            <text>开盘</text>
+            <text>开盘价</text>
             <text>{{ quote.open }}</text>
           </view>
           <view>
-            <text>最高</text>
+            <text>最高价</text>
             <text>{{ quote.high }}</text>
           </view>
           <view>
-            <text>最低</text>
+            <text>最低价</text>
             <text>{{ quote.low }}</text>
           </view>
           <view>
@@ -61,7 +61,7 @@
             <text>{{ quote.volumeText }}</text>
           </view>
           <view>
-            <text>昨收</text>
+            <text>收盘价</text>
             <text>{{ quote.preClose }}</text>
           </view>
         </view>

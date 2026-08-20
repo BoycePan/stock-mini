@@ -44,8 +44,9 @@ http://100.90.180.33:18487
    `https://push2.eastmoney.com`（A股平均股价全市场快照的 clist 权威端点，push2delay 覆盖不足时回退）；
 2. **首页卡片点击查看当日分时**（`pages/minute/index`，纯前端直连）还需追加：
    `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
-   （Yahoo 1分钟，仅韩股/日股/汇率/VIX/KOSDAQ 等东财腾讯无分时的标的，见 `docs/minute-api.md`，
-   不加则这几个卡片不显示「分时」角标）；东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
+   （Yahoo 1分钟，仅 VIX/KOSDAQ 等东财腾讯无分时的标的做兜底，见 `docs/minute-api.md`；
+   汇率已改走东财 119/133 或交叉合成，大陆可直连，不加 Yahoo 域名只影响 VIX/KOSDAQ）；
+   东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
 3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
 4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。

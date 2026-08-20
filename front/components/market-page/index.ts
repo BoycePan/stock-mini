@@ -3,6 +3,8 @@ import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 Component({
   properties: {
+    /** 是否显示搜索按钮 */
+    showSearch: { type: Boolean, value: true },
     /** 是否显示分享按钮 */
     showShare: { type: Boolean, value: false },
     /** 是否正在加载 */

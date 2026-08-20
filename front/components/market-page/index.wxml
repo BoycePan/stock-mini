@@ -1,5 +1,5 @@
 <view class="market-page {{ theme === 'dark' ? 'theme-dark' : '' }}">
-  <app-header showSearch="{{ true }}" showShare="{{ showShare }}" bind:share="onShare"></app-header>
+  <app-header showSearch="{{ showSearch }}" showShare="{{ showShare }}" bind:share="onShare"></app-header>
   <view class="page-meta">
     <view class="page-status {{ statusTone }}"
       ><text class="status-dot"></text><text>{{ statusLabel }}</text></view

@@ -40,6 +40,10 @@ export interface MarketSection {
    * 代替逐卡片内联「分时」标签；仅在该面板内指标支持分时图时置 true。
    */
   minuteCorner?: boolean
+  /** 标题右侧盘面状态文案（如 盘中 / 午休 / 盘前 / 盘后 / 集合竞价 / 休市），仅部分市场板块展示 */
+  marketStatus?: string
+  /** 盘面状态色调：active=盘中 / quiet=盘前盘后午休等 / rest=休市 */
+  marketTone?: 'active' | 'quiet' | 'rest'
 }
 
 export interface MarketPageData {
