@@ -15,6 +15,7 @@ import {
   type AsiaIndexConfig,
   type AsiaRateConfig,
   type AsiaStockConfig,
+  type GlobalIndexConfig,
   type MetalConfig,
 } from '../config/tabbar'
 import {
@@ -63,7 +64,7 @@ export type MarketPageKey = 'global' | 'asia' | 'metals' | 'finance'
  */
 
 // ---------------------------------------------------------------------------
-// 全球页：全球指数 + 宏观经济 + 行业板块
+// 全球页：A股指数 + 美股指数 + 宏观经济 + 行业板块
 // ---------------------------------------------------------------------------
 
 /**
@@ -101,7 +102,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   ])
   const session = await resolveGlobalMarketSession(indexQuotes)
   const indexByCode = new Map(indexQuotes.map((quote) => [quote.code, quote]))
-  const indices: QuoteItem[] = GLOBAL_INDICES.map((cfg) => {
+  const indexItem = (cfg: GlobalIndexConfig): QuoteItem => {
     const quote = indexByCode.get(cfg.code)
     return {
       code: cfg.code,
@@ -109,12 +110,14 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
       price: quote?.latestPrice ?? null,
       pct: quote?.changePercent ?? null,
     }
-  })
-  // A股平均股价插在 A 股指数（创业板指 / 科创50）之后、美股指数之前；
+  }
+  // 全球指数按市场归属拆分展示：A股指数（A股四大指数）+ 美股指数（三大指数）
+  const cnIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'cn').map(indexItem)
+  const usIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'us').map(indexItem)
+  // A股平均股价插在A股指数末尾（属于 A 股口径，不放入美股指数）；
   // 分时源与卡片报价同 secid（47.800005，东财官方平均股价指数，见 config/minute.ts AVG）
   const avgPrice = await resolveAShareAveragePrice(indexQuotes)
-  const usIndex = indices.findIndex((item) => item.code.startsWith('us'))
-  indices.splice(usIndex === -1 ? indices.length : usIndex, 0, {
+  cnIndices.push({
     code: AVG_PRICE_CONFIG.code,
     name: AVG_PRICE_CONFIG.name,
     price: avgPrice.price,
@@ -184,11 +187,12 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     return item
   })
 
-  if (!indices.length && !macro.length && !sectors.length) {
+  if (!cnIndices.length && !usIndices.length && !macro.length && !sectors.length) {
     throw new Error('暂无行情数据')
   }
   return buildQuoteGlobalPage({
-    indices,
+    cnIndices,
+    usIndices,
     macro,
     sectors,
     statusLabel: '全球市场',
@@ -199,7 +203,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
 }
 
 // ---------------------------------------------------------------------------
-// 日韩页：指数 6 + 个股 16 + 汇率 4
+// 日韩页：指数 6 + 个股 16 + 汇率 5
 // ---------------------------------------------------------------------------
 
 async function fetchAsiaIndices(): Promise<QuoteItem[]> {
@@ -314,7 +318,7 @@ function rateItem(
 }
 
 async function fetchAsiaRates(): Promise<QuoteItem[]> {
-  // ① 新浪批量 1 次（4 个汇率 key）
+  // ① 新浪批量 1 次（5 个汇率 key）
   const rows = await fetchSinaQuotes(ASIA_RATES.map((cfg) => cfg.sinaKey))
   const byKey = new Map(rows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
   const results: Array<QuoteItem | null> = new Array(ASIA_RATES.length).fill(null)
@@ -408,10 +412,10 @@ function metalMinuteVariant(
     default:
       return metal.usKeys.length
         ? {
-            minuteCode: `us-${metal.code}`,
-            minuteUnavailableTip:
-              '外盘时段该金属展示外盘报价，暂无对应外盘分时图；国内盘时段可查看',
-          }
+          minuteCode: `us-${metal.code}`,
+          minuteUnavailableTip:
+            '外盘时段该金属展示外盘报价，暂无对应外盘分时图；国内盘时段可查看',
+        }
         : undefined
   }
 }
@@ -572,7 +576,7 @@ async function fetchGoldShopGroup(): Promise<QuoteGroup | null> {
     return {
       id: 'metal-gold-shop',
       title: '金店金价',
-      tip: '金店足金饰品零售价（元/克），来源：金投网金店金价，仅供参考，以门店实际挂牌价为准',
+      tip: '金店足金饰品零售价（元/克），来源：网络公开数据，仅供参考，以门店实际挂牌价为准',
       items,
       // 上游不保证提供涨跌幅（常为 0），为 0 时隐藏涨跌徽标，避免展示无意义的 0.00%
       hideFlatChange: true,

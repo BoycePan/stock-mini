@@ -19,7 +19,8 @@ const index = (code: string, name: string, price: number): QuoteItem => ({
 
 test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () => {
   const page = buildQuoteGlobalPage({
-    indices: [index('sh000001', '上证指数', 3421.5)],
+    cnIndices: [index('sh000001', '上证指数', 3421.5)],
+    usIndices: [],
     macro: [],
     sectors: [sector('BK1134', 'AI算力', 1.5)],
     statusLabel: '全球市场',
@@ -34,11 +35,18 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
   assert.equal(board.badge, 'A股时段')
   assert.equal(board.minuteCorner, true, '行业板块应以面板右上角角标提示分时')
   assert.ok(board.tip && board.tip.length > 0, '行业板块应附带说明文案')
+  assert.ok(board.tip.includes('中国行业板块'), '提示应说明中国行业板块的展示时段')
+  assert.ok(board.tip.includes('美股行业板块'), '提示应说明美股行业板块的展示时段')
+  assert.ok(
+    board.tip.includes('09:30') && board.tip.includes('15:00'),
+    '提示应给出中国/美股展示的切换时间点',
+  )
 })
 
 test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」且透传分时代码', () => {
   const page = buildQuoteGlobalPage({
-    indices: [index('usQQQ', '纳斯达克', 20000)],
+    cnIndices: [],
+    usIndices: [index('usQQQ', '纳斯达克', 20000)],
     macro: [],
     // 美股时段板块由 api 层标记分时代码（us-BKxxxx → 代理股均值合成分时，见 api/market.ts）
     sectors: [
@@ -65,7 +73,8 @@ test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」
 
 test('buildQuoteGlobalPage：未传 sectorTitle 时默认「中国行业板块」', () => {
   const page = buildQuoteGlobalPage({
-    indices: [],
+    cnIndices: [],
+    usIndices: [],
     macro: [],
     sectors: [sector('BK0917', '半导体', null)],
     statusLabel: '全球市场',
@@ -75,6 +84,49 @@ test('buildQuoteGlobalPage：未传 sectorTitle 时默认「中国行业板块�
   const board = page.sections.find((section) => section.id === 'industry-board')
   assert.ok(board)
   assert.equal(board.title, '中国行业板块')
+})
+
+test('buildQuoteGlobalPage：全球指数按市场拆分为「中国指数」「美股指数」两个分区', () => {
+  const page = buildQuoteGlobalPage({
+    cnIndices: [
+      index('sh000001', '上证指数', 3421.5),
+      index('sz399001', '深证成指', 10850.2),
+      { code: 'AVG', name: 'A股平均股价', price: 21.33, pct: 0.5 },
+    ],
+    usIndices: [index('usDJI', '道琼斯工业', 44150.6), index('usQQQ', '纳斯达克', 20000)],
+    macro: [],
+    sectors: [],
+    statusLabel: '全球市场',
+    statusTone: 'active',
+  })
+
+  assert.deepEqual(
+    page.sections.map((section) => [section.id, section.title]),
+    [
+      ['cn-index', 'A股指数'],
+      ['us-index', '美股指数'],
+    ],
+  )
+  assert.equal(page.sections[0]?.metrics.length, 3, '中国指数分区应包含 A 股指数与平均股价')
+  assert.equal(page.sections[0]?.metrics[2]?.name, 'A股平均股价')
+  assert.equal(page.sections[1]?.metrics.length, 2)
+  assert.equal(page.sections[1]?.metrics[0]?.name, '道琼斯工业')
+})
+
+test('buildQuoteGlobalPage：某市场指数为空时对应分区不展示', () => {
+  const page = buildQuoteGlobalPage({
+    cnIndices: [index('sh000001', '上证指数', 3421.5)],
+    usIndices: [],
+    macro: [],
+    sectors: [],
+    statusLabel: '全球市场',
+    statusTone: 'active',
+  })
+
+  assert.deepEqual(
+    page.sections.map((section) => section.title),
+    ['A股指数'],
+  )
 })
 
 test('buildQuoteMetalsPage：指标透传「个股」+金属 tags，分组透传 tip', () => {

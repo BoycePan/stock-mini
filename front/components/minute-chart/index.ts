@@ -10,7 +10,7 @@ const DOWN_COLOR = '#20a66a'
 
 /**
  * 当日分时图（canvas 2d）：
- * - 价格线（最新价 >= 昨收 用涨色，否则跌色，与全局涨跌色一致）
+ * - 价格线（以昨收 0% 为基准分段着色：突破 0% 用涨色红、跌破 0% 用跌色绿，穿越处换色）
  * - 均价线（橙色）
  * - 昨收基准虚线（不绘制文字标签）
  * - 下方成交量柱（每分钟柱按该分钟收盘价相对开盘价分色：涨红、跌绿、平盘白/灰；无成交量数据时整块隐藏，价格区占满）
@@ -200,34 +200,75 @@ Component({
         ctx.setLineDash([])
       }
 
-      const lastPrice = points[n - 1]?.price
-      const up = hasPre ? (lastPrice ?? 0) >= preClose : true
-      const mainColor = up ? UP_COLOR : DOWN_COLOR
-
-      // 价格线下方的渐变填充
-      const grad = ctx.createLinearGradient(0, padT, 0, padT + priceH)
-      grad.addColorStop(0, up ? 'rgba(235,81,77,0.14)' : 'rgba(32,166,106,0.14)')
-      grad.addColorStop(1, up ? 'rgba(235,81,77,0.02)' : 'rgba(32,166,106,0.02)')
-      ctx.beginPath()
-      ctx.moveTo(xOf(0), padT + priceH)
-      for (let i = 0; i < n; i += 1) {
-        ctx.lineTo(xOf(i), priceY(points[i]?.price ?? 0))
+      // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%
+      const baseY = hasPre ? priceY(preClose) : null
+      const linePts: Array<{ x: number; y: number }> = points.map((p, i) => ({
+        x: xOf(i),
+        y: priceY(p.price ?? 0),
+      }))
+      const segPts: Array<{ x: number; y: number }> = []
+      for (let i = 0; i < n - 1; i += 1) {
+        const a = linePts[i]
+        const b = linePts[i + 1]
+        if (!a || !b) continue
+        segPts.push(a)
+        if (baseY !== null && ((a.y <= baseY && b.y > baseY) || (a.y > baseY && b.y <= baseY))) {
+          const t = (baseY - a.y) / (b.y - a.y)
+          segPts.push({ x: a.x + (b.x - a.x) * t, y: baseY })
+        }
       }
-      ctx.lineTo(xOf(n - 1), padT + priceH)
-      ctx.closePath()
-      ctx.fillStyle = grad
-      ctx.fill()
+      const lastPt = linePts[n - 1]
+      if (lastPt) segPts.push(lastPt)
 
-      // 价格线
-      ctx.strokeStyle = mainColor
+      // 价格线下方的渐变填充：0% 上方红、下方绿（线与 0% 基准之间的区域；无基准时红色填充到底部）
+      const fillBottom = baseY ?? padT + priceH
+      const gradUp = ctx.createLinearGradient(0, padT, 0, padT + priceH)
+      gradUp.addColorStop(0, 'rgba(235,81,77,0.14)')
+      gradUp.addColorStop(1, 'rgba(235,81,77,0.02)')
+      const gradDown = ctx.createLinearGradient(0, padT, 0, padT + priceH)
+      gradDown.addColorStop(0, 'rgba(32,166,106,0.14)')
+      gradDown.addColorStop(1, 'rgba(32,166,106,0.02)')
+      const paintSide = (up: boolean) => {
+        ctx.beginPath()
+        for (let i = 0; i < segPts.length - 1; i += 1) {
+          const a = segPts[i]
+          const b = segPts[i + 1]
+          if (!a || !b) continue
+          const mid = (a.y + b.y) / 2
+          const onSide = baseY === null ? up : up ? mid <= baseY : mid > baseY
+          if (!onSide) continue
+          ctx.moveTo(a.x, a.y)
+          ctx.lineTo(b.x, b.y)
+          ctx.lineTo(b.x, fillBottom)
+          ctx.lineTo(a.x, fillBottom)
+          ctx.closePath()
+        }
+        ctx.fillStyle = up ? gradUp : gradDown
+        ctx.fill()
+      }
+      paintSide(true)
+      paintSide(false)
+
+      // 价格线：突破 0% 用红色、跌破 0% 用绿色，同色相邻段合并为一条路径
       ctx.lineWidth = 1.5
-      ctx.beginPath()
-      for (let i = 0; i < n; i += 1) {
-        const y = priceY(points[i]?.price ?? 0)
-        if (i === 0) ctx.moveTo(xOf(0), y)
-        else ctx.lineTo(xOf(i), y)
+      let runColor: string | null = null
+      for (let i = 0; i < segPts.length - 1; i += 1) {
+        const a = segPts[i]
+        const b = segPts[i + 1]
+        if (!a || !b) continue
+        const mid = (a.y + b.y) / 2
+        const color = baseY === null || mid <= baseY ? UP_COLOR : DOWN_COLOR
+        if (runColor !== color) {
+          if (runColor !== null) ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(a.x, a.y)
+          ctx.lineTo(b.x, b.y)
+          runColor = color
+        } else {
+          ctx.lineTo(b.x, b.y)
+        }
       }
-      ctx.stroke()
+      if (runColor !== null) ctx.stroke()
 
       // 均价线
       ctx.strokeStyle = avgColor

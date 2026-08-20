@@ -45,7 +45,7 @@ export interface QuoteGroup {
  * 与 config/tabbar.ts（接口参数）分离维护。
  */
 export const QUOTE_ICONS: Record<string, string> = {
-  // 全球指数
+  // 全球指数（中国指数 / 美股指数）
   sh000001: '🇨🇳',
   sz399001: '🇨🇳',
   sz399006: '🇨🇳', // 创业板指
@@ -118,6 +118,7 @@ export const QUOTE_ICONS: Record<string, string> = {
   CNYJPY: '💱',
   USDKRW: '💱',
   USDJPY: '💱',
+  USDCNY: '💱',
   // 有色金属
   GOLD: '🥇',
   SILVER: '🥈',
@@ -171,11 +172,14 @@ function sectionOf(
 }
 
 // ---------------------------------------------------------------------------
-// 全球页：全球指数 + 宏观经济 + 行业板块
+// 全球页：中国指数 + 美股指数 + 宏观经济 + 行业板块
 // ---------------------------------------------------------------------------
 
 export interface QuoteGlobalPageParams {
-  indices: QuoteItem[]
+  /** 中国指数（A股四大指数 + A股平均股价） */
+  cnIndices: QuoteItem[]
+  /** 美股指数（道琼斯 / 标普500 / 纳斯达克） */
+  usIndices: QuoteItem[]
   macro: QuoteItem[]
   sectors: QuoteItem[]
   statusLabel: string
@@ -188,8 +192,11 @@ export interface QuoteGlobalPageParams {
 
 export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageData {
   const groups: QuoteGroup[] = []
-  if (params.indices.length) {
-    groups.push({ id: 'global-index', title: '全球指数', items: params.indices })
+  if (params.cnIndices.length) {
+    groups.push({ id: 'cn-index', title: 'A股指数', items: params.cnIndices })
+  }
+  if (params.usIndices.length) {
+    groups.push({ id: 'us-index', title: '美股指数', items: params.usIndices })
   }
   if (params.macro.length) {
     groups.push({ id: 'global-economy', title: '宏观经济', items: params.macro })
@@ -217,7 +224,13 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
       if (params.sectorBadge) {
         section.badge = params.sectorBadge
       }
-      section.tip = '全球产业数据根据公开产业信息整理,用于展示不同产业的发展变化,仅供信息参考。'
+      section.tip = [
+        '板块数据随交易时段自动切换：',
+        '· 中国行业板块（A股时段）：北京时间 周一至周五 09:30–15:00（含午休）；',
+        '· 美股行业板块（其余时段）：周一至周五 15:00–次日 09:30 及周末，取美股代理股涨跌幅均值。',
+        '',
+        '全球产业数据根据公开产业信息整理，仅供信息参考。',
+      ].join('\n')
     }
     sections.push(section)
     offset += group.items.length

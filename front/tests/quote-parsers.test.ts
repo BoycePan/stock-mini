@@ -189,6 +189,34 @@ test('新浪 fx_ 外汇：涨跌字段缺失时按 现价-昨收 反推', () => 
   assert.ok(Math.abs((quote.changePercent as number) - 0.2096) < 0.001)
 })
 
+test('新浪 fx_ 外汇：美元/人民币（fx_susdcny）实测字段布局', () => {
+  const fields = [
+    '17:44:27', // [0] 时间
+    '6.7232', // [1] 现价
+    '6.7248', // [2] 卖价
+    '6.7341', // [3] 昨收
+    '277.0', // [4] 成交量
+    '6.7200', // [5] 今开
+    '6.7376', // [6] 最高
+    '6.7099', // [7] 最低
+    '6.7240', // [8]
+    '美元/人民币', // [9] 名称
+    '-0.15', // [10] 涨跌幅(%)
+    '-0.0101', // [11] 涨跌额
+    '0.0277', // [12]
+    '',
+    '0.0000',
+    '0.0000',
+    '',
+    '2026-08-20', // [17] 日期
+  ]
+  const quote = parseSinaQuote('fx_susdcny', fields)
+  assert.equal(quote.price, 6.7232)
+  assert.equal(quote.previousClose, 6.7341)
+  assert.equal(quote.change, -0.0101)
+  assert.equal(quote.changePercent, -0.15)
+})
+
 test('新浪 A股/指数默认格式：现价 [3]、昨收 [2]', () => {
   const fields = [
     '贵州茅台',

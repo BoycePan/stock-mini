@@ -215,17 +215,18 @@
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | 0    | `resolveGlobalMarketSession`（会话判定）+ ①腾讯指数 **并发**                                                                                            | ①腾讯直连 `sh000001`、`sz399001`、`sz399006`（创业板指）、`sh000688`（科创50）、`usDJI`（道琼斯工业）、`usQQQ`、`usSPY`；`api.fetchQuoteBySecid` 传 `1.000001`、`0.399001`、`0.399006`、`1.000688`、`100.DJIA`、`105.QQQ`、`100.NDX`（其中市场 0/1 的内部仍走①腾讯）                                      | 判定 A股/美股开闭状态，带 30s 缓存 + in-flight 去重；首次观测 400ms 后重拉确认 |
 | 0b   | A股平均股价（通达信 880003 口径，等权平均）：①东财官方平均股价指数（`ulist.np/get`，secid `47.800005`，**用户指定接口**）→ ②腾讯 `sh880003`（与步骤 0 同批请求）→ ③新浪 `sh880003` → ④东财全市场等权自算（`clist/get`，**60s 缓存**）                                                                                       | ①的入参：`fltt=2&fields=f17,f18,f8,f15,f12,f16,f115,f2,f14,f5,f6,f3,f20,f13,f145,f100,f265,f266&secids=47.800005`（`data.diff[0]` 取 `f2` 最新价 / `f3` 涨跌幅 / `f18` 昨收 / `f14` 名称）；④的入参：`fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23`（沪深主板+创业板+科创板）、`fields=f2,f18`；优先 `push2delay` 大页（pz=8000）→ 覆盖不足分页补齐 → 回退 `push2.eastmoney.com`（生产需加白名单） | 平均股价=最新价等权平均，涨跌幅=(今均价−昨均价)/昨均价；全部源失败 / 覆盖度与区间校验不过时该卡片显示 `--`；卡片支持当日分时（东财 `trends2/get?secid=47.800005`，见 minute-api.md） |
-| 1    | ②新浪批量预取 1 次                                                                                                                                    | 宏观资产全部新浪 key：`hf_OIL,znb_VIX,DINIW,hf_GC,hf_XAU,hf_SI,hf_XAG,hf_HG,hf_NG`（`gb_TLT` 不在此批，逐项拉取）                                                                                 | 供后续逐项解析复用，避免重复请求                                               |
-| 2    | 宏观资产 9 项逐项 `quote.fetchAccurate` 多源并发现拉                                                                                                  | 见下表 A（新浪→腾讯→东财兜底，`parallel=min(2,n)`）                                                                                                                                               | 共识聚合取中位数                                                               |
+| 1    | ②新浪批量预取 1 次                                                                                                                                    | 宏观资产全部新浪 key：`hf_OIL,znb_VIX,DINIW,hf_GC,hf_XAU,hf_SI,hf_XAG,hf_HG,hf_NG,fx_susdcny`（`gb_TLT` 不在此批，逐项拉取）                                                                                 | 供后续逐项解析复用，避免重复请求                                               |
+| 2    | 宏观资产 10 项逐项 `quote.fetchAccurate` 多源并发现拉                                                                                                  | 见下表 A（新浪→腾讯→东财兜底，`parallel=min(2,n)`）                                                                                                                                               | 共识聚合取中位数                                                               |
 | 3    | 行业板块：A 股时段 `fetchAShareBoardChangeMap(24 个板块代码)` 1 次；非 A 股时段 `fetchUsProxyChangeMap(全部 proxies, usMode)`（②新浪 + ④东财各 1 次） | 见下表 B                                                                                                                                                                                          | 板块涨跌幅；非 A 股时段取美股代理股涨跌幅均值                                  |
 
-**A. 宏观资产 9 项（code / name / 数据源）**
+**A. 宏观资产 10 项（code / name / 数据源）**
 
 | code | name           | 数据源（kind:key / secid）                                      |
 | ---- | -------------- | --------------------------------------------------------------- |
 | BRT  | 布伦特原油     | 新浪 `hf_OIL`                                                   |
 | VIX  | 恐慌指数       | 新浪 `znb_VIX`、腾讯 `usVIX`、东财 `100.VIX`                    |
 | UDI  | 美元强弱       | 新浪 `DINIW`、东财 `100.UDI`                                    |
+| USDCNY | 美元/人民币  | 新浪 `fx_susdcny`（腾讯无外汇代码、东财 119 无 USDCNY 标的）     |
 | TLT  | 美债长债       | 新浪 `gb_TLT`、腾讯 `usTLT`、东财 `105.TLT`/`106.TLT`/`107.TLT` |
 | GC   | 黄金盎司       | 新浪 `hf_GC`、`hf_XAU`                                          |
 | SI   | 白银盎司       | 新浪 `hf_SI`、`hf_XAG`                                          |
@@ -276,10 +277,10 @@
 | ---- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | 1    | ②新浪指数 **并发 6 路**（每路 1 个 key）                              | `znb_KOSPI`、`znb_KOSDAQ`、`int_nikkei`、`znb_TOPIX`、`znb_VNINDEX`、`znb_SENSEX` |
 | 2    | ①腾讯→③东财兜底 **串行 16 只个股**（先腾讯，命中则不拉东财）          | 韩股 `kr005930`…；日股 `jp8035`…（腾讯）；`116.005930`…、`151.8035`…（东财）      |
-| 3    | ②新浪汇率 **并发 4 路**                                               | `fx_scnykrw`、`fx_scnyjpy`、`fx_susdkrw`、`fx_susdjpy`                            |
+| 3    | ②新浪汇率 **并发 5 路**                                               | `fx_scnykrw`、`fx_scnyjpy`、`fx_susdkrw`、`fx_susdjpy`、`fx_susdcny`                            |
 | 4    | ①腾讯重试 **4 项**（固定列表，覆盖式写入）                            | `kr005930`、`jp7203`、`kr000660`、`jp8035`                                        |
 | 5    | ③东财指数（默认**仅新浪解析失败时**；N225/VNINDEX 为**东财优先**，见下） | `100.KS11`、`100.N225`、`100.VNINDEX` |
-| 6    | ③东财汇率（**仅新浪失败时**；价格 `÷100`）                            | `119.CNYKRW`、`119.CNYJPY`、`119.USDKRW`、`119.USDJPY`                            |
+| 6    | ③东财汇率（**仅新浪失败时**；价格 `÷100`）                            | `119.CNYKRW`、`119.CNYJPY`、`119.USDKRW`、`119.USDJPY`、`119.USDCNY`                            |
 
 **指数 / 标的 / 汇率配置（name + 各源代码）**
 
@@ -311,6 +312,7 @@
 | 汇率 | CNYJPY  | 人民币/日元 | `fx_scnyjpy`  | —          | `119.CNYJPY` |
 | 汇率 | USDKRW  | 美元/韩元   | `fx_susdkrw`  | —          | `119.USDKRW` |
 | 汇率 | USDJPY  | 美元/日元   | `fx_susdjpy`  | —          | `119.USDJPY` |
+| 汇率 | USDCNY  | 美元/人民币 | `fx_susdcny`  | —          | `119.USDCNY` |
 
 **解析与数据校验（迁移时必须复刻）**
 
@@ -428,7 +430,7 @@
 
 | 页面 | 数据字段                                                                                                                                                   | 来源                                    |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 9 项 + 行业板块 24 项 + 会话   |
-| 日韩 | `krIndexes/jpIndexes/asiaIndexes/krStocks/jpStocks/forexRates[]`（code/name/price/rawPct/change/changeText/toneClass/arrow）                               | 指数 6 + 个股 16 + 汇率 4               |
+| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 10 项 + 行业板块 24 项 + 会话   |
+| 日韩 | `krIndexes/jpIndexes/asiaIndexes/krStocks/jpStocks/forexRates[]`（code/name/price/rawPct/change/changeText/toneClass/arrow）                               | 指数 6 + 个股 16 + 汇率 5               |
 | 有色 | `sections[]`（title + cards[]（name/value/toneClass/arrow/changeText））                                                                                   | 金银 2 + 工业金属 5 + 其他金属 5        |
 | AI   | `productItems[]`（name/price/pct）、`deviceItems[]`                                                                                                        | A 股产品标的 + 美股设备标的（当前为空） |

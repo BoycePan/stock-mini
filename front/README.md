@@ -27,7 +27,7 @@ http://100.90.180.33:18487
   - `utils/quote.ts`：多源聚合 `fetchAccurate`（共识取中位数）、板块涨跌幅
     `fetchAShareBoardChangeMap` / `fetchUsProxyChangeMap`；
   - `utils/market-session.ts` + `utils/market-clock.ts`：A股/美股会话判定（30s 缓存）；
-  - `config/tabbar.ts`：三个页面（全球指数/宏观资产/行业板块 24 项、日韩指数/个股/汇率、
+  - `config/tabbar.ts`：三个页面（A股指数/美股指数/宏观资产/行业板块 24 项、日韩指数/个股/汇率、
     有色金属）的标的与数据源配置；
   - `utils/quote-parser.ts` / `utils/quote-consensus.ts`：纯解析 / 共识纯函数（可单测）。
 - **财经（新闻）、搜索、个股/板块详情、新闻列表**等仍走后端接口
@@ -104,12 +104,12 @@ pnpm upload:preview -- --page=pages/global/index   # 生成预览二维码
 `.github/workflows/frontend-upload.yml` 会在 main 分支的 `front/` 变更时自动上传。
 首次使用需在仓库配置：
 
-| 名称 | 类型 | 说明 |
-| --- | --- | --- |
-| `WX_PRIVATE_KEY` | Secret | 上传密钥文件内容（推荐） |
+| 名称                | 类型     | 说明                                                      |
+| ------------------- | -------- | --------------------------------------------------------- |
+| `WX_PRIVATE_KEY`    | Secret   | 上传密钥文件内容（推荐）                                  |
 | `WX_UPLOAD_VERSION` | Variable | 上传版本号，如 `1.0.1`；留空时自动生成 `1.0.<run_number>` |
-| `WX_ROBOT` | Variable | 机器人编号 1-30，默认 1 |
-| `WX_APPID` | Variable | 可选，默认读 `project.config.json` |
+| `WX_ROBOT`          | Variable | 机器人编号 1-30，默认 1                                   |
+| `WX_APPID`          | Variable | 可选，默认读 `project.config.json`                        |
 
 > 注意：GitHub 托管运行器出口 IP 会变化，若密钥 IP 白名单无法覆盖，请改用自托管 runner
 > 或通过 `WX_CI_PROXY` 指定固定出口 IP 的 HTTP 代理。

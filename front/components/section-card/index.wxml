@@ -22,7 +22,7 @@
       <view
         class="metric-card {{ compact ? 'compact-metric' : '' }} {{
           section.singleLine ? 'single-line-metric' : ''
-        }}"
+        }} {{ item.minuteAvailable && !section.minuteCorner ? 'minute-badge-card' : '' }}"
         data-index="{{ index }}"
         bindtap="onMetricTap"
       >

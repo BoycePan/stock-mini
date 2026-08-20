@@ -135,7 +135,7 @@ export const US_PROXY_NAMES: Record<string, string> = {
  */
 export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
-  // 全球页 · 全球指数
+  // 全球页 · A股指数 / 美股指数
   // -------------------------------------------------------------------------
   sh000001: { em: '1.000001', tc: 'sh000001' }, // 上证指数
   sz399001: { em: '0.399001', tc: 'sz399001' }, // 深证成指
@@ -231,6 +231,7 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   CNYJPY: { yahoo: 'CNYJPY=X' }, // 人民币/日元
   USDKRW: { yahoo: 'KRW=X' }, // 美元/韩元
   USDJPY: { yahoo: 'JPY=X' }, // 美元/日元
+  USDCNY: { yahoo: 'CNY=X' }, // 美元/人民币
 
   // -------------------------------------------------------------------------
   // 有色页 · 金银/工业金属（沪 主连 = 东财 SHFE 连续合约；含夜盘，点较多）

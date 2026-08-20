@@ -194,7 +194,7 @@ function sinaGb(key: string, fields: string[]): SinaQuote {
 
 /**
  * 新浪 fx_ 外汇：现价 [1]、昨收 [3]；新浪自带 [10] 涨跌幅(%)、[11] 涨跌额，
- * 缺失时由 现价-昨收 反推（实测 4 个汇率 key，[11] = 现价-昨收、[10] = 涨跌幅均吻合）。
+ * 缺失时由 现价-昨收 反推（实测 5 个汇率 key，[11] = 现价-昨收、[10] = 涨跌幅均吻合）。
  */
 function sinaFx(key: string, fields: string[]): SinaQuote {
   const price = numAt(fields, 1)

@@ -16,16 +16,18 @@ import type { QuoteSource } from '../types/quote'
 export interface GlobalIndexConfig {
   code: string
   name: string
+  /** 市场归属：cn = 中国（A股）指数，us = 美股指数；页面按此拆分为「A股指数」「美股指数」两个分区 */
+  market: 'cn' | 'us'
 }
 
 export const GLOBAL_INDICES: GlobalIndexConfig[] = [
-  { code: 'sh000001', name: '上证指数' },
-  { code: 'sz399001', name: '深证成指' },
-  { code: 'sz399006', name: '创业板指' },
-  { code: 'sh000688', name: '科创50' },
-  { code: 'usDJI', name: '道琼斯工业' },
-  { code: 'usSPY', name: '标普500' },
-  { code: 'usQQQ', name: '纳斯达克' },
+  { code: 'sh000001', name: '上证指数', market: 'cn' },
+  { code: 'sz399001', name: '深证成指', market: 'cn' },
+  { code: 'sz399006', name: '创业板指', market: 'cn' },
+  { code: 'sh000688', name: '科创50', market: 'cn' },
+  { code: 'usDJI', name: '道琼斯工业', market: 'us' },
+  { code: 'usSPY', name: '标普500', market: 'us' },
+  { code: 'usQQQ', name: '纳斯达克', market: 'us' },
 ]
 
 /**
@@ -43,7 +45,7 @@ export const AVG_PRICE_CONFIG = {
   sinaKey: 'sh880003',
 } as const
 
-/** 宏观资产 9 项（docs 表 A：code / name / 数据源） */
+/** 宏观资产 10 项（docs 表 A：code / name / 数据源） */
 export interface MacroAssetConfig {
   code: string
   name: string
@@ -80,6 +82,12 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
       { kind: 'sina_diniw', key: 'DINIW', min: 60, max: 200 },
       { kind: 'em', secid: '100.UDI', min: 60, max: 200 },
     ],
+  },
+  {
+    code: 'USDCNY',
+    name: '美元/人民币',
+    // 人民币汇率仅新浪 fx_ 可用（腾讯无外汇代码、东财 119 无 USDCNY 标的，见 docs 表 A）
+    sources: [{ kind: 'sina_fx', key: 'fx_susdcny', min: 5, max: 10 }],
   },
   {
     code: 'TLT',
@@ -256,6 +264,7 @@ export const ASIA_RATES: AsiaRateConfig[] = [
   { code: 'CNYJPY', name: '人民币/日元', sinaKey: 'fx_scnyjpy', emSecid: '119.CNYJPY' },
   { code: 'USDKRW', name: '美元/韩元', sinaKey: 'fx_susdkrw', emSecid: '119.USDKRW' },
   { code: 'USDJPY', name: '美元/日元', sinaKey: 'fx_susdjpy', emSecid: '119.USDJPY' },
+  { code: 'USDCNY', name: '美元/人民币', sinaKey: 'fx_susdcny', emSecid: '119.USDCNY' },
 ]
 
 // ---------------------------------------------------------------------------
