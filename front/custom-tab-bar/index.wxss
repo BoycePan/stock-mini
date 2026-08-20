@@ -12,8 +12,8 @@
   justify-content: space-around;
   padding-top: 14rpx;
   border-top: 1rpx solid rgba(219, 227, 237, 0.9);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 -10rpx 30rpx rgba(55, 76, 105, 0.1);
+  background: rgba(255, 255, 255, 1);
+  box-shadow:0 -4rpx 20rpx  rgba(55, 76, 105, 0.08);
 }
 
 .safe-bottom {

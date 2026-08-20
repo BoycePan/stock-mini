@@ -298,7 +298,12 @@ export async function fetchAShareAveragePrice(): Promise<{
   if (count >= 3000 && coverage >= 0.9 && prevSum > 0) {
     const price = sum / count
     const prev = prevSum / count
-    if (price >= AVG_PRICE_MIN && price <= AVG_PRICE_MAX && prev >= AVG_PRICE_MIN && prev <= AVG_PRICE_MAX) {
+    if (
+      price >= AVG_PRICE_MIN &&
+      price <= AVG_PRICE_MAX &&
+      prev >= AVG_PRICE_MIN &&
+      prev <= AVG_PRICE_MAX
+    ) {
       value = { price, pct: ((price - prev) / prev) * 100 }
     } else {
       console.warn('[quote] A股平均股价超出合理区间，丢弃:', { price, prev, count, total })

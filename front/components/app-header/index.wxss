@@ -15,6 +15,8 @@
 .back-button {
   display: flex;
   align-items: center;
+  /* 文案过长时只省略标题，不允许压缩返回按钮 */
+  flex-shrink: 0;
   margin-right: 14rpx;
   padding: 10rpx 20rpx 10rpx 14rpx;
   border: 1rpx solid #e1e8f0;
@@ -44,6 +46,7 @@
   width: 68rpx;
   height: 68rpx;
   display: block;
+  flex-shrink: 0;
   border-radius: 16rpx;
 }
 
@@ -53,6 +56,7 @@
 
 .brand-title {
   margin-left: 16rpx;
+  min-width: 0;
   overflow: hidden;
   color: #152338;
   font-size: 40rpx;

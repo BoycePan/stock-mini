@@ -40,6 +40,9 @@ vendor/
 /.pnpm-store/
 /pnpm-debug.log*
 
+# Husky 内部生成（shim 等），不提交
+/.husky/_
+
 
 /front/miniprogram_npm
 /front/node_modules/

@@ -412,10 +412,10 @@ function metalMinuteVariant(
     default:
       return metal.usKeys.length
         ? {
-          minuteCode: `us-${metal.code}`,
-          minuteUnavailableTip:
-            '外盘时段该金属展示外盘报价，暂无对应外盘分时图；国内盘时段可查看',
-        }
+            minuteCode: `us-${metal.code}`,
+            minuteUnavailableTip:
+              '外盘时段该金属展示外盘报价，暂无对应外盘分时图；国内盘时段可查看',
+          }
         : undefined
   }
 }

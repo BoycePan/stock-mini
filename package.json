@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.11.0",
   "scripts": {
+    "prepare": "husky",
     "front": "pnpm --filter market-tracker-mini",
     "test": "pnpm --filter market-tracker-mini test",
     "type-check": "pnpm --filter market-tracker-mini type-check",
@@ -14,5 +15,14 @@
     "check": "pnpm test && pnpm type-check && pnpm lint && pnpm format:check",
     "upload": "pnpm --filter market-tracker-mini upload",
     "upload:preview": "pnpm --filter market-tracker-mini upload:preview"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.0.0"
+  },
+  "lint-staged": {
+    "front/{api,components,config,custom-tab-bar,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}": "prettier --write",
+    "front/{app.ts,app.json,app.wxss,eslint.config.js,prettier.config.js,tsconfig.json}": "prettier --write"
   }
 }

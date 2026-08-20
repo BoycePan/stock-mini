@@ -222,35 +222,6 @@ Component({
       const lastPt = linePts[n - 1]
       if (lastPt) segPts.push(lastPt)
 
-      // 价格线下方的渐变填充：0% 上方红、下方绿（线与 0% 基准之间的区域；无基准时红色填充到底部）
-      const fillBottom = baseY ?? padT + priceH
-      const gradUp = ctx.createLinearGradient(0, padT, 0, padT + priceH)
-      gradUp.addColorStop(0, 'rgba(235,81,77,0.14)')
-      gradUp.addColorStop(1, 'rgba(235,81,77,0.02)')
-      const gradDown = ctx.createLinearGradient(0, padT, 0, padT + priceH)
-      gradDown.addColorStop(0, 'rgba(32,166,106,0.14)')
-      gradDown.addColorStop(1, 'rgba(32,166,106,0.02)')
-      const paintSide = (up: boolean) => {
-        ctx.beginPath()
-        for (let i = 0; i < segPts.length - 1; i += 1) {
-          const a = segPts[i]
-          const b = segPts[i + 1]
-          if (!a || !b) continue
-          const mid = (a.y + b.y) / 2
-          const onSide = baseY === null ? up : up ? mid <= baseY : mid > baseY
-          if (!onSide) continue
-          ctx.moveTo(a.x, a.y)
-          ctx.lineTo(b.x, b.y)
-          ctx.lineTo(b.x, fillBottom)
-          ctx.lineTo(a.x, fillBottom)
-          ctx.closePath()
-        }
-        ctx.fillStyle = up ? gradUp : gradDown
-        ctx.fill()
-      }
-      paintSide(true)
-      paintSide(false)
-
       // 价格线：突破 0% 用红色、跌破 0% 用绿色，同色相邻段合并为一条路径
       ctx.lineWidth = 1.5
       let runColor: string | null = null
@@ -265,6 +236,7 @@ Component({
           ctx.beginPath()
           ctx.moveTo(a.x, a.y)
           ctx.lineTo(b.x, b.y)
+          ctx.strokeStyle = color
           runColor = color
         } else {
           ctx.lineTo(b.x, b.y)

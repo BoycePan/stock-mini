@@ -32,7 +32,7 @@ const MA_COLORS: Record<'light' | 'dark', string[]> = {
  * - 蜡烛图：影线 + 圆角实体，红涨绿跌（与全局涨跌色一致）
  * - MA5 / MA10 / MA20 均线 + 左上角图例（数值为最新值）
  * - 左侧价格刻度 + 底部日期刻度 + 浅色网格（含纵向时间分隔线）
- * - 下方成交量柱按当根 K 线涨跌分色（红涨、绿跌），左上角标注最大量
+ * - 下方成交量柱按当根 K 线涨跌分色（红涨、绿跌，实色不透明，同花顺风格），左上角标注最大量
  * - 最新价虚线 + 右侧圆角标签（按最后一根涨跌着色）
  * - 点击 / 拖动 canvas 显示十字光标 + 信息框（时间 / 开 / 高 / 低 / 收 / 涨跌幅 / 成交量）
  * - 深浅主题配色跟随 theme
@@ -122,7 +122,7 @@ Component({
     /** 绘制基础图（网格 / 刻度 / 蜡烛 / 均线 / 成交量 / 最新价标签），并把布局参数写回 state */
     renderChart(st: KlineChartState) {
       const { ctx, width, height, klines, isDark } = st
-      const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(20,32,51,0.08)'
+      const gridColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(20,32,51,0.12)'
       const textColor = isDark ? '#8a97a8' : '#718096'
       const baseColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(20,32,51,0.3)'
       const maColors = isDark ? MA_COLORS.dark : MA_COLORS.light
@@ -212,8 +212,8 @@ Component({
         if (isUpKline(k)) upPath.push(x - bw / 2, volBottom - h, bw, h)
         else downPath.push(x - bw / 2, volBottom - h, bw, h)
       }
-      paintRects(ctx, upPath, 'rgba(235,81,77,0.5)')
-      paintRects(ctx, downPath, 'rgba(32,166,106,0.5)')
+      paintRects(ctx, upPath, UP_COLOR)
+      paintRects(ctx, downPath, DOWN_COLOR)
 
       // 蜡烛：影线 + 圆角实体（红涨绿跌）
       for (let i = 0; i < n; i += 1) {
