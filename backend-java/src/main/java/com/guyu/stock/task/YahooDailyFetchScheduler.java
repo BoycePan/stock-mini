@@ -6,13 +6,12 @@ import com.guyu.stock.service.YahooSectorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 /**
  * 每天 6:00 自动拉取雅虎全球资产日线并同步元数据（指数 + 板块 ETF）。
  * 6:00（北京时间）时美股/欧洲/亚太均已收盘，日线为最终值。
  */
-@Component
+//@Component
 public class YahooDailyFetchScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(YahooDailyFetchScheduler.class);

@@ -7,13 +7,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 /**
  * 全局实时快照定时刷新（指数 + 板块 ETF）：每 60s 批量拉雅虎最新点位覆盖落库 quote_snapshot。
  * 启动时立即刷一次避免空库；刷新失败临时降频 2 分钟防持续撞限流。
  */
-@Component
+//@Component
 public class YahooSnapshotScheduler implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(YahooSnapshotScheduler.class);
