@@ -1,0 +1,65 @@
+/* 通用说明弹窗：半透明遮罩 + 居中卡片 */
+.info-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 35, 0.55);
+}
+
+.info-dialog {
+  width: 600rpx;
+  max-width: 85%;
+  padding: 48rpx 40rpx 36rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.2);
+}
+
+.info-title {
+  display: block;
+  text-align: center;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #152338;
+}
+
+.info-content {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 27rpx;
+  line-height: 1.7;
+  color: #6b7a90;
+}
+
+.info-confirm {
+  margin-top: 40rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 42rpx;
+  background: linear-gradient(135deg, #66a6ff 0%, #4c7ff5 100%);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.info-confirm::after {
+  border: none;
+}
+
+.info-dialog.theme-dark {
+  background: #1a2637;
+}
+
+.info-dialog.theme-dark .info-title {
+  color: #f5f7fb;
+}
+
+.info-dialog.theme-dark .info-content {
+  color: #9cacc0;
+}

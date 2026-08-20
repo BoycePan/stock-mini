@@ -4,7 +4,6 @@
   padding: 0 24rpx;
 }
 
-.loading,
 .empty-wrap {
   margin-top: 18rpx;
   padding: 120rpx 24rpx;
@@ -179,7 +178,6 @@
 }
 
 /* dark theme */
-.page.theme-dark .loading,
 .page.theme-dark .empty-wrap,
 .page.theme-dark .detail-card,
 .page.theme-dark .link-card,

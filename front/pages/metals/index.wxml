@@ -1,20 +1,18 @@
-<view class="page theme-{{theme}} metals-page">
-  <app-header showSearch="{{true}}" showShare="{{false}}"></app-header>
-  <view class="page-status {{statusTone}}">
-    <text class="status-dot"></text>
-    <text>{{statusLabel}}</text>
-    <text class="updated">{{updatedLabel}}</text>
-  </view>
-  <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}"></loading-state>
-    <view wx:elif="{{error}}" class="error-card">
-      <text>{{error}}</text>
-      <button bindtap="onRetry">重新加载</button>
-    </view>
-    <block wx:else>
-      <section-card wx:for="{{sections}}" wx:key="id" section="{{item}}"></section-card>
-    </block>
-    <view class="bottom-space"></view>
-  </scroll-view>
-  <bottom-tabbar active="{{activeTab}}" bind:change="onTabChange"></bottom-tabbar>
+<view class="page theme-{{ theme }} metals-page">
+  <market-page
+    activeTab="{{ activeTab }}"
+    loading="{{ loading }}"
+    error="{{ error }}"
+    loadingText="正在加载贵金属行情"
+    loadingDesc="正在为您同步最新贵金属报价，请稍候…"
+    statusLabel="{{ statusLabel }}"
+    statusTone="{{ statusTone }}"
+    updatedLabel="{{ updatedLabel }}"
+    sections="{{ sections }}"
+    bind:retry="onRetry"
+    bind:share="onShare"
+    bind:tabchange="onTabChange"
+    bind:metrictap="onMetricTap"
+  ></market-page>
 </view>
+

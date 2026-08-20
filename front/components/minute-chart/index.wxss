@@ -1,0 +1,8 @@
+.minute-chart {
+  width: 100%;
+}
+
+.minute-canvas {
+  width: 100%;
+  height: 420rpx;
+}

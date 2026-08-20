@@ -1,6 +1,7 @@
 import { getNewsDetail, type NewsDetail } from '../../utils/storage'
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { buildSharePath } from '../../utils/share'
 
 /** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
 function decodeQuery(value: string | undefined): string {
@@ -57,6 +58,10 @@ Page({
   },
   onShareAppMessage() {
     const news = this.data.news
-    return { title: news?.title || '新闻详情', path: '/pages/news/index' }
+    return {
+      title: news?.title || '新闻详情',
+      // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
+      path: buildSharePath('news-detail', { title: news?.title, url: news?.url }),
+    }
   },
 })

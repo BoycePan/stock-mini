@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本仓库是「市场魔方助手」微信原生小程序（`front/`）+ Spring Boot 后端（`backend-java/`）。
+本仓库是「市场追踪助手」微信原生小程序（`front/`）+ Spring Boot 后端（`backend-java/`）。
 
 ## 主题兼容规范（强制，涉及任何 UI 改动时必读）
 

@@ -1,101 +1,144 @@
 <view class="page theme-{{ theme }} settings-page">
   <app-header showShare="{{ false }}"></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <!-- 用户信息卡片（来自全局 auth store，登录/登出自动同步） -->
+
+    <!-- 用户信息卡片 -->
     <view class="user-card">
       <block wx:if="{{ isLoggedIn && user }}">
-        <image
-          wx:if="{{ user.avatar_url }}"
-          class="user-avatar"
-          src="{{ user.avatar_url }}"
-          mode="aspectFill"
-        />
-        <view wx:else class="user-avatar avatar-placeholder">👤</view>
+        <view class="avatar-ring">
+          <image
+            wx:if="{{ user.avatar_url }}"
+            class="user-avatar"
+            src="{{ user.avatar_url }}"
+            mode="aspectFill"
+          />
+          <view wx:else class="user-avatar avatar-placeholder">👤</view>
+        </view>
         <view class="user-info">
           <text class="user-name">{{ user.nickname || '微信用户' }}</text>
-          <text class="user-meta">已登录 · 用户ID {{ user.id }}</text>
+          <text class="user-meta">用户ID {{ user.id }}</text>
         </view>
-        <!-- <button class="logout-button" size="mini" bindtap="onLogout">退出登录</button> -->
       </block>
-      <view wx:else class="user-guest">
-        <view class="user-avatar avatar-placeholder">👤</view>
+      <view wx:else class="user-guest" bindtap="onLoginTap">
+        <view class="avatar-ring">
+          <view class="user-avatar avatar-placeholder">👤</view>
+        </view>
         <view class="user-info">
           <text class="user-name">未登录</text>
-          <text class="user-meta">打开行情页时将自动登录</text>
+          <text class="user-meta">点击可重新登录</text>
+        </view>
+        <view class="user-status offline">去登录</view>
+      </view>
+    </view>
+
+    <!-- 上线公告横幅 -->
+    <view class="banner">
+      <view class="banner-icon">🚀</view>
+      <view class="banner-copy">
+        <text class="banner-title">小程序全新上线</text>
+        <text class="banner-subtitle">更多模块持续更新中</text>
+      </view>
+      <view class="banner-badge">NEW</view>
+    </view>
+
+    <!-- 通用设置 -->
+    <text class="section-heading">通用</text>
+    <view class="setting-group">
+      <view class="setting-row theme-row">
+        <view class="row-icon-wrap theme">
+          <t-icon name="mode-light" size="40rpx" class="row-icon-svg" />
+        </view>
+        <view class="row-main">
+          <text class="row-label">主题模式</text>
+          <text class="row-desc">自由切换浅色 / 深色外观</text>
+        </view>
+        <view class="theme-switch">
+          <text
+            class="theme-option {{ theme === 'light' ? 'selected' : '' }}"
+            data-value="light"
+            bindtap="onThemeChange"
+          >浅色</text>
+          <text
+            class="theme-option {{ theme === 'dark' ? 'selected' : '' }}"
+            data-value="dark"
+            bindtap="onThemeChange"
+          >深色</text>
         </view>
       </view>
     </view>
 
-    <!-- 主题切换卡片 -->
-    <view class="theme-card">
-      <view class="theme-copy">
-        <text class="theme-icon">☼</text>
-        <view>
-          <text class="theme-title">主题模式</text>
-          <text class="theme-subtitle">随心切换，舒适体验</text>
+    <!-- 关于 -->
+    <text class="section-heading">关于</text>
+    <view class="setting-group">
+      <view
+        class="setting-row clickable"
+        hover-class="row-hover"
+        data-key="data-notice"
+        bindtap="onServiceTap"
+      >
+        <view class="row-icon-wrap blue">
+          <text class="row-emoji">📊</text>
         </view>
+        <view class="row-main">
+          <text class="row-label">数据说明</text>
+          <text class="row-desc">数据来源、时效与准确性说明</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
-      <view class="theme-switch">
-        <text
-          class="theme-option {{ theme === 'light' ? 'selected' : '' }}"
-          data-value="light"
-          bindtap="onThemeChange"
-          >☼ 浅色</text
-        >
-        <text
-          class="theme-option {{ theme === 'dark' ? 'selected' : '' }}"
-          data-value="dark"
-          bindtap="onThemeChange"
-          >☾ 深色</text
-        >
+      <view class="row-divider"></view>
+      <view
+        class="setting-row clickable"
+        hover-class="row-hover"
+        data-key="disclaimer"
+        bindtap="onServiceTap"
+      >
+        <view class="row-icon-wrap orange">
+          <text class="row-emoji">⚠️</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">免责声明</text>
+          <text class="row-desc">信息仅供参考，不构成投资建议</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
+      </view>
+      <view class="row-divider"></view>
+      <view
+        class="setting-row clickable"
+        hover-class="row-hover"
+        data-key="agreement"
+        bindtap="onServiceTap"
+      >
+        <view class="row-icon-wrap green">
+          <text class="row-emoji">📄</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">用户协议</text>
+          <text class="row-desc">服务条款与用户行为规范</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
+      </view>
+      <view class="row-divider"></view>
+      <view
+        class="setting-row clickable"
+        hover-class="row-hover"
+        data-key="privacy"
+        bindtap="onServiceTap"
+      >
+        <view class="row-icon-wrap purple">
+          <text class="row-emoji">🔒</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">隐私政策</text>
+          <text class="row-desc">信息收集、存储与你的权利</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
     </view>
 
-    <!-- 更多服务 -->
-    <view class="setting-section">
-      <text class="setting-heading">更多服务</text>
-      <view class="service-grid">
-        <view
-          class="service-item"
-          hover-class="service-item-hover"
-          data-key="data-notice"
-          bindtap="onServiceTap"
-        >
-          <text class="service-icon blue">▣</text>
-          <text>数据说明</text>
-          <text class="service-sub">了解数据来源</text>
-        </view>
-        <view
-          class="service-item"
-          hover-class="service-item-hover"
-          data-key="disclaimer"
-          bindtap="onServiceTap"
-        >
-          <text class="service-icon orange">◆</text>
-          <text>免责声明</text>
-          <text class="service-sub">使用条款提示</text>
-        </view>
-        <view
-          class="service-item"
-          hover-class="service-item-hover"
-          data-key="agreement"
-          bindtap="onServiceTap"
-        >
-          <text class="service-icon green">▤</text>
-          <text>用户协议</text>
-          <text class="service-sub">查看详细协议</text>
-        </view>
-        <view
-          class="service-item"
-          hover-class="service-item-hover"
-          data-key="privacy"
-          bindtap="onServiceTap"
-        >
-          <text class="service-icon purple">▣</text>
-          <text>隐私政策</text>
-          <text class="service-sub">查看隐私政策</text>
-        </view>
-      </view>
+    <!-- 页脚 -->
+    <view class="footer">
+      <text class="footer-title">市场追踪助手</text>
+      <text class="footer-sub">v{{ version }} · 数据仅供参考，不构成任何投资建议</text>
     </view>
 
     <view class="bottom-space"></view>

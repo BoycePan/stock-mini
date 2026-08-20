@@ -1,4 +1,4 @@
-# 市场魔方助手小程序
+# 市场追踪助手小程序
 
 原生微信小程序前端，使用 TypeScript + MobX，服务于仓库中的股票行情后端。
 
@@ -16,8 +16,39 @@ http://100.90.180.33:18487
 
 ## 数据策略
 
-- 所有页面数据（认证、股票、板块、新闻、全球/日韩/有色/财经行情）均来自后端接口
-  （见 `../docs/API.md`），请求路径集中在 `api/` 目录；接口失败或无数据时页面展示错误态。
+- **全球 / 日韩 / 有色** 三个 TabBar 行情页的数据**不再走后端**，全部直连
+  `docs/tabbar-api.md` 中的外部行情接口：
+  - ① 腾讯行情 `https://qt.gtimg.cn`（文本）
+  - ② 新浪行情 `https://hq.sinajs.cn`（文本）
+  - ③ 东财个股行情 `push2delay.eastmoney.com/api/qt/stock/get`
+  - ④ 东财列表行情 `push2delay.eastmoney.com/api/qt/ulist.np/get`
+- 封装分层（新增文件）：
+  - `api/quote.ts`：4 个外部接口的单接口封装（失败降级为空数据，不抛错）；
+  - `utils/quote.ts`：多源聚合 `fetchAccurate`（共识取中位数）、板块涨跌幅
+    `fetchAShareBoardChangeMap` / `fetchUsProxyChangeMap`；
+  - `utils/market-session.ts` + `utils/market-clock.ts`：A股/美股会话判定（30s 缓存）；
+  - `config/tabbar.ts`：三个页面（A股指数/美股指数/宏观资产/行业板块 24 项、日韩指数/个股/汇率、
+    有色金属）的标的与数据源配置；
+  - `utils/quote-parser.ts` / `utils/quote-consensus.ts`：纯解析 / 共识纯函数（可单测）。
+- **财经（新闻）、搜索、个股/板块详情、新闻列表**等仍走后端接口
+  （`api/news.ts`、`api/stock.ts`、`api/sector.ts`）。
+- 请求路径集中在 `api/` 目录；外部接口失败时按「新浪 → 腾讯 → 东财」兜底链补齐，
+  全部失败时页面展示错误态。
+
+### 外部域名配置（必读）
+
+小程序直连外部行情接口需要：
+
+1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
+   `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
+   `https://push2.eastmoney.com`（A股平均股价全市场快照的 clist 权威端点，push2delay 覆盖不足时回退）；
+2. **首页卡片点击查看当日分时**（`pages/minute/index`，纯前端直连）还需追加：
+   `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
+   （Yahoo 1分钟，仅韩股/日股/汇率/VIX/KOSDAQ 等东财腾讯无分时的标的，见 `docs/minute-api.md`，
+   不加则这几个卡片不显示「分时」角标）；东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
+3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
+4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
+   会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
 
 ## 依赖安装
 
@@ -25,8 +56,8 @@ http://100.90.180.33:18487
 
 ```bash
 pnpm install
-pnpm --filter market-magic-mini type-check
-pnpm --filter market-magic-mini lint
+pnpm --filter market-tracker-mini type-check
+pnpm --filter market-tracker-mini lint
 ```
 
 当前执行环境无法访问 npm registry，因此依赖版本沿用当前 lockfile 中记录的稳定版本，并按项目约束将 TypeScript 目标提升到 5.8+、ESLint 使用 9 flat config。联网后建议重新运行 `pnpm view <package> version` 校验版本。
@@ -73,12 +104,12 @@ pnpm upload:preview -- --page=pages/global/index   # 生成预览二维码
 `.github/workflows/frontend-upload.yml` 会在 main 分支的 `front/` 变更时自动上传。
 首次使用需在仓库配置：
 
-| 名称 | 类型 | 说明 |
-| --- | --- | --- |
-| `WX_PRIVATE_KEY` | Secret | 上传密钥文件内容（推荐） |
+| 名称                | 类型     | 说明                                                      |
+| ------------------- | -------- | --------------------------------------------------------- |
+| `WX_PRIVATE_KEY`    | Secret   | 上传密钥文件内容（推荐）                                  |
 | `WX_UPLOAD_VERSION` | Variable | 上传版本号，如 `1.0.1`；留空时自动生成 `1.0.<run_number>` |
-| `WX_ROBOT` | Variable | 机器人编号 1-30，默认 1 |
-| `WX_APPID` | Variable | 可选，默认读 `project.config.json` |
+| `WX_ROBOT`          | Variable | 机器人编号 1-30，默认 1                                   |
+| `WX_APPID`          | Variable | 可选，默认读 `project.config.json`                        |
 
 > 注意：GitHub 托管运行器出口 IP 会变化，若密钥 IP 白名单无法覆盖，请改用自托管 runner
 > 或通过 `WX_CI_PROXY` 指定固定出口 IP 的 HTTP 代理。

@@ -1,6 +1,7 @@
 .content-scroll {
   flex: 1;
   min-height: 0;
+  height: 0;
   padding: 0 24rpx;
 }
 
@@ -45,7 +46,6 @@
   font-size: 24rpx;
 }
 
-.loading,
 .error {
   margin-top: 18rpx;
   padding: 120rpx 24rpx;

@@ -1,3 +1,5 @@
+@import './styles/font.wxss';
+
 page {
   background: #eef3f8;
   color: #142033;
@@ -57,9 +59,6 @@ button::after {
 .page.theme-dark .stock-name,
 .page.theme-dark .price,
 .page.theme-dark .panel-title,
-.page.theme-dark .setting-heading,
-.page.theme-dark .theme-title,
-.page.theme-dark .follow-title,
 .page.theme-dark .news-title,
 .page.theme-dark .metric-value,
 .page.theme-dark .market-value {
@@ -70,9 +69,6 @@ button::after {
 .page.theme-dark .quote-card,
 .page.theme-dark .panel,
 .page.theme-dark .error-card,
-.page.theme-dark .setting-section,
-.page.theme-dark .follow-card,
-.page.theme-dark .theme-card,
 .page.theme-dark .news-list,
 .page.theme-dark .loading,
 .page.theme-dark .error {
@@ -83,7 +79,6 @@ button::after {
 
 .page.theme-dark .metric-card,
 .page.theme-dark .theme-switch,
-.page.theme-dark .service-item,
 .page.theme-dark .market-card {
   border-color: #34465e;
   background: #223248;
@@ -93,37 +88,18 @@ button::after {
 .page.theme-dark .metric-name,
 .page.theme-dark .quote-grid text:last-child,
 .page.theme-dark .member-row,
-.page.theme-dark .board-row,
-.page.theme-dark .service-item {
+.page.theme-dark .board-row {
   color: #e5ebf4;
 }
 
-.page.theme-dark .source-note,
-.page.theme-dark .updated,
-.page.theme-dark .theme-subtitle,
+.page.theme-dark .update-time,
 .page.theme-dark .news-time,
 .page.theme-dark .news-meta,
 .page.theme-dark .quote-grid text:first-child,
-.page.theme-dark .service-sub,
-.page.theme-dark .follow-subtitle,
-.page.theme-dark .follow-tip,
 .page.theme-dark .stock-code,
 .page.theme-dark .kline-row,
 .page.theme-dark .news-intro {
   color: #9cacc0;
-}
-
-.page.theme-dark .promo-card {
-  border-color: #66424a;
-  background: #392a34;
-}
-
-.page.theme-dark .promo-title {
-  color: #ffd7d4;
-}
-
-.page.theme-dark .promo-subtitle {
-  color: #d9a4a5;
 }
 
 .page.theme-dark .theme-option.selected {
@@ -148,9 +124,4 @@ button::after {
 .page.theme-dark .board-row,
 .page.theme-dark .member-row {
   border-color: #2c3d53;
-}
-
-.page.theme-dark .follow-placeholder {
-  border-color: #4a5e77;
-  color: #9cacc0;
 }

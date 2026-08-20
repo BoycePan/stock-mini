@@ -12,7 +12,7 @@
       <text class="back-arrow">‹</text>
       <text class="back-label">返回</text>
     </view>
-    <view wx:if="{{ showBrand }}" class="brand-mark">◎</view>
+    <image wx:if="{{ showBrand }}" class="brand-mark" src="/static/images/logo.png" mode="aspectFit" />
     <text class="brand-title">{{ title }}</text>
   </view>
   <view wx:if="{{ showShare || showSearch }}" class="header-actions">

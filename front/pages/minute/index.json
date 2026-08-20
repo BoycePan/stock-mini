@@ -1,0 +1,10 @@
+{
+  "usingComponents": {
+    "app-header": "/components/app-header/index",
+    "loading-state": "/components/loading-state/index",
+    "empty-state": "/components/empty-state/index",
+    "minute-chart": "/components/minute-chart/index",
+    "disclaimer-footer": "/components/disclaimer-footer/index"
+  },
+  "enablePullDownRefresh": true
+}

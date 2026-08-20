@@ -27,8 +27,8 @@
 }
 
 .market-change {
-  font-size: 25rpx;
-  font-weight: 600;
+  font-size: 28rpx;
+  font-weight: 700;
 }
 
 .market-change.up {

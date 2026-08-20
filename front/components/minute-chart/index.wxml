@@ -1,0 +1,11 @@
+<view class="minute-chart {{ theme === 'dark' ? 'theme-dark' : '' }}">
+  <canvas
+    type="2d"
+    id="minute-canvas"
+    class="minute-canvas"
+    bindtouchstart="onTouchStart"
+    catchtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd"
+    bindtouchcancel="onTouchEnd"
+  ></canvas>
+</view>

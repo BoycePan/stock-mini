@@ -21,7 +21,7 @@ importers:
         version: 5.1.1(miniprogram-api-typings@3.12.0)(mobx-miniprogram@6.12.3)
       tdesign-miniprogram:
         specifier: ^1.12.0
-        version: 1.15.3
+        version: 1.16.0
       weapp-qrcode-canvas-2d:
         specifier: ^1.1.6
         version: 1.1.6
@@ -4417,8 +4417,8 @@ packages:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
 
-  tdesign-miniprogram@1.15.3:
-    resolution: {integrity: sha512-EtWrODktAHzHXqaTw2iahBx90EDWa/evtTh9wUOCPDAYEJKpLkjupCGqdRneup16x7s95N3LF0OUbITanm5lCw==}
+  tdesign-miniprogram@1.16.0:
+    resolution: {integrity: sha512-HbK0PWVqXoiynkXOGrda+B8ChPwCcx1IazExlBJzxDhNjkQ8qE4/v0k5wn07gLxW042mSsVdwoX/aUTB0yH4jw==}
 
   terminal-kit@2.4.0:
     resolution: {integrity: sha512-lQCKNFYCaVoFM23pcurnQ7wOnsz4u588JNu2sfNOnB8IU6Tl4vdOdHNe7bL2aIiB0kA7m94gS4VI0+3CRI1G/A==}
@@ -9800,7 +9800,7 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  tdesign-miniprogram@1.15.3: {}
+  tdesign-miniprogram@1.16.0: {}
 
   terminal-kit@2.4.0:
     dependencies:

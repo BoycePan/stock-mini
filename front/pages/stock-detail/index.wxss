@@ -22,6 +22,53 @@
   padding: 0 24rpx;
 }
 
+/* 数据延迟免责提示 */
+.data-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-top: 18rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid #f3e6c8;
+  border-radius: 20rpx;
+  background: #fffaf0;
+}
+
+.notice-icon {
+  flex-shrink: 0;
+  width: 34rpx;
+  height: 34rpx;
+  margin-top: 2rpx;
+  border-radius: 50%;
+  background: #e8b04c;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 34rpx;
+  text-align: center;
+}
+
+.notice-text {
+  flex: 1;
+  color: #8a6d3b;
+  font-size: 23rpx;
+  line-height: 36rpx;
+}
+
+.page.theme-dark .data-notice {
+  border-color: #4a4430;
+  background: #26241a;
+}
+
+.page.theme-dark .notice-icon {
+  background: #d9a54a;
+  color: #1d1c14;
+}
+
+.page.theme-dark .notice-text {
+  color: #d9c9a3;
+}
+
 .quote-card,
 .panel,
 .error-card {

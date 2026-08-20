@@ -1,7 +1,44 @@
 {
-  "description": "市场魔方助手",
+  "description": "市场追踪助手",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "tests",
+        "type": "folder"
+      },
+      {
+        "value": "keys",
+        "type": "folder"
+      },
+      {
+        "value": "c31a093133b62d97cc8f273dff196f19",
+        "type": "folder"
+      },
+      {
+        "value": "eslint.config.js",
+        "type": "file"
+      },
+      {
+        "value": "prettier.config.js",
+        "type": "file"
+      },
+      {
+        "value": "project.private.config.json",
+        "type": "file"
+      },
+      {
+        "value": ".md",
+        "type": "suffix"
+      },
+      {
+        "value": ".DS_Store",
+        "type": "suffix"
+      }
+    ],
     "include": []
   },
   "setting": {
@@ -9,7 +46,7 @@
     "es6": true,
     "enhance": true,
     "postcss": true,
-    "minified": false,
+    "minified": true,
     "compileHotReLoad": true,
     "minifyWXSS": true,
     "minifyWXML": true,
@@ -17,7 +54,7 @@
       "typescript"
     ],
     "compileWorklet": false,
-    "uglifyFileName": false,
+    "uglifyFileName": true,
     "uploadWithSourceMap": true,
     "packNpmManually": false,
     "packNpmRelationList": [],
@@ -33,9 +70,9 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "3.9.0",
+  "libVersion": "3.17.1",
   "appid": "wx2cfd1556edf21a24",
-  "projectname": "market-magic-mini",
+  "projectname": "market-tracker-mini",
   "condition": {},
   "simulatorPluginLibVersion": {},
   "editorSetting": {}

@@ -1,16 +1,16 @@
 {
-  "name": "market-magic-mini",
+  "name": "market-tracker-mini",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "市场魔方助手原生微信小程序",
+  "description": "市场追踪助手原生微信小程序",
   "license": "MIT",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --import ./tests/register.mjs --experimental-strip-types --test tests/*.test.ts",
     "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "upload": "node --experimental-strip-types scripts/upload.ts",
     "upload:preview": "node --experimental-strip-types scripts/upload.ts --preview"

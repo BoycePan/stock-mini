@@ -1,3 +1,5 @@
+@import '../../styles/font.wxss';
+
 .tabbar {
   position: fixed;
   z-index: 20;
@@ -37,9 +39,11 @@
   min-width: 74rpx;
   padding: 0 14rpx;
   border-radius: 22rpx;
-  font-size: 42rpx;
+  font-size: 38rpx;
   line-height: 52rpx;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab.active .tab-icon {

@@ -1,99 +1,249 @@
 .content-scroll {
   flex: 1;
   min-height: 0;
-  padding: 12rpx 24rpx 0;
+  padding: 14rpx 24rpx 0;
 }
 
+/* ============ 卡片通用 ============ */
 .legal-card {
-  margin-top: 18rpx;
-  padding: 30rpx 28rpx 34rpx;
+  margin-top: 20rpx;
+  padding: 34rpx 32rpx 38rpx;
   border: 1rpx solid #e2eaf3;
-  border-radius: 28rpx;
+  border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 6rpx 28rpx rgba(64, 86, 116, 0.07);
+}
+
+/* ============ 标题卡片 ============ */
+.intro-card {
+  padding-top: 32rpx;
+}
+
+.legal-header {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+
+.legal-icon-wrap {
+  flex: 0 0 auto;
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26rpx;
+  background: linear-gradient(135deg, #eef4ff 0%, #ddeafd 100%);
+  box-shadow: 0 4rpx 16rpx rgba(66, 120, 237, 0.14);
+}
+
+.legal-icon-emoji {
+  font-size: 44rpx;
+  line-height: 1;
+}
+
+.legal-header-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
 .legal-title {
   display: block;
   color: #152338;
   font-size: 40rpx;
-  font-weight: 750;
-  letter-spacing: 1rpx;
+  font-weight: 800;
+  letter-spacing: 0.5rpx;
 }
 
 .legal-updated {
   display: inline-block;
-  margin-top: 16rpx;
-  padding: 8rpx 20rpx;
-  border: 1rpx solid #cdeedb;
-  border-radius: 26rpx;
-  background: #effaf3;
-  color: #1c9d59;
-  font-size: 22rpx;
+  padding: 7rpx 20rpx;
+  border: 1rpx solid #bce4d2;
+  border-radius: 28rpx;
+  background: #edfaf4;
+  color: #179a5a;
+  font-size: 21rpx;
   font-weight: 600;
+  align-self: flex-start;
 }
 
+.intro-divider {
+  height: 1rpx;
+  margin: 26rpx 0 4rpx;
+  background: linear-gradient(90deg, #dde6f2 0%, transparent 80%);
+}
+
+/* intro 引用块 */
+.intro-quote-block {
+  display: flex;
+  align-items: stretch;
+  gap: 18rpx;
+  margin-top: 16rpx;
+}
+
+.intro-quote-bar {
+  flex: 0 0 auto;
+  width: 5rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #4278ed 0%, #96c0ff 100%);
+}
+
+.intro-quote-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.intro-text {
+  color: #2e3f58;
+  font-size: 28rpx;
+  line-height: 52rpx;
+}
+
+/* ============ 正文段落 ============ */
 .legal-paragraph {
-  margin-top: 22rpx;
+  margin-top: 16rpx;
 }
 
 .legal-text {
   display: block;
   color: #3d4c60;
-  font-size: 28rpx;
-  line-height: 48rpx;
+  font-size: 27rpx;
+  line-height: 50rpx;
+  letter-spacing: 0.3rpx;
+}
+
+/* ============ 详细条款卡片 ============ */
+.sections-card {
+  padding-top: 32rpx;
+  padding-bottom: 8rpx;
+}
+
+.legal-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid #edf1f6;
+  margin-bottom: 4rpx;
 }
 
 .legal-details-heading {
   display: block;
-  padding-bottom: 22rpx;
-  border-bottom: 1rpx solid #edf1f6;
   color: #152338;
-  font-size: 33rpx;
+  font-size: 32rpx;
   font-weight: 700;
 }
 
+.sections-count {
+  padding: 6rpx 18rpx;
+  border-radius: 24rpx;
+  background: #eef3fb;
+  color: #6a88b5;
+  font-size: 21rpx;
+  font-weight: 600;
+}
+
 .legal-section {
-  padding-top: 26rpx;
+  padding-top: 28rpx;
+}
+
+.legal-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+/* 数字序号圆圈 */
+.section-num {
+  flex: 0 0 auto;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4278ed 0%, #6fa3ff 100%);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 700;
 }
 
 .legal-section-heading {
   display: block;
-  color: #22334a;
-  font-size: 30rpx;
+  color: #1a2d45;
+  font-size: 29rpx;
   font-weight: 700;
+  letter-spacing: 0.3rpx;
 }
 
+/* 节分割线（最后一节靠 padding 撑） */
+.section-divider {
+  height: 1rpx;
+  margin-top: 28rpx;
+  background: #eef2f8;
+}
+
+.legal-section:last-child .section-divider {
+  display: none;
+}
+
+/* ============ 结语卡片 ============ */
 .closing-card {
   text-align: center;
+  padding: 40rpx 32rpx 42rpx;
+  background: linear-gradient(135deg, #f3f8ff 0%, #eaeffb 100%);
+  border-color: #cfddf5;
+}
+
+.closing-badge {
+  display: inline-block;
+  margin-bottom: 20rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #4278ed 0%, #6fa3ff 100%);
+  color: #fff;
+  font-size: 21rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.closing-icon {
+  font-size: 52rpx;
+  margin-bottom: 18rpx;
+  line-height: 1.2;
 }
 
 .closing-text {
-  color: #34445a;
+  color: #2d3f58;
   font-size: 27rpx;
   font-weight: 600;
+  line-height: 48rpx;
 }
 
+/* ============ 其他 ============ */
 .bottom-space {
   height: 80rpx;
 }
 
-/* dark theme */
+/* ============================================================
+   深色主题
+   ============================================================ */
 .page.theme-dark .legal-card {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8rpx 28rpx rgba(0, 0, 0, 0.22);
 }
 
-.page.theme-dark .legal-title,
-.page.theme-dark .legal-details-heading,
-.page.theme-dark .legal-section-heading {
+.page.theme-dark .legal-icon-wrap {
+  background: linear-gradient(135deg, #1d3252 0%, #192b46 100%);
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.25);
+}
+
+.page.theme-dark .legal-title {
   color: #f5f7fb;
-}
-
-.page.theme-dark .legal-text,
-.page.theme-dark .closing-text {
-  color: #e5ebf4;
 }
 
 .page.theme-dark .legal-updated {
@@ -102,6 +252,48 @@
   color: #5fd396;
 }
 
+.page.theme-dark .intro-divider {
+  background: linear-gradient(90deg, #2a394e 0%, transparent 80%);
+}
+
+.page.theme-dark .intro-quote-bar {
+  background: linear-gradient(180deg, #4278ed 0%, #3160c4 100%);
+}
+
+.page.theme-dark .intro-text {
+  color: #c4d3e8;
+}
+
+.page.theme-dark .legal-text {
+  color: #b8ccdf;
+}
+
+.page.theme-dark .legal-details-header {
+  border-color: #2a394e;
+}
+
 .page.theme-dark .legal-details-heading {
-  border-color: #2c3d53;
+  color: #f5f7fb;
+}
+
+.page.theme-dark .sections-count {
+  background: #1d3047;
+  color: #6fa3ff;
+}
+
+.page.theme-dark .section-divider {
+  background: #243548;
+}
+
+.page.theme-dark .legal-section-heading {
+  color: #e8eef7;
+}
+
+.page.theme-dark .closing-card {
+  background: linear-gradient(135deg, #192640 0%, #16203a 100%);
+  border-color: #2a3c58;
+}
+
+.page.theme-dark .closing-text {
+  color: #ccdaee;
 }

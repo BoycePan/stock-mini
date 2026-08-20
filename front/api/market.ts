@@ -1,40 +1,645 @@
 import type { MarketPageData } from '../types/market'
-import { globalApi } from './global'
+import type { QuoteSource, SinaQuote, TencentQuote } from '../types/quote'
+import {
+  ASIA_INDICES,
+  ASIA_JP_STOCKS,
+  ASIA_KR_STOCKS,
+  ASIA_RATES,
+  AVG_PRICE_CONFIG,
+  GLOBAL_INDICES,
+  INDUSTRY_BOARDS,
+  MACRO_ASSETS,
+  METALS,
+  METAL_SECTIONS,
+  metalSinaKeys,
+  type AsiaIndexConfig,
+  type AsiaRateConfig,
+  type AsiaStockConfig,
+  type GlobalIndexConfig,
+  type MetalConfig,
+} from '../config/tabbar'
+import {
+  GOLD_SHOP_BRANDS,
+  GOLD_SHOP_CATALOG,
+  goldShopItemLabel,
+  pickGoldShopItem,
+} from '../config/gold-shop'
+import { PHYSICAL_GOLD_CATALOG, type PhysicalGoldItemConfig } from '../config/physical-gold'
+import { fetchGoldShopQuotes, fetchPhysicalGoldQuotes } from './gold-shop'
 import { newsApi } from './news'
-import { buildAsiaPage, buildGlobalPage, buildMetalsPage } from '../utils/global-market'
+import {
+  fetchEastmoneyAveragePrice,
+  fetchEastmoneyQuote,
+  fetchSinaQuotes,
+  fetchTencentQuotes,
+} from './quote'
+import { aShareSecid, bareCode } from '../utils/quote-consensus'
+import {
+  fetchAccurate,
+  fetchAShareAveragePrice,
+  fetchAShareBoardChangeMap,
+  fetchUsProxyChangeMap,
+} from '../utils/quote'
+import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
+import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
+import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
+import {
+  buildQuoteAsiaPage,
+  buildQuoteGlobalPage,
+  buildQuoteMetalsPage,
+  hasLiveQuote,
+  type QuoteGroup,
+  type QuoteItem,
+} from '../utils/quote-pages'
 
 export type MarketPageKey = 'global' | 'asia' | 'metals' | 'finance'
 
-/** 数据全部来自后端接口；接口失败或无数据时直接抛错，由页面展示错误态 */
+/**
+ * 行情页数据（全球 / 日韩 / 有色）全部来自 docs/tabbar-api.md 的外部接口：
+ *   ① 腾讯 qt.gtimg.cn   ② 新浪 hq.sinajs.cn
+ *   ③ 东财 stock/get     ④ 东财 ulist.np/get
+ * 有色页额外有 ⑥ 金投网金店金价（api.jijinhao.com，见 api/gold-shop.ts）。
+ * 由 api/quote.ts（单接口）+ utils/quote.ts（多源聚合）+ utils/market-session.ts（会话）封装。
+ * 财经页（新闻）仍走后端 news 接口。
+ */
+
+// ---------------------------------------------------------------------------
+// 全球页：A股指数 + 美股指数 + 宏观经济 + 行业板块
+// ---------------------------------------------------------------------------
+
+/**
+ * A股平均股价取数链（通达信 880003 口径，全市场等权平均）：
+ * ①东财官方平均股价指数（ulist.np/get，secid 47.800005，用户指定接口，见 api/quote.ts）
+ * → ②腾讯 sh880003（与全球指数同批请求，零额外请求）→ ③新浪 sh880003 →
+ * ④东财全市场等权自算（60s 缓存，见 utils/quote.ts）。
+ * 任一路给出有效价格即采用；全部失败返回 null（卡片显示 --）。
+ */
+async function resolveAShareAveragePrice(
+  indexQuotes: TencentQuote[],
+): Promise<{ price: number | null; pct: number | null }> {
+  const em = await fetchEastmoneyAveragePrice(AVG_PRICE_CONFIG.emSecid)
+  if (em && em.price !== null && em.price > 0 && !isAbnormalPct(em.changePercent)) {
+    return { price: em.price, pct: em.changePercent }
+  }
+  const tc = indexQuotes.find((quote) => quote.code === AVG_PRICE_CONFIG.tc)
+  if (tc?.valid && tc.latestPrice !== null && !isAbnormalPct(tc.changePercent)) {
+    return { price: tc.latestPrice, pct: tc.changePercent }
+  }
+  const sinaRows = await fetchSinaQuotes([AVG_PRICE_CONFIG.sinaKey])
+  const sina = parseSinaQuote(AVG_PRICE_CONFIG.sinaKey, sinaRows[0]?.fields ?? [])
+  if (sina.price !== null && sina.price > 0 && !isAbnormalPct(sina.changePercent)) {
+    return { price: sina.price, pct: sina.changePercent }
+  }
+  console.warn('[global] 东财平均股价指数/腾讯/新浪 均无有效数据，回退东财全市场等权自算')
+  return fetchAShareAveragePrice()
+}
+
 async function getGlobalMarketPage(): Promise<MarketPageData> {
-  const [indices, sectors, commodity, forex, bond, crypto] = await Promise.all([
-    globalApi.getIndices(),
-    globalApi.getSectors('us'),
-    globalApi.getAssets('commodity'),
-    globalApi.getAssets('forex'),
-    globalApi.getAssets('bond'),
-    globalApi.getAssets('crypto'),
+  // ① 腾讯指数（与实时会话探测共用同一次请求；顺带批量拉 880003 平均股价）
+  const indexQuotes = await fetchTencentQuotes([
+    ...GLOBAL_INDICES.map((item) => item.code),
+    AVG_PRICE_CONFIG.tc,
   ])
-  const assets = [...commodity, ...forex, ...bond, ...crypto]
-  if (!indices.length && !sectors.length && !assets.length) throw new Error('empty')
-  return buildGlobalPage(indices, sectors, assets)
+  const session = await resolveGlobalMarketSession(indexQuotes)
+  const indexByCode = new Map(indexQuotes.map((quote) => [quote.code, quote]))
+  const indexItem = (cfg: GlobalIndexConfig): QuoteItem => {
+    const quote = indexByCode.get(cfg.code)
+    return {
+      code: cfg.code,
+      name: displayName(quote?.name, cfg.name),
+      price: quote?.latestPrice ?? null,
+      pct: quote?.changePercent ?? null,
+    }
+  }
+  // 全球指数按市场归属拆分展示：A股指数（A股四大指数）+ 美股指数（三大指数）
+  const cnIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'cn').map(indexItem)
+  const usIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'us').map(indexItem)
+  // A股平均股价插在A股指数末尾（属于 A 股口径，不放入美股指数）；
+  // 分时源与卡片报价同 secid（47.800005，东财官方平均股价指数，见 config/minute.ts AVG）
+  const avgPrice = await resolveAShareAveragePrice(indexQuotes)
+  cnIndices.push({
+    code: AVG_PRICE_CONFIG.code,
+    name: AVG_PRICE_CONFIG.name,
+    price: avgPrice.price,
+    pct: avgPrice.pct,
+  })
+
+  // ② 新浪批量预取宏观资产全部 key（供 fetchAccurate 复用，避免重复请求）
+  const sinaKeys = Array.from(
+    new Set(
+      MACRO_ASSETS.flatMap((asset) =>
+        asset.sources.flatMap((source) =>
+          source.kind.startsWith('sina') && source.key
+            ? Array.isArray(source.key)
+              ? source.key
+              : [source.key]
+            : [],
+        ),
+      ),
+    ),
+  )
+  const sinaRows = await fetchSinaQuotes(sinaKeys)
+  const sinaBatch = new Map(sinaRows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
+
+  // ③ 宏观资产逐项 fetchAccurate（新浪批量优先，腾讯 / 东财兜底，共识取中位数）
+  const macro: QuoteItem[] = []
+  for (const asset of MACRO_ASSETS) {
+    const quote = await fetchAccurate(asset.sources, { sina: sinaBatch }, { parallel: 2 })
+    macro.push({
+      code: asset.code,
+      name: asset.name,
+      price: quote?.price ?? null,
+      pct: quote?.changePercent ?? null,
+    })
+  }
+
+  // ④ 行业板块：A股时段取东财板块涨跌幅；非 A 股时段取美股代理股涨跌幅均值
+  const boardPct: Record<string, number> = {}
+  if (session.useA) {
+    const boardMap = await fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code))
+    for (const board of INDUSTRY_BOARDS) {
+      const pct = boardMap[board.code] ?? boardMap[`90.${board.code}`]
+      if (pct !== undefined) boardPct[board.code] = pct
+    }
+  } else {
+    const proxyMap = await fetchUsProxyChangeMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
+    for (const board of INDUSTRY_BOARDS) {
+      const pcts = board.proxies
+        .map((proxy) => proxyMap[proxy] ?? proxyMap[bareCode(proxy)])
+        .filter((pct): pct is number => typeof pct === 'number' && Number.isFinite(pct))
+      if (pcts.length) {
+        boardPct[board.code] = pcts.reduce((sum, pct) => sum + pct, 0) / pcts.length
+      }
+    }
+  }
+  const sectors: QuoteItem[] = INDUSTRY_BOARDS.map((board) => {
+    const item: QuoteItem = {
+      code: board.code,
+      name: board.name,
+      price: null,
+      pct: boardPct[board.code] ?? null,
+    }
+    if (!session.useA) {
+      // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
+      // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
+      item.minuteCode = `us-${board.code}`
+    }
+    return item
+  })
+
+  if (!cnIndices.length && !usIndices.length && !macro.length && !sectors.length) {
+    throw new Error('暂无行情数据')
+  }
+  return buildQuoteGlobalPage({
+    cnIndices,
+    usIndices,
+    macro,
+    sectors,
+    statusLabel: '全球市场',
+    statusTone: session.statusTone,
+    sectorBadge: session.useA ? 'A股时段' : '美股时段',
+    sectorTitle: session.useA ? '中国行业板块' : '美股行业板块',
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 日韩页：指数 6 + 个股 16 + 汇率 5
+// ---------------------------------------------------------------------------
+
+async function fetchAsiaIndices(): Promise<QuoteItem[]> {
+  // ① 新浪批量 1 次（6 个指数 key，等价于文档的并发 6 路）
+  const rows = await fetchSinaQuotes(ASIA_INDICES.map((cfg) => cfg.sinaKey))
+  const byKey = new Map(rows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
+  const results: Array<QuoteItem | null> = new Array(ASIA_INDICES.length).fill(null)
+
+  // 新浪源条目（区间校验通过才采用）
+  const sinaItem = (cfg: AsiaIndexConfig): QuoteItem | null => {
+    const quote = byKey.get(cfg.sinaKey)
+    if (quote && quote.price !== null && validateQuote(quote.price, cfg.min, cfg.max)) {
+      return { code: cfg.code, name: cfg.name, price: quote.price, pct: quote.changePercent }
+    }
+    return null
+  }
+  // 东财源条目（仅配置了 emSecid 时可用；区间校验通过才采用）
+  const emItem = async (cfg: AsiaIndexConfig): Promise<QuoteItem | null> => {
+    if (!cfg.emSecid) return null
+    const em = await fetchEastmoneyQuote(cfg.emSecid)
+    if (em && em.latestPrice !== null && validateQuote(em.latestPrice, cfg.min, cfg.max)) {
+      return {
+        code: cfg.code,
+        name: displayName(em.name, cfg.name),
+        price: em.latestPrice,
+        pct: em.changePercent,
+      }
+    }
+    return null
+  }
+
+  // 默认 新浪优先、东财失败兜底；preferEm 的标的（新浪源陈旧/不更新，如 int_nikkei）东财优先、
+  // 东财失败退回新浪。东财 secid 与分时页同源（100.N225 / 100.VNINDEX），
+  // 保证「卡片展示值」与「点进去的分时」口径一致。
+  await Promise.all(
+    ASIA_INDICES.map(async (cfg, index) => {
+      results[index] =
+        cfg.preferEm && cfg.emSecid
+          ? ((await emItem(cfg)) ?? sinaItem(cfg))
+          : (sinaItem(cfg) ?? (await emItem(cfg)))
+    }),
+  )
+  return results.filter((item): item is QuoteItem => item !== null)
+}
+
+async function fetchAsiaStocks(configs: AsiaStockConfig[]): Promise<QuoteItem[]> {
+  if (!configs.length) return []
+  // ① 腾讯批量 1 次（全部个股，命中则不拉东财）
+  const rows = await fetchTencentQuotes(configs.map((cfg) => cfg.tc))
+  const byTc = new Map(rows.map((row) => [row.code, row]))
+  const results: Array<QuoteItem | null> = new Array(configs.length).fill(null)
+  const fallback: Array<{ cfg: AsiaStockConfig; index: number }> = []
+
+  configs.forEach((cfg, index) => {
+    const quote = byTc.get(cfg.tc)
+    if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
+      results[index] = {
+        code: cfg.code,
+        // 韩/日个股固定展示配置的中文名（腾讯等源返回英文名，如 Samsung Electronics Co., Ltd.）
+        name: cfg.name,
+        price: quote.latestPrice,
+        pct: quote.changePercent,
+      }
+    } else {
+      fallback.push({ cfg, index })
+    }
+  })
+
+  // ② 东财个股兜底（并发补齐未命中项）
+  await Promise.all(
+    fallback.map(async ({ cfg, index }) => {
+      const em = await fetchEastmoneyQuote(cfg.emSecid)
+      if (em && em.latestPrice !== null) {
+        results[index] = {
+          code: cfg.code,
+          // 同上：东财兜底也统一用配置的中文名
+          name: cfg.name,
+          price: em.latestPrice,
+          pct: em.changePercent,
+        }
+      } else {
+        results[index] = { code: cfg.code, name: cfg.name, price: null, pct: null }
+      }
+    }),
+  )
+  return results.filter((item): item is QuoteItem => item !== null)
+}
+
+/**
+ * 汇率涨跌幅：仅丢弃异常值（|pct| >= 80，与 fetchAccurate 同款护栏）。
+ * 外汇日间波动通常 <1%（实测 -0.3% ~ +0.05%），正常小波动原样保留，
+ * 不再做「|pct|<5 归零」（旧规则会把所有真实涨跌压成 0）。
+ */
+function normalizeRatePct(pct: number | null | undefined): number | null {
+  if (pct === null || pct === undefined) return null
+  return isAbnormalPct(pct) ? null : pct
+}
+
+/** 汇率条目（东财兜底价格 ÷100；涨跌幅仅做异常护栏） */
+function rateItem(
+  cfg: AsiaRateConfig,
+  price: number | null,
+  pct: number | null | undefined,
+): QuoteItem {
+  return {
+    code: cfg.code,
+    name: cfg.name,
+
+    price,
+    pct: normalizeRatePct(pct),
+  }
+}
+
+async function fetchAsiaRates(): Promise<QuoteItem[]> {
+  // ① 新浪批量 1 次（5 个汇率 key）
+  const rows = await fetchSinaQuotes(ASIA_RATES.map((cfg) => cfg.sinaKey))
+  const byKey = new Map(rows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
+  const results: Array<QuoteItem | null> = new Array(ASIA_RATES.length).fill(null)
+  const fallback: Array<{ cfg: AsiaRateConfig; index: number }> = []
+
+  ASIA_RATES.forEach((cfg, index) => {
+    const quote = byKey.get(cfg.sinaKey)
+    if (quote && quote.price !== null && quote.price > 0) {
+      results[index] = rateItem(cfg, quote.price, quote.changePercent)
+    } else {
+      fallback.push({ cfg, index })
+    }
+  })
+
+  // ② 东财汇率兜底：价格 ÷100（119 汇率 f43 为 10^4 倍精度，
+  //    normalizeEastmoneyQuote 按 f152=2 已 ÷100，这里需再 ÷100；USDKRW 同样适用）
+  await Promise.all(
+    fallback.map(async ({ cfg, index }) => {
+      const em = await fetchEastmoneyQuote(cfg.emSecid)
+      if (em && em.latestPrice !== null) {
+        const price = em.latestPrice / 100
+        results[index] = rateItem(cfg, price, em.changePercent)
+      } else {
+        results[index] = rateItem(cfg, null, null)
+      }
+    }),
+  )
+  return results.filter((item): item is QuoteItem => item !== null)
+}
+
+function pickItems(byCode: Map<string, QuoteItem>, codes: string[]): QuoteItem[] {
+  return codes
+    .map((code) => byCode.get(code))
+    .filter((item): item is QuoteItem => item !== undefined)
 }
 
 async function getAsiaMarketPage(): Promise<MarketPageData> {
-  const indices = await globalApi.getIndices()
-  if (!indices.length) throw new Error('empty')
-  return buildAsiaPage(indices)
+  const allIndexItems = await fetchAsiaIndices()
+  const byCode = new Map(allIndexItems.map((item) => [item.code, item]))
+  const indexGroups: QuoteGroup[] = [
+    { id: 'asia-kr-index', title: '韩国指数', items: pickItems(byCode, ['KS11', 'KQ11']) },
+    { id: 'asia-jp-index', title: '日本指数', items: pickItems(byCode, ['N225', 'TPX']) },
+    { id: 'asia-asia-index', title: '亚洲指数', items: pickItems(byCode, ['VNINDEX', 'SENSEX']) },
+  ]
+
+  const krStocks = await fetchAsiaStocks(ASIA_KR_STOCKS)
+  const jpStocks = await fetchAsiaStocks(ASIA_JP_STOCKS)
+  const rates = await fetchAsiaRates()
+
+  const all = [...allIndexItems, ...krStocks, ...jpStocks, ...rates]
+  if (!all.length) throw new Error('暂无行情数据')
+
+  return buildQuoteAsiaPage({
+    indexGroups,
+    stockGroups: [
+      { id: 'asia-kr-stock', title: '韩国核心个股', items: krStocks },
+      { id: 'asia-jp-stock', title: '日本核心个股', items: jpStocks },
+    ],
+    rates,
+    statusTone: hasLiveQuote(all) ? 'active' : 'rest',
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 有色页：金银 / 工业金属 / 其他金属
+// ---------------------------------------------------------------------------
+
+/** 多源兜底命中的来源是否属于 A 股个股（腾讯 / 新浪A股 / 东财个股接口） */
+const A_SHARE_SOURCES = new Set(['tencent', 'sina_ashare', 'em'])
+
+/**
+ * 金属分时取数随会话切换，保证「卡片展示什么，点进去就看到什么」：
+ * - 国内盘（useA）：卡片展示沪主连/A股个股，分时沿用 config/minute.ts 既有源（113.xm / shxxxxxx）；
+ * - 外盘（useA=false）：GOLD/SILVER/COPPER 卡片展示 COMEX 报价，分时切到已验证的 COMEX 源
+ *   （GOLD-US/SILVER-US/COPPER-US）；铝/锌/镍/锡/钨卡片展示外盘报价但无已验证外盘分时源，
+ *   用 us- 前缀占位（无源）并给提示，避免误入沪主连/A股分时；钼/锗/铟/锑无外盘报价，
+ *   外盘时段仍展示 A 股个股，分时不变。
+ */
+function metalMinuteVariant(
+  metal: MetalConfig,
+  useA: boolean,
+): Pick<QuoteItem, 'minuteCode' | 'minuteUnavailableTip'> | undefined {
+  if (useA) return undefined
+  switch (metal.code) {
+    case 'GOLD':
+      return { minuteCode: 'GOLD-US' }
+    case 'SILVER':
+      return { minuteCode: 'SILVER-US' }
+    case 'COPPER':
+      return { minuteCode: 'COPPER-US' }
+    default:
+      return metal.usKeys.length
+        ? {
+          minuteCode: `us-${metal.code}`,
+          minuteUnavailableTip:
+            '外盘时段该金属展示外盘报价，暂无对应外盘分时图；国内盘时段可查看',
+        }
+        : undefined
+  }
+}
+
+async function resolveMetal(
+  metal: MetalConfig,
+  ctx: { sinaBatch: Map<string, SinaQuote>; tcMap: Map<string, TencentQuote>; useA: boolean },
+): Promise<QuoteItem> {
+  const base = { code: metal.code, name: metal.name }
+  // 分时取数随会话切换（外盘时段切 COMEX / 占位无源，见 metalMinuteVariant）
+  const minute = metalMinuteVariant(metal, ctx.useA)
+  // ① 新浪批量：优先国内或外盘 key 列表（取决于 useA），区间校验通过即采用
+  const preferred = ctx.useA ? [...metal.aKeys, ...metal.usKeys] : [...metal.usKeys, ...metal.aKeys]
+  for (const key of preferred) {
+    const quote = ctx.sinaBatch.get(key)
+    if (!quote || quote.price === null) continue
+    const range = metal.aKeys.includes(key) ? metal.aRange : metal.usRange
+    if (validateQuote(quote.price, range?.[0], range?.[1])) {
+      return { ...base, ...minute, price: quote.price, pct: quote.changePercent }
+    }
+  }
+
+  // ② 腾讯批量命中（tc 类金属股 / 钨 sh600549）：展示的是个股股价，打「个股」标
+  if (metal.tc) {
+    const quote = ctx.tcMap.get(metal.tc)
+    if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
+      return {
+        ...base,
+        ...minute,
+        name: displayName(quote.name, metal.name),
+        price: quote.latestPrice,
+        pct: quote.changePercent,
+        // 展示的是个股股价：标「个股」+ 所代表的金属
+        tags: ['个股', metal.name],
+      }
+    }
+  }
+
+  // ③ 多源兜底：腾讯 → 新浪A股 → 东财（钨等再补外盘 hf_ key）
+  const sources: QuoteSource[] = []
+  if (metal.tc) {
+    sources.push(
+      { kind: 'tencent', key: metal.tc },
+      { kind: 'sina_ashare', key: metal.tc.toLowerCase() },
+      { kind: 'em', secid: aShareSecid(metal.tc) },
+    )
+  }
+  if (metal.usKeys.length) {
+    sources.push({
+      kind: 'sina_hf',
+      key: metal.usKeys,
+      min: metal.usRange?.[0],
+      max: metal.usRange?.[1],
+    })
+  }
+  if (sources.length) {
+    const quote = await fetchAccurate(sources, {}, { parallel: 2 })
+    if (quote && quote.price !== null) {
+      return {
+        ...base,
+        ...minute,
+        price: quote.price,
+        pct: quote.changePercent,
+        // 命中个股来源（如钼/锗/铟/锑的 tc 兜底）时标「个股」+ 代表金属；外盘 hf_ 等金属报价不加标
+        tags: A_SHARE_SOURCES.has(quote.source) ? ['个股', metal.name] : undefined,
+      }
+    }
+  }
+
+  return { ...base, ...minute, price: null, pct: null }
 }
 
 async function getMetalsMarketPage(): Promise<MarketPageData> {
-  const assets = await globalApi.getAssets('commodity')
-  if (!assets.length) throw new Error('empty')
-  return buildMetalsPage(assets)
+  // 金店金价 / 实物黄金价格与行情拉取并行；失败返回 null（页面跳过对应分区，不影响整页）
+  const goldShopPromise = fetchGoldShopGroup()
+  const physicalGoldPromise = fetchPhysicalGoldGroup()
+  const session = await resolveNonferrousMarketSession()
+
+  // ① 新浪批量 1 次（全部 nf_*/hf_* key；useA 只影响解析顺序，批量一次拉全）
+  const sinaRows = await fetchSinaQuotes(metalSinaKeys())
+  const sinaBatch = new Map(sinaRows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
+
+  // ② 腾讯批量 1 次（tc 类金属股）
+  const tcCodes = METALS.map((metal) => metal.tc).filter((code): code is string => !!code)
+  const tcRows = await fetchTencentQuotes(tcCodes)
+  const tcMap = new Map(tcRows.map((row) => [row.code, row]))
+
+  // ③ 逐项解析（金银 / 工业金属 / 其他金属）
+  const items = await Promise.all(
+    METALS.map((metal) => resolveMetal(metal, { sinaBatch, tcMap, useA: session.useA })),
+  )
+  const itemByCode = new Map(METALS.map((metal, index) => [metal.code, items[index] as QuoteItem]))
+  const groups: QuoteGroup[] = METAL_SECTIONS.map((section) => ({
+    id: `metal-${section.id}`,
+    title: section.title,
+    tip: section.tip,
+    items: section.codes.flatMap((code) => {
+      const item = itemByCode.get(code)
+      return item ? [item] : []
+    }),
+  }))
+
+  // ④ 实物黄金价格分区（上海黄金交易所现货基准价，优先于金店金价）
+  const physicalGoldGroup = await physicalGoldPromise
+  if (physicalGoldGroup && physicalGoldGroup.items.length) {
+    groups.push(physicalGoldGroup)
+  }
+
+  // ⑤ 金店金价分区（真实金店零售价，独立外部源，失败自动隐藏）
+  const goldShopGroup = await goldShopPromise
+  if (goldShopGroup && goldShopGroup.items.length) {
+    groups.push(goldShopGroup)
+  }
+
+  if (
+    !items.some((item) => item.price !== null) &&
+    !goldShopGroup?.items.length &&
+    !physicalGoldGroup?.items.length
+  ) {
+    throw new Error('暂无行情数据')
+  }
+  return buildQuoteMetalsPage({
+    groups,
+    statusTone: session.statusTone,
+    badge: session.useA ? '国内盘' : '外盘',
+  })
 }
+
+/**
+ * 拉取金店金价并组装为分区（每品牌一行，展示足金/零售口径）。
+ * 任何失败都返回 null，由调用方决定是否展示，绝不让该分区拖垮整页。
+ */
+async function fetchGoldShopGroup(): Promise<QuoteGroup | null> {
+  try {
+    const quotes = await fetchGoldShopQuotes()
+    if (!quotes.length) return null
+    const byCode = new Map(quotes.map((quote) => [quote.code, quote]))
+    const items: QuoteItem[] = []
+    for (const shop of GOLD_SHOP_BRANDS) {
+      const configs = GOLD_SHOP_CATALOG[shop] ?? []
+      if (!configs.length) continue
+      const chosen = pickGoldShopItem(configs, byCode)
+      if (!chosen) continue
+      // 标签用目录品类名（如「零售价」→「零售」），不用上游 showName（可能是一长串）
+      const config = configs.find((item) => item.code === chosen.code)
+      items.push({
+        code: `GS-${shop}`,
+        name: shop,
+        price: chosen.price,
+        pct: chosen.pct,
+        icon: '🏬',
+        tags: [goldShopItemLabel(config?.item ?? chosen.item)],
+        // 上游每条报价带 time（epoch ms），展示为「HH:mm 更新」（跨天补日期）
+        updatedAt: formatItemUpdatedAt(chosen.time),
+      })
+    }
+    if (!items.length) return null
+    return {
+      id: 'metal-gold-shop',
+      title: '金店金价',
+      tip: '金店足金饰品零售价（元/克），来源：网络公开数据，仅供参考，以门店实际挂牌价为准',
+      items,
+      // 上游不保证提供涨跌幅（常为 0），为 0 时隐藏涨跌徽标，避免展示无意义的 0.00%
+      hideFlatChange: true,
+    }
+  } catch (error) {
+    console.warn('[metals] 金店金价分区构建失败，跳过:', error)
+    return null
+  }
+}
+
+/**
+ * 拉取上海黄金交易所实物黄金价格并组装为分区（黄金9999 为基准价）。
+ * 失败或全部无价时返回 null，由调用方决定是否展示。
+ */
+async function fetchPhysicalGoldGroup(): Promise<QuoteGroup | null> {
+  try {
+    const quotes = await fetchPhysicalGoldQuotes()
+    if (!quotes.length) return null
+    const byCode = new Map(quotes.map((quote) => [quote.code, quote]))
+    const items: QuoteItem[] = []
+    for (const cfg of PHYSICAL_GOLD_CATALOG) {
+      const quote = byCode.get(cfg.code)
+      // 区间校验防上游异常快照（如金条50g 无报价返回 0）
+      if (!quote || !validateQuote(quote.price, cfg.min, cfg.max)) continue
+      items.push(physicalGoldItemOf(cfg, quote))
+    }
+    if (!items.length) return null
+    return {
+      id: 'metal-physical-gold',
+      title: '实物黄金价格',
+      tip: '上海黄金交易所现货价格：黄金/铂金为元/克，白银为元/千克；来源：网络公开数据，仅供参考',
+      items,
+      // 部分品种（如金条100g）上游涨跌幅为 0，为 0 时隐藏涨跌徽标
+      hideFlatChange: true,
+    }
+  } catch (error) {
+    console.warn('[metals] 实物黄金价格分区构建失败，跳过:', error)
+    return null
+  }
+}
+
+/** 单个 SGE 品种 → 展示条目；单位非「元/克」时（白银 元/千克）加单位标签防误解 */
+function physicalGoldItemOf(
+  cfg: PhysicalGoldItemConfig,
+  quote: { price: number; pct: number },
+): QuoteItem {
+  return {
+    code: `SGE-${cfg.code}`,
+    name: cfg.name,
+    price: quote.price,
+    pct: quote.pct,
+    icon: '🏛️',
+    tags: cfg.unit && cfg.unit !== '元/克' ? [cfg.unit] : undefined,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 财经页（保持后端 news 接口，不在 tabbar-api.md 范围）
+// ---------------------------------------------------------------------------
 
 async function getFinanceMarketPage(): Promise<MarketPageData> {
   const news = await newsApi.getFeed(20)
-  if (!news.length) throw new Error('empty')
+  if (!news.length) throw new Error('暂无新闻')
   const newsMetrics = news.map((item, index) => ({
     id: `finance-news-${index}`,
     name: item.title,
@@ -52,7 +657,7 @@ async function getFinanceMarketPage(): Promise<MarketPageData> {
   return {
     statusLabel: '财经',
     statusTone: 'active',
-    updatedLabel: '已更新 · 财经新闻',
+    updatedLabel: `数据更新时间：${formatDateTime()}`,
     sections: [{ id: 'finance-news', title: '财经新闻', tone: 'finance', metrics: newsMetrics }],
   }
 }

@@ -7,11 +7,11 @@ Component({
   },
   data: {
     tabs: [
-      { key: 'global', label: '全球', icon: '◎' },
-      { key: 'asia', label: '日韩', icon: '⊕' },
-      { key: 'metals', label: '有色', icon: '◇' },
-      { key: 'finance', label: '财经', icon: '◔' },
-      { key: 'settings', label: '设置', icon: '✤' },
+      { key: 'global', label: '全球', iconClass: 'icon-quanqiu' },
+      { key: 'asia', label: '日韩', iconClass: 'icon-target-full' },
+      { key: 'metals', label: '有色', iconClass: 'icon-yousejinshu' },
+      { key: 'finance', label: '财经', iconClass: 'icon-caijingrili' },
+      { key: 'settings', label: '设置', iconClass: 'icon-shezhi' },
     ],
   },
   lifetimes: {

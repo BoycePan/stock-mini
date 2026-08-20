@@ -1,7 +1,7 @@
 <view class="page theme-{{theme}}">
   <app-header title="新闻详情" showShare="{{true}}" showBack="{{true}}" showBrand="{{false}}" bind:share="onShare"></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <loading-state wx:if="{{loading}}" text="正在加载新闻详情" desc="正在为您获取完整内容，请稍候…"></loading-state>
     <view wx:elif="{{error && !news.title}}" class="empty-wrap">
       <empty-state title="新闻详情缺失"></empty-state>
     </view>
@@ -51,6 +51,7 @@
         <text class="guide-note">小程序无法直接打开外部网页，请复制链接后在浏览器中访问。</text>
       </view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </scroll-view>
 </view>

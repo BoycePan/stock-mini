@@ -1,7 +1,7 @@
 <view class="page theme-{{theme}}">
   <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}"></loading-state>
+    <loading-state wx:if="{{loading}}" text="正在加载板块数据" desc="正在为您获取板块行情与成分股，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
       <text>{{error}}</text>
       <button bindtap="loadData">重新加载</button>
@@ -52,5 +52,6 @@
         <empty-state wx:else title="暂无成分股" description="请检查板块 cid 是否有效"></empty-state>
       </view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
   </scroll-view>
 </view>

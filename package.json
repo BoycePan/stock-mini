@@ -1,18 +1,18 @@
 {
   "name": "wx-app-stock-workspace",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "packageManager": "pnpm@11.11.0",
   "scripts": {
-    "front": "pnpm --filter market-magic-mini",
-    "test": "pnpm --filter market-magic-mini test",
-    "type-check": "pnpm --filter market-magic-mini type-check",
-    "lint": "pnpm --filter market-magic-mini lint",
-    "lint:fix": "pnpm --filter market-magic-mini lint:fix",
-    "format": "pnpm --filter market-magic-mini format",
-    "format:check": "pnpm --filter market-magic-mini format:check",
+    "front": "pnpm --filter market-tracker-mini",
+    "test": "pnpm --filter market-tracker-mini test",
+    "type-check": "pnpm --filter market-tracker-mini type-check",
+    "lint": "pnpm --filter market-tracker-mini lint",
+    "lint:fix": "pnpm --filter market-tracker-mini lint:fix",
+    "format": "pnpm --filter market-tracker-mini format",
+    "format:check": "pnpm --filter market-tracker-mini format:check",
     "check": "pnpm test && pnpm type-check && pnpm lint && pnpm format:check",
-    "upload": "pnpm --filter market-magic-mini upload",
-    "upload:preview": "pnpm --filter market-magic-mini upload:preview"
+    "upload": "pnpm --filter market-tracker-mini upload",
+    "upload:preview": "pnpm --filter market-tracker-mini upload:preview"
   }
 }

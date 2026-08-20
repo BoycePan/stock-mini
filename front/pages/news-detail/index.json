@@ -1,7 +1,9 @@
 {
   "usingComponents": {
     "app-header": "/components/app-header/index",
-    "empty-state": "/components/empty-state/index"
+    "loading-state": "/components/loading-state/index",
+    "empty-state": "/components/empty-state/index",
+    "disclaimer-footer": "/components/disclaimer-footer/index"
   },
   "enablePullDownRefresh": false
 }

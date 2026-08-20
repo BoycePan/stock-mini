@@ -1,0 +1,81 @@
+<view class="page theme-{{theme}}">
+  <view class="page-header">
+    <app-header title="{{ name || '行情分时' }}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+  </view>
+  <view class="content-scroll">
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载分时"
+      desc="正在为您同步该标的当日分时走势，请稍候…"
+    ></loading-state>
+
+    <view wx:elif="{{ error }}" class="error-card">
+      <text>{{ error }}</text>
+      <button bindtap="onRetry">重新加载</button>
+    </view>
+
+    <block wx:else>
+      <view class="data-notice">
+        <view class="notice-icon">!</view>
+        <text class="notice-text">分时数据来自第三方公开数据，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text>
+      </view>
+
+      <!-- 基本信息卡片 -->
+      <view class="quote-card" wx:if="{{ quote }}">
+        <view class="quote-head">
+          <view class="quote-title">
+            <text class="stock-name">{{ name }}</text>
+            <text class="stock-code">{{ code }}</text>
+          </view>
+          <view class="quote-price">
+            <text class="price {{ quote.changeClass }}">{{ quote.price }}</text>
+            <text class="quote-change {{ quote.changeClass }}">{{ quote.changeText }}</text>
+          </view>
+        </view>
+        <view class="quote-grid">
+          <view>
+            <text>今开</text>
+            <text>{{ quote.open }}</text>
+          </view>
+          <view>
+            <text>最高</text>
+            <text>{{ quote.high }}</text>
+          </view>
+          <view>
+            <text>最低</text>
+            <text>{{ quote.low }}</text>
+          </view>
+          <view>
+            <text>均价</text>
+            <text>{{ quote.avg }}</text>
+          </view>
+          <view wx:if="{{ quote.hasVolume }}">
+            <text>成交量</text>
+            <text>{{ quote.volumeText }}</text>
+          </view>
+          <view>
+            <text>昨收</text>
+            <text>{{ quote.preClose }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="panel">
+        <view class="panel-title">
+          <text>{{ name }} · 当日分时</text>
+        </view>
+        <view wx:if="{{ minuteNote }}" class="minute-note">{{ minuteNote }}</view>
+        <minute-chart
+          wx:if="{{ points.length }}"
+          points="{{ points }}"
+          preClose="{{ preClose }}"
+          theme="{{ theme }}"
+        ></minute-chart>
+        <empty-state wx:else title="暂无分时数据"></empty-state>
+      </view>
+    </block>
+
+    <disclaimer-footer></disclaimer-footer>
+    <view class="bottom-space"></view>
+  </view>
+</view>

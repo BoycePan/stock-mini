@@ -7,6 +7,7 @@ import {
   releaseStoreBindings,
 } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { getAppVersion } from '../../utils/version'
 
 Page({
   data: {
@@ -14,11 +15,30 @@ Page({
     theme: rootStore.settings.theme,
     user: null as User | null,
     isLoggedIn: false,
+    version: '',
   },
   onLoad() {
     bindTheme(this)
+    // 版本号动态读取：体验版 / 正式版取微信运行时上报的发版版本号，开发版回退兜底版本
+    this.setData({ version: getAppVersion() })
     // 用户信息 / 登录态来自全局 auth store，登录、登出自动同步
     registerStoreBinding(this, bindGlobalAuth(this))
+    this.ensureAutoLogin()
+  },
+
+  ensureAutoLogin() {
+    if (!rootStore.auth.isLoggedIn) {
+      rootStore.auth.ensureLogin().catch((err: unknown) => {
+        console.warn('[settings] 自动登录失败:', err)
+      })
+    }
+  },
+  onLoginTap() {
+    if (!rootStore.auth.isLoggedIn) {
+      rootStore.auth.login().catch((err: unknown) => {
+        console.warn('[settings] 登录失败:', err)
+      })
+    }
   },
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
@@ -28,16 +48,6 @@ Page({
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
     if (!key) return
     wx.navigateTo({ url: `/pages/legal/index?type=${key}` })
-  },
-  onLogout() {
-    wx.showModal({
-      title: '退出登录',
-      content: '退出后再次进入行情页将自动重新登录',
-      confirmColor: '#EB514D',
-      success: (result) => {
-        if (result.confirm) rootStore.auth.logout()
-      },
-    })
   },
   onUnload() {
     releaseStoreBindings(this)
