@@ -1,5 +1,2 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # 提交前自动格式化前端代码（仅处理暂存区中 front/ 下的文件）
 pnpm exec lint-staged
