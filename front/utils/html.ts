@@ -201,14 +201,14 @@ const BLOCK_FONT_TAGS = new Set([
   'code',
 ])
 
-const BODY_FONT_SIZE = '14px'
+const BODY_FONT_SIZE = '16px'
 const HEADING_FONT_SIZES: Record<string, string> = {
-  h1: '22px',
-  h2: '19px',
-  h3: '17px',
-  h4: '16px',
-  h5: '15px',
-  h6: '15px',
+  h1: '24px',
+  h2: '21px',
+  h3: '19px',
+  h4: '17px',
+  h5: '16px',
+  h6: '16px',
 }
 
 function parseAttrs(attrStr: string): Map<string, string> {

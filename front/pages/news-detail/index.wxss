@@ -55,8 +55,8 @@
   display: block;
   margin-top: 24rpx;
   color: #4a5a70;
-  font-size: 27rpx;
-  line-height: 42rpx;
+  font-size: 30rpx;
+  line-height: 46rpx;
 }
 
 /* rich-text 富文本正文：节点内已注入主题色/字号，容器样式作为兜底 */
@@ -64,7 +64,7 @@
   display: block;
   margin-top: 24rpx;
   color: #3d4c63;
-  font-size: 28rpx;
+  font-size: 32rpx;
   line-height: 1.8;
   word-break: break-word;
 }
