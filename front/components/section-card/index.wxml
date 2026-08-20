@@ -66,8 +66,8 @@
 
   <info-dialog
     visible="{{ tipVisible }}"
-    title="{{ section.title }}"
-    content="{{ section.tip }}"
+    title="{{ section.title || '' }}"
+    content="{{ section.tip || '' }}"
     bind:close="onCloseTip"
   ></info-dialog>
 </view>
