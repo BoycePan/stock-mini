@@ -106,6 +106,13 @@
             <artifactId>hutool-core</artifactId>
             <version>5.8.47</version>
         </dependency>
+
+        <!-- RSS/Atom 解析：RssNewsScheduler 定时拉取新闻源（兼容 RSS 0.9x/1.0/2.0 与 Atom） -->
+        <dependency>
+            <groupId>com.rometools</groupId>
+            <artifactId>rome</artifactId>
+            <version>2.1.0</version>
+        </dependency>
     </dependencies>
 
     <build>

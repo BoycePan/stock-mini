@@ -45,3 +45,7 @@ app:
     timeout-seconds: 5
     user-agent: "test-agent"
     referer: "https://test.local"
+  rss:
+    # 测试关闭 RSS 定时拉取：@SpringBootTest 启动时 RssNewsScheduler 会种子+首轮拉取，
+    # 避免测试上下文触发真实网络请求。
+    enabled: false

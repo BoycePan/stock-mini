@@ -7,7 +7,7 @@ server:
 # 容器内默认 /apps/logs，由 deploy.sh 挂载宿主目录；本机调试可设 LOG_DIR=logs
 logging:
   file:
-    path: ${LOG_DIR:/apps/logs}
+    path: ${LOG_DIR:/Users/lilaiyun/Downloads/logs}
 
 spring:
   application:
@@ -79,6 +79,16 @@ app:
     # 指数/板块/资产快照定时刷新：默认 60s 批量拉最新点位落 quote_snapshot（63+ symbol，30s 会撞雅虎限流）
     snapshot-enabled: ${FETCH_SNAPSHOT_ENABLED:true}
     snapshot-interval-ms: ${FETCH_SNAPSHOT_INTERVAL_MS:60000}
+  rss:
+    # RSS 新闻定时拉取（RssNewsScheduler，每分钟）。源列表在数据库 rss_source 表（见 scripts/rss_source.sql），
+    # 本段只放运行参数与 Worker 凭据。
+    enabled: ${RSS_ENABLED:true}
+    # 每个源每轮最多取多少条（实际入库因去重通常远少于此）
+    max-items-per-feed: ${RSS_MAX_ITEMS:20}
+    # Cloudflare Worker 转发通道：配了才能拉 via_worker=true 的源（海外源）。
+    # 不配 RSS_WORKER_BASE/RSS_AUTH_TOKEN 时自动沿用 FETCH_*（Yahoo sidecar 同款 Worker，见上方 app.fetch）。
+    worker-base: ${RSS_WORKER_BASE:${FETCH_WORKER_BASE:}}
+    auth-token: ${RSS_AUTH_TOKEN:${FETCH_AUTH_TOKEN:}}
   logging:
     # 每个 HTTP 请求的耗时日志（方法/URI/状态码/耗时ms/IP/uid），见 RequestLogFilter
     request-enabled: ${REQUEST_LOG_ENABLED:true}
