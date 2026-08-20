@@ -27,7 +27,8 @@ let lastMinuteRequestAt = 0
 
 /**
  * 首页卡片当日分时图查看页（纯前端直连外部接口，见 docs/minute-api.md）。
- * 入参：code=首页卡片行情code（如 sh000001 / KS11 / GOLD）、name=展示名。
+ * 入参：code=首页卡片行情code（如 sh000001 / KS11 / GOLD）、name=展示名；
+ * mcode=分时取数专用代码（随会话切换口径，如外盘 GOLD → GOLD-US 取 COMEX），缺省等于 code。
  * 数据源按 东财 → 腾讯 → Yahoo 兜底；页面可见期间每 8s 静默刷新一次。
  */
 Page({
@@ -35,6 +36,8 @@ Page({
     theme: rootStore.settings.theme,
     code: '',
     name: '',
+    /** 分时取数代码（缺省与 code 相同；不同时用于外盘/会话切换口径） */
+    mcode: '',
     loading: true,
     /** 是否有请求进行中（含静默刷新），供自动刷新跳过并发 */
     requesting: false,
@@ -52,8 +55,10 @@ Page({
     bindTheme(this)
     const code = decodeURIComponent(options.code || '')
     const name = decodeURIComponent(options.name || '')
-    this.setData({ code, name })
-    if (!hasMinuteSources(code)) {
+    // 分时取数代码：显式 mcode 优先（外盘/会话切换口径），缺省用展示 code
+    const mcode = decodeURIComponent(options.mcode || '') || code
+    this.setData({ code, name, mcode })
+    if (!hasMinuteSources(mcode)) {
       this.setData({ loading: false, error: '该指标暂无分时数据' })
       return
     }
@@ -85,7 +90,7 @@ Page({
     this.setData({ requesting: true })
     if (!silent) this.setData({ loading: true, error: '' })
     try {
-      const result = await fetchMinuteData(this.data.code)
+      const result = await fetchMinuteData(this.data.mcode || this.data.code)
       if (result) {
         this.setData({
           loading: false,
@@ -157,7 +162,12 @@ Page({
     return {
       title: this.data.name || '行情分时',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
-      path: buildSharePath('minute', { code: this.data.code, name: this.data.name }),
+      path: buildSharePath('minute', {
+        code: this.data.code,
+        name: this.data.name,
+        // 取数口径与展示 code 不同时（外盘/会话切换）一并透传，保证分享打开仍是同一标的
+        mcode: this.data.mcode && this.data.mcode !== this.data.code ? this.data.mcode : undefined,
+      }),
     }
   },
 })

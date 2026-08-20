@@ -6,10 +6,21 @@
  *   - tc    腾讯分时     web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股兜底）
  *   - yahoo Yahoo 1分钟   query1.finance.yahoo.com/v8/finance/chart?range=1d&interval=1m
  *                        （东财分时不覆盖的标的：韩股/日股/汇率/VIX/KOSDAQ 等）
+ *   - emProxies 美股代理股分时均值合成（东财 trends2，每只代理归一化到昨收 100 后取均值，
+ *     用于美股时段行业板块：卡片展示的正是代理股涨跌幅均值，合成图与之同口径）
  *
  * 取数优先级：em → tc → yahoo（与首页「新浪 → 腾讯 → 东财」兜底链同思路）。
  * 每个 secid / 代码均已实测可拿到当日分时数据（验证矩阵见 docs/minute-api.md「验证结果」）。
+ *
+ * 会话随卡片口径切换（见 api/market.ts）：
+ *   - 有色页 GOLD/SILVER/COPPER 在「外盘」时段卡片展示 COMEX 报价，分时对应
+ *     GOLD-US / SILVER-US / COPPER-US（东财 COMEX 分时，与全球页 GC/SI/HG 同一已验证源）；
+ *   - 美股时段行业板块（us-BKxxxx）为代理股分时均值合成，标注各代理股中文名；
+ *   - 外盘无分时源的金属（us-ALUMINUM 等）**刻意不配置**：卡片展示外盘报价但没有
+ *     已验证的外盘分时源，点击给出提示而非展示错误市场（沪主连/A股）的数据。
  */
+
+import { INDUSTRY_BOARDS } from './tabbar'
 
 export interface MinuteSources {
   /** 东财分时 secid（trends2/get，如 1.000001 / 113.aum / 90.BK1134） */
@@ -18,8 +29,102 @@ export interface MinuteSources {
   tc?: string
   /** Yahoo 1分钟 符号（如 ^VIX / 005930.KS / CNYKRW=X） */
   yahoo?: string
+  /**
+   * 美股代理股分时均值合成：东财 secid 数组（如 ['105.NVDA', '105.AMD']）。
+   * 每只代理归一化到昨收 100 后逐分钟取均值（跨零点对齐），与卡片展示的代理股涨跌幅均值同口径。
+   */
+  emProxies?: string[]
   /** 展示提示（如 TOPIX 用 ETF 代理时说明图表标的），有值时在分时页面板标题下展示 */
   note?: string
+}
+
+/**
+ * 美股代理股中文名表（key 为裸代码，105.NVDA → NVDA）。
+ * 覆盖 INDUSTRY_BOARDS 全部代理股（测试强制校验，新增代理漏配会失败）；
+ * 名称优先采用东财返回的中文名（实测 105.NVDA=英伟达 / 105.AMD=超威半导体 等），
+ * 东财返回英文名的代理股（Coherent/Lumentum/Vertiv 等）在此补中文名；
+ * ETF 统一用简短中文名（半导体ETF / 机器人ETF 等），便于分时页标注阅读。
+ * 展示时以此表为准，东财名仅作未收录时的兜底。
+ */
+export const US_PROXY_NAMES: Record<string, string> = {
+  // AI算力
+  NVDA: '英伟达',
+  AMD: '超威半导体',
+  AVGO: '博通',
+  MRVL: '迈威尔科技',
+  SMCI: '超微电脑',
+  // CPO
+  COHR: '高意', // Coherent
+  LITE: '朗美通', // Lumentum
+  AAOI: '应用光电',
+  FN: '飞尼科', // Fabrinet
+  CIEN: 'Ciena科技',
+  // 半导体 / 存储
+  SOXX: '半导体ETF',
+  MU: '美光科技',
+  WDC: '西部数据',
+  STX: '希捷科技',
+  // 数据中心 / 云计算
+  DLR: '数字房地产信托',
+  EQIX: '易昆尼克斯',
+  VRT: '维谛技术', // Vertiv
+  VST: '维斯特拉', // Vistra
+  CRM: '赛富时',
+  NOW: '现在服务公司', // ServiceNow
+  SNOW: '雪花数据', // Snowflake
+  ORCL: '甲骨文',
+  // 商业航天 / 卫星
+  RKLB: '火箭实验室', // Rocket Lab
+  ASTS: 'AST太空移动', // AST SpaceMobile
+  RDW: '红线航天', // Redwire
+  LUNR: '直觉机器', // Intuitive Machines
+  IRDM: '铱星通讯',
+  GSAT: '全球星',
+  VSAT: '卫讯公司',
+  // 机器人 / 自动驾驶 / 核电 / 电网
+  ROBO: '机器人ETF',
+  DRIV: '自动驾驶ETF', // Global X Autonomous & Electric Vehicles ETF
+  OKLO: '奥克洛', // Oklo
+  SMR: '纽斯凯尔', // NuScale Power
+  CEG: '星座能源', // Constellation Energy
+  GEV: 'GE维诺瓦', // GE Vernova
+  NEE: '新纪元能源',
+  PWR: '广达服务',
+  ETN: '伊顿',
+  // 军工 / 新能源 / 光伏 / 锂电池 / 能源
+  LMT: '洛克希德马丁',
+  RTX: '雷神技术',
+  NOC: '诺斯罗普-格鲁曼',
+  GD: '通用动力',
+  ENPH: '恩福能源', // Enphase Energy
+  FSLR: '第一太阳能',
+  RIVN: '里维安', // Rivian
+  SEDG: '太阳能边际', // SolarEdge Technologies
+  TAN: '光伏ETF',
+  BATT: '锂电池ETF', // Amplify Battery Metals & Materials ETF
+  XLE: '能源ETF',
+  FCG: '天然气ETF',
+  // 铜/有色 / 黄金 / 银行金融 / 生物医药 / 消费 / 稀土
+  FCX: '自由港麦克莫兰',
+  SCCO: '南方铜业',
+  TECK: '泰克资源',
+  AA: '美国铝业',
+  GDX: '黄金矿业ETF',
+  JPM: '摩根大通',
+  BAC: '美国银行',
+  WFC: '富国银行',
+  GS: '高盛',
+  LLY: '礼来',
+  PFE: '辉瑞',
+  MRK: '默沙东',
+  ABBV: '艾伯维',
+  KO: '可口可乐',
+  PG: '宝洁',
+  WMT: '沃尔玛',
+  COST: '开市客',
+  MP: 'MP材料', // MP Materials
+  REMX: '稀土ETF',
+  UUUU: '能源燃料', // Energy Fuels
 }
 
 /**
@@ -34,6 +139,11 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
   sh000001: { em: '1.000001', tc: 'sh000001' }, // 上证指数
   sz399001: { em: '0.399001', tc: 'sz399001' }, // 深证成指
+  sz399006: { em: '0.399006', tc: 'sz399006' }, // 创业板指
+  sh000688: { em: '1.000688', tc: 'sh000688' }, // 科创50
+  // A股平均股价：东财官方平均股价指数（市场号 47），与卡片报价同 secid，见 api/market.ts
+  AVG: { em: '47.800005' },
+  usDJI: { em: '100.DJIA' }, // 道琼斯工业（东财指数）
   usSPY: { em: '107.SPY' }, // 标普500（SPDR ETF，东财分时 185 点）
   usQQQ: { em: '105.QQQ' }, // 纳斯达克（Invesco QQQ）
 
@@ -133,12 +243,47 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   NICKEL: { em: '113.nim' }, // 镍 → 沪镍主连
   TIN: { em: '113.snm' }, // 锡 → 沪锡主连
 
+  // -------------------------------------------------------------------------
+  // 有色页 · 外盘时段（卡片展示 COMEX 报价时的分时对应，与全球页 GC/SI/HG 同一已验证源）
+  // -------------------------------------------------------------------------
+  'GOLD-US': {
+    em: '101.GC00Y',
+    note: '外盘时段：分时为 COMEX 黄金（美元/盎司），与卡片口径一致',
+  },
+  'SILVER-US': {
+    em: '101.SI00Y',
+    note: '外盘时段：分时为 COMEX 白银（美元/盎司），与卡片口径一致',
+  },
+  'COPPER-US': {
+    em: '101.HG00Y',
+    note: '外盘时段：分时为 COMEX 铜（美元/磅），与卡片口径一致',
+  },
+
   // 其他金属：无现货/期货分时，取对应 A 股上市公司（与首页 tc 兜底同标的）
   TUNGSTEN: { em: '1.600549', tc: 'sh600549' }, // 钨 → 厦门钨业
   MOLY: { em: '1.603993', tc: 'sh603993' }, // 钼 → 洛阳钼业
   GERMANIUM: { em: '0.002428', tc: 'sz002428' }, // 锗 → 云南锗业
   INDIUM: { em: '1.600961', tc: 'sh600961' }, // 铟 → 株冶集团
   ANTIMONY: { em: '1.601020', tc: 'sh601020' }, // 锑 → 华钰矿业
+
+  // -------------------------------------------------------------------------
+  // 全球页 · 美股时段行业板块（us-BKxxxx，见 utils/market-page-factory onMetricTap 的 minuteCode）
+  // 卡片展示的正是美股代理股涨跌幅均值，分时同样取代理股均值合成（东财 trends2，跨零点对齐，
+  // 基准=昨收100）。代理列表与 config/tabbar.ts 的 INDUSTRY_BOARDS 单一数据源保持一致。
+  // -------------------------------------------------------------------------
+  ...buildUsBoardMinuteSources(),
+}
+
+/**
+ * 美股时段行业板块的分时源：us-<板块代码> → 代理股分时均值合成。
+ * 由 INDUSTRY_BOARDS 自动生成，保证代理列表与首页行情取数完全一致。
+ */
+function buildUsBoardMinuteSources(): Record<string, MinuteSources> {
+  const entries: Record<string, MinuteSources> = {}
+  for (const board of INDUSTRY_BOARDS) {
+    entries[`us-${board.code}`] = { emProxies: [...board.proxies] }
+  }
+  return entries
 }
 
 /** 该卡片 code 是否支持当日分时图（有任一可用源） */

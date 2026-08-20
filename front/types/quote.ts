@@ -1,12 +1,11 @@
 /**
- * 外部行情接口（docs/tabbar-api.md ①-⑤）的传输 / 归一化类型。
+ * 外部行情接口（docs/tabbar-api.md ①-④）的传输 / 归一化类型。
  *
- * 这 4 个外部数据源：
+ * 外部数据源：
  *   ① 腾讯行情 qt.gtimg.cn（纯文本）
  *   ② 新浪行情 hq.sinajs.cn（纯文本）
  *   ③ 东财个股行情 push2delay.eastmoney.com/api/qt/stock/get（JSON）
  *   ④ 东财列表行情 push2delay.eastmoney.com/api/qt/ulist.np/get（JSON）
- *   ⑤ 跳转小程序配置 douyin.aaaa5.cn（JSON，设置页使用）
  */
 
 /** 腾讯行情解析结果（v_<code>="..." 按 ~ 拆分） */
@@ -113,16 +112,4 @@ export interface QuoteSource {
   /** 价格合理区间 [min,max]，价格不在区间内的源直接丢弃 */
   min?: number
   max?: number
-}
-
-/** 跳转小程序配置（docs/tabbar-api.md ⑤） */
-export interface JumpMpConfig {
-  visible: boolean
-  title: string
-  desc: string
-  actionText: string
-  icon: string
-  appId: string
-  path: string
-  envVersion: 'release' | 'develop' | 'trial'
 }

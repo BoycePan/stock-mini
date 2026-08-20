@@ -20,6 +20,7 @@
         bind:metrictap="onMetricTap"
       ></section-card>
     </block>
+    <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </scroll-view>
   <bottom-tabbar active="{{ activeTab }}" bind:change="onTabChange"></bottom-tabbar>

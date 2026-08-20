@@ -1,0 +1,4 @@
+<view class="disclaimer-footer {{theme === 'dark' ? 'dark' : ''}}">
+  <text class="disclaimer-text">数据源自公开信息，仅供参考，不构成投资建议。</text>
+  <text class="disclaimer-text">投资有风险，决策需谨慎。</text>
+</view>

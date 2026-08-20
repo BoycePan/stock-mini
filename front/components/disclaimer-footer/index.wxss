@@ -1,0 +1,16 @@
+.disclaimer-footer {
+  padding: 28rpx 48rpx 40rpx;
+  text-align: center;
+}
+
+.disclaimer-text {
+  display: block;
+  color: #8a98aa;
+  font-size: 20rpx;
+  line-height: 32rpx;
+}
+
+/* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
+.disclaimer-footer.dark .disclaimer-text {
+  color: #9cacc0;
+}

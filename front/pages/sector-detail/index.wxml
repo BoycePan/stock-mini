@@ -52,5 +52,6 @@
         <empty-state wx:else title="暂无成分股" description="请检查板块 cid 是否有效"></empty-state>
       </view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
   </scroll-view>
 </view>

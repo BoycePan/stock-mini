@@ -1,4 +1,5 @@
 import type { MinutePoint } from '../../types/stock'
+import { computeMinuteVolumeDirections } from '../../utils/minute'
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 type CanvasNode = WechatMiniprogram.Canvas
@@ -12,7 +13,7 @@ const DOWN_COLOR = '#20a66a'
  * - 价格线（最新价 >= 昨收 用涨色，否则跌色，与全局涨跌色一致）
  * - 均价线（橙色）
  * - 昨收基准虚线（不绘制文字标签）
- * - 下方成交量柱（按每分钟价格相对昨收着色；无成交量数据时整块隐藏，价格区占满）
+ * - 下方成交量柱（每分钟柱按该分钟收盘价相对开盘价分色：涨红、跌绿、平盘白/灰；无成交量数据时整块隐藏，价格区占满）
  * - 点击 / 拖动 canvas 显示十字光标 + 信息框（时间 / 价格 / 涨跌 / 均价 / 成交量），同花顺式交互
  * - 画布内不展示「当前价格」「昨收」常驻标签；价格刻度绘制在左侧留白，不遮挡图形
  * - 深浅主题配色跟随 theme
@@ -246,8 +247,8 @@ Component({
       }
       if (avgDrawn) ctx.stroke()
 
-      // 成交量柱（下方区域）：每根柱按该分钟价格相对昨收分色（价 >= 昨收 涨红，否则跌绿），
-      // 无昨收基准时统一蓝色；同色柱合并为一个 path 批量 fill 提升性能，无成交量数据时跳过
+      // 成交量柱（下方区域）：每根柱按该分钟收盘价相对开盘价分色（涨红、跌绿、平盘白/灰），
+      // 同色柱合并为一个 path 批量 fill 提升性能，无成交量数据时跳过
       if (hasVol) {
         const volMax = Math.max(...points.map((p) => p.volume || 0), 1)
         const volTop = padT + priceH + 10
@@ -256,34 +257,26 @@ Component({
         const bw = Math.max(1, slot * 0.6)
         const barH = (p: MinutePoint) =>
           (volBottom - volTop) * Math.min((p.volume || 0) / volMax, 1)
-        if (hasPre) {
-          // 先画跌色再画涨色，两种颜色各一批 path
-          const groups: Array<{ match: (p: MinutePoint) => boolean; color: string }> = [
-            { match: (p) => !((p.price ?? 0) >= preClose), color: 'rgba(32,166,106,0.55)' },
-            { match: (p) => (p.price ?? 0) >= preClose, color: 'rgba(235,81,77,0.55)' },
-          ]
-          for (const g of groups) {
-            ctx.beginPath()
-            for (let i = 0; i < n; i += 1) {
-              const p = points[i]
-              if (!p || !g.match(p)) continue
-              const h = barH(p)
-              if (h <= 0) continue
-              ctx.rect(xOf(i) - bw / 2, volBottom - h, bw, h)
-            }
-            ctx.fillStyle = g.color
-            ctx.fill()
-          }
-        } else {
+
+        const dirs = computeMinuteVolumeDirections(points, hasPre ? preClose : null)
+        const flatColor = isDark ? 'rgba(195,206,222,0.55)' : 'rgba(154,167,184,0.65)'
+
+        // 分组批量绘制：平（白/灰）、跌（绿）、涨（红）
+        const groups: Array<{ match: (i: number) => boolean; color: string }> = [
+          { match: (i) => dirs[i] === 'flat', color: flatColor },
+          { match: (i) => dirs[i] === 'down', color: 'rgba(32,166,106,0.55)' },
+          { match: (i) => dirs[i] === 'up', color: 'rgba(235,81,77,0.55)' },
+        ]
+        for (const g of groups) {
           ctx.beginPath()
           for (let i = 0; i < n; i += 1) {
             const p = points[i]
-            if (!p) continue
+            if (!p || !g.match(i)) continue
             const h = barH(p)
             if (h <= 0) continue
             ctx.rect(xOf(i) - bw / 2, volBottom - h, bw, h)
           }
-          ctx.fillStyle = 'rgba(66,120,237,0.45)'
+          ctx.fillStyle = g.color
           ctx.fill()
         }
 

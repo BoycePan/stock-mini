@@ -21,6 +21,13 @@ export interface QuoteItem {
   tags?: string[]
   /** 条目更新时间文案（如「09:53 更新」），有值时才在卡片上展示 */
   updatedAt?: string
+  /**
+   * 分时取数专用代码：随会话切换取数口径（如 外盘 GOLD → GOLD-US 取 COMEX 分时）。
+   * 缺省时用 code 取分时；该 code 无分时源时卡片不显示「分时」入口。
+   */
+  minuteCode?: string
+  /** 无分时源时点击卡片的提示文案（覆盖默认「该指标暂无分时数据」） */
+  minuteUnavailableTip?: string
 }
 
 export interface QuoteGroup {
@@ -41,6 +48,10 @@ export const QUOTE_ICONS: Record<string, string> = {
   // 全球指数
   sh000001: '🇨🇳',
   sz399001: '🇨🇳',
+  sz399006: '🇨🇳', // 创业板指
+  sh000688: '🇨🇳', // 科创50
+  AVG: '🧮', // A股平均股价（全市场等权自算）
+  usDJI: '🇺🇸', // 道琼斯工业
   usSPY: '🇺🇸',
   usQQQ: '🇺🇸',
   // 宏观经济
@@ -130,6 +141,8 @@ function metricOf(
   return {
     id: `q-${item.code}-${index}`,
     code: item.code,
+    minuteCode: item.minuteCode,
+    minuteUnavailableTip: item.minuteUnavailableTip,
     name: item.name,
     value: item.price === null ? '' : formatNumber(item.price),
     change: item.pct ?? 0,
@@ -198,7 +211,8 @@ export function buildQuoteGlobalPage(params: QuoteGlobalPageParams): MarketPageD
     if (group.id === 'industry-board') {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
-      // 24 个板块均支持分时图：整面板右上角以单个「分时」角标提示，代替逐卡片内联标签
+      // 板块分时随会话切换：A股时段 → 东财板块分时；美股时段 → 美股代理股均值合成分时。
+      // 两个会话均有分时图，整面板右上角以单个「分时」角标提示
       section.minuteCorner = true
       if (params.sectorBadge) {
         section.badge = params.sectorBadge

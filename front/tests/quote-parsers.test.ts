@@ -5,7 +5,7 @@ import {
   displayName,
   isAbnormalPct,
   normalizeEastmoneyQuote,
-  parseJumpMpBody,
+  parseEastmoneyAveragePrice,
   parseQuoteTime,
   parseSinaQuote,
   parseSinaText,
@@ -302,6 +302,34 @@ test('东财：价格除数规则', () => {
 })
 
 // ---------------------------------------------------------------------------
+// ③c 东财平均股价指数（ulist.np/get，secid 47.800005）
+// ---------------------------------------------------------------------------
+
+test('东财平均股价：f2 最新价 / f3 涨跌幅 / f18 昨收 / f14 名称', () => {
+  const quote = parseEastmoneyAveragePrice('47.800005', {
+    f12: '800005',
+    f13: 47,
+    f14: 'A股平均股价',
+    f2: 21.35,
+    f3: 1.25,
+    f18: 21.09,
+  })
+  assert.ok(quote)
+  assert.equal(quote.secid, '47.800005')
+  assert.equal(quote.code, '800005')
+  assert.equal(quote.name, 'A股平均股价')
+  assert.equal(quote.price, 21.35)
+  assert.equal(quote.changePercent, 1.25)
+  assert.equal(quote.previousClose, 21.09)
+})
+
+test('东财平均股价：缺 f2 视为无行情返回 null', () => {
+  assert.equal(parseEastmoneyAveragePrice('47.800005', null), null)
+  assert.equal(parseEastmoneyAveragePrice('47.800005', undefined), null)
+  assert.equal(parseEastmoneyAveragePrice('47.800005', { f14: 'A股平均股价', f3: 1.25 }), null)
+})
+
+// ---------------------------------------------------------------------------
 // 时间解析
 // ---------------------------------------------------------------------------
 
@@ -351,53 +379,6 @@ test('displayName：乱码 / 空值回退配置名', () => {
   assert.equal(displayName('pv_none_match', '黄金'), '黄金')
   assert.equal(displayName('上证指数', '兜底'), '上证指数')
   assert.equal(displayName('AAPL', '兜底'), 'AAPL')
-})
-
-// ---------------------------------------------------------------------------
-// ⑤ 跳转小程序配置解析
-// ---------------------------------------------------------------------------
-
-test('跳转配置：data.jumpMp 优先，appId 校验通过才可见', () => {
-  const config = parseJumpMpBody({
-    jumpMp: {
-      show: true,
-      appId: 'wx1234567890abcdef',
-      title: '看有色',
-      desc: '金银行情',
-      actionText: '去看看',
-      path: '/pages/x',
-      envVersion: 'trial',
-    },
-  })
-  assert.equal(config.visible, true)
-  assert.equal(config.appId, 'wx1234567890abcdef')
-  assert.equal(config.envVersion, 'trial')
-  assert.equal(config.actionText, '去看看')
-})
-
-test('跳转配置：data.more.jumpMp 与 data 本身兜底', () => {
-  const viaMore = parseJumpMpBody({ more: { jumpMp: { show: 1, appId: 'wx1234567890abcdef' } } })
-  assert.equal(viaMore.visible, true)
-
-  const viaSelf = parseJumpMpBody({ show: 'true', appId: 'wx1234567890abcdef' })
-  assert.equal(viaSelf.visible, true)
-})
-
-test('跳转配置：appId 含占位文案 / 格式非法则不可见', () => {
-  const placeholder = parseJumpMpBody({ jumpMp: { show: true, appId: '填写你的appid' } })
-  assert.equal(placeholder.visible, false)
-  assert.equal(placeholder.appId, '')
-
-  const invalid = parseJumpMpBody({ jumpMp: { show: true, appId: 'wx123' } })
-  assert.equal(invalid.visible, false)
-})
-
-test('跳转配置：字符串响应去掉 BOM 后解析，失败回默认隐藏配置', () => {
-  const config = parseJumpMpBody('\uFEFF{"jumpMp":{"show":"yes","appId":"wx1234567890abcdef"}}')
-  assert.equal(config.visible, true)
-  const broken = parseJumpMpBody('not-json{')
-  assert.equal(broken.visible, false)
-  assert.equal(broken.title, '看有色金属行情 金价魔方小程序')
 })
 
 // ---------------------------------------------------------------------------

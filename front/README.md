@@ -22,9 +22,8 @@ http://100.90.180.33:18487
   - ② 新浪行情 `https://hq.sinajs.cn`（文本）
   - ③ 东财个股行情 `push2delay.eastmoney.com/api/qt/stock/get`
   - ④ 东财列表行情 `push2delay.eastmoney.com/api/qt/ulist.np/get`
-  - ⑤ 跳转小程序配置 `douyin.aaaa5.cn`（设置页使用，已一并封装）
 - 封装分层（新增文件）：
-  - `api/quote.ts`：5 个外部接口的单接口封装（失败降级为空数据，不抛错）；
+  - `api/quote.ts`：4 个外部接口的单接口封装（失败降级为空数据，不抛错）；
   - `utils/quote.ts`：多源聚合 `fetchAccurate`（共识取中位数）、板块涨跌幅
     `fetchAShareBoardChangeMap` / `fetchUsProxyChangeMap`；
   - `utils/market-session.ts` + `utils/market-clock.ts`：A股/美股会话判定（30s 缓存）；
@@ -42,7 +41,7 @@ http://100.90.180.33:18487
 
 1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
    `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
-   `https://douyin.aaaa5.cn`（若用到跳转配置）；
+   `https://push2.eastmoney.com`（A股平均股价全市场快照的 clist 权威端点，push2delay 覆盖不足时回退）；
 2. **首页卡片点击查看当日分时**（`pages/minute/index`，纯前端直连）还需追加：
    `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
    （Yahoo 1分钟，仅韩股/日股/汇率/VIX/KOSDAQ 等东财腾讯无分时的标的，见 `docs/minute-api.md`，

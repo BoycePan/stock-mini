@@ -1,19 +1,20 @@
 /**
- * 行情外部接口统一封装（docs/tabbar-api.md ①-⑤）。
+ * 行情外部接口统一封装（docs/tabbar-api.md ①-④）。
  *
  * 页面 / 业务层只依赖本模块与 utils/quote.ts，不直接拼外部 URL。
  * 所有接口在请求失败时「降级为空数据」而非抛错：新浪/腾讯返回空行、东财返回 null / 空 map，
  * 由调用方按多源兜底链（新浪 → 腾讯 → 东财）自行补齐，避免单源故障拖垮整页。
  */
 
-import type { EastmoneyQuote, JumpMpConfig, SinaRow, TencentQuote } from '../types/quote'
+import type { EastmoneyQuote, SinaRow, TencentQuote } from '../types/quote'
 import {
-  JUMP_MP_DEFAULT,
   normalizeEastmoneyQuote,
-  parseJumpMpBody,
+  parseEastmoneyAveragePrice,
   parseSinaText,
   parseTencentText,
   tencentQuoteOf,
+  type EastmoneyAveragePrice,
+  type EastmoneyAveragePriceRaw,
   type EastmoneyRaw,
 } from '../utils/quote-parser'
 import { requestExternal } from './external'
@@ -22,7 +23,7 @@ const HOSTS = {
   tencent: 'https://qt.gtimg.cn',
   sina: 'https://hq.sinajs.cn',
   eastmoney: 'https://push2delay.eastmoney.com',
-  jumpMp: 'https://douyin.aaaa5.cn',
+  eastmoneyPush2: 'https://push2.eastmoney.com',
 } as const
 
 // ---------------------------------------------------------------------------
@@ -131,28 +132,133 @@ export async function fetchEastmoneyList(secids: string[]): Promise<Record<strin
 }
 
 // ---------------------------------------------------------------------------
-// ⑤ 跳转小程序配置：GET https://douyin.aaaa5.cn/1/3.json?t=<ts>（设置页使用）
+// ④b 东财全市场A股快照：GET .../api/qt/clist/get（A股平均股价等权自算的数据源）
+// fs = 沪深主板 + 创业板 + 科创板（深主板 t:6 / 创业板 t:80 / 沪主板 t:2 / 科创板 t:23），
+// 仅取 f2 最新价 / f18 昨收，控制响应体积。
+// 覆盖策略：优先单次大页（pz=8000）→ 覆盖不足按 pz=1000 分页补齐 → 仍不足回退
+// push2.eastmoney.com 主站（clist 权威端点）。data.total 兼容数字/数字字符串两种形态。
 // ---------------------------------------------------------------------------
 
-let jumpMpCache: { at: number; config: JumpMpConfig } | null = null
-const JUMP_MP_TTL = 60_000
+export interface EastmoneyClistItem {
+  f2?: number | string
+  f18?: number | string
+}
 
-export async function fetchJumpMpConfig(): Promise<JumpMpConfig> {
-  const now = Date.now()
-  if (jumpMpCache && now - jumpMpCache.at < JUMP_MP_TTL) {
-    return jumpMpCache.config
-  }
+export interface EastmoneyClistPage {
+  items: EastmoneyClistItem[]
+  /** data.total：满足 fs 过滤条件的全市场股票数（0 = 上游未返回，视为未知） */
+  total: number
+}
+
+async function fetchEastmoneyClistPage(
+  pn: number,
+  pz: number,
+  host: string = HOSTS.eastmoney,
+): Promise<EastmoneyClistPage> {
+  const params = [
+    `pn=${pn}`,
+    `pz=${pz}`,
+    'po=1',
+    'np=1',
+    'ut=fa5fd1943c7b386f172d6893dbfba10b',
+    'invt=2',
+    'fltt=2',
+    'fid=f3',
+    'fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23',
+    'fields=f2,f18',
+  ].join('&')
+  const url = `${host}/api/qt/clist/get?${params}`
   try {
-    const body = await requestExternal<unknown>(`${HOSTS.jumpMp}/1/3.json?t=${now}`, {
-      timeout: 8000,
-    })
-    const config = parseJumpMpBody(body)
-    jumpMpCache = { at: now, config }
-    return config
+    const body = await requestExternal<{
+      data?: { total?: number | string; diff?: EastmoneyClistItem[] }
+    }>(url, { timeout: 15000 })
+    // total 兼容数字 / 数字字符串（部分响应以字符串返回）
+    const raw = body?.data?.total
+    const parsed = typeof raw === 'number' ? raw : Number(String(raw ?? '').trim())
+    const total = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+    return { items: body?.data?.diff ?? [], total }
   } catch (error) {
-    console.warn('[quote] 跳转小程序配置请求失败:', error)
-    // 失败回退缓存或默认隐藏配置
-    return jumpMpCache?.config ?? { ...JUMP_MP_DEFAULT }
+    console.warn('[quote] 东财全市场A股快照失败:', error)
+    return { items: [], total: 0 }
+  }
+}
+
+/** 覆盖是否足够：total 已知要求 ≥90% 且 ≥3000 只；total 未知要求 ≥3000 只 */
+function hasEnoughCoverage(page: EastmoneyClistPage): boolean {
+  if (page.total > 0) {
+    return page.items.length >= Math.max(3000, Math.floor(page.total * 0.9))
+  }
+  return page.items.length >= 3000
+}
+
+async function fetchClistAll(host: string): Promise<EastmoneyClistPage> {
+  const first = await fetchEastmoneyClistPage(1, 8000, host)
+  if (hasEnoughCoverage(first)) return first
+
+  // 分页补齐：total 已知按页数并行拉全；未知逐页追加到空页 / 数量下限为止
+  if (first.total > 0) {
+    const pageSize = 1000
+    const pageCount = Math.ceil(first.total / pageSize)
+    const pages = await Promise.all(
+      Array.from({ length: pageCount }, (_, index) =>
+        fetchEastmoneyClistPage(index + 1, pageSize, host),
+      ),
+    )
+    return { items: pages.flatMap((page) => page.items), total: first.total }
+  }
+  const items = [...first.items]
+  for (let pn = 2; pn <= 10 && items.length < 3000; pn++) {
+    const page = await fetchEastmoneyClistPage(pn, 1000, host)
+    items.push(...page.items)
+    if (page.items.length === 0) break
+  }
+  return { items, total: 0 }
+}
+
+export async function fetchEastmoneyAShareSnapshot(): Promise<EastmoneyClistPage> {
+  const primary = await fetchClistAll(HOSTS.eastmoney)
+  if (hasEnoughCoverage(primary)) return primary
+
+  // push2delay 覆盖不足时回退 push2 主站（clist 权威端点；生产需将 push2.eastmoney.com 加入合法域名）
+  console.warn('[quote] push2delay 全市场快照覆盖不足，回退 push2:', {
+    got: primary.items.length,
+    total: primary.total,
+  })
+  const fallback = await fetchClistAll(HOSTS.eastmoneyPush2)
+  if (fallback.items.length >= primary.items.length) return fallback
+  return primary
+}
+
+// ---------------------------------------------------------------------------
+// ④c 东财平均股价指数：GET .../api/qt/ulist.np/get?fltt=2&fields=...&secids=47.800005
+// 东财官方「A股平均股价」指数（通达信 880003 口径，全市场等权平均）。
+// 字段取自用户指定 URL：f17 今开 / f18 昨收 / f8 换手率 / f15 最高 / f12 代码 /
+// f16 最低 / f115 振幅 / f2 最新价 / f14 名称 / f5 成交量 / f6 成交额 / f3 涨跌幅 /
+// f20 总市值 / f13 市场 / f145 均价 / f100 涨速 / f265 60日涨跌幅 / f266 年初至今涨跌幅。
+// ---------------------------------------------------------------------------
+
+const EM_AVG_PRICE_FIELDS =
+  'f17,f18,f8,f15,f12,f16,f115,f2,f14,f5,f6,f3,f20,f13,f145,f100,f265,f266'
+/** 东财平均股价指数 secid（市场号 47 = 平均股价指数；调用方可覆盖） */
+export const EM_AVG_PRICE_SECID = '47.800005'
+
+export async function fetchEastmoneyAveragePrice(
+  secid: string = EM_AVG_PRICE_SECID,
+): Promise<EastmoneyAveragePrice | null> {
+  const params = [
+    'fltt=2',
+    `fields=${encodeURIComponent(EM_AVG_PRICE_FIELDS)}`,
+    `secids=${secid}`,
+  ].join('&')
+  const url = `${HOSTS.eastmoney}/api/qt/ulist.np/get?${params}`
+  try {
+    const body = await requestExternal<{ data?: { diff?: EastmoneyAveragePriceRaw[] } }>(url, {
+      timeout: 10000,
+    })
+    return parseEastmoneyAveragePrice(secid, body?.data?.diff?.[0])
+  } catch (error) {
+    console.warn('[quote] 东财平均股价指数失败:', error)
+    return null
   }
 }
 
@@ -161,5 +267,6 @@ export const quoteApi = {
   sina: fetchSinaQuotes,
   eastmoneyQuote: fetchEastmoneyQuote,
   eastmoneyList: fetchEastmoneyList,
-  jumpMpConfig: fetchJumpMpConfig,
+  eastmoneyAShareSnapshot: fetchEastmoneyAShareSnapshot,
+  eastmoneyAveragePrice: fetchEastmoneyAveragePrice,
 }

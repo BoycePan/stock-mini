@@ -51,6 +51,7 @@
         <text class="guide-note">小程序无法直接打开外部网页，请复制链接后在浏览器中访问。</text>
       </view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </scroll-view>
 </view>

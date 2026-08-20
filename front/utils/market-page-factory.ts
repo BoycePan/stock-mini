@@ -87,8 +87,9 @@ export function createMarketPage(opts: MarketPageOptions) {
                 ...section,
                 metrics: section.metrics.map((metric) => ({
                   ...metricViewModel(metric),
-                  // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）
-                  minuteAvailable: hasMinuteSources(metric.code ?? ''),
+                  // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
+                  // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code。
+                  minuteAvailable: hasMinuteSources(metric.minuteCode ?? metric.code ?? ''),
                 })),
               })),
           },
@@ -146,18 +147,27 @@ export function createMarketPage(opts: MarketPageOptions) {
 
     /**
      * 点击行情卡片 → 查看当日分时图（纯前端，直连外部接口）。
-     * 无分时源的卡片（如金店金价、财经新闻）提示后忽略。
+     * 取数代码 = minuteCode ?? code（随会话切换口径，如外盘 GOLD → GOLD-US 取 COMEX）；
+     * 无分时源的卡片（美股时段板块 / 外盘无分时金属 / 金店金价 / 财经新闻）提示后忽略，
+     * 绝不跳转到与卡片展示口径不一致的行情。
      */
     onMetricTap(event: WechatMiniprogram.CustomEvent<{ metric?: MarketMetric }>) {
       const metric = event.detail.metric
       const code = metric?.code ?? ''
-      if (!code || !hasMinuteSources(code)) {
-        wx.showToast({ title: '该指标暂无分时数据', icon: 'none' })
+      const minuteCode = metric?.minuteCode ?? code
+      if (!minuteCode || !hasMinuteSources(minuteCode)) {
+        wx.showToast({
+          title: metric?.minuteUnavailableTip ?? '该指标暂无分时数据',
+          icon: 'none',
+        })
         return
       }
-      wx.navigateTo({
-        url: `/pages/minute/index?code=${encodeURIComponent(code)}&name=${encodeURIComponent(metric?.name ?? '')}`,
-      })
+      const query = [
+        `code=${encodeURIComponent(code)}`,
+        `name=${encodeURIComponent(metric?.name ?? '')}`,
+      ]
+      if (minuteCode !== code) query.push(`mcode=${encodeURIComponent(minuteCode)}`)
+      wx.navigateTo({ url: `/pages/minute/index?${query.join('&')}` })
     },
 
     ...shareHandlers,

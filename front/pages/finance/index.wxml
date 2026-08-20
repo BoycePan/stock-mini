@@ -45,6 +45,7 @@
       </view>
       <view wx:else class="empty-hint">暂无新闻</view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </scroll-view>
   <bottom-tabbar active="{{ activeTab }}" bind:change="onTabChange"></bottom-tabbar>

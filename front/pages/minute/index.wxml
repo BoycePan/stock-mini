@@ -75,6 +75,7 @@
       </view>
     </block>
 
+    <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </view>
 </view>

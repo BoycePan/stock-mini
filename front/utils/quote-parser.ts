@@ -4,7 +4,7 @@
  * 本模块不发起任何网络请求，只做「文本 / JSON → 结构化数据」，可在 Node 测试中直接复用。
  */
 
-import type { EastmoneyQuote, JumpMpConfig, SinaQuote, TencentQuote } from '../types/quote'
+import type { EastmoneyQuote, SinaQuote, TencentQuote } from '../types/quote'
 
 // ---------------------------------------------------------------------------
 // 通用工具
@@ -416,71 +416,45 @@ export function normalizeEastmoneyQuote(
 }
 
 // ---------------------------------------------------------------------------
-// ⑤ 跳转小程序配置解析（docs「附录 A」）
+// ③c 东财平均股价指数（ulist.np/get，secid 47.800005）
+// 东财官方「A股平均股价」指数（通达信 880003 口径，全市场等权平均）：
+// f2=最新价、f3=涨跌幅(%)、f18=昨收、f14=名称、f12=代码、f13=市场。
+// fltt=2 下价格与涨跌幅均为十进制数（无需再 ÷100）。
 // ---------------------------------------------------------------------------
 
-export const JUMP_MP_DEFAULT: JumpMpConfig = {
-  visible: false,
-  title: '看有色金属行情 金价魔方小程序',
-  desc: '金银、工业金属、小金属行情',
-  actionText: '打开',
-  icon: '/images/jump-rg.png',
-  appId: '',
-  path: '',
-  envVersion: 'release',
+export interface EastmoneyAveragePriceRaw {
+  f12?: string | number
+  f13?: string | number
+  f14?: string
+  f2?: number | string
+  f3?: number | string
+  f18?: number | string
 }
 
-const JUMP_MP_APPID_PATTERN = /^wx[0-9a-fA-F]{16}$/
-const JUMP_MP_PLACEHOLDER = /填写|placeholder|example|你的|对方/i
-
-function isTruthyShow(value: unknown): boolean {
-  return value === true || value === 1 || value === 'true' || value === '1' || value === 'yes'
+export interface EastmoneyAveragePrice {
+  secid: string
+  code: string
+  name: string
+  price: number | null
+  previousClose: number | null
+  changePercent: number | null
 }
 
-function pickJumpMpSource(body: unknown): Record<string, unknown> {
-  if (!body || typeof body !== 'object') return {}
-  const obj = body as Record<string, unknown>
-  if (obj.jumpMp && typeof obj.jumpMp === 'object') {
-    return obj.jumpMp as Record<string, unknown>
-  }
-  const more = obj.more
-  if (more && typeof more === 'object' && (more as Record<string, unknown>).jumpMp) {
-    return (more as Record<string, unknown>).jumpMp as Record<string, unknown>
-  }
-  return obj
-}
-
-/** 解析跳转配置响应：data.jumpMp → data.more.jumpMp → data 本身 */
-export function parseJumpMpBody(body: unknown): JumpMpConfig {
-  let source: unknown = body
-  if (typeof body === 'string') {
-    try {
-      source = JSON.parse(stripBom(body))
-    } catch {
-      return { ...JUMP_MP_DEFAULT }
-    }
-  }
-  const data = pickJumpMpSource(source)
-  const rawAppId = String(data.appId ?? '').replace(JUMP_MP_PLACEHOLDER, '')
-  const validAppId = JUMP_MP_APPID_PATTERN.test(rawAppId)
-  const envVersion = (['release', 'develop', 'trial'] as const).includes(
-    data.envVersion as 'release' | 'develop' | 'trial',
-  )
-    ? (data.envVersion as 'release' | 'develop' | 'trial')
-    : 'release'
-
+/** ulist diff 条目 → 平均股价归一化报价；缺 f2（最新价）返回 null */
+export function parseEastmoneyAveragePrice(
+  secid: string,
+  raw: EastmoneyAveragePriceRaw | null | undefined,
+): EastmoneyAveragePrice | null {
+  if (!raw) return null
+  const price = toNumber(raw.f2)
+  if (price === null) return null
   return {
-    visible: isTruthyShow(data.show) && validAppId,
-    appId: validAppId ? rawAppId : '',
-    title: typeof data.title === 'string' && data.title ? data.title : JUMP_MP_DEFAULT.title,
-    desc: typeof data.desc === 'string' && data.desc ? data.desc : JUMP_MP_DEFAULT.desc,
-    actionText:
-      typeof data.actionText === 'string' && data.actionText
-        ? data.actionText
-        : JUMP_MP_DEFAULT.actionText,
-    icon: typeof data.icon === 'string' && data.icon ? data.icon : JUMP_MP_DEFAULT.icon,
-    path: typeof data.path === 'string' ? data.path : '',
-    envVersion,
+    secid,
+    code: String(raw.f12 ?? ''),
+    name: typeof raw.f14 === 'string' ? raw.f14 : '',
+    price,
+    previousClose: toNumber(raw.f18),
+    changePercent: toNumber(raw.f3),
   }
 }
 

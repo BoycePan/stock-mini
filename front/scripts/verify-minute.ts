@@ -13,6 +13,7 @@
 
 import { MINUTE_SOURCES } from '../config/minute.ts'
 import {
+  buildCompositePoints,
   parseEastmoneyTrends,
   parseTencentMinuteNode,
   parseYahooMinuteResult,
@@ -32,7 +33,7 @@ async function fetchText(url: string, headers: Record<string, string> = {}): Pro
   return response.text()
 }
 
-async function emMinute(secid: string): Promise<MinuteResult | null> {
+async function emMinute(secid: string, keepFullTime = false): Promise<MinuteResult | null> {
   const params = [
     `secid=${encodeURIComponent(secid)}`,
     'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13',
@@ -41,8 +42,10 @@ async function emMinute(secid: string): Promise<MinuteResult | null> {
     'iscr=0',
   ].join('&')
   const text = await fetchText(`${EM_URL}?${params}`)
-  const body = JSON.parse(text) as { data?: { preClose?: number; trends?: string[] } }
-  return parseEastmoneyTrends(body?.data)
+  const body = JSON.parse(text) as {
+    data?: { preClose?: number; name?: string; trends?: string[] }
+  }
+  return parseEastmoneyTrends(body?.data, keepFullTime ? { keepFullTime: true } : undefined)
 }
 
 async function tcMinute(code: string): Promise<MinuteResult | null> {
@@ -75,10 +78,49 @@ async function verifyOne(code: string): Promise<{ code: string; ok: boolean; det
   const sources = MINUTE_SOURCES[code]
   if (!sources) return { code, ok: false, detail: '无分时源配置' }
 
+  // 美股代理股分时均值合成（us-BKxxxx）：每只代理归一化到昨收 100 后逐分钟取均值
+  if (sources.emProxies?.length) {
+    const series: Array<{
+      name?: string
+      points: Array<{ time: string; norm: number; volume: number }>
+    }> = []
+    for (const secid of sources.emProxies) {
+      try {
+        const result = await emMinute(secid, true)
+        if (result && result.points.length >= 2 && result.preClose && result.preClose > 0) {
+          const preClose = result.preClose as number
+          series.push({
+            name: result.name,
+            points: result.points.map((p) => ({
+              time: p.time,
+              norm: (p.price / preClose) * 100,
+              volume: p.volume || 0,
+            })),
+          })
+        }
+      } catch {
+        // 单只代理失败跳过，其余代理仍可合成
+      }
+      await sleep(SLEEP_MS)
+    }
+    if (series.length) {
+      const points = buildCompositePoints(series)
+      if (points.length >= 2) {
+        return {
+          code,
+          ok: true,
+          detail: `东财代理合成 ${sources.emProxies.length}只命中${series.length} ${points.length}点 基准=100`,
+        }
+      }
+    }
+    return { code, ok: false, detail: '代理合成分时失败' }
+  }
+
   const tries: Array<[string, () => Promise<MinuteResult | null>]> = []
   if (sources.em) tries.push([`东财(${sources.em})`, () => emMinute(sources.em as string)])
   if (sources.tc) tries.push([`腾讯(${sources.tc})`, () => tcMinute(sources.tc as string)])
-  if (sources.yahoo) tries.push([`Yahoo(${sources.yahoo})`, () => yhMinute(sources.yahoo as string)])
+  if (sources.yahoo)
+    tries.push([`Yahoo(${sources.yahoo})`, () => yhMinute(sources.yahoo as string)])
 
   for (const [label, run] of tries) {
     try {

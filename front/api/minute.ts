@@ -31,11 +31,16 @@ const HOSTS = {
 interface EastmoneyTrendsBody {
   data?: {
     preClose?: number
+    /** 证券名（美股如「英伟达」，供代理股合成标注中文名） */
+    name?: string
     trends?: string[]
   }
 }
 
-export async function fetchEastmoneyMinute(secid: string): Promise<MinuteResult | null> {
+export async function fetchEastmoneyMinute(
+  secid: string,
+  opts?: { keepFullTime?: boolean },
+): Promise<MinuteResult | null> {
   const params = [
     `secid=${encodeURIComponent(secid)}`,
     'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13',
@@ -46,7 +51,8 @@ export async function fetchEastmoneyMinute(secid: string): Promise<MinuteResult 
   const url = `${HOSTS.emTrends}/api/qt/stock/trends2/get?${params}`
   try {
     const body = await requestExternal<EastmoneyTrendsBody>(url, { timeout: 10000 })
-    return parseEastmoneyTrends(body?.data)
+    // keepFullTime：保留完整时间戳（美股代理股合成需要跨零点对齐），默认输出 HH:mm
+    return parseEastmoneyTrends(body?.data, opts)
   } catch (error) {
     console.warn(`[minute] 东财分时失败 ${secid}:`, error)
     return null

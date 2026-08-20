@@ -57,5 +57,6 @@
       </view>
       <view wx:else class="hint">输入股票代码或名称搜索，如 000001 / 贵州茅台</view>
     </block>
+    <disclaimer-footer></disclaimer-footer>
   </scroll-view>
 </view>

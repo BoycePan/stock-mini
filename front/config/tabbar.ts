@@ -12,7 +12,7 @@ import type { QuoteSource } from '../types/quote'
 // 全球页
 // ---------------------------------------------------------------------------
 
-/** 全球指数（腾讯行情代码，与实时会话探测共用一次请求） */
+/** 全球指数（腾讯行情代码，与实时会话探测共用一次请求；A股平均股价取数链见 api/market.ts） */
 export interface GlobalIndexConfig {
   code: string
   name: string
@@ -21,9 +21,27 @@ export interface GlobalIndexConfig {
 export const GLOBAL_INDICES: GlobalIndexConfig[] = [
   { code: 'sh000001', name: '上证指数' },
   { code: 'sz399001', name: '深证成指' },
+  { code: 'sz399006', name: '创业板指' },
+  { code: 'sh000688', name: '科创50' },
+  { code: 'usDJI', name: '道琼斯工业' },
   { code: 'usSPY', name: '标普500' },
   { code: 'usQQQ', name: '纳斯达克' },
 ]
+
+/**
+ * A股平均股价（通达信 880003 口径，全市场等权平均）。
+ * 取数链（见 api/market.ts）：①东财官方平均股价指数（ulist.np/get，secid `emSecid`，
+ * 用户指定接口）→ ②腾讯 sh880003（与全球指数同批请求）→ ③新浪 sh880003 →
+ * ④东财全市场等权自算（60s 缓存）。前四路任一路给出有效价格即采用。
+ */
+export const AVG_PRICE_CONFIG = {
+  code: 'AVG',
+  name: 'A股平均股价',
+  /** 东财官方平均股价指数 secid（市场号 47 = 平均股价指数） */
+  emSecid: '47.800005',
+  tc: 'sh880003',
+  sinaKey: 'sh880003',
+} as const
 
 /** 宏观资产 9 项（docs 表 A：code / name / 数据源） */
 export interface MacroAssetConfig {
@@ -157,6 +175,14 @@ export interface AsiaIndexConfig {
   /** 价格合理区间校验（docs「解析与数据校验」） */
   min: number
   max: number
+  /**
+   * 是否东财优先取数（需同时配置 emSecid）：用于新浪源陈旧 / 已不更新的指数
+   * （如 int_nikkei 响应只剩 4 个字段、数值长期停留在旧点位，但能通过区间校验，
+   * 旧的「新浪优先、东财仅失败兜底」会一直展示旧值）。东财 secid 与分时页同源
+   * （100.N225 / 100.VNINDEX），优先东财可保证「卡片展示值」与「点进去的分时」口径一致；
+   * 东财失败时仍退回新浪。
+   */
+  preferEm?: boolean
 }
 
 export const ASIA_INDICES: AsiaIndexConfig[] = [
@@ -167,11 +193,22 @@ export const ASIA_INDICES: AsiaIndexConfig[] = [
     name: '日经225',
     sinaKey: 'int_nikkei',
     emSecid: '100.N225',
+    // 区间仅作垃圾数据护栏：日经已长期运行在 6 万点上方（2026 年约 6.6 万），
+    // 旧上限 55000 会把东财真实新值（65982）当异常丢弃、回退到新浪陈旧旧值（44946）。
     min: 15000,
-    max: 55000,
+    max: 100000,
+    preferEm: true,
   },
   { code: 'TPX', name: 'TOPIX', sinaKey: 'znb_TOPIX', min: 1500, max: 6000 },
-  { code: 'VNINDEX', name: '越南胡志明', sinaKey: 'znb_VNINDEX', min: 500, max: 3000 },
+  {
+    code: 'VNINDEX',
+    name: '越南胡志明',
+    sinaKey: 'znb_VNINDEX',
+    emSecid: '100.VNINDEX',
+    min: 500,
+    max: 3000,
+    preferEm: true,
+  },
   { code: 'SENSEX', name: '孟买SENSEX', sinaKey: 'znb_SENSEX', min: 30000, max: 120000 },
 ]
 

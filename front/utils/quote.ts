@@ -7,6 +7,7 @@
  */
 
 import {
+  fetchEastmoneyAShareSnapshot,
   fetchEastmoneyList,
   fetchEastmoneyQuote,
   fetchSinaQuotes,
@@ -238,4 +239,73 @@ export async function fetchAShareMulti(code: string): Promise<SourceQuote | null
     { kind: 'em', secid: aShareSecid(code) },
   ]
   return fetchAccurate(sources, {}, { parallel: 3 })
+}
+
+// ---------------------------------------------------------------------------
+// A股平均股价（等权自算，口径对齐通达信 880003「平均股价」）
+// ---------------------------------------------------------------------------
+
+/** 平均股价缓存：clist 全市场响应较大，缓存 60s 避免 10s 自动刷新高频重拉 */
+interface AveragePriceCache {
+  at: number
+  value: { price: number; pct: number } | null
+}
+
+let averagePriceCache: AveragePriceCache | null = null
+const AVERAGE_PRICE_TTL = 60_000
+/** 平均股价合理区间（元）：防上游单位 / 异常快照污染展示 */
+const AVG_PRICE_MIN = 1
+const AVG_PRICE_MAX = 500
+
+function toFiniteNumber(value: number | string | undefined): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const num = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+/**
+ * A股平均股价：沪深A股（主板+创业板+科创板）最新价等权平均（口径对齐通达信 880003 / 同花顺「平均股价」），
+ * 涨跌幅 = (今均价 − 昨均价) / 昨均价 × 100（昨收缺失 / 停牌无价个股剔除）。
+ * 数据源：东财 clist 全市场快照（push2delay，60s 缓存）。
+ * 护栏：① 覆盖度校验（total 已知：平均个股数须 ≥ 全市场的 90% 且 ≥ 3000；total 未知：须 ≥ 3000，
+ *       防分页截断取到局部子集）；② 价格合理区间 [1, 500]（防单位/异常快照污染展示）；不满足即返回 null（卡片显示 --）。
+ */
+export async function fetchAShareAveragePrice(): Promise<{
+  price: number | null
+  pct: number | null
+}> {
+  const now = Date.now()
+  if (averagePriceCache && now - averagePriceCache.at < AVERAGE_PRICE_TTL) {
+    return averagePriceCache.value ?? { price: null, pct: null }
+  }
+
+  const { items, total } = await fetchEastmoneyAShareSnapshot()
+  let sum = 0
+  let prevSum = 0
+  let count = 0
+  for (const item of items) {
+    const price = toFiniteNumber(item.f2)
+    const prev = toFiniteNumber(item.f18)
+    if (price === null || prev === null || price <= 0 || prev <= 0) continue
+    sum += price
+    prevSum += prev
+    count += 1
+  }
+
+  // 覆盖度校验：total 已知要求 ≥90% 且 ≥3000 只；total 未知（上游未返回）按数量下限放行
+  const coverage = total > 0 ? count / total : count >= 3000 ? 1 : 0
+  let value: { price: number; pct: number } | null = null
+  if (count >= 3000 && coverage >= 0.9 && prevSum > 0) {
+    const price = sum / count
+    const prev = prevSum / count
+    if (price >= AVG_PRICE_MIN && price <= AVG_PRICE_MAX && prev >= AVG_PRICE_MIN && prev <= AVG_PRICE_MAX) {
+      value = { price, pct: ((price - prev) / prev) * 100 }
+    } else {
+      console.warn('[quote] A股平均股价超出合理区间，丢弃:', { price, prev, count, total })
+    }
+  } else {
+    console.warn('[quote] A股平均股价覆盖度不足，丢弃:', { count, total })
+  }
+  averagePriceCache = { at: now, value }
+  return value ?? { price: null, pct: null }
 }

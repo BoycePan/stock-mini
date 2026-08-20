@@ -26,5 +26,6 @@
       </view>
       <empty-state wx:else title="暂无新闻"></empty-state>
     </block>
+    <disclaimer-footer></disclaimer-footer>
   </scroll-view>
 </view>

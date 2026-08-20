@@ -36,11 +36,17 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
   assert.ok(board.tip && board.tip.length > 0, '行业板块应附带说明文案')
 })
 
-test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」', () => {
+test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」且透传分时代码', () => {
   const page = buildQuoteGlobalPage({
     indices: [index('usQQQ', '纳斯达克', 20000)],
     macro: [],
-    sectors: [sector('BK1134', 'AI算力', 2.3)],
+    // 美股时段板块由 api 层标记分时代码（us-BKxxxx → 代理股均值合成分时，见 api/market.ts）
+    sectors: [
+      {
+        ...sector('BK1134', 'AI算力', 2.3),
+        minuteCode: 'us-BK1134',
+      },
+    ],
     statusLabel: '全球市场',
     statusTone: 'active',
     sectorBadge: '美股时段',
@@ -51,7 +57,10 @@ test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」
   assert.ok(board)
   assert.equal(board.title, '美股行业板块')
   assert.equal(board.badge, '美股时段')
-  assert.equal(board.minuteCorner, true, '行业板块应以面板右上角角标提示分时')
+  assert.equal(board.minuteCorner, true, '美股时段板块同样支持代理股合成分时，应展示「分时」角标')
+  const metric = board.metrics[0]
+  assert.ok(metric, '美股时段板块应包含指标')
+  assert.equal(metric.minuteCode, 'us-BK1134', '美股时段板块应透传代理股合成分时代码')
 })
 
 test('buildQuoteGlobalPage：未传 sectorTitle 时默认「中国行业板块」', () => {

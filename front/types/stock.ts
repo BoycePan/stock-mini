@@ -54,6 +54,8 @@ export interface MinuteResult {
   /** 昨收（分时基准线），源未提供时为空 */
   preClose: number | null
   points: MinutePoint[]
+  /** 源返回的证券名（如东财美股「英伟达」），供代理股合成页标注中文名 */
+  name?: string
 }
 
 export interface KlineResult {
