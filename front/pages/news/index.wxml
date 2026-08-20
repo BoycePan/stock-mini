@@ -10,13 +10,13 @@
       <view wx:if="{{items.length}}" class="news-list">
         <view
           wx:for="{{items}}"
-          wx:key="url"
+          wx:key="key"
           class="news-item"
           data-index="{{index}}"
           bindtap="onItemTap"
         >
           <text class="news-title">{{item.title}}</text>
-          <text class="news-intro">{{item.summary}}</text>
+          <text class="news-intro">{{item.summaryText}}</text>
           <text class="news-meta">{{item.source}} {{item.time}}</text>
         </view>
         <view class="load-more" bindtap="onLoadMore" wx:if="{{hasMore}}">

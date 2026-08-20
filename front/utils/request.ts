@@ -8,7 +8,7 @@ export interface RequestOptions {
   data?: Record<string, unknown> | string
   query?: Record<string, string | number | boolean | undefined>
   withAuth?: boolean
-  /** 登录接口自身需要跳过登录等待，避免死锁 */
+  /** 跳过登录门闩：登录接口自身（避免死锁）以及无需鉴权的公开页面（如财经页）使用 */
   skipLoginWait?: boolean
 }
 

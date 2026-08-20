@@ -648,7 +648,9 @@ function physicalGoldItemOf(
 // ---------------------------------------------------------------------------
 
 async function getFinanceMarketPage(): Promise<MarketPageData> {
-  const news = await newsApi.getFeed(1, 20)
+  // 财经资讯每页固定拉取 10 条（页面列表展示条数）
+  // 财经页是公开页面，不依赖登录：skipLoginWait 跳过请求层登录门闩（后端 news/feed 本身无需鉴权）
+  const news = await newsApi.getFeed(1, 10, { skipLoginWait: true })
   if (!news.length) throw new Error('暂无新闻')
   const newsMetrics = news.map((item, index) => ({
     id: `finance-news-${index}`,

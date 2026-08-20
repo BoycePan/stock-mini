@@ -1,6 +1,9 @@
+import { createStoreBindings } from 'mobx-miniprogram-bindings'
 import { getNewsDetail, type NewsDetail } from '../../utils/storage'
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
+import { buildRichHtml } from '../../utils/html'
 import { buildSharePath } from '../../utils/share'
 
 /** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
@@ -18,6 +21,8 @@ Page({
     theme: rootStore.settings.theme,
     loading: true,
     news: null as NewsDetail | null,
+    /** 清洗后可直接交给 <rich-text> 渲染的正文 HTML；纯文本摘要时为空串，回退普通 <text> */
+    richHtml: '',
     error: '',
     copied: false,
   },
@@ -31,8 +36,20 @@ Page({
     this.setData({
       loading: false,
       news,
-      error: news.title && news.url ? '' : '新闻详情缺失',
+      error: news.title || news.summary ? '' : '新闻详情缺失',
     })
+    // 富文本颜色随主题注入：主题切换时自动重算（closure 捕获 onLoad 时的摘要原文）
+    const summary = news.summary
+    registerStoreBinding(
+      this,
+      createStoreBindings(this, {
+        store: rootStore.settings,
+        fields: {
+          richHtml: () => buildRichHtml(summary, rootStore.settings.theme),
+        },
+        actions: [],
+      }),
+    )
   },
   onShare() {
     wx.showShareMenu({ withShareTicket: true })
@@ -54,6 +71,7 @@ Page({
     })
   },
   onUnload() {
+    releaseStoreBindings(this)
     unbindTheme(this)
   },
   onShareAppMessage() {

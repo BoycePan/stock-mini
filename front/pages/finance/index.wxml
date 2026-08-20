@@ -15,6 +15,9 @@
     refresher-default-style="{{ theme === 'dark' ? 'white' : 'black' }}"
     refresher-background="{{ theme === 'dark' ? '#151e2d' : '#eef3f8' }}"
     bindrefresherrefresh="onRefresherRefresh"
+    bindscrolltolower="onScrollLower"
+    lower-threshold="150"
+    scroll-top="{{ scrollTop }}"
   >
     <loading-state
       wx:if="{{ loading }}"
@@ -30,17 +33,30 @@
       <view wx:if="{{ news.length }}" class="news-list">
         <view
           wx:for="{{ news }}"
-          wx:key="url"
-          class="news-item"
+          wx:key="key"
+          class="news-item {{ item.flash ? 'news-item-flash' : '' }}"
+          hover-class="news-item-hover"
           data-index="{{ index }}"
           bindtap="onItemTap"
         >
-          <text class="news-title">{{ item.title }}</text>
-          <text class="news-intro">{{ item.summary }}</text>
-          <view class="news-meta">
-            <text wx:if="{{ item.source }}" class="news-source">{{ item.source }}</text>
-            <text wx:if="{{ item.time }}" class="news-time">{{ item.time }}</text>
+          <view class="news-head">
+            <text class="news-title">{{ item.title }}</text>
+            <text wx:if="{{ item.flash }}" class="flash-badge">快讯</text>
           </view>
+          <text wx:if="{{ item.summary }}" class="news-intro">{{ item.summary }}</text>
+          <view class="news-meta">
+            <view class="meta-source">
+              <text class="meta-dot {{ item.flash ? 'meta-dot-flash' : '' }}"></text>
+              <text wx:if="{{ item.source }}" class="news-source">{{ item.source }}</text>
+            </view>
+            <text wx:if="{{ item.timeText || item.time }}" class="news-time">{{
+              item.timeText || item.time
+            }}</text>
+          </view>
+        </view>
+        <!-- 滚动加载 footer：触底自动加载，也可点击手动加载 -->
+        <view class="load-more {{ hasMore ? '' : 'end' }}" bindtap="onLoadMore">
+          {{ loadingMore ? '加载中…' : hasMore ? '加载更多' : '没有更多了' }}
         </view>
       </view>
       <view wx:else class="empty-hint">暂无新闻</view>
@@ -48,4 +64,7 @@
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </scroll-view>
+
+  <!-- 悬浮刷新按钮组件：刷新成功 10s 后出现（淡入/淡出动画在组件内），点击触发下拉刷新 -->
+  <refresh-btn id="refresh-btn" bind:refresh="onRefreshBtnRefresh"></refresh-btn>
 </view>

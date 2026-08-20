@@ -1,0 +1,7 @@
+<view
+  class="refresh-btn {{ show ? 'show' : '' }} {{ theme === 'dark' ? 'dark' : '' }}"
+  hover-class="refresh-btn-hover"
+  bindtap="onTap"
+>
+  <text class="refresh-btn-icon">↻</text>
+</view>

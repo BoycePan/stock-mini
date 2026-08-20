@@ -62,6 +62,32 @@ export function formatItemUpdatedAt(value?: string | number | Date): string {
   return `${md} ${hm} 更新`
 }
 
+/**
+ * 新闻时间展示：解析「yyyy-MM-dd HH:mm[:ss]」格式，
+ * 当天显示「x分钟前 / x小时前」，跨天显示「MM-DD HH:mm」，跨年补年份；
+ * 时间晚于当前（时钟偏差）按「刚刚」处理。解析失败返回原文。
+ */
+export function formatNewsTime(value: string, now = new Date()): string {
+  if (!value) return ''
+  const matched = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value.trim())
+  if (!matched) return value
+  const [, year, month, day, hour, minute] = matched
+  const date = new Date(+year!, +month! - 1, +day!, +hour!, +minute!)
+  if (Number.isNaN(date.getTime())) return value
+  const diff = now.getTime() - date.getTime()
+  if (diff < 60_000) return '刚刚'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}分钟前`
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  if (sameDay) return `${Math.floor(diff / 3_600_000)}小时前`
+  const hm = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  const md = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  if (date.getFullYear() === now.getFullYear()) return `${md} ${hm}`
+  return `${year}-${md} ${hm}`
+}
+
 /** 完整时间戳 yyyy-MM-dd HH:mm:ss（用于「数据更新时间」展示） */
 export function formatDateTime(value?: string | number | Date): string {
   const date = dayjs(value)

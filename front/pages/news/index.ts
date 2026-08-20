@@ -1,16 +1,29 @@
 import { newsApi } from '../../api/news'
 import { rootStore } from '../../stores/root.store'
 import { saveNewsDetail } from '../../utils/storage'
+import { stripHtml } from '../../utils/html'
 import type { NewsItem } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 
 const FEED_PAGE_SIZE = 20
 
+/** 列表展示条目：summary 为后端返回的 HTML，剥离标签后用于两行预览（原始摘要透传详情页） */
+type NewsItemView = NewsItem & { summaryText: string; key: string }
+
+function toNewsViewItem(item: NewsItem, index: number): NewsItemView {
+  return {
+    ...item,
+    summaryText: stripHtml(item.summary ?? ''),
+    // 后端部分条目 url 为空，不能用 url 作 wx:key
+    key: item.id ?? `news-${index}-${item.time ?? ''}`,
+  }
+}
+
 Page({
   data: {
     theme: rootStore.settings.theme,
     loading: true,
-    items: [] as NewsItem[],
+    items: [] as NewsItemView[],
     error: '',
     code: '',
     title: '财经新闻',
@@ -40,7 +53,7 @@ Page({
         this.setData({
           loading: false,
           error: '',
-          items,
+          items: items.map(toNewsViewItem),
           hasMore: items.length > 0,
         })
       } else {
@@ -48,7 +61,7 @@ Page({
         this.setData({
           loading: false,
           error: '',
-          items,
+          items: items.map(toNewsViewItem),
           hasMore: items.length >= FEED_PAGE_SIZE,
         })
       }
@@ -68,7 +81,7 @@ Page({
         const page = Math.ceil((this.data.items.length + 1) / FEED_PAGE_SIZE)
         const items = await newsApi.getStockNews(this.data.code, page)
         this.setData({
-          items: [...this.data.items, ...items],
+          items: [...this.data.items, ...items.map(toNewsViewItem)],
           hasMore: items.length > 0,
         })
       } else {
@@ -76,7 +89,7 @@ Page({
         const page = Math.ceil((this.data.items.length + 1) / FEED_PAGE_SIZE)
         const items = await newsApi.getFeed(page, FEED_PAGE_SIZE)
         this.setData({
-          items: [...this.data.items, ...items],
+          items: [...this.data.items, ...items.map(toNewsViewItem)],
           hasMore: items.length >= FEED_PAGE_SIZE,
         })
       }

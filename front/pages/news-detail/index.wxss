@@ -59,6 +59,16 @@
   line-height: 42rpx;
 }
 
+/* rich-text 富文本正文：节点内已注入主题色/字号，容器样式作为兜底 */
+.detail-rich {
+  display: block;
+  margin-top: 24rpx;
+  color: #3d4c63;
+  font-size: 28rpx;
+  line-height: 1.8;
+  word-break: break-word;
+}
+
 .empty-summary {
   color: #8b99ab;
 }
@@ -196,6 +206,10 @@
 .page.theme-dark .detail-summary,
 .page.theme-dark .guide-text {
   color: #e5ebf4;
+}
+
+.page.theme-dark .detail-rich {
+  color: #dfe6f0;
 }
 
 .page.theme-dark .detail-meta,

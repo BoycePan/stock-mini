@@ -1,0 +1,49 @@
+/* ---------------------------------------------------------------------------
+ * 悬浮刷新按钮：右下角圆形，刷新成功 delay（默认 10s）后出现。
+ * 出现/隐藏通过 .show 类切换 + transition 动画（淡入淡出 + 缩放弹跳）。
+ * 组件样式隔离，深色规则写在组件内（根节点 .dark 类由 theme 切换）。
+ * ------------------------------------------------------------------------- */
+.refresh-btn {
+  position: fixed;
+  right: 32rpx;
+  bottom: 240rpx; /* 位于自定义 tabBar（122rpx + 安全区）上方 */
+  z-index: 50;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6d9cf7, #4278ed);
+  box-shadow: 0 12rpx 28rpx rgba(66, 120, 237, 0.38);
+  /* 隐藏态：透明 + 缩小下移，不可点击 */
+  opacity: 0;
+  transform: scale(0.4) translateY(48rpx);
+  pointer-events: none;
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.refresh-btn.show {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+.refresh-btn-hover {
+  transform: scale(0.88);
+}
+
+.refresh-btn-icon {
+  font-size: 46rpx;
+  line-height: 1;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 深色主题：更亮的强调蓝渐变，保证可读 */
+.refresh-btn.dark {
+  background: linear-gradient(135deg, #8ab4ff, #5f93f5);
+  box-shadow: 0 12rpx 28rpx rgba(111, 163, 255, 0.35);
+}
