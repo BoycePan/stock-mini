@@ -11,7 +11,6 @@ import { getAppVersion } from '../../utils/version'
 
 Page({
   data: {
-    activeTab: 'settings',
     theme: rootStore.settings.theme,
     user: null as User | null,
     isLoggedIn: false,
@@ -24,6 +23,10 @@ Page({
     // 用户信息 / 登录态来自全局 auth store，登录、登出自动同步
     registerStoreBinding(this, bindGlobalAuth(this))
     this.ensureAutoLogin()
+  },
+  onShow() {
+    // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
+    this.syncTabBar()
   },
 
   ensureAutoLogin() {
@@ -53,8 +56,11 @@ Page({
     releaseStoreBindings(this)
     unbindTheme(this)
   },
-  onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
-    const key = event.detail.key
-    if (key !== this.data.activeTab) wx.redirectTo({ url: `/pages/${key}/index` })
+  /** 同步底部自定义 tabBar 的激活态到当前页（custom-tab-bar 常驻渲染层，由框架管理） */
+  syncTabBar() {
+    if (typeof this.getTabBar === 'function') {
+      const tabBar = this.getTabBar()
+      if (tabBar) tabBar.setData({ selected: 'settings' })
+    }
   },
 })

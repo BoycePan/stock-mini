@@ -52,7 +52,6 @@ export function createMarketPage(opts: MarketPageOptions) {
   return Page({
     data: {
       theme: rootStore.settings.theme,
-      activeTab: pageKey,
       loading: !rootStore.market.pages[pageKey],
       sections: [] as MarketSection[],
       statusLabel: '',
@@ -110,6 +109,8 @@ export function createMarketPage(opts: MarketPageOptions) {
     onShow() {
       // 分享中转跳转中的页面不再启动首页自动刷新
       if (shareRedirectedPages.has(this)) return
+      // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
+      this.syncTabBar()
       // 距上次真正发起的请求超过 5s 才在 onShow 立即补一次刷新
       // （lastRequestAt 由 store 在 loadPage 实际请求处记录，缓存命中不更新）
       startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey])
@@ -140,9 +141,15 @@ export function createMarketPage(opts: MarketPageOptions) {
       void this.loadData({ force: true })
     },
 
-    onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
-      const key = event.detail.key
-      if (key !== this.data.activeTab) wx.redirectTo({ url: `/pages/${key}/index` })
+    /**
+     * 同步底部自定义 tabBar 的激活态到当前页（custom-tab-bar 常驻渲染层，由框架管理）。
+     * 首次冷启动时 getTabBar() 可能尚未就绪，custom-tab-bar 内部已按路由兜底，无需额外处理。
+     */
+    syncTabBar() {
+      if (typeof this.getTabBar === 'function') {
+        const tabBar = this.getTabBar()
+        if (tabBar) tabBar.setData({ selected: pageKey })
+      }
     },
 
     /**

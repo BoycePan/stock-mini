@@ -1,6 +1,5 @@
 <view class="page theme-{{ theme }} asia-page">
   <market-page
-    activeTab="{{ activeTab }}"
     loading="{{ loading }}"
     error="{{ error }}"
     loadingText="正在加载亚太行情"
@@ -11,7 +10,6 @@
     sections="{{ sections }}"
     bind:retry="onRetry"
     bind:share="onShare"
-    bind:tabchange="onTabChange"
     bind:metrictap="onMetricTap"
   ></market-page>
 </view>

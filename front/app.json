@@ -19,5 +19,33 @@
     "backgroundTextStyle": "light",
     "enablePullDownRefresh": true
   },
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "tabBar": {
+    "custom": true,
+    "color": "#9aa7b8",
+    "selectedColor": "#3f7df0",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/global/index",
+        "text": "全球"
+      },
+      {
+        "pagePath": "pages/asia/index",
+        "text": "日韩"
+      },
+      {
+        "pagePath": "pages/metals/index",
+        "text": "有色"
+      },
+      {
+        "pagePath": "pages/finance/index",
+        "text": "财经"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置"
+      }
+    ]
+  }
 }

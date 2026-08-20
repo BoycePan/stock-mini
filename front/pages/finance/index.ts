@@ -29,13 +29,12 @@ function toNewsView(page?: MarketPageData | null): NewsItemView[] {
 
 /** 财经请求防抖：两次请求的最小间隔（毫秒），接口响应慢时避免被高频请求打爆 */
 const MIN_REQUEST_INTERVAL = 5000
-/** 模块级共享（跨页面实例），保证切页重建后依然生效 */
+/** 模块级共享（跨页面实例），原生 tabBar keep-alive 下页面实例常驻，防抖时间源全局唯一 */
 let lastFinanceRequestAt = 0
 
 Page({
   data: {
     theme: rootStore.settings.theme,
-    activeTab: 'finance',
     loading: !rootStore.market.pages['finance'] && !getFinanceCache(),
     refreshing: false,
     news: [] as NewsItemView[],
@@ -100,6 +99,8 @@ Page({
     }
   },
   onShow() {
+    // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
+    this.syncTabBar()
     // 距上次请求超过 5s 才立即补刷新（lastFinanceRequestAt 与 loadData 内 5s 防抖共用同一时间源）
     startAutoRefresh(this, lastFinanceRequestAt)
   },
@@ -173,8 +174,11 @@ Page({
       url: `/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
     })
   },
-  onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
-    const key = event.detail.key
-    if (key !== this.data.activeTab) wx.redirectTo({ url: `/pages/${key}/index` })
+  /** 同步底部自定义 tabBar 的激活态到当前页（custom-tab-bar 常驻渲染层，由框架管理） */
+  syncTabBar() {
+    if (typeof this.getTabBar === 'function') {
+      const tabBar = this.getTabBar()
+      if (tabBar) tabBar.setData({ selected: 'finance' })
+    }
   },
 })

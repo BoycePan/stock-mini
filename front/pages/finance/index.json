@@ -1,7 +1,6 @@
 {
   "usingComponents": {
     "app-header": "/components/app-header/index",
-    "bottom-tabbar": "/components/bottom-tabbar/index",
     "loading-state": "/components/loading-state/index",
     "disclaimer-footer": "/components/disclaimer-footer/index"
   }

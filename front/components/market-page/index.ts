@@ -3,8 +3,6 @@ import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 Component({
   properties: {
-    /** 当前激活的 TabBar 标签 */
-    activeTab: { type: String, value: '' },
     /** 是否显示分享按钮 */
     showShare: { type: Boolean, value: false },
     /** 是否正在加载 */
@@ -42,9 +40,6 @@ Component({
     },
     onShare() {
       this.triggerEvent('share')
-    },
-    onTabChange(event: WechatMiniprogram.CustomEvent<{ key: string }>) {
-      this.triggerEvent('tabchange', event.detail)
     },
     onMetricTap(event: WechatMiniprogram.CustomEvent) {
       this.triggerEvent('metrictap', event.detail)
