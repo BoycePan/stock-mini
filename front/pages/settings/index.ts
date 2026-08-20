@@ -1,6 +1,6 @@
 import { rootStore } from '../../stores/root.store'
 import type { User } from '../../types/user'
-import type { ThemeMode } from '../../utils/storage'
+import type { ThemePreference } from '../../utils/storage'
 import {
   bindGlobalAuth,
   registerStoreBinding,
@@ -12,6 +12,7 @@ import { getAppVersion } from '../../utils/version'
 Page({
   data: {
     theme: rootStore.settings.theme,
+    themePref: rootStore.settings.themePref,
     user: null as User | null,
     isLoggedIn: false,
     version: '',
@@ -45,12 +46,15 @@ Page({
   },
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
-    rootStore.settings.setTheme(value as ThemeMode)
+    rootStore.settings.setTheme(value as ThemePreference)
   },
   onServiceTap(event: WechatMiniprogram.BaseEvent) {
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
     if (!key) return
     wx.navigateTo({ url: `/pages/legal/index?type=${key}` })
+  },
+  onFeedbackTap() {
+    wx.navigateTo({ url: '/pages/custom/index' })
   },
   onUnload() {
     releaseStoreBindings(this)

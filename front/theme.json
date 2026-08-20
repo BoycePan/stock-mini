@@ -1,0 +1,10 @@
+{
+  "light": {
+    "windowBg": "#F3F6FA",
+    "windowTextStyle": "dark"
+  },
+  "dark": {
+    "windowBg": "#0F1722",
+    "windowTextStyle": "light"
+  }
+}

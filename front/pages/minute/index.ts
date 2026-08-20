@@ -2,6 +2,7 @@ import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { startAutoRefresh, stopAutoRefresh } from '../../utils/auto-refresh'
 import { fetchMinuteData, hasMinuteSources } from '../../utils/minute'
+import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
 import type { MinutePoint } from '../../types/stock'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
 import { buildSharePath } from '../../utils/share'
@@ -46,6 +47,8 @@ Page({
     preClose: 0,
     sourceLabel: '',
     minuteNote: '',
+    /** 交易时段模型（utils/minute-session.ts），由数据源 code + 命中的源计算，透传给分时图 */
+    session: 'continuous' as MinuteSessionKind,
     quote: null as MinuteQuoteView | null,
   },
   isLoading() {
@@ -98,6 +101,8 @@ Page({
           preClose: result.preClose ?? 0,
           sourceLabel: `数据来源：${result.sourceLabel}`,
           minuteNote: result.note ?? '',
+          // 完整时段铺空白：按取数 code 确定交易时段（日股口径已在分类中区分）
+          session: resolveMinuteSession(this.data.mcode || this.data.code),
           quote: this.buildQuote(result.points, result.preClose),
         })
       } else if (!silent) {

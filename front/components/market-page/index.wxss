@@ -5,8 +5,7 @@
  */
 
 /* 自定义组件宿主选择器：确保组件在父容器 flex 布局中占满 100% 高度并约束子 scroll-view */
-:host,
-market-page {
+:host {
   display: flex;
   flex-direction: column;
   flex: 1;

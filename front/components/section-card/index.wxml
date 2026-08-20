@@ -42,7 +42,7 @@
           <view
             wx:if="{{ section.singleLine && !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
-            ><text>{{ item.direction }}</text
+            ><text class="metric-change-prefix">{{ item.direction }}</text
             ><text>{{ item.changeText }}</text></view
           >
         </view>
@@ -55,7 +55,7 @@
           <view
             wx:if="{{ !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
-            ><text>{{ item.direction }}</text
+            ><text class="metric-change-prefix">{{ item.direction }}</text
             ><text>{{ item.changeText }}</text></view
           >
         </view>

@@ -12,7 +12,8 @@ const bindingMap = new WeakMap<object, { destroyStoreBindings: () => void }>()
 
 /**
  * 页面 / 自定义组件绑定主题：基于全局 settings store（mobx-miniprogram-bindings），
- * 主题变更时自动刷新 this.data.theme（无需在 onShow 手动同步）。
+ * 主题变更时自动刷新 this.data.theme（实际生效主题）与 this.data.themePref（用户偏好，
+ * 设置页选中态用），无需在 onShow 手动同步。
  * onLoad / attached 调用一次即可，重复调用会先解绑旧绑定。
  */
 export function bindTheme(target: ThemeTarget): void {
@@ -21,6 +22,7 @@ export function bindTheme(target: ThemeTarget): void {
     store: rootStore.settings,
     fields: {
       theme: () => rootStore.settings.theme,
+      themePref: () => rootStore.settings.themePref,
     },
     actions: {
       setTheme: 'setTheme',

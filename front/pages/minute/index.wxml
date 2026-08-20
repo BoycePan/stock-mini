@@ -1,6 +1,11 @@
-<view class="page theme-{{theme}}">
+<view class="page theme-{{ theme }}">
   <view class="page-header">
-    <app-header title="{{ name || '行情分时' }}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+    <app-header
+      title="{{ name || '行情分时' }}"
+      showShare="{{ false }}"
+      showBack="{{ true }}"
+      showBrand="{{ false }}"
+    ></app-header>
   </view>
   <view class="content-scroll">
     <loading-state
@@ -17,7 +22,9 @@
     <block wx:else>
       <view class="data-notice">
         <view class="notice-icon">!</view>
-        <text class="notice-text">分时数据来自第三方公开数据，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text>
+        <text class="notice-text"
+          >分时数据来自第三方公开数据，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text
+        >
       </view>
 
       <!-- 基本信息卡片 -->
@@ -34,7 +41,7 @@
         </view>
         <view class="quote-grid">
           <view>
-            <text>今开</text>
+            <text>开盘</text>
             <text>{{ quote.open }}</text>
           </view>
           <view>
@@ -70,6 +77,7 @@
           points="{{ points }}"
           preClose="{{ preClose }}"
           theme="{{ theme }}"
+          session="{{ session }}"
         ></minute-chart>
         <empty-state wx:else title="暂无分时数据"></empty-state>
       </view>

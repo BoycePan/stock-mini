@@ -11,13 +11,16 @@
     "pages/sector-detail/index",
     "pages/news/index",
     "pages/news-detail/index",
-    "pages/legal/index"
+    "pages/legal/index",
+    "pages/custom/index"
   ],
   "window": {
     "navigationStyle": "custom",
-    "backgroundColor": "#F3F6FA",
-    "backgroundTextStyle": "light",
-    "enablePullDownRefresh": true
+    "backgroundColor": "@windowBg",
+    "backgroundTextStyle": "@windowTextStyle",
+    "enablePullDownRefresh": true,
+    "backgroundColorTop": "@windowBg",
+    "backgroundColorBottom": "@windowBg"
   },
   "sitemapLocation": "sitemap.json",
   "tabBar": {
@@ -47,5 +50,7 @@
         "text": "设置"
       }
     ]
-  }
+  },
+  "darkmode": true,
+  "themeLocation": "theme.json"
 }

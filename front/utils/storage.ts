@@ -10,6 +10,8 @@ const SEARCH_HISTORY_LIMIT = 10
 const FINANCE_CACHE_KEY = 'market_tracker_finance_cache'
 
 export type ThemeMode = 'light' | 'dark'
+/** 主题偏好：'system' 表示跟随微信客户端主题（默认），'light' / 'dark' 为用户手动选择 */
+export type ThemePreference = 'system' | ThemeMode
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -44,8 +46,36 @@ export function clearUser(): void {
   wx.removeStorageSync(USER_KEY)
 }
 
+export function getThemePreference(): ThemePreference {
+  const pref = read<ThemePreference>(THEME_KEY, 'system')
+  return pref === 'system' || pref === 'light' || pref === 'dark' ? pref : 'system'
+}
+
+/** 读取微信客户端当前生效主题（跟随系统深色模式）。需 app.json 配置 darkmode:true，否则恒为 light */
+function getSystemTheme(): ThemeMode {
+  try {
+    const info =
+      typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : wx.getSystemInfoSync()
+    return info.theme === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+/**
+ * 把主题偏好解析为实际生效主题：
+ * - 'system' → 跟随微信客户端主题（systemTheme 优先用于主题变化事件回调，避免二次读取）；
+ * - 'light' / 'dark' → 手动选择，直接生效。
+ */
+export function resolveTheme(pref: ThemePreference, systemTheme?: ThemeMode): ThemeMode {
+  if (pref !== 'system') return pref
+  if (systemTheme) return systemTheme
+  return getSystemTheme()
+}
+
+/** 当前实际生效主题（已解析），组件 attached 等场景拿到的就是最终渲染值 */
 export function getTheme(): ThemeMode {
-  return read<ThemeMode>(THEME_KEY, 'light')
+  return resolveTheme(getThemePreference())
 }
 
 type ThemeListener = (theme: ThemeMode) => void
@@ -63,16 +93,21 @@ export function onThemeChange(listener: ThemeListener): () => void {
   }
 }
 
-export function setTheme(theme: ThemeMode): void {
-  wx.setStorageSync(THEME_KEY, theme)
+/**
+ * 持久化主题偏好，并把解析后的实际主题写入 globalData / 广播给订阅者。
+ * 用户手动选择浅色 / 深色即写入显式偏好，之后不再跟随系统。
+ */
+export function setTheme(pref: ThemePreference, systemTheme?: ThemeMode): void {
+  const resolved = resolveTheme(pref, systemTheme)
+  wx.setStorageSync(THEME_KEY, pref)
   // getApp() may return undefined during App.onLaunch because the app instance
   // is not registered yet, so guard before touching globalData.
   const app = getApp<{ globalData: { theme?: ThemeMode } }>()
   if (app) {
-    app.globalData.theme = theme
+    app.globalData.theme = resolved
   }
   // 广播给所有存活页面 / 组件，保证主题切换即时生效
-  themeListeners.forEach((listener) => listener(theme))
+  themeListeners.forEach((listener) => listener(resolved))
 }
 
 export function getApiBaseUrl(): string {

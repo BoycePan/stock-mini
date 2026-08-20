@@ -1,57 +1,67 @@
-<view class="page theme-{{theme}}">
+<view class="page theme-{{ theme }}">
   <view class="page-header">
-    <app-header title="股票详情" showShare="{{true}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+    <app-header
+      title="股票详情"
+      showShare="{{ true }}"
+      showBack="{{ true }}"
+      showBrand="{{ false }}"
+    ></app-header>
   </view>
   <view class="content-scroll">
-    <loading-state wx:if="{{loading}}" text="正在加载股票详情" desc="正在为您获取行情、K线与相关资讯，请稍候…"></loading-state>
-    <view wx:elif="{{error}}" class="error-card">
-      <text>{{error}}</text>
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载股票详情"
+      desc="正在为您获取行情、K线与相关资讯，请稍候…"
+    ></loading-state>
+    <view wx:elif="{{ error }}" class="error-card">
+      <text>{{ error }}</text>
       <button bindtap="onRefresh">重新加载</button>
     </view>
     <block wx:else>
-
       <!-- 数据提示（免责声明） -->
       <view class="data-notice">
         <view class="notice-icon">!</view>
-        <text class="notice-text">行情数据来自第三方公开接口，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text>
+        <text class="notice-text"
+          >行情数据来自第三方公开接口，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text
+        >
       </view>
 
       <!-- 行情卡片 -->
       <view class="quote-card">
         <view class="quote-head">
           <view>
-            <text class="stock-name">{{quote.name}}</text>
-            <text class="stock-code">{{quote.code}}</text>
+            <text class="stock-name">{{ quote.name }}</text>
+            <text class="stock-code">{{ quote.code }}</text>
           </view>
           <view class="quote-price">
-            <text class="price">{{quote.price}}</text>
-            <text class="quote-change {{quote.changeClass}}">{{quote.changeText}}</text>
+            <text class="price">{{ quote.price }}</text>
+            <text class="quote-change {{ quote.changeClass }}">{{ quote.changeText }}</text>
           </view>
         </view>
         <view class="quote-grid">
           <view>
-            <text>今开</text>
-            <text>{{quote.open}}</text>
+            <text>开盘</text>
+            <text>{{ quote.open }}</text>
           </view>
           <view>
             <text>昨收</text>
-            <text>{{quote.prev_close}}</text>
+            <text>{{ quote.prev_close }}</text>
           </view>
           <view>
             <text>最高</text>
-            <text>{{quote.high}}</text>
+            <text>{{ quote.high }}</text>
           </view>
           <view>
             <text>最低</text>
-            <text>{{quote.low}}</text>
+            <text>{{ quote.low }}</text>
           </view>
           <view>
             <text>成交量</text>
-            <text>{{quote.volumeText}}</text>
+            <text>{{ quote.volumeText }}</text>
           </view>
           <view>
             <text>成交额</text>
-            <text>{{quote.amountText}}</text>
+            <text>{{ quote.amountText }}</text>
           </view>
         </view>
       </view>
@@ -62,18 +72,20 @@
           <text>K线</text>
           <view class="scale-tabs">
             <text
-              class="{{scale === '240' ? 'selected' : ''}}"
+              class="{{ scale === '240' ? 'selected' : '' }}"
               data-value="240"
               bindtap="onScaleChange"
-            >日线</text>
+              >日线</text
+            >
             <text
-              class="{{scale === '1200' ? 'selected' : ''}}"
+              class="{{ scale === '1200' ? 'selected' : '' }}"
               data-value="1200"
               bindtap="onScaleChange"
-            >周线</text>
+              >周线</text
+            >
           </view>
         </view>
-        <kline-chart klines="{{klines}}" theme="{{theme}}"></kline-chart>
+        <kline-chart klines="{{ klines }}" theme="{{ theme }}"></kline-chart>
       </view>
 
       <!-- 相关新闻面板 -->
@@ -81,21 +93,21 @@
         <view class="panel-title">
           <text>相关新闻</text>
         </view>
-        <view wx:if="{{news.length}}">
+        <view wx:if="{{ news.length }}">
           <view
             class="news-row"
-            wx:for="{{news}}"
+            wx:for="{{ news }}"
             wx:key="url"
-            data-index="{{index}}"
+            data-index="{{ index }}"
             bindtap="onNewsTap"
           >
-            <text class="news-title">{{item.title}}</text>
-            <text class="news-time">{{item.time}}</text>
+            <text class="news-title">{{ item.title }}</text>
+            <text class="news-time">{{ item.time }}</text>
           </view>
-          <view class="load-more" bindtap="onLoadMoreNews" wx:if="{{newsHasMore}}">
-            {{loadingMoreNews ? '加载中…' : '加载更多新闻'}}
+          <view class="load-more" bindtap="onLoadMoreNews" wx:if="{{ newsHasMore }}">
+            {{ loadingMoreNews ? '加载中…' : '加载更多新闻' }}
           </view>
-          <view class="load-more end" wx:elif="{{news.length}}">没有更多新闻</view>
+          <view class="load-more end" wx:elif="{{ news.length }}">没有更多新闻</view>
         </view>
         <empty-state wx:else title="暂无相关新闻"></empty-state>
       </view>
@@ -105,25 +117,28 @@
         <view class="panel-title">
           <text>相关公告</text>
         </view>
-        <view wx:if="{{announcements.length}}">
+        <view wx:if="{{ announcements.length }}">
           <view
             class="news-row"
-            wx:for="{{announcements}}"
+            wx:for="{{ announcements }}"
             wx:key="id"
-            data-url="{{item.url}}"
+            data-url="{{ item.url }}"
             bindtap="onAnnouncementTap"
           >
-            <text class="news-title">{{item.title}}</text>
-            <text class="news-time">{{item.time}}</text>
+            <text class="news-title">{{ item.title }}</text>
+            <text class="news-time">{{ item.time }}</text>
           </view>
-          <view class="load-more" bindtap="onLoadMoreAnnouncements" wx:if="{{announcementHasMore}}">
-            {{loadingMoreAnnouncements ? '加载中…' : '加载更多公告'}}
+          <view
+            class="load-more"
+            bindtap="onLoadMoreAnnouncements"
+            wx:if="{{ announcementHasMore }}"
+          >
+            {{ loadingMoreAnnouncements ? '加载中…' : '加载更多公告' }}
           </view>
-          <view class="load-more end" wx:elif="{{announcements.length}}">没有更多公告</view>
+          <view class="load-more end" wx:elif="{{ announcements.length }}">没有更多公告</view>
         </view>
         <empty-state wx:else title="暂无公告"></empty-state>
       </view>
-
     </block>
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>

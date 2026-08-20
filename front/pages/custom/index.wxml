@@ -1,0 +1,66 @@
+<view class="page theme-{{theme}} feedback-page">
+  <app-header
+    title="问题反馈"
+    showShare="{{false}}"
+    showBack="{{true}}"
+    showBrand="{{false}}"
+  ></app-header>
+  <scroll-view scroll-y class="content-scroll">
+    <!-- 引言 -->
+    <view class="card intro-card">
+      <view class="intro-header">
+        <view class="intro-icon-wrap">
+          <text class="intro-icon">💬</text>
+        </view>
+        <view class="intro-header-text">
+          <text class="intro-title">你的反馈，让工具更好用</text>
+          <text class="intro-subtitle">问题反馈与功能建议，直达开发者</text>
+        </view>
+      </view>
+      <view class="intro-divider"></view>
+      <text class="intro-body">
+        使用「市场追踪助手」时遇到问题，或希望新增功能、调整体验，扫码添加微信即可直达开发者。反馈时描述具体场景，能帮助更快定位与优化。
+      </text>
+    </view>
+
+    <!-- 联系方式二维码 -->
+    <view class="card qr-card">
+      <view class="card-title-row">
+        <text class="card-title">扫码联系开发者</text>
+      </view>
+      <view class="qr-wrap">
+        <image
+          wx:if="{{!qrError}}"
+          class="qr-image"
+          src="{{qrCodeUrl}}"
+          mode="widthFix"
+          show-menu-by-longpress="{{true}}"
+          binderror="onQrError"
+        />
+        <view wx:else class="qr-error">
+          <text class="qr-error-icon">🖼️</text>
+          <text class="qr-error-text">二维码加载失败，请稍后重试</text>
+          <text class="qr-error-retry" bindtap="onRetryQr">重新加载</text>
+        </view>
+      </view>
+      <text class="qr-hint">长按识别二维码，或截图后用微信扫一扫</text>
+      <view class="qr-note">
+        <text class="qr-note-icon">💬</text>
+        <text class="qr-note-text">添加时请备注「问题反馈」或「功能建议」+ 简单描述</text>
+      </view>
+    </view>
+
+    <!-- 反馈小贴士 -->
+    <view class="card tips-card">
+      <view class="card-title-row">
+        <text class="card-title">反馈小贴士</text>
+      </view>
+      <view class="tip-line" wx:for="{{tips}}" wx:key="*this">
+        <text class="tip-dot">·</text>
+        <text class="tip-text">{{item}}</text>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+</view>

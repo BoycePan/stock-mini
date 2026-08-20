@@ -1,5 +1,13 @@
 import type { MinutePoint } from '../../types/stock'
 import { computeMinuteVolumeDirections } from '../../utils/minute'
+import {
+  buildMinuteGrid,
+  minuteToSlot,
+  parseMinuteOfDay,
+  sessionTimeLabels,
+  type MinuteGrid,
+  type MinuteSessionKind,
+} from '../../utils/minute-session'
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 type CanvasNode = WechatMiniprogram.Canvas
@@ -17,6 +25,9 @@ const DOWN_COLOR = '#20a66a'
  * - 点击 / 拖动 canvas 显示十字光标 + 信息框（时间 / 价格 / 涨跌 / 均价 / 成交量），同花顺式交互
  * - 画布内不展示「当前价格」「昨收」常驻标签；价格刻度绘制在左侧留白，不遮挡图形
  * - 深浅主题配色跟随 theme
+ * - session（utils/minute-session.ts）：非 continuous 时按完整交易时段铺点——早于收盘时，
+ *   右侧未来分钟自动留白（时间轴固定为 09:30-11:30/13:00-15:00 等真实时段；休盘不占空白），
+ *   数据时间无法对齐时段网格时自动回退为拉伸绘制
  */
 Component({
   properties: {
@@ -24,9 +35,14 @@ Component({
     /** 昨收（0 / 空 视为无基准线） */
     preClose: { type: Number, value: 0 },
     theme: { type: String, value: 'light' },
+    /**
+     * 交易时段模型（utils/minute-session.ts 的 MinuteSessionKind）：
+     * 非 continuous 时按完整时段铺点、未来分钟留白；缺省 continuous = 拉伸绘制
+     */
+    session: { type: String, value: 'continuous' },
   },
   observers: {
-    'points, preClose, theme': function () {
+    'points, preClose, theme, session': function () {
       this.draw(this.data.points as MinutePoint[], this.data.preClose as number)
     },
   },
@@ -73,6 +89,8 @@ Component({
             points: points as MinutePoint[],
             preClose,
             isDark: this.data.theme === 'dark',
+            session: this.data.session as MinuteSessionKind,
+            padded: this.buildPaddedLayout(points as MinutePoint[]),
             rectLeft: info.left ?? 0,
             padL: 0,
             padR: 12,
@@ -184,7 +202,12 @@ Component({
       st.maxP = maxP
 
       const priceY = (p: number) => padT + ((maxP - p) / (maxP - minP)) * priceH
-      const xOf = (i: number) => padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW)
+      // 完整时段模式：按真实时钟槽位铺点（未来分钟留白）；否则等分拉伸
+      const padded = st.padded
+      const xOf = (i: number) =>
+        padded
+          ? padL + ((padded.slots[i] ?? 0) / (padded.grid.totalSlots - 1)) * plotW
+          : padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW)
 
       // 横向网格 + 价格刻度（右对齐在左侧留白内）
       // 纵轴已以昨收 0% 对称，中间网格线（i=2）即零轴：实线高亮 + 「0%」标签
@@ -268,8 +291,9 @@ Component({
         const volMax = Math.max(...points.map((p) => p.volume || 0), 1)
         const volTop = padT + priceH + 10
         const volBottom = height - padB
-        const slot = plotW / n
-        const bw = Math.max(1, slot * 0.6)
+        // 完整时段模式按真实槽位宽度画柱，避免数据点少时柱过宽
+        const slotSize = padded ? plotW / padded.grid.totalSlots : plotW / n
+        const bw = Math.max(1, slotSize * 0.6)
         const barH = (p: MinutePoint) =>
           (volBottom - volTop) * Math.min((p.volume || 0) / volMax, 1)
 
@@ -303,14 +327,50 @@ Component({
         ctx.stroke()
       }
 
-      // 时间刻度（5 个等分点取实际时间）
+      // 时间刻度：完整时段模式取固定时段标签（A股 09:30/10:30/11:30/13:00/15:00），
+      // 拉伸模式取 5 个等分点实际时间
       ctx.fillStyle = textColor
       ctx.textAlign = 'center'
-      for (let i = 0; i <= 4; i += 1) {
-        const idx = Math.min(n - 1, Math.round((i / 4) * (n - 1)))
-        const t = points[idx]?.time ?? ''
-        ctx.fillText(t, xOf(idx), height - 2)
+      if (padded) {
+        for (const label of sessionTimeLabels(padded.grid)) {
+          ctx.fillText(
+            label.text,
+            padL + (label.slot / (padded.grid.totalSlots - 1)) * plotW,
+            height - 2,
+          )
+        }
+      } else {
+        for (let i = 0; i <= 4; i += 1) {
+          const idx = Math.min(n - 1, Math.round((i / 4) * (n - 1)))
+          const t = points[idx]?.time ?? ''
+          ctx.fillText(t, xOf(idx), height - 2)
+        }
       }
+    },
+    /**
+     * 按完整交易时段把数据点铺到真实时钟上（utils/minute-session.ts）：
+     * 以首个数据点时间为锚点生成时段网格，逐点换算槽位。
+     * 任一数据点时间无法对齐时段网格（解析失败 / 落在休盘时间 / 时间乱序）时返回 null，
+     * 调用方回退为原有拉伸绘制，保证异常数据不出错。
+     */
+    buildPaddedLayout(points: MinutePoint[]): PaddedLayout | null {
+      const kind = this.data.session as MinuteSessionKind
+      if (!kind || kind === 'continuous' || points.length === 0) return null
+      const anchor = parseMinuteOfDay(points[0]?.time ?? '')
+      if (anchor === null) return null
+      const grid = buildMinuteGrid(kind, anchor)
+      if (!grid) return null
+      const slots: number[] = []
+      for (const p of points) {
+        const minute = parseMinuteOfDay(p.time)
+        if (minute === null) return null
+        const slot = minuteToSlot(grid, minute)
+        if (slot === null) return null
+        // 时间必须单调不减，否则无法按真实时钟铺点（回退拉伸）
+        if (slots.length > 0 && slot < (slots[slots.length - 1] as number)) return null
+        slots.push(slot)
+      }
+      return { grid, slots }
     },
     /** 十字光标 + 信息框（同花顺式） */
     renderCrosshair(st: MinuteChartState) {
@@ -327,7 +387,10 @@ Component({
       const avgColor = isDark ? '#f5b94a' : '#f0a020'
       const lineColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(20,32,51,0.35)'
       const priceY = (v: number) => padT + ((maxP - v) / (maxP - minP)) * priceH
-      const x = padL + (idx / (n - 1)) * plotW
+      // 完整时段模式：十字光标跟随真实时钟槽位
+      const x = st.padded
+        ? padL + ((st.padded.slots[idx] ?? 0) / (st.padded.grid.totalSlots - 1)) * plotW
+        : padL + (idx / (n - 1)) * plotW
       const y = priceY(p.price)
 
       // 竖线贯穿价格区 + 成交量区，横线贯穿价格区
@@ -428,8 +491,24 @@ Component({
       // canvas 触摸事件 touches[0] 运行时自带相对 canvas 的 x（类型声明未包含，这里显式取）
       const touchX = (touch as unknown as { x?: number }).x
       const x = typeof touchX === 'number' ? touchX : (touch.clientX ?? 0) - (st.rectLeft ?? 0)
-      const raw = Math.round(((x - st.padL) / st.plotW) * (st.points.length - 1))
-      const next = Math.max(0, Math.min(st.points.length - 1, raw))
+      let next: number
+      if (st.padded && st.padded.slots.length > 0) {
+        // 完整时段模式：触摸位置 → 时段槽位 → 距离最近的真实数据点
+        const touched = Math.round(((x - st.padL) / st.plotW) * (st.padded.grid.totalSlots - 1))
+        const target = Math.max(0, Math.min(st.padded.grid.totalSlots - 1, touched))
+        let bestDist = Infinity
+        next = 0
+        st.padded.slots.forEach((slot, i) => {
+          const dist = Math.abs(slot - target)
+          if (dist < bestDist) {
+            bestDist = dist
+            next = i
+          }
+        })
+      } else {
+        const raw = Math.round(((x - st.padL) / st.plotW) * (st.points.length - 1))
+        next = Math.max(0, Math.min(st.points.length - 1, raw))
+      }
       if (next !== st.activeIndex) {
         st.activeIndex = next
         this.render()
@@ -445,6 +524,9 @@ interface MinuteChartState {
   points: MinutePoint[]
   preClose: number
   isDark: boolean
+  session: MinuteSessionKind
+  /** 完整时段铺点结果（无/无法对齐时为 null，回退拉伸绘制） */
+  padded: PaddedLayout | null
   rectLeft: number
   padL: number
   padR: number
@@ -456,6 +538,12 @@ interface MinuteChartState {
   minP: number
   maxP: number
   activeIndex: number | null
+}
+
+/** 完整时段网格 + 每个数据点的槽位 */
+interface PaddedLayout {
+  grid: MinuteGrid
+  slots: number[]
 }
 
 /** 组件实例 → 画布状态（避免在 data 中放非响应式对象） */

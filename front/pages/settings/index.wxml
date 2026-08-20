@@ -1,7 +1,6 @@
 <view class="page theme-{{ theme }} settings-page">
   <app-header showShare="{{ false }}"></app-header>
   <scroll-view scroll-y class="content-scroll">
-
     <!-- 用户信息卡片 -->
     <view class="user-card">
       <block wx:if="{{ isLoggedIn && user }}">
@@ -50,20 +49,47 @@
         </view>
         <view class="row-main">
           <text class="row-label">主题模式</text>
-          <text class="row-desc">自由切换浅色 / 深色外观</text>
+          <!-- <text class="row-desc">默认跟随系统，也可手动切换浅色 / 深色</text> -->
         </view>
         <view class="theme-switch">
           <text
-            class="theme-option {{ theme === 'light' ? 'selected' : '' }}"
+            class="theme-option {{ themePref === 'system' ? 'selected' : '' }}"
+            data-value="system"
+            bindtap="onThemeChange"
+            >跟随系统</text
+          >
+          <text
+            class="theme-option {{ themePref === 'light' ? 'selected' : '' }}"
             data-value="light"
             bindtap="onThemeChange"
-          >浅色</text>
+            >浅色</text
+          >
           <text
-            class="theme-option {{ theme === 'dark' ? 'selected' : '' }}"
+            class="theme-option {{ themePref === 'dark' ? 'selected' : '' }}"
             data-value="dark"
             bindtap="onThemeChange"
-          >深色</text>
+            >深色</text
+          >
         </view>
+      </view>
+    </view>
+
+    <!-- 更多 -->
+    <text class="section-heading">更多</text>
+    <view class="setting-group">
+      <view
+        class="setting-row clickable"
+        hover-class="row-hover"
+        bindtap="onFeedbackTap"
+      >
+        <view class="row-icon-wrap purple">
+          <text class="row-emoji">💬</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">问题反馈</text>
+          <text class="row-desc">反馈问题、提出建议</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
     </view>
 

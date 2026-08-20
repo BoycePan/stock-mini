@@ -261,7 +261,7 @@
   background: rgba(132, 146, 165, 0.08);
 }
 
-.metric-change text:first-child {
+.metric-change .metric-change-prefix {
   margin-right: 4rpx;
   font-size: 22rpx;
 }
@@ -323,7 +323,7 @@
   background: transparent;
 }
 
-.section-card .single-line-metric .metric-change text:first-child {
+.section-card .single-line-metric .metric-change .metric-change-prefix {
   margin-right: 4rpx;
   font-size: 22rpx;
 }
