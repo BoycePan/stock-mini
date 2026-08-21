@@ -3,6 +3,12 @@ import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
 import { formatChange } from '../../utils/formatter'
+import {
+  APP_NAME,
+  formatShareStamp,
+  type PosterData,
+  type PosterTone,
+} from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
@@ -29,6 +35,7 @@ Page({
     members: [] as MemberView[],
     memberTotal: 0,
     error: '',
+    posterData: null as PosterData | null,
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
@@ -85,9 +92,9 @@ Page({
     this.setData({ selectedBoard: board, klines: [] })
     try {
       const result = await sectorApi.getKlines(board.plate_code, '240', 60)
-      this.setData({ klines: result.klines })
+      this.setData({ klines: result.klines, posterData: this.buildPosterData() })
     } catch {
-      this.setData({ klines: [] })
+      this.setData({ klines: [], posterData: this.buildPosterData() })
       wx.showToast({ title: '板块K线加载失败', icon: 'none' })
     }
   },
@@ -100,6 +107,47 @@ Page({
   },
   onUnload() {
     unbindTheme(this)
+  },
+  /** 组装分享海报数据（板块信息 + 成分股涨幅榜；K 线图由 share-poster 组件按 klines 绘制） */
+  buildPosterData(): PosterData {
+    const board = this.data.selectedBoard
+    const memberRows = this.data.members.slice(0, 6).map((member) => ({
+      name: member.name,
+      value: member.priceText,
+      changeText: member.changeText,
+      tone: (member.changeClass === 'up'
+        ? 'up'
+        : member.changeClass === 'down'
+          ? 'down'
+          : 'flat') as PosterTone,
+    }))
+    return {
+      title: (board && board.plate_name) || this.data.title,
+      subtitle: APP_NAME,
+      statusText: (board && board.plate_code) || '板块K线',
+      stamp: formatShareStamp(new Date()),
+      includeWatermark: true,
+      sections: [
+        {
+          title: '板块信息',
+          rows: [
+            {
+              name: '板块代码',
+              value: (board && board.plate_code) || '',
+              changeText: '',
+              tone: 'flat',
+            },
+            { name: '成分股', value: String(this.data.memberTotal), changeText: '', tone: 'flat' },
+          ],
+        },
+        ...(memberRows.length ? [{ title: '成分股涨幅榜', rows: memberRows }] : []),
+      ],
+    }
+  },
+  /** 顶栏分享按钮：调起 share-poster 组件生成并预览海报 */
+  onSharePoster() {
+    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+    if (poster) poster.open()
   },
   onMemberTap(event: WechatMiniprogram.BaseEvent) {
     const index = (event.currentTarget as unknown as { dataset: { index?: number } }).dataset.index

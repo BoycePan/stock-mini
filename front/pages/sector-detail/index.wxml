@@ -1,5 +1,12 @@
 <view class="page theme-{{theme}}">
-  <app-header title="{{title}}" showShare="{{false}}" showBack="{{true}}" showBrand="{{false}}"></app-header>
+  <app-header
+    title="{{title}}"
+    showShare="{{true}}"
+    posterShare="{{true}}"
+    bind:share="onSharePoster"
+    showBack="{{true}}"
+    showBrand="{{false}}"
+  ></app-header>
   <scroll-view scroll-y class="content-scroll">
     <loading-state wx:if="{{loading}}" text="正在加载板块数据" desc="正在为您获取板块行情与成分股，请稍候…"></loading-state>
     <view wx:elif="{{error}}" class="error-card">
@@ -54,4 +61,12 @@
     </block>
     <disclaimer-footer></disclaimer-footer>
   </scroll-view>
+
+  <!-- 分享海报（隐藏画布 + 预览弹窗） -->
+  <share-poster
+    id="sharePoster"
+    posterData="{{ posterData }}"
+    klines="{{ klines }}"
+    chartTitle="K线走势"
+  ></share-poster>
 </view>

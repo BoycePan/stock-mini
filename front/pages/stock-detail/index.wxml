@@ -3,6 +3,8 @@
     <app-header
       title="股票详情"
       showShare="{{ true }}"
+      posterShare="{{ true }}"
+      bind:share="onSharePoster"
       showBack="{{ true }}"
       showBrand="{{ false }}"
     ></app-header>
@@ -143,4 +145,12 @@
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </view>
+
+  <!-- 分享海报（隐藏画布 + 预览弹窗） -->
+  <share-poster
+    id="sharePoster"
+    posterData="{{ posterData }}"
+    klines="{{ klines }}"
+    chartTitle="K线走势"
+  ></share-poster>
 </view>

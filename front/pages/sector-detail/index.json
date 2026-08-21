@@ -4,6 +4,7 @@
     "loading-state": "/components/loading-state/index",
     "empty-state": "/components/empty-state/index",
     "kline-chart": "/components/kline-chart/index",
+    "share-poster": "/components/share-poster/index",
     "disclaimer-footer": "/components/disclaimer-footer/index"
   },
   "enablePullDownRefresh": true

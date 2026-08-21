@@ -52,5 +52,7 @@
     ]
   },
   "darkmode": true,
-  "themeLocation": "theme.json"
+  "themeLocation": "theme.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
 }

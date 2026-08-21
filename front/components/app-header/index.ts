@@ -42,12 +42,13 @@ Component({
 
       let headerStyle: string
       if (hasCapsule) {
-        // 胶囊顶部到状态栏底部的距离，用于垂直居中对齐
+        // 胶囊顶部到状态栏底部的距离
         const capsuleTopGap = Math.max(menuButton.top - statusBarHeight, 0)
         const navHeight = statusBarHeight + capsuleTopGap * 2 + menuButton.height
         // 胶囊左边缘到屏幕右边缘的距离，再留 8px 呼吸空间
         const rightInset = Math.max(windowInfo.windowWidth - menuButton.left, 0) + 8
-        headerStyle = `padding-top: ${statusBarHeight}px; height: ${navHeight}px; padding-right: ${rightInset}px;`
+        // padding-top 设为胶囊顶部坐标，使内容顶部与胶囊顶部精确平齐
+        headerStyle = `padding-top: ${menuButton.top}px; height: ${navHeight}px; padding-right: ${rightInset}px;`
       } else {
         // 兜底：拿不到胶囊信息时退化为旧逻辑（安全区顶部 + 估算值）
         const safeTop = windowInfo.safeArea?.top ?? statusBarHeight

@@ -12,7 +12,11 @@
     <view class="update-time">{{ updatedLabel }}</view>
   </view>
   <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{ loading }}" text="{{ loadingText }}" desc="{{ loadingDesc }}"></loading-state>
+    <loading-state
+      wx:if="{{ loading }}"
+      text="{{ loadingText }}"
+      desc="{{ loadingDesc }}"
+    ></loading-state>
     <view wx:elif="{{ error }}" class="error-card"
       ><text>{{ error }}</text
       ><button bindtap="onRetry">重新加载</button></view
@@ -36,7 +40,7 @@
       <view class="share-modal-head">
         <text class="share-modal-title">分享海报</text>
         <view class="share-wm-row">
-          <text class="share-wm-label">水印</text>
+          <text class="share-wm-label">底部水印</text>
           <switch
             checked="{{ includeWatermark }}"
             bindchange="onWatermarkToggle"

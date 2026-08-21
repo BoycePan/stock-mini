@@ -3,7 +3,13 @@ import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import { saveNewsDetail } from '../../utils/storage'
 import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
-import { formatChange, formatWan } from '../../utils/formatter'
+import { formatChange, formatNumber, formatWan } from '../../utils/formatter'
+import {
+  APP_NAME,
+  formatShareStamp,
+  type PosterData,
+  type PosterTone,
+} from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
@@ -33,6 +39,7 @@ Page({
     loadingMoreAnnouncements: false,
     scale: '240',
     error: '',
+    posterData: null as PosterData | null,
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
@@ -71,6 +78,7 @@ Page({
           amountText: formatWan(quote.amount),
         },
         klines: klineResult.klines,
+        posterData: this.buildPosterData(quote),
         news: newsResult,
         newsPage: 1,
         newsHasMore: newsResult.length > 0,
@@ -176,6 +184,47 @@ Page({
   },
   onUnload() {
     unbindTheme(this)
+  },
+  /** 组装分享海报数据（头部 + 行情指标分区；K 线图由 share-poster 组件按 klines 绘制） */
+  buildPosterData(quote: StockQuote): PosterData {
+    const change = Number(quote.pct_change) || 0
+    const tone: PosterTone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+    return {
+      title: quote.name || '股票详情',
+      subtitle: APP_NAME,
+      statusText: quote.code || '',
+      stamp: formatShareStamp(new Date()),
+      includeWatermark: true,
+      sections: [
+        {
+          title: '行情指标',
+          rows: [
+            {
+              name: '最新价',
+              value: formatNumber(quote.price, 2),
+              changeText: formatChange(change),
+              tone,
+            },
+            { name: '开盘', value: formatNumber(quote.open, 2), changeText: '', tone: 'flat' },
+            {
+              name: '昨收',
+              value: formatNumber(quote.prev_close, 2),
+              changeText: '',
+              tone: 'flat',
+            },
+            { name: '最高', value: formatNumber(quote.high, 2), changeText: '', tone: 'flat' },
+            { name: '最低', value: formatNumber(quote.low, 2), changeText: '', tone: 'flat' },
+            { name: '成交量', value: formatWan(quote.volume), changeText: '', tone: 'flat' },
+            { name: '成交额', value: formatWan(quote.amount), changeText: '', tone: 'flat' },
+          ],
+        },
+      ],
+    }
+  },
+  /** 顶栏分享按钮：调起 share-poster 组件生成并预览海报 */
+  onSharePoster() {
+    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+    if (poster) poster.open()
   },
   onShareAppMessage() {
     return {

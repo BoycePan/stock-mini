@@ -30,7 +30,7 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(miniprogram-api-typings@3.12.0)(mobx-miniprogram@6.12.3)
       tdesign-miniprogram:
-        specifier: ^1.12.0
+        specifier: ^1.16.0
         version: 1.16.0
       weapp-qrcode-canvas-2d:
         specifier: ^1.1.6
@@ -2651,6 +2651,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
