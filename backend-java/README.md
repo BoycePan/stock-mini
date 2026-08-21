@@ -144,6 +144,26 @@ bash scripts/deploy.sh --run
 
 > 与 Go 版 `backend/` 并存时注意端口：两者默认都监听 `18487`（host 网络），并存验证请用 `PORT` 给其中一方换端口。
 
+### 监控接入（OpenTelemetry → SigNoz）
+
+镜像**不打包** javaagent jar（避免 CI/服务器带宽消耗），部署时从宿主挂载 `opentelemetry-javaagent.jar` 并以覆盖 CMD 方式加载（`-javaagent`），自动采集 HTTP 请求 / JDBC / 定时任务 trace、JVM 指标与 logback 日志。
+
+- **首次准备**（一次性，本机下好后 scp 到服务器，后续复用）：
+  ```bash
+  curl -L -o opentelemetry-javaagent.jar \
+    https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/2.31.0/opentelemetry-javaagent-2.31.0.jar
+  scp opentelemetry-javaagent.jar root@<服务器>:/apps/stock/backend-java/
+  ```
+  jar 缺失时部署脚本自动降级为无监控模式（业务不受影响）。
+- **上报配置**：`.env` 中的 `OTEL_*` 变量（模板见 `.env.example`），部署时由 `docker run --env-file` 注入。
+- **Endpoint 要点**：
+  - 本机/开发：`OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:18117`（`OTEL_EXPORTER_OTLP_PROTOCOL=grpc`）。
+  - 线上经 Tailscale 回连本机：用**本机 Tailscale IP**（如 `http://100.90.180.33:18117`），**勿用 localhost**（容器内 localhost 不是宿主机）。
+  - SigNoz 与业务同机/同 VPC 后：改为线上服务器内网或 Tailscale IP。
+- **容错**：上报是异步的，SigNoz 不可达时业务不受影响（span 队列满后丢弃，不阻塞、不无限重试），适合监控暂不稳定的过渡期。
+- **首次接入需重启容器**（JVM 启动参数变更），有数秒停机窗口；之后每次部署自动生效。
+- **服务名**：SigNoz UI 的 Services 页以 `OTEL_SERVICE_NAME`（本项目 `stock-backend`）标识该服务。
+
 ## 部署前检查
 
 切换线上流量前，请确认以下两点（涉及生产数据库，Java 侧启动不会自动校验）：

@@ -56,6 +56,19 @@ jobs:
             # 日志目录（挂载到 /apps/logs；提前创建，便于后续设置读写权限）
             mkdir -p /apps/stock/backend-java/logs
 
+            # ── OpenTelemetry agent（SigNoz 监控）──
+            # agent jar 不打包进镜像：从宿主挂载 + 覆盖 CMD 加载，避免镜像增量/带宽消耗。
+            # jar 不存在时优雅降级（无监控启动，业务不停），并提示放置方法。
+            OTEL_JAR=/apps/stock/backend-java/opentelemetry-javaagent.jar
+            AGENT_ARGS=""
+            if [ -f "$OTEL_JAR" ]; then
+              AGENT_ARGS="-v $OTEL_JAR:/app/opentelemetry-javaagent.jar:ro"
+              echo "==> 启用 OpenTelemetry agent ($OTEL_JAR)"
+            else
+              echo "!! $OTEL_JAR 不存在，本次以无监控模式启动（业务不受影响）。" >&2
+              echo "!! 放置方法：scp opentelemetry-javaagent.jar root@<host>:$OTEL_JAR" >&2
+            fi
+
             # 滚动重启
             docker stop stock-backend-java 2>/dev/null || true
             docker rm stock-backend-java 2>/dev/null || true
@@ -66,7 +79,9 @@ jobs:
               -e LOG_DIR=/apps/logs \
               -v /apps/stock/backend-java/logs:/apps/logs \
               --env-file .env \
-              "$IMAGE"
+              $AGENT_ARGS \
+              "$IMAGE" \
+              bash -lc 'if [ -f /app/opentelemetry-javaagent.jar ]; then exec java -javaagent:/app/opentelemetry-javaagent.jar -Duser.timezone=Asia/Shanghai -jar app.jar; else exec java -Duser.timezone=Asia/Shanghai -jar app.jar; fi'
 
             # 等待健康检查（最多 60s）
             echo "=== 等待启动 ==="
