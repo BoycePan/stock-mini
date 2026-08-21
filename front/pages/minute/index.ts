@@ -5,7 +5,7 @@ import { fetchMinuteData, hasMinuteSources, sparseVolumeNote } from '../../utils
 import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
 import type { MinutePoint } from '../../types/stock'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
-import { buildSharePath } from '../../utils/share'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 interface MinuteQuoteView {
   price: string
@@ -176,6 +176,7 @@ Page({
         // 取数口径与展示 code 不同时（外盘/会话切换）一并透传，保证分享打开仍是同一标的
         mcode: this.data.mcode && this.data.mcode !== this.data.code ? this.data.mcode : undefined,
       }),
+      imageUrl: SHARE_IMAGE_URL,
     }
   },
 })

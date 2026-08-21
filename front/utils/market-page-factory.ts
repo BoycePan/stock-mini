@@ -15,7 +15,7 @@ import { metricViewModel } from './market'
 import { hasMinuteSources } from '../config/minute'
 import { registerStoreBinding, releaseStoreBindings } from './store-bindings'
 import { bindTheme, unbindTheme } from './theme'
-import { redirectFromShare } from './share'
+import { redirectFromShare, SHARE_IMAGE_URL } from './share'
 
 export type MarketPageKey = 'asia' | 'metals' | 'global'
 
@@ -26,28 +26,35 @@ export interface MarketPageOptions {
   loadingText: string
   /** 加载中副文本 */
   loadingDesc: string
-  /** 是否启用分享（目前仅 global 需要） */
-  enableShare?: boolean
+}
+
+/** 各行情页分享卡片标题 */
+const SHARE_TITLES: Record<MarketPageKey, string> = {
+  global: '全球市场行情',
+  asia: '亚太市场行情',
+  metals: '贵金属行情',
 }
 
 export function createMarketPage(opts: MarketPageOptions) {
-  const { pageKey, enableShare = false } = opts
+  const { pageKey } = opts
 
   // 分享中转：分享卡片先进首页再自动跳转目标页时，标记该页面实例，跳转完成前
   // 不再执行首页的数据加载 / 自动刷新（避免中转瞬间多打一次首页请求）
   const shareRedirectedPages = new WeakSet<object>()
 
-  const shareHandlers = enableShare
-    ? {
-        onShare() {
-          wx.showShareMenu({ withShareTicket: true })
-          wx.showToast({ title: '请使用右上角分享', icon: 'none' })
-        },
-        onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
-          return { title: '市场追踪助手', path: `/pages/${pageKey}/index` }
-        },
+  const shareHandlers = {
+    onShare() {
+      wx.showShareMenu({ withShareTicket: true })
+      wx.showToast({ title: '请使用右上角分享', icon: 'none' })
+    },
+    onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+      return {
+        title: SHARE_TITLES[pageKey],
+        path: `/pages/${pageKey}/index`,
+        imageUrl: SHARE_IMAGE_URL,
       }
-    : {}
+    },
+  }
 
   return Page({
     data: {

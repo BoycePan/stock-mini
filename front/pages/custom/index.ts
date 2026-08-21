@@ -1,5 +1,6 @@
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { SHARE_IMAGE_URL } from '../../utils/share'
 
 /** 开发者联系方式二维码（阿里云 OSS 静态资源） */
 const QR_CODE_URL = 'https://jzo2o-pan-oss.oss-cn-hangzhou.aliyuncs.com/images/qrcode.jpg'
@@ -26,5 +27,12 @@ Page({
   },
   onRetryQr() {
     this.setData({ qrError: false })
+  },
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    return {
+      title: '意见反馈 - 市场追踪助手',
+      path: '/pages/custom/index',
+      imageUrl: SHARE_IMAGE_URL,
+    }
   },
 })

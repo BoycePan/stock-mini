@@ -4,6 +4,7 @@ import { stockApi } from '../../api/stock'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
 import { formatChange } from '../../utils/formatter'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const MEMBER_QUOTE_LIMIT = 20
 
@@ -106,5 +107,17 @@ Page({
     const member = this.data.members[index]
     if (!member) return
     wx.navigateTo({ url: `/pages/stock-detail/index?code=${member.code}` })
+  },
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    return {
+      title: this.data.title || '板块详情',
+      // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
+      path: buildSharePath('sector-detail', {
+        code: this.data.code,
+        cid: this.data.cid ? String(this.data.cid) : undefined,
+        name: this.data.title,
+      }),
+      imageUrl: SHARE_IMAGE_URL,
+    }
   },
 })

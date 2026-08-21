@@ -3,6 +3,7 @@ import { rootStore } from '../../stores/root.store'
 import { addSearchHistory, clearSearchHistory, getSearchHistory } from '../../utils/storage'
 import type { StockInfo } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { SHARE_IMAGE_URL } from '../../utils/share'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -85,5 +86,12 @@ Page({
   onClearHistory() {
     clearSearchHistory()
     this.setData({ history: [] })
+  },
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    return {
+      title: '股票搜索 - 市场追踪助手',
+      path: '/pages/search/index',
+      imageUrl: SHARE_IMAGE_URL,
+    }
   },
 })

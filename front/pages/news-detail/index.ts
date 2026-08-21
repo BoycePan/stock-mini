@@ -4,7 +4,7 @@ import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
 import { buildRichHtml } from '../../utils/html'
-import { buildSharePath } from '../../utils/share'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 /** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
 function decodeQuery(value: string | undefined): string {
@@ -80,6 +80,7 @@ Page({
       title: news?.title || '新闻详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
       path: buildSharePath('news-detail', { title: news?.title, url: news?.url }),
+      imageUrl: SHARE_IMAGE_URL,
     }
   },
 })

@@ -6,6 +6,7 @@ import { getFinanceCache, saveNewsDetail, setFinanceCache } from '../../utils/st
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { stripHtml } from '../../utils/html'
+import { SHARE_IMAGE_URL } from '../../utils/share'
 import { formatNewsTime } from '../../utils/formatter'
 import type { MarketPageData } from '../../types/market'
 
@@ -328,6 +329,13 @@ Page({
     if (typeof this.getTabBar === 'function') {
       const tabBar = this.getTabBar()
       if (tabBar) tabBar.setData({ selected: 'finance' })
+    }
+  },
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    return {
+      title: '财经新闻',
+      path: '/pages/finance/index',
+      imageUrl: SHARE_IMAGE_URL,
     }
   },
 })

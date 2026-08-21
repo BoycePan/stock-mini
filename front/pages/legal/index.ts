@@ -1,5 +1,6 @@
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { rootStore } from '../../stores/root.store'
+import { SHARE_IMAGE_URL } from '../../utils/share'
 
 interface LegalSection {
   heading: string
@@ -215,6 +216,7 @@ const DEFAULT_DOC: LegalDoc = {
 Page({
   data: {
     theme: rootStore.settings.theme,
+    type: '',
     title: '',
     docIcon: '',
     updatedAt: '',
@@ -226,10 +228,20 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
     const type = options.type || ''
+    this.setData({ type })
     this.applyDoc(LEGAL_DOCS[type] ?? DEFAULT_DOC)
   },
   onUnload() {
     unbindTheme(this)
+  },
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    return {
+      title: this.data.title ? `${this.data.title} - 市场追踪助手` : '市场追踪助手',
+      path: this.data.type
+        ? `/pages/legal/index?type=${encodeURIComponent(this.data.type)}`
+        : '/pages/legal/index',
+      imageUrl: SHARE_IMAGE_URL,
+    }
   },
   applyDoc(doc: LegalDoc) {
     this.setData({

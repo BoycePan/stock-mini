@@ -5,7 +5,7 @@ import { saveNewsDetail } from '../../utils/storage'
 import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
 import { formatChange, formatWan } from '../../utils/formatter'
 import { bindTheme, unbindTheme } from '../../utils/theme'
-import { buildSharePath } from '../../utils/share'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const ANNOUNCEMENT_PAGE_SIZE = 20
 
@@ -182,6 +182,7 @@ Page({
       title: this.data.quote?.name || '股票详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
       path: buildSharePath('stock-detail', { code: this.data.code }),
+      imageUrl: SHARE_IMAGE_URL,
     }
   },
 })

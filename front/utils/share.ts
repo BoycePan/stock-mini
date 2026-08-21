@@ -11,11 +11,15 @@
 /** 分享入口统一指向的首页路径（app.json 首个页面，即小程序冷启动页） */
 export const SHARE_HOME_PATH = '/pages/global/index'
 
+/** 分享卡片统一配图（静态资源 CDN，建议 5:4 比例图） */
+export const SHARE_IMAGE_URL = 'https://wx-stock-static.guyu.org.cn/resource/wx-stock-share.jpg'
+
 /** 分享目标页路由表：target 标识 → 页面路径 */
 const SHARE_TARGET_ROUTES: Record<string, string> = {
   minute: '/pages/minute/index',
   'stock-detail': '/pages/stock-detail/index',
   'news-detail': '/pages/news-detail/index',
+  'sector-detail': '/pages/sector-detail/index',
 }
 
 /** 安全解码：微信 onLoad options 可能已被解码，避免重复解码抛 URIError */
