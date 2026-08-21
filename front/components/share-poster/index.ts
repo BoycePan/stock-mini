@@ -4,22 +4,25 @@ import { renderSharePoster, type PosterData } from '../../utils/share-poster'
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 /**
- * 分享海报组件（K 线图页面通用）：
+ * 分享海报组件（行情 / 新闻详情通用）：
  * - 持有隐藏 Canvas（#shareCanvas）绘制海报并导出临时文件；
  * - 预览弹窗：水印开关（重画）、长按保存 / 转发、保存相册、调起微信图片分享菜单；
- * - 海报由 posterData（标题 / 状态 / 分区指标）+ klines（内嵌 K 线走势图）组成，
+ * - 海报由 posterData（标题 / 状态 / 分区指标）+ klines（可选，内嵌 K 线走势图）组成，
  *   固定深色底，深浅主题下均清晰可读；弹窗 UI 跟随主题。
  *
- * 页面用法：
+ * 页面用法（行情页）：
  * <share-poster id="sharePoster" posterData="{{ posterData }}" klines="{{ klines }}"></share-poster>
  * app-header 绑定 posterShare + bind:share 后，页面 onSharePoster 调
  * this.selectComponent('#sharePoster').open()。
+ *
+ * 新闻等无行情页面不传 klines（不绘制内嵌图表），海报正文走 posterData 的
+ * 文本段落分区（PosterSection.text，见 utils/share-poster.ts）。
  */
 Component({
   properties: {
     /** 海报数据（主标题 / 状态文案 / 分区指标等），由页面组装 */
     posterData: { type: Object, value: {} },
-    /** K 线数据：非空时在海报头部下方绘制 K 线走势图 */
+    /** K 线数据：非空时在海报头部下方绘制 K 线走势图（新闻等无行情页面可不传） */
     klines: { type: Array, value: [] },
     /** K 线面板标题 */
     chartTitle: { type: String, value: 'K线走势' },
@@ -48,19 +51,17 @@ Component({
       const klines = this.data.klines as KlinePoint[]
       if (this.data.shareLoading) return
       if (!data || !data.sections || !data.sections.length) {
-        wx.showToast({ title: '行情加载中…请稍候', icon: 'none' })
-        return
-      }
-      if (!klines || !klines.length) {
-        wx.showToast({ title: 'K线加载中…请稍候', icon: 'none' })
+        wx.showToast({ title: '内容加载中…请稍候', icon: 'none' })
         return
       }
       // 同时打开右上角胶囊菜单的分享能力（onShareAppMessage 在页面层定义）
       wx.showShareMenu({ withShareTicket: true })
       this.setData({ shareLoading: true })
       wx.showLoading({ title: '生成图片中…', mask: true })
-      const chart = buildKlinePosterChart(klines, this.data.chartTitle)
-      renderSharePoster(this, data, { chart })
+      // K 线可选：新闻等无行情页面不传 klines，海报正文用文本段落分区
+      const chart =
+        klines && klines.length ? buildKlinePosterChart(klines, this.data.chartTitle) : undefined
+      renderSharePoster(this, data, chart ? { chart } : undefined)
         .then((path) => {
           this.setData({ shareLoading: false, sharePreviewPath: path, modalVisible: true })
           wx.hideLoading()
@@ -81,8 +82,10 @@ Component({
       this.setData({ includeWatermark: next, shareLoading: true })
       wx.showLoading({ title: '重画图片中…', mask: true })
       const data = { ...(this.data.posterData as PosterData), includeWatermark: next }
-      const chart = buildKlinePosterChart(this.data.klines as KlinePoint[], this.data.chartTitle)
-      renderSharePoster(this, data, { chart })
+      const klines = this.data.klines as KlinePoint[]
+      const chart =
+        klines && klines.length ? buildKlinePosterChart(klines, this.data.chartTitle) : undefined
+      renderSharePoster(this, data, chart ? { chart } : undefined)
         .then((path) => {
           this.setData({ shareLoading: false, sharePreviewPath: path })
           wx.hideLoading()

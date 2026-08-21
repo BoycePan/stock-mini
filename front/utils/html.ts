@@ -201,14 +201,24 @@ const BLOCK_FONT_TAGS = new Set([
   'code',
 ])
 
-const BODY_FONT_SIZE = '16px'
+const BODY_FONT_SIZE = '15px'
+const BODY_LINE_HEIGHT = '1.9'
 const HEADING_FONT_SIZES: Record<string, string> = {
-  h1: '24px',
-  h2: '21px',
-  h3: '19px',
-  h4: '17px',
-  h5: '16px',
-  h6: '16px',
+  h1: '22px',
+  h2: '19px',
+  h3: '17px',
+  h4: '16px',
+  h5: '15px',
+  h6: '15px',
+}
+
+const HEADING_LINE_HEIGHTS: Record<string, string> = {
+  h1: '1.4',
+  h2: '1.4',
+  h3: '1.4',
+  h4: '1.5',
+  h5: '1.5',
+  h6: '1.5',
 }
 
 function parseAttrs(attrStr: string): Map<string, string> {
@@ -268,7 +278,8 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
         if (isClosing) return ALLOWED_TAGS.has(tag) ? `</${tag}>` : ''
         if (!ALLOWED_TAGS.has(tag)) return ''
         if (tag === 'br') return '<br>'
-        if (tag === 'hr') return '<hr>'
+        if (tag === 'hr')
+          return `<hr style="border:none;border-top:1px solid ${theme === RICH_HTML_DARK_THEME ? '#2a394e' : '#e2eaf3'};margin:20px 0;">`
 
         const attrs = parseAttrs(attrStr)
         const style = parseStyle(attrs.get('style') ?? '')
@@ -305,22 +316,41 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
           if (!style.color) {
             style.color = HEADING_TAGS.has(tag) ? theme.heading : theme.text
           }
-          // 块级标签统一字号 / 行高，保证排版舒展且深浅色下一致
-          if (HEADING_TAGS.has(tag) && !style['font-size']) {
-            style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
-          } else if (BLOCK_FONT_TAGS.has(tag) && !style['font-size']) {
-            style['font-size'] = BODY_FONT_SIZE
-          }
-          if (
-            (tag === 'p' ||
-              tag === 'div' ||
-              tag === 'li' ||
-              tag === 'blockquote' ||
-              tag === 'td' ||
-              tag === 'th') &&
-            !style['line-height']
-          ) {
-            style['line-height'] = '1.8'
+          // 块级标签统一字号 / 行高 / 间距，保证排版舒展且深浅色下一致
+          if (HEADING_TAGS.has(tag)) {
+            if (!style['font-size']) style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
+            if (!style['font-weight']) style['font-weight'] = '700'
+            if (!style['line-height']) style['line-height'] = HEADING_LINE_HEIGHTS[tag] ?? '1.4'
+            if (!style['margin-top']) style['margin-top'] = '20px'
+            if (!style['margin-bottom']) style['margin-bottom'] = '10px'
+          } else if (BLOCK_FONT_TAGS.has(tag)) {
+            if (!style['font-size']) style['font-size'] = BODY_FONT_SIZE
+            if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
+            // 段落间距 + 首行缩进
+            if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
+              style['margin-bottom'] = '14px'
+            }
+            if (tag === 'p' && !style['text-indent']) {
+              style['text-indent'] = '2em'
+            }
+            // 引用块装饰
+            if (tag === 'blockquote') {
+              if (!style['border-left'])
+                style['border-left'] =
+                  `3px solid ${theme === RICH_HTML_DARK_THEME ? '#3b6fd6' : '#4278ed'}`
+              if (!style['padding-left']) style['padding-left'] = '14px'
+              if (!style['margin']) style['margin'] = '16px 0'
+              if (!style['font-style']) style['font-style'] = 'italic'
+              if (!style.color) style.color = theme === RICH_HTML_DARK_THEME ? '#9cacc0' : '#718096'
+            }
+            // 代码块
+            if (tag === 'code') {
+              if (!style['background'])
+                style['background'] = theme === RICH_HTML_DARK_THEME ? '#1a2637' : '#f2f6fa'
+              if (!style['border-radius']) style['border-radius'] = '4px'
+              if (!style['padding']) style['padding'] = '2px 6px'
+              if (!style['font-size']) style['font-size'] = '15px'
+            }
           }
           const styleAttr = buildStyle(style)
           return `<${tag} style="${styleAttr}">`

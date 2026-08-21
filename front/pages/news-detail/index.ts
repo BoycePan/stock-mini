@@ -3,8 +3,9 @@ import { getNewsDetail, type NewsDetail } from '../../utils/storage'
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
-import { buildRichHtml } from '../../utils/html'
+import { buildRichHtml, stripHtml } from '../../utils/html'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
+import { APP_NAME, formatShareStamp, type PosterData } from '../../utils/share-poster'
 
 /** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
 function decodeQuery(value: string | undefined): string {
@@ -25,6 +26,8 @@ Page({
     richHtml: '',
     error: '',
     copied: false,
+    /** 分享海报数据（标题 + 摘要段落，无 K 线纯文本海报） */
+    posterData: null as PosterData | null,
   },
   onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
@@ -37,6 +40,7 @@ Page({
       loading: false,
       news,
       error: news.title || news.summary ? '' : '新闻详情缺失',
+      posterData: this.buildPosterData(news),
     })
     // 富文本颜色随主题注入：主题切换时自动重算（closure 捕获 onLoad 时的摘要原文）
     const summary = news.summary
@@ -51,9 +55,35 @@ Page({
       }),
     )
   },
-  onShare() {
-    wx.showShareMenu({ withShareTicket: true })
-    wx.showToast({ title: '请使用右上角分享', icon: 'none' })
+  /**
+   * 组装分享海报数据：
+   * - 头部主标题用来源名（页面 detail-source-badge 的文案，短文案不会省略号）；
+   * - 新闻标题放正文上方（heroText）整行多行展示，不省略号；
+   * - 正文为摘要段落（不放原文链接）；不传 klines，纯文本海报。
+   */
+  buildPosterData(news: NewsDetail): PosterData {
+    const summary = stripHtml(news.summary || '').trim()
+    const sections: PosterData['sections'] = [
+      {
+        title: '新闻摘要',
+        // 无摘要时给占位文案，保证海报始终有正文分区
+        text: summary || '原文摘要暂未获取，可打开「市场追踪助手」小程序查看完整内容。',
+      },
+    ]
+    return {
+      title: news.source || '财经新闻',
+      heroText: news.title || '',
+      subtitle: APP_NAME,
+      statusText: '',
+      stamp: formatShareStamp(new Date()),
+      includeWatermark: true,
+      sections,
+    }
+  },
+  /** 顶栏分享按钮：调起 share-poster 组件生成并预览海报 */
+  onSharePoster() {
+    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+    if (poster) poster.open()
   },
   onCopyLink() {
     const url = this.data.news?.url

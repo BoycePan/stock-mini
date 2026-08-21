@@ -70,21 +70,29 @@
   display: flex;
   align-items: center;
   gap: 14rpx;
+  /* 不压缩右侧操作按钮，优先让标题省略 */
+  flex-shrink: 0;
 }
 
-.share-button {
-  height: 66rpx;
+.header .share-button {
+  /* 权重需 ≥0,2,0 才能压过框架默认 wx-button:not([size=mini])（0,1,1）的 width:184px / margin auto */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 固定 100rpx 会裁掉「↗ 分享」文案（padding 已占 52rpx），用 auto 由内容撑开 */
+  width: auto;
+  flex: none;
+  margin: 0;
+  /* 高度 / 行高 / 圆角由 index.ts 按胶囊尺寸动态设置（inline style 覆盖此处兜底值） */
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 26rpx;
+  font-size: 25rpx;
   border: 1rpx solid #e1e8f0;
-  border-radius: 34rpx;
+  border-radius: 32rpx;
   background: rgba(255, 255, 255, 0.88);
   color: #344257;
   box-shadow: 0 8rpx 20rpx rgba(62, 83, 111, 0.08);
-}
-
-.share-button {
-  padding: 0 26rpx;
-  font-size: 25rpx;
-  line-height: 66rpx;
 }
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */

@@ -22,6 +22,12 @@
   </view>
   <view wx:if="{{ showShare || showSearch }}" class="header-actions">
     <!-- <button wx:if="{{ showSearch }}" class="share-button" bindtap="onSearch">🔍 搜索</button> -->
-    <button wx:if="{{ posterShare }}" class="share-button" bindtap="onShare">↗ 分享</button>
+    <button
+      wx:if="{{ posterShare }}"
+      class="share-button"
+      style="height: {{ capsuleHeight }}px; line-height: {{ capsuleHeight }}px; border-radius: {{ capsuleRadius }}px;"
+      bindtap="onShare"
+      >↗ 分享</button
+    >
   </view>
 </view>

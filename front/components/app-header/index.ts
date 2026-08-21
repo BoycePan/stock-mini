@@ -11,6 +11,13 @@ Component({
     showBrand: { type: Boolean, value: true },
     theme: { type: String, value: 'light' },
   },
+  data: {
+    headerStyle: '',
+    /** 胶囊按钮高度（px），分享按钮与之保持一致（兜底 32px） */
+    capsuleHeight: 32,
+    /** 胶囊圆角 = 高度一半（px） */
+    capsuleRadius: 16,
+  },
   lifetimes: {
     attached() {
       this.setData({ theme: getTheme() })
@@ -49,13 +56,19 @@ Component({
         const rightInset = Math.max(windowInfo.windowWidth - menuButton.left, 0) + 8
         // padding-top 设为胶囊顶部坐标，使内容顶部与胶囊顶部精确平齐
         headerStyle = `padding-top: ${menuButton.top}px; height: ${navHeight}px; padding-right: ${rightInset}px;`
+        // 分享按钮与胶囊等高、同圆角，视觉上对齐
+        this.setData({
+          headerStyle,
+          capsuleHeight: menuButton.height,
+          capsuleRadius: Math.round(menuButton.height / 2),
+        })
       } else {
         // 兜底：拿不到胶囊信息时退化为旧逻辑（安全区顶部 + 估算值）
         const safeTop = windowInfo.safeArea?.top ?? statusBarHeight
         const basePaddingTop = (26 * windowInfo.windowWidth) / 750
         headerStyle = `padding-top: ${safeTop + basePaddingTop}px;`
+        this.setData({ headerStyle })
       }
-      this.setData({ headerStyle })
     },
     onShare() {
       this.triggerEvent('share')

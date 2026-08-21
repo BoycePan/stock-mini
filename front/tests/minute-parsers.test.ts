@@ -331,7 +331,7 @@ test('MIN_MINUTE_POINTS 至少为 2（过滤腾讯外股单点数据）', () => 
 })
 
 // ---------------------------------------------------------------------------
-// 覆盖性校验：首页每一张行情卡片都必须有分时源（金店金价 GS-* 除外）
+// 覆盖性校验：首页每一张行情卡片都必须有分时源（金店金价 GS-*、恐慌指数 VIX 除外）
 // ---------------------------------------------------------------------------
 
 test('覆盖性：全球页全部卡片 code 均有分时源', () => {
@@ -341,7 +341,9 @@ test('覆盖性：全球页全部卡片 code 均有分时源', () => {
     ...MACRO_ASSETS.map((item) => item.code),
     ...INDUSTRY_BOARDS.map((item) => item.code),
   ]
-  const missing = codes.filter((code) => !hasMinuteSources(code))
+  // 恐慌指数 VIX 刻意不配置分时源：仅 Yahoo ^VIX 有分时但大陆被墙、无大陆可直连源，
+  // 卡片不显示「分时」角标、点击提示暂无数据（见 config/minute.ts MINUTE_SOURCES 注释）。
+  const missing = codes.filter((code) => code !== 'VIX' && !hasMinuteSources(code))
   assert.deepEqual(missing, [], `缺少分时源: ${missing.join(', ')}`)
 })
 

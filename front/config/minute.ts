@@ -5,7 +5,8 @@
  *   - em    东方财富分时  push2delay.eastmoney.com/api/qt/stock/trends2/get（ndays=1 当日分钟线，覆盖最广）
  *   - tc    腾讯分时     web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股兜底）
  *   - yahoo Yahoo 1分钟   query1.finance.yahoo.com/v8/finance/chart?range=1d&interval=1m
- *                        （东财/腾讯分时均不覆盖的标的：KOSDAQ/VIX 等；
+ *                        （东财/腾讯分时均不覆盖的标的：KOSDAQ 等；
+ *                          恐慌指数 VIX 仅 Yahoo 有分时且大陆被墙，刻意不配置（见下）；
  *                          韩股/日股/USDKRW/USDJPY 已改由东财 177/176/119 覆盖；
  *                          汇率 CNYKRW/CNYJPY/USDCNY 已改由东财 119/133 或交叉合成覆盖；
  *                          Yahoo 仅作大陆外兜底，大陆访问被墙）
@@ -140,7 +141,10 @@ export const US_PROXY_NAMES: Record<string, string> = {
  * 首页行情卡片 code → 当日分时数据源。
  * 无条目的卡片（如金店金价 GS-*、财经新闻）不支持分时图。
  * 韩股/日股（东财 177/176）、USDKRW/USDJPY（东财 119）已由东财分时覆盖，
- * Yahoo 1分钟保留兜底；KOSDAQ/VIX/CNYKRW/CNYJPY/USDCNY 东财无分时，仍仅配 Yahoo。
+ * Yahoo 1分钟保留兜底；KOSDAQ/CNYKRW/CNYJPY/USDCNY 东财无分时，仍仅配 Yahoo。
+ * 恐慌指数 VIX **刻意不配置**：仅 Yahoo 有分时（^VIX），大陆访问 Yahoo 被墙，
+ * 且无大陆可直连的真实 VIX 分时源。因此卡片不显示「分时」角标、点击提示暂无数据，
+ * 避免大陆用户点进分时页后加载失败（见 utils/market-page-factory.ts onMetricTap）。
  */
 export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
@@ -160,7 +164,8 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // 全球页 · 宏观经济
   // -------------------------------------------------------------------------
   BRT: { em: '112.B00Y' }, // 布伦特原油
-  VIX: { yahoo: '^VIX' }, // 恐慌指数：东财无此标的，仅 Yahoo
+  // 恐慌指数 VIX：刻意不配置分时源（仅 Yahoo ^VIX 有分时但大陆被墙），
+  // 卡片不显示「分时」角标，点击给出「该指标暂无分时数据」提示。
   UDI: { em: '100.UDI' }, // 美元指数（24h 行情，点较多）
   TLT: { em: '105.TLT' }, // 美债长债
   GC: { em: '101.GC00Y' }, // 黄金盎司（COMEX）

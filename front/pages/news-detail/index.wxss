@@ -1,11 +1,17 @@
+/* ============================================================
+   布局容器
+   ============================================================ */
 .content-scroll {
   flex: 1;
   min-height: 0;
   padding: 0 24rpx;
 }
 
+/* ============================================================
+   空态 / 错误
+   ============================================================ */
 .empty-wrap {
-  margin-top: 18rpx;
+  margin-top: 20rpx;
   padding: 120rpx 24rpx;
   border: 1rpx solid #e2eaf3;
   border-radius: 28rpx;
@@ -15,62 +21,133 @@
   box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
 }
 
+/* ============================================================
+   通用卡片
+   ============================================================ */
 .detail-card,
 .link-card,
 .guide-card {
-  margin-top: 18rpx;
-  padding: 32rpx 28rpx;
+  margin-top: 20rpx;
   border: 1rpx solid #e2eaf3;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(64, 86, 116, 0.09);
+  overflow: hidden;
 }
 
-.detail-title {
-  display: block;
-  color: #1c2a3e;
-  font-size: 34rpx;
-  font-weight: 700;
-  line-height: 48rpx;
+/* ============================================================
+   正文卡片 — 顶部强调色条
+   ============================================================ */
+.detail-accent-bar {
+  height: 4rpx;
+  background: linear-gradient(90deg, #4278ed 0%, #6fa3ff 100%);
 }
 
+/* ============================================================
+   元信息行（来源徽标 + 时间）
+   ============================================================ */
 .detail-meta {
   display: flex;
   align-items: center;
-  margin-top: 16rpx;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  padding: 28rpx 32rpx 0;
+}
+
+.detail-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6rpx 18rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #eef3ff 0%, #dde9ff 100%);
+}
+
+.detail-source-text {
+  color: #3b6fd6;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 0.5rpx;
+}
+
+.detail-time {
   color: #99a6b7;
   font-size: 22rpx;
 }
 
-.detail-source {
-  color: #2f6fed;
-  font-weight: 600;
-}
-
-.meta-dot {
-  margin: 0 10rpx;
-}
-
-.detail-summary {
+/* ============================================================
+   标题
+   ============================================================ */
+.detail-title {
   display: block;
-  margin-top: 24rpx;
-  color: #4a5a70;
-  font-size: 30rpx;
-  line-height: 46rpx;
+  padding: 22rpx 32rpx 0;
+  color: #1c2a3e;
+  font-size: 36rpx;
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: 0.5rpx;
 }
 
-/* rich-text 富文本正文：节点内已注入主题色/字号，容器样式作为兜底 */
+/* ============================================================
+   标题与正文分割线
+   ============================================================ */
+.detail-divider {
+  height: 1rpx;
+  margin: 24rpx 32rpx 0;
+  background: linear-gradient(90deg, #e2eaf3 0%, transparent 100%);
+}
+
+/* ============================================================
+   rich-text 富文本正文
+   ============================================================ */
 .detail-rich {
   display: block;
-  margin-top: 24rpx;
+  padding: 24rpx 32rpx 32rpx;
   color: #3d4c63;
-  font-size: 32rpx;
-  line-height: 1.8;
+  font-size: 28rpx;
+  line-height: 1.9;
   word-break: break-word;
 }
 
-.empty-summary {
+/* ============================================================
+   纯文本摘要（无 HTML 时）
+   ============================================================ */
+.detail-summary {
+  display: block;
+  padding: 24rpx 32rpx 32rpx;
+  color: #4a5a70;
+  font-size: 28rpx;
+  line-height: 1.9;
+  word-break: break-word;
+}
+
+/* ============================================================
+   正文为空态
+   ============================================================ */
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 32rpx 40rpx;
+  gap: 18rpx;
+}
+
+.detail-empty-icon {
+  font-size: 60rpx;
+  line-height: 1;
+}
+
+.detail-empty-text {
   color: #8b99ab;
+  font-size: 26rpx;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* ============================================================
+   原文链接卡片
+   ============================================================ */
+.link-card {
+  padding: 28rpx 32rpx;
 }
 
 .link-head {
@@ -79,13 +156,29 @@
   justify-content: space-between;
 }
 
+.link-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.link-icon {
+  font-size: 28rpx;
+}
+
 .link-label {
   color: #152338;
   font-size: 28rpx;
   font-weight: 700;
 }
 
-.link-copied {
+.link-copied-badge {
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  background: #e6f6ee;
+}
+
+.link-copied-text {
   color: #1c9d59;
   font-size: 22rpx;
   font-weight: 600;
@@ -94,53 +187,83 @@
 .link-url {
   display: flex;
   align-items: center;
-  margin-top: 16rpx;
-  padding: 20rpx;
-  border: 1rpx dashed #cbd7e5;
-  border-radius: 16rpx;
-  background: #f8fafc;
+  margin-top: 18rpx;
+  padding: 20rpx 22rpx;
+  border: 1rpx dashed #c6d3e8;
+  border-radius: 18rpx;
+  background: #f7f9fc;
 }
 
 .link-url-hover {
-  opacity: 0.7;
+  opacity: 0.72;
 }
 
 .link-url-text {
   flex: 1;
   color: #5b6b80;
   font-size: 23rpx;
-  line-height: 34rpx;
+  line-height: 36rpx;
   word-break: break-all;
 }
 
 .link-copy-icon {
   flex: 0 0 auto;
-  margin-left: 12rpx;
-  color: #2f6fed;
-  font-size: 30rpx;
+  margin-left: 14rpx;
+  color: #4278ed;
+  font-size: 32rpx;
 }
 
 .detail-link {
-  margin-top: 24rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 40rpx;
-  background: #2f6fed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 22rpx;
+  height: 84rpx;
+  border-radius: 42rpx;
+  background: linear-gradient(135deg, #4278ed 0%, #6fa3ff 100%);
   color: #fff;
-  font-size: 28rpx;
+  font-size: 27rpx;
   font-weight: 600;
+  letter-spacing: 0.5rpx;
+  white-space: nowrap;
+  box-shadow: 0 8rpx 20rpx rgba(66, 120, 237, 0.28);
+}
+
+.detail-link-text {
+  color: #fff;
+  font-size: 27rpx;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .detail-link-copied {
-  background: #20a66a;
+  background: linear-gradient(135deg, #20a66a 0%, #34c27a 100%);
+  box-shadow: 0 8rpx 20rpx rgba(32, 166, 106, 0.28);
 }
 
 .detail-link::after {
   border: 0;
 }
 
+/* ============================================================
+   使用引导卡片
+   ============================================================ */
+.guide-card {
+  padding: 28rpx 32rpx 32rpx;
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 4rpx;
+}
+
+.guide-icon {
+  font-size: 28rpx;
+}
+
 .guide-title {
-  display: block;
   color: #152338;
   font-size: 28rpx;
   font-weight: 700;
@@ -149,73 +272,111 @@
 .guide-step {
   display: flex;
   align-items: flex-start;
-  margin-top: 20rpx;
+  margin-top: 22rpx;
 }
 
 .guide-num {
-  width: 36rpx;
-  height: 36rpx;
+  width: 38rpx;
+  height: 38rpx;
   flex: 0 0 auto;
-  margin-right: 14rpx;
+  margin-right: 16rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6b9cf8, #4c7ff0);
+  background: linear-gradient(135deg, #6b9cf8 0%, #4278ed 100%);
   color: #fff;
   font-size: 22rpx;
-  font-weight: 600;
-  line-height: 36rpx;
+  font-weight: 700;
+  line-height: 38rpx;
   text-align: center;
+  box-shadow: 0 4rpx 10rpx rgba(66, 120, 237, 0.32);
 }
 
 .guide-text {
   flex: 1;
   color: #46566b;
-  font-size: 25rpx;
-  line-height: 38rpx;
+  font-size: 26rpx;
+  line-height: 40rpx;
+}
+
+.guide-note-wrap {
+  margin-top: 24rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: #f7f9fc;
 }
 
 .guide-note {
-  display: block;
-  margin-top: 20rpx;
-  padding-top: 18rpx;
-  border-top: 1rpx dashed #dce5ef;
   color: #8b99ab;
-  font-size: 22rpx;
-  line-height: 34rpx;
+  font-size: 23rpx;
+  line-height: 36rpx;
 }
 
+/* ============================================================
+   底部占位
+   ============================================================ */
 .bottom-space {
   height: 80rpx;
 }
 
-/* dark theme */
-.page.theme-dark .empty-wrap,
+/* ============================================================
+   深色主题覆盖
+   ============================================================ */
+.page.theme-dark .empty-wrap {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.2);
+}
+
 .page.theme-dark .detail-card,
 .page.theme-dark .link-card,
 .page.theme-dark .guide-card {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.22);
 }
 
-.page.theme-dark .detail-title,
-.page.theme-dark .link-label,
-.page.theme-dark .guide-title {
+.page.theme-dark .detail-source-badge {
+  background: linear-gradient(135deg, #1e3a6e 0%, #243d72 100%);
+}
+
+.page.theme-dark .detail-source-text {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .detail-time {
+  color: #9cacc0;
+}
+
+.page.theme-dark .detail-title {
   color: #f5f7fb;
 }
 
-.page.theme-dark .detail-summary,
-.page.theme-dark .guide-text {
-  color: #e5ebf4;
+.page.theme-dark .detail-divider {
+  background: linear-gradient(90deg, #2a394e 0%, transparent 100%);
 }
 
 .page.theme-dark .detail-rich {
   color: #dfe6f0;
 }
 
-.page.theme-dark .detail-meta,
-.page.theme-dark .empty-summary,
-.page.theme-dark .guide-note {
+.page.theme-dark .detail-summary {
+  color: #e5ebf4;
+}
+
+.page.theme-dark .detail-empty-text {
   color: #9cacc0;
+}
+
+.page.theme-dark .link-label,
+.page.theme-dark .guide-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .link-copied-badge {
+  background: #1c3d2e;
+}
+
+.page.theme-dark .link-copied-text {
+  color: #3ec97a;
 }
 
 .page.theme-dark .link-url {
@@ -227,6 +388,28 @@
   color: #b9c6d6;
 }
 
+.page.theme-dark .link-copy-icon {
+  color: #6fa3ff;
+}
+
 .page.theme-dark .detail-link {
-  background: #3b6fd6;
+  background: linear-gradient(135deg, #3b6fd6 0%, #5a8fff 100%);
+  box-shadow: 0 8rpx 20rpx rgba(59, 111, 214, 0.36);
+}
+
+.page.theme-dark .detail-link-copied {
+  background: linear-gradient(135deg, #1a8c58 0%, #28b06e 100%);
+  box-shadow: 0 8rpx 20rpx rgba(26, 140, 88, 0.36);
+}
+
+.page.theme-dark .guide-text {
+  color: #b9c6d6;
+}
+
+.page.theme-dark .guide-note-wrap {
+  background: #223248;
+}
+
+.page.theme-dark .guide-note {
+  color: #9cacc0;
 }

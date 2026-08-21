@@ -63,23 +63,34 @@ export interface PosterRow {
 
 export interface PosterSection {
   title: string
-  rows: PosterRow[]
+  /** 行网格数据；text 段落分区可省略 */
+  rows?: PosterRow[]
   /** 仅涨跌幅分区（如行业板块）：使用紧凑单元格，内容居中单行展示 */
   compact?: boolean
+  /**
+   * 全文段落（新闻摘要等）：设置后忽略 rows，渲染为整行宽卡片的多行文本，
+   * 高度按实际换行行数计算（测量需传入 ctx，无 ctx 时按 CJK 宽度估算兜底）。
+   */
+  text?: string
 }
 
 export interface PosterData {
-  /** 海报主标题（如「全球市场行情」） */
+  /** 海报主标题（如「全球市场行情」「财联社」） */
   title: string
   /** 副标题（品牌名） */
   subtitle: string
-  /** 状态文案（如「全球市场」「有色」），画在头部状态胶囊 */
+  /** 状态文案（如「全球市场」「有色」），画在头部状态胶囊；为空时不绘制胶囊 */
   statusText: string
   /** 时间戳（如 2026-08-21 21:45） */
   stamp: string
   /** 是否绘制底部水印 */
   includeWatermark: boolean
   sections: PosterSection[]
+  /**
+   * 正文大标题（新闻标题等）：绘制在头部卡片与分区之间，多行换行不省略号，
+   * 适用于头部主标题位置被短文案占用（如来源名）的场景。
+   */
+  heroText?: string
 }
 
 /**
@@ -163,14 +174,86 @@ function sectionCellHeight(section: PosterSection): number {
   return section.compact ? CELL_H_COMPACT : CELL_H
 }
 
+// 全文段落分区（新闻摘要等）排版参数（设计坐标系）
+const TEXT_FONT_SIZE = 28 // 段落字号
+const TEXT_LINE_HEIGHT = 40 // 行高
+const TEXT_PAD = 24 // 段落卡片内边距
+/** 段落最多绘制行数：超出截断并加省略号，防止超长摘要撑爆海报 */
+const MAX_TEXT_LINES = 14
+
+// 正文大标题（heroText，新闻标题等）排版参数
+const HERO_FONT_SIZE = 38 // 标题字号（加粗）
+const HERO_LINE_HEIGHT = 56 // 行高
+const HERO_MAX_LINES = 6 // 最多行数，超出截断
+const HERO_BOTTOM_GAP = 24 // 与下方分区的间距
+
+/** 按字符贪心换行（CJK / 拉丁混排均可），返回宽度不超过 maxWidth 的行 */
+function wrapTextLines(ctx: CanvasCtx, text: string, maxWidth: number): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const ch of String(text)) {
+    const next = line + ch
+    if (line !== '' && ctx.measureText(next).width > maxWidth) {
+      lines.push(line)
+      line = ch
+    } else {
+      line = next
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+/**
+ * 全文段落分区面板高度（含上下内边距，不含分区标题行）。
+ * 有 ctx 时按真实换行行数精确测量；无 ctx 时按 CJK 每字 ≈ 字号宽度估算兜底，
+ * 保证 measurePosterHeight 在无画布环境下（如单测）也能返回合理值。
+ */
+function textSectionPanelHeight(ctx: CanvasCtx | undefined, section: PosterSection): number {
+  const text = section.text || ''
+  let lineCount: number
+  const maxWidth = POSTER_WIDTH - M * 2 - TEXT_PAD * 2
+  if (ctx) {
+    ctx.font = `${TEXT_FONT_SIZE}px sans-serif`
+    lineCount = wrapTextLines(ctx, text, maxWidth).length
+  } else {
+    const charsPerLine = Math.max(1, Math.floor(maxWidth / TEXT_FONT_SIZE))
+    lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
+  }
+  return TEXT_PAD * 2 + Math.min(lineCount, MAX_TEXT_LINES) * TEXT_LINE_HEIGHT
+}
+
+/** 正文大标题（heroText）高度：含与下方分区的间距 */
+function heroTextHeight(ctx: CanvasCtx | undefined, text: string): number {
+  let lineCount: number
+  const maxWidth = POSTER_WIDTH - M * 2
+  if (ctx) {
+    ctx.font = `bold ${HERO_FONT_SIZE}px sans-serif`
+    lineCount = wrapTextLines(ctx, text, maxWidth).length
+  } else {
+    const charsPerLine = Math.max(1, Math.floor(maxWidth / HERO_FONT_SIZE))
+    lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
+  }
+  return Math.min(lineCount, HERO_MAX_LINES) * HERO_LINE_HEIGHT + HERO_BOTTOM_GAP
+}
+
 /** 按分区数据计算海报总高度（设计坐标系）；chart 非空时计入内嵌图表面板高度 */
-export function measurePosterHeight(data: PosterData, chart?: PosterChart): number {
+export function measurePosterHeight(
+  data: PosterData,
+  chart?: PosterChart,
+  ctx?: CanvasCtx,
+): number {
   let h = HEADER_TOP + HEADER_H + HEADER_BOTTOM_GAP
+  if (data.heroText) h += heroTextHeight(ctx, data.heroText)
   if (chart) h += chart.height + SECTION_GAP
   for (const section of data.sections) {
+    if (section.text) {
+      h += TITLE_H + textSectionPanelHeight(ctx, section) + SECTION_GAP
+      continue
+    }
     h += TITLE_H
     const cellH = sectionCellHeight(section)
-    const rowCount = Math.max(1, Math.ceil(section.rows.length / 2))
+    const rowCount = Math.max(1, Math.ceil((section.rows ?? []).length / 2))
     h += rowCount * cellH + (rowCount - 1) * CELL_GAP
     h += SECTION_GAP
   }
@@ -310,7 +393,8 @@ function drawHeader(
   const rightX = width - M - 24 // 右侧内容对齐线
   const titleX = M + 24 + 88 + 26 // logo 右侧 + 间距
 
-  // 状态胶囊（右上，宽度随文案自适应）——先算几何，供标题截断宽度使用
+  // 状态胶囊（右上，宽度随文案自适应）——先算几何，供标题截断宽度使用；
+  // statusText 为空（如新闻海报头部主标题即来源名）时不绘制胶囊，标题宽度延伸到右缘
   const status = data.statusText || ''
   ctx.font = '22px sans-serif'
   const statusW = ctx.measureText(status).width
@@ -318,6 +402,7 @@ function drawHeader(
   const pillH = 40
   const pillX = rightX - pillW
   const pillY = HEADER_TOP + 74
+  const hasPill = status !== ''
 
   // Logo（圆角裁切）
   const logoX = M + 24
@@ -340,11 +425,13 @@ function drawHeader(
     ctx.fillText('市', logoX + logoSize / 2, logoY + logoSize / 2 + 18)
   }
 
-  // 标题（左，最大宽度到状态胶囊左侧）
+  // 标题（左，最大宽度到状态胶囊左侧；无胶囊时延伸到右缘）
   ctx.textAlign = 'left'
   ctx.fillStyle = TEXT_MAIN
   ctx.font = 'bold 42px sans-serif'
-  const titleMaxW = Math.max(100, pillX - titleX - 16)
+  const titleMaxW = hasPill
+    ? Math.max(100, pillX - titleX - 16)
+    : Math.max(100, rightX - titleX - 8)
   ctx.fillText(truncText(ctx, data.title || '', titleMaxW), titleX, HEADER_TOP + 86)
 
   // 品牌名（小程序名称，金色突出显示）
@@ -359,16 +446,18 @@ function drawHeader(
   ctx.fillText(data.stamp || '', rightX, HEADER_TOP + 56)
 
   // 状态胶囊
-  roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2)
-  ctx.fillStyle = 'rgba(201,168,108,0.16)'
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(201,168,108,0.45)'
-  ctx.lineWidth = 1
-  ctx.stroke()
-  ctx.fillStyle = GOLD
-  ctx.textAlign = 'center'
-  ctx.fillText(status, pillX + pillW / 2, pillY + 27)
-  ctx.textAlign = 'left'
+  if (hasPill) {
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2)
+    ctx.fillStyle = 'rgba(201,168,108,0.16)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(201,168,108,0.45)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+    ctx.fillStyle = GOLD
+    ctx.textAlign = 'center'
+    ctx.fillText(status, pillX + pillW / 2, pillY + 27)
+    ctx.textAlign = 'left'
+  }
 }
 
 /** 绘制单个数据单元格：
@@ -463,7 +552,7 @@ export function drawPoster(
   logoImg: WechatMiniprogram.Image | null = null,
   chart?: PosterChart,
 ): void {
-  const height = measurePosterHeight(data, chart)
+  const height = measurePosterHeight(data, chart, ctx)
 
   // ── 背景：极光渐变（深蓝 → 靛蓝 → 深紫）斜向过渡 ──────────────
   const bg = ctx.createLinearGradient(0, 0, width * 0.6, height)
@@ -520,6 +609,24 @@ export function drawPoster(
   const cellW = (width - M * 2 - GRID_GAP) / 2
   let y = HEADER_TOP + HEADER_H + HEADER_BOTTOM_GAP
 
+  // 正文大标题（新闻标题等）：整行宽、多行换行、超长才截断，绘制在头部与分区之间
+  if (data.heroText) {
+    const heroMaxW = width - M * 2
+    ctx.font = `bold ${HERO_FONT_SIZE}px sans-serif`
+    ctx.textAlign = 'left'
+    ctx.fillStyle = TEXT_MAIN
+    const heroLines = wrapTextLines(ctx, data.heroText, heroMaxW)
+    const heroTruncated = heroLines.length > HERO_MAX_LINES
+    const heroShown = heroLines.slice(0, HERO_MAX_LINES)
+    heroShown.forEach((line, i) => {
+      const isLast = i === heroShown.length - 1
+      const label = isLast && heroTruncated ? truncText(ctx, line + '…', heroMaxW) : line
+      ctx.fillText(label, M, y + HERO_FONT_SIZE)
+      y += HERO_LINE_HEIGHT
+    })
+    y += HERO_BOTTOM_GAP
+  }
+
   // 内嵌图表（K 线走势等）：圆角卡片 + 金色标题 + 绘制回调（画在头部与分区之间）
   if (chart) {
     const panelX = M
@@ -552,9 +659,38 @@ export function drawPoster(
     ctx.textAlign = 'left'
     ctx.fillText(section.title || '', M + 22, y + 39)
     y += TITLE_H
+
+    // 全文段落分区（新闻摘要等）：整行宽卡片 + 多行文本，替代行网格
+    if (section.text) {
+      const panelX = M
+      const panelW = width - M * 2
+      const textMaxW = panelW - TEXT_PAD * 2
+      const lines = wrapTextLines(ctx, section.text, textMaxW)
+      const truncated = lines.length > MAX_TEXT_LINES
+      const shown = lines.slice(0, MAX_TEXT_LINES)
+      const panelH = TEXT_PAD * 2 + shown.length * TEXT_LINE_HEIGHT
+      roundRect(ctx, panelX, y, panelW, panelH, 20)
+      ctx.fillStyle = CARD_BG
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      ctx.fillStyle = TEXT_MAIN
+      ctx.font = `${TEXT_FONT_SIZE}px sans-serif`
+      ctx.textAlign = 'left'
+      shown.forEach((line, i) => {
+        const isLast = i === shown.length - 1
+        const label = isLast && truncated ? truncText(ctx, line + '…', textMaxW) : line
+        ctx.fillText(label, panelX + TEXT_PAD, y + TEXT_PAD + TEXT_LINE_HEIGHT * i + TEXT_FONT_SIZE)
+      })
+      y += panelH + SECTION_GAP
+      continue
+    }
+
     const cellH = sectionCellHeight(section)
-    const rowCount = Math.max(1, Math.ceil(section.rows.length / 2))
-    section.rows.forEach((row, i) => {
+    const rows = section.rows ?? []
+    const rowCount = Math.max(1, Math.ceil(rows.length / 2))
+    rows.forEach((row, i) => {
       const col = i % 2
       const rowIdx = Math.floor(i / 2)
       const x = M + col * (cellW + GRID_GAP)
@@ -649,7 +785,10 @@ export function renderSharePoster(
           }
           const dpr = wx.getWindowInfo().pixelRatio || 2
           const width = POSTER_WIDTH
-          const height = measurePosterHeight(data, options?.chart)
+          // 设置画布尺寸会重置 2d 上下文状态，因此先用探针 ctx 测量总高度
+          // （含文本分区的真实换行行数），再 resize 画布并重新取 ctx。
+          const probe = canvas.getContext('2d')
+          const height = measurePosterHeight(data, options?.chart, probe)
           canvas.width = width * dpr
           canvas.height = height * dpr
           const ctx = canvas.getContext('2d')
