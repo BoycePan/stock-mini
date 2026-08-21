@@ -1,6 +1,7 @@
 <view class="page theme-{{ theme }} global-page">
   <market-page
     showShare="{{ true }}"
+    shareTitle="全球市场行情"
     loading="{{ loading }}"
     error="{{ error }}"
     loadingText="正在加载全球行情"
@@ -10,7 +11,6 @@
     updatedLabel="{{ updatedLabel }}"
     sections="{{ sections }}"
     bind:retry="onRetry"
-    bind:share="onShare"
     bind:metrictap="onMetricTap"
   ></market-page>
 </view>

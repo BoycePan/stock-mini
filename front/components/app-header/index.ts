@@ -4,6 +4,8 @@ Component({
   properties: {
     title: { type: String, value: '市场追踪助手' },
     showShare: { type: Boolean, value: true },
+    /** 是否显示「分享海报」按钮（生成海报，区别于右上角胶囊菜单分享） */
+    posterShare: { type: Boolean, value: false },
     showBack: { type: Boolean, value: false },
     showSearch: { type: Boolean, value: false },
     showBrand: { type: Boolean, value: true },

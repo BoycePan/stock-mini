@@ -116,3 +116,138 @@
   background: #7e93b0;
   box-shadow: 0 0 0 5rpx rgba(126, 147, 176, 0.18);
 }
+
+/* ============ 分享海报：隐藏画布（移出屏幕，宽 750 与海报设计坐标系一致） ============ */
+.share-canvas-hidden {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 750px;
+  height: 2400px;
+}
+
+/* 分享海报预览弹窗 */
+.share-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36rpx;
+  background: rgba(12, 18, 28, 0.62);
+}
+
+.share-modal-panel {
+  width: 100%;
+  padding: 28rpx 24rpx 24rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.22);
+}
+
+.share-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.share-modal-title {
+  color: #152338;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.share-wm-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.share-wm-label {
+  color: #718096;
+  font-size: 24rpx;
+}
+
+.share-preview-scroll {
+  max-height: 58vh;
+  border-radius: 16rpx;
+  background: #0c1220;
+  overflow: hidden;
+}
+
+.share-preview-img {
+  display: block;
+  width: 100%;
+}
+
+.share-modal-tip {
+  margin: 16rpx 0 18rpx;
+  color: #99a6b7;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+.share-modal-actions {
+  display: flex;
+  gap: 14rpx;
+}
+
+.share-act-close,
+.share-act-forward,
+.share-act-save {
+  flex: 1;
+  padding: 20rpx 0;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.share-act-forward {
+  background: linear-gradient(135deg, #1a2332, #2a3648);
+  color: #f5efe3;
+}
+
+.share-act-save {
+  background: linear-gradient(135deg, #4278ed, #3a67d6);
+  color: #ffffff;
+}
+
+.share-act-close {
+  background: #f0f3f8;
+  color: #5c6675;
+}
+
+/* 深色主题 */
+.market-page.theme-dark .share-modal-panel {
+  background: #1a2637;
+}
+
+.market-page.theme-dark .share-modal-title {
+  color: #f5f7fb;
+}
+
+.market-page.theme-dark .share-wm-label {
+  color: #9cacc0;
+}
+
+.market-page.theme-dark .share-modal-tip {
+  color: #9cacc0;
+}
+
+.market-page.theme-dark .share-act-forward {
+  background: linear-gradient(135deg, #24334a, #2f415c);
+  color: #f5efe3;
+}
+
+.market-page.theme-dark .share-act-save {
+  background: linear-gradient(135deg, #6fa3ff, #5b8cf0);
+  color: #0d1524;
+}
+
+.market-page.theme-dark .share-act-close {
+  background: #223248;
+  color: #c6d2e2;
+}

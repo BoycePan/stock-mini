@@ -12,7 +12,8 @@
 export const SHARE_HOME_PATH = '/pages/global/index'
 
 /** 分享卡片统一配图（静态资源 CDN，建议 5:4 比例图） */
-export const SHARE_IMAGE_URL = 'https://wx-stock-static.guyu.org.cn/resource/wx-stock-share.jpg'
+export const SHARE_IMAGE_URL =
+  'https://wx-stock-static.guyu.org.cn/resource/wx-stock-share.jpg?now=1787321043'
 
 /** 分享目标页路由表：target 标识 → 页面路径 */
 const SHARE_TARGET_ROUTES: Record<string, string> = {

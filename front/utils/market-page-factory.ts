@@ -43,10 +43,7 @@ export function createMarketPage(opts: MarketPageOptions) {
   const shareRedirectedPages = new WeakSet<object>()
 
   const shareHandlers = {
-    onShare() {
-      wx.showShareMenu({ withShareTicket: true })
-      wx.showToast({ title: '请使用右上角分享', icon: 'none' })
-    },
+    // 右上角胶囊菜单分享（海报生成由 market-page 组件内处理，见 components/market-page）
     onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
       return {
         title: SHARE_TITLES[pageKey],

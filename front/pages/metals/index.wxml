@@ -1,5 +1,7 @@
 <view class="page theme-{{ theme }} metals-page">
   <market-page
+    showShare="{{ true }}"
+    shareTitle="有色行情"
     loading="{{ loading }}"
     error="{{ error }}"
     loadingText="正在加载贵金属行情"
@@ -9,7 +11,6 @@
     updatedLabel="{{ updatedLabel }}"
     sections="{{ sections }}"
     bind:retry="onRetry"
-    bind:share="onShare"
     bind:metrictap="onMetricTap"
   ></market-page>
 </view>
