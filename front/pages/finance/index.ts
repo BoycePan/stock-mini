@@ -168,7 +168,8 @@ Page({
     try {
       const requested = await this.loadData({ force: true })
       if (!requested) {
-        // 10s 防抖拦截（距上次请求不足 10s）：未真正发起刷新，恢复按钮可点状态
+        // 10s 防抖拦截（距上次请求不足 10s）：未真正发起刷新，先停止下拉动画，再恢复按钮可点状态
+        this.setData({ refreshing: false })
         this.getRefreshBtn()?.restore()
         return
       }
@@ -196,13 +197,11 @@ Page({
       this.getRefreshBtn()?.sync()
       return
     }
-    // 切换显示（tab 切回）时拉取最新数据：距上次请求 ≥10s 才真正发起（loadData 内 10s 防抖保证），
-    // 刷新成功后会重置悬浮按钮计时，因此即将刷新时不在此同步按钮（避免闪一下又消失）
-    const willRefresh = Date.now() - lastFinanceRequestAt >= MIN_REQUEST_INTERVAL
-    if (!willRefresh) {
-      // 10s 内刚请求过：不刷新，仅按距上次刷新成功时间同步悬浮按钮
-      this.getRefreshBtn()?.sync()
-    }
+    // 切换显示（tab 切回）时拉取最新数据：距上次请求 ≥10s 才真正发起（loadData 内 10s 防抖保证）。
+    // 无论是否即将刷新都调用 sync() 同步按钮状态：
+    // - 若实际触发刷新，loadData 成功后 refreshDone() 会重置按钮计时（sync 结果会被覆盖）；
+    // - 若被防抖拦截（10s 内），sync() 负责按剩余时间显示或恢复计时器。
+    this.getRefreshBtn()?.sync()
     void this.loadData({ silent: true })
   },
   onUnload() {

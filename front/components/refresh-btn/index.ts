@@ -28,6 +28,8 @@ Component({
   data: {
     /** 是否显示（淡入/淡出动画由 .show 类 + CSS transition 处理） */
     show: false,
+    /** 是否正在刷新中（防止重复点击） */
+    tapping: false,
   },
   lifetimes: {
     attached() {
@@ -42,16 +44,22 @@ Component({
   pageLifetimes: {
     show() {
       pageVisible = true
+      // 页面重新可见时，恢复被 hide() 清掉的计时器（或直接显示已超时的按钮）
+      this.sync()
     },
     hide() {
       pageVisible = false
+      // 页面不可见时清掉计时器，重新可见时由 show() 里的 sync() 重建
       this.clearTimer()
+      // 同时隐藏按钮，避免返回时残留旧状态
+      this.setData({ show: false, tapping: false })
     },
   },
   methods: {
     /** 刷新成功回调：记录成功时间，隐藏按钮并安排 delay 后重现 */
     refreshDone() {
       lastRefreshAt = Date.now()
+      this.setData({ tapping: false })
       this.hide()
       this.schedule()
     },
@@ -64,13 +72,14 @@ Component({
     /** 安排 delay 后显示按钮（若期间又有新刷新，会被重新安排 / 覆盖） */
     schedule() {
       this.clearTimer()
+      const delay = this.data.delay
       refreshBtnTimer = setTimeout(() => {
         refreshBtnTimer = null
         // 到点后若期间没有新刷新（距上次成功已满 delay），且页面仍为可见页，则显示按钮
-        if (Date.now() - lastRefreshAt >= this.data.delay && pageVisible) {
+        if (Date.now() - lastRefreshAt >= delay && pageVisible) {
           this.setData({ show: true })
         }
-      }, this.data.delay)
+      }, delay)
     },
     /**
      * 页面显示时同步按钮状态：距上次刷新成功 ≥delay 直接显示；不足则按剩余时间继续计时。
@@ -78,19 +87,29 @@ Component({
      */
     sync() {
       if (lastRefreshAt === 0) return
-      if (Date.now() - lastRefreshAt >= this.data.delay) {
+      const elapsed = Date.now() - lastRefreshAt
+      if (elapsed >= this.data.delay) {
         this.clearTimer()
-        this.setData({ show: true })
+        if (pageVisible) this.setData({ show: true })
       } else {
-        this.schedule()
+        // 剩余时间重建计时器，避免提前或延迟出现
+        this.clearTimer()
+        const remaining = this.data.delay - elapsed
+        refreshBtnTimer = setTimeout(() => {
+          refreshBtnTimer = null
+          if (Date.now() - lastRefreshAt >= this.data.delay && pageVisible) {
+            this.setData({ show: true })
+          }
+        }, remaining)
       }
     },
-    /** 恢复按钮为可点状态：立即显示（用于刷新失败 / 防抖拦截场景，保证还能再点） */
+    /**
+     * 恢复按钮为可点状态：立即显示（用于刷新失败 / 防抖拦截场景，保证还能再点）。
+     * 不再检查 lastRefreshAt > 0，首次加载失败时也应让用户重试。
+     */
     restore() {
-      if (lastRefreshAt > 0) {
-        this.clearTimer()
-        this.setData({ show: true })
-      }
+      this.clearTimer()
+      this.setData({ show: true, tapping: false })
     },
     clearTimer() {
       if (refreshBtnTimer) {
@@ -98,8 +117,10 @@ Component({
         refreshBtnTimer = null
       }
     },
-    /** 点击按钮：隐藏（淡出动画）并通知页面执行与下拉刷新相同的刷新流程 */
+    /** 点击按钮：防重复点击，隐藏（淡出动画）并通知页面执行与下拉刷新相同的刷新流程 */
     onTap() {
+      if (this.data.tapping) return
+      this.setData({ tapping: true })
       this.hide()
       this.triggerEvent('refresh')
     },
