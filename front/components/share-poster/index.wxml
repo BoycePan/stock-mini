@@ -8,7 +8,7 @@
       <view class="share-modal-head">
         <text class="share-modal-title">分享海报</text>
         <view class="share-wm-row">
-          <text class="share-wm-label">底部水印</text>
+          <text class="share-wm-label">水印</text>
           <switch
             checked="{{ includeWatermark }}"
             bindchange="onWatermarkToggle"

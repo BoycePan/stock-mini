@@ -7,7 +7,7 @@
  * - 海报固定深色底（深浅主题下都清晰可读），设计坐标系宽 750；
  * - 头部渐变卡片：logo（front/static/images/logo.png）+ 标题 + 品牌副标题 + 时间戳 + 状态胶囊；
  * - 分区数据按双列网格绘制（名称 + 数值 + 涨跌幅，涨跌着色）；
- * - 底部水印「微信小程序搜「市场追踪助手」查看实时行情」。
+ * - 水印「微信小程序搜「市场追踪助手」查看实时行情」。
  *
  * 调用方（market-page 组件）持有隐藏画布 <canvas type="2d" id="shareCanvas">，
  * 通过 renderSharePoster 导出临时文件，返回 Promise<tempFilePath>。
@@ -83,7 +83,7 @@ export interface PosterData {
   statusText: string
   /** 时间戳（如 2026-08-21 21:45） */
   stamp: string
-  /** 是否绘制底部水印 */
+  /** 是否绘制水印 */
   includeWatermark: boolean
   sections: PosterSection[]
   /**
@@ -699,7 +699,7 @@ export function drawPoster(
     y += rowCount * cellH + (rowCount - 1) * CELL_GAP + SECTION_GAP
   }
 
-  // 底部水印：金色高亮胶囊（淡金底 + 细描边 + 金色文字，克制不突兀）
+  // 水印：金色高亮胶囊（淡金底 + 细描边 + 金色文字，克制不突兀）
   if (data.includeWatermark) {
     const text = watermarkText()
     ctx.font = '22px sans-serif'

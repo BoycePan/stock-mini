@@ -6,6 +6,13 @@ import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute
 import type { MinutePoint } from '../../types/stock'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
+import {
+  APP_NAME,
+  formatShareStamp,
+  type PosterData,
+  type PosterTone,
+} from '../../utils/share-poster'
+import type { MinutePosterChartData } from '../../utils/minute-poster'
 
 interface MinuteQuoteView {
   price: string
@@ -50,6 +57,10 @@ Page({
     /** 交易时段模型（utils/minute-session.ts），由数据源 code + 命中的源计算，透传给分时图 */
     session: 'continuous' as MinuteSessionKind,
     quote: null as MinuteQuoteView | null,
+    /** 分享海报数据（头部 + 行情指标分区；分时图由 share-poster 组件按 minutePoster 绘制） */
+    posterData: null as PosterData | null,
+    /** 分享海报内嵌分时图数据（points + 昨收 + 时段，传给 share-poster 组件） */
+    minutePoster: null as MinutePosterChartData | null,
   },
   isLoading() {
     return this.data.requesting
@@ -107,6 +118,13 @@ Page({
           minuteNote: [result.note, dataNote].filter(Boolean).join('；'),
           session,
           quote: this.buildQuote(result.points, result.preClose),
+          posterData: this.buildPosterData(result.points, result.preClose),
+          minutePoster: {
+            points: result.points,
+            preClose: result.preClose ?? 0,
+            session,
+            title: `${this.data.name} · 当日分时`,
+          },
         })
       } else if (!silent) {
         this.setData({
@@ -116,6 +134,8 @@ Page({
           sourceLabel: '',
           minuteNote: '',
           quote: null,
+          posterData: null,
+          minutePoster: null,
           error: '分时数据加载失败，请下拉或点击重试',
         })
       }
@@ -157,8 +177,94 @@ Page({
       preClose: pre !== null ? pre.toFixed(2) : '--',
     }
   },
+  /** 组装分享海报数据（头部 + 行情指标分区；分时图由 share-poster 组件按 minutePoster 绘制） */
+  buildPosterData(points: MinutePoint[], preClose: number | null): PosterData {
+    const last = points[points.length - 1]
+    const price = last && Number.isFinite(last.price) ? last.price : null
+    const pre = preClose !== null && Number.isFinite(preClose) && preClose > 0 ? preClose : null
+    const change = price !== null && pre !== null ? price - pre : null
+    const pct = change !== null && pre !== null && pre !== 0 ? (change / pre) * 100 : null
+    const tone: PosterTone = change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down'
+
+    const prices = points.map((p) => p.price).filter((v): v is number => Number.isFinite(v))
+    const high = prices.length ? Math.max(...prices) : null
+    const low = prices.length ? Math.min(...prices) : null
+    const totalVolume = points.reduce((sum, p) => sum + (p.volume || 0), 0)
+    const lastAvg = last?.avg
+
+    return {
+      title: this.data.name || '行情分时',
+      subtitle: APP_NAME,
+      statusText: this.data.code || '',
+      stamp: formatShareStamp(new Date()),
+      includeWatermark: true,
+      sections: [
+        {
+          title: '行情指标',
+          rows: [
+            {
+              name: '最新价',
+              value: price !== null ? price.toFixed(2) : '--',
+              // 海报涨跌幅只展示百分比（页面同时展示涨跌额 + 涨跌幅，过长会与数值挤占）
+              changeText: pct !== null ? formatChange(pct) : '',
+              tone,
+            },
+            {
+              name: '开盘',
+              value:
+                points[0] && Number.isFinite(points[0].price) ? points[0].price.toFixed(2) : '--',
+              changeText: '',
+              tone: 'flat',
+            },
+            {
+              name: '昨收',
+              value: pre !== null ? pre.toFixed(2) : '--',
+              changeText: '',
+              tone: 'flat',
+            },
+            {
+              name: '最高',
+              value: high !== null ? high.toFixed(2) : '--',
+              changeText: '',
+              tone: 'flat',
+            },
+            {
+              name: '最低',
+              value: low !== null ? low.toFixed(2) : '--',
+              changeText: '',
+              tone: 'flat',
+            },
+            {
+              name: '均价',
+              value:
+                lastAvg !== null && lastAvg !== undefined && Number.isFinite(lastAvg)
+                  ? formatNumber(lastAvg)
+                  : '--',
+              changeText: '',
+              tone: 'flat',
+            },
+            ...(totalVolume > 0
+              ? [
+                  {
+                    name: '成交量',
+                    value: formatVolume(totalVolume),
+                    changeText: '',
+                    tone: 'flat' as PosterTone,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+    }
+  },
   onRetry() {
     void this.loadData()
+  },
+  /** 顶栏分享按钮：调起 share-poster 组件生成并预览海报 */
+  onSharePoster() {
+    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+    if (poster) poster.open()
   },
   onUnload() {
     stopAutoRefresh(this)

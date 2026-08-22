@@ -2,7 +2,9 @@
   <view class="page-header">
     <app-header
       title="{{ name || '行情分时' }}"
-      showShare="{{ false }}"
+      showShare="{{ true }}"
+      posterShare="{{ true }}"
+      bind:share="onSharePoster"
       showBack="{{ true }}"
       showBrand="{{ false }}"
     ></app-header>
@@ -86,4 +88,11 @@
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
   </view>
+
+  <!-- 分享海报（隐藏画布 + 预览弹窗；分时图由 share-poster 组件按 minutePoster 绘制） -->
+  <share-poster
+    id="sharePoster"
+    posterData="{{ posterData }}"
+    minuteChart="{{ minutePoster }}"
+  ></share-poster>
 </view>
