@@ -122,6 +122,8 @@ interface RefreshBtnInstance {
   show(): void
   /** 轮询确认没有新新闻时调用：隐藏按钮（淡出动画由组件内 CSS 处理） */
   hide(): void
+  /** 查询按钮当前是否已显示（轮询判断是否可跳过本轮请求） */
+  isShown(): boolean
 }
 
 /** 回到顶部按钮组件（back-to-top）对外方法 */
@@ -406,9 +408,12 @@ Page({
    */
   async checkNewNews() {
     if (newsPolling) return
+    // 按钮已显示（有新新闻待刷新）：跳过本轮，无需再发请求
+    if (this.getRefreshBtn()?.isShown?.()) return
     newsPolling = true
     try {
-      const items = await newsApi.getFeed(1, 10)
+      // 只拉最新 1 条：仅用于判断「有没有本地未收录的新新闻」，无需多条
+      const items = await newsApi.getFeed(1, 1)
       if (!items.length || this.data.news.length === 0) return
       const localIds = new Set(
         this.data.news.map((item) => item.id).filter((id): id is string => Boolean(id)),

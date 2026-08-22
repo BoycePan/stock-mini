@@ -43,6 +43,10 @@ Component({
     },
   },
   methods: {
+    /** 按钮当前是否处于显示状态（供页面轮询判断是否跳过本轮请求） */
+    isShown() {
+      return this.data.show
+    },
     /** 页面检测到最新新闻时调用：显示按钮（页面不可见 / 已显示时忽略） */
     show() {
       if (pageVisible && !this.data.show) {
