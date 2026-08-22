@@ -4,6 +4,7 @@ import com.guyu.stock.config.AppProperties;
 import com.guyu.stock.external.sina.SinaNewsClient;
 import com.guyu.stock.model.NewsRow;
 import com.guyu.stock.service.AsyncNewsSaver;
+import com.guyu.stock.util.NewsUpdateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -58,6 +59,9 @@ public class SinaFeedScheduler implements ApplicationRunner {
             log.error("[sina-feed] 拉取失败: {}", e.getMessage());
         } finally {
             running.set(false);
+
+            // 更新最新拉取时间
+            NewsUpdateUtil.updateTime();
         }
     }
 

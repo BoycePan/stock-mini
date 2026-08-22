@@ -5,6 +5,7 @@ import com.guyu.stock.common.ErrCode;
 import com.guyu.stock.config.AppProperties;
 import com.guyu.stock.dao.UserRepository;
 import com.guyu.stock.model.User;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,7 @@ public class AuthService {
         this.appProperties = appProperties;
     }
 
-    public Map<String, Object> login(String code) {
+    public Map<String, Object> login(HttpServletRequest request, String code) {
         if (code == null || code.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "code 不能为空");
         }
@@ -63,6 +64,10 @@ public class AuthService {
             result.put("token", token);
             result.put("expires_in", (long) expireHours * 3600);
             result.put("user", user);
+
+            // id 存入上下文，方便后续打日志
+            request.setAttribute("user_id", user.id());
+
             return result;
         } catch (BizException e) {
             throw e;

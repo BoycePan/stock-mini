@@ -7,6 +7,7 @@ import com.guyu.stock.external.rss.RssNewsClient.RssItem;
 import com.guyu.stock.model.NewsRow;
 import com.guyu.stock.model.RssSource;
 import com.guyu.stock.service.AsyncNewsSaver;
+import com.guyu.stock.util.NewsUpdateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -29,17 +30,6 @@ public class RssNewsScheduler implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(RssNewsScheduler.class);
 
-    /** 默认源种子：仅当 rss_source 表为空时写入（幂等），之后以数据库为准、不会被覆盖 */
-    private static final List<RssSource> DEFAULT_SOURCES = List.of(
-            new RssSource(0, "少数派", "https://sspai.com/feed", false),
-            new RssSource(0, "爱范儿", "https://www.ifanr.com/feed", false),
-            new RssSource(0, "阮一峰", "https://www.ruanyifeng.com/blog/atom.xml", false),
-            new RssSource(0, "CNBC", "https://www.cnbc.com/id/100003114/device/rss/rss.html", false),
-            new RssSource(0, "TechCrunch", "https://techcrunch.com/feed/", false),
-            new RssSource(0, "Yahoo Finance", "https://finance.yahoo.com/news/rssindex", true),
-            new RssSource(0, "BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", true),
-            new RssSource(0, "The Verge", "https://www.theverge.com/rss/index.xml", true));
-
     private final RssProperties props;
     private final RssSourceRepository rssSourceRepository;
     private final RssNewsClient rssNewsClient;
@@ -58,23 +48,9 @@ public class RssNewsScheduler implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         try {
-            seedDefaultSources();
-        } catch (Exception e) {
-            log.warn("[RSS] 默认源种子失败（请先在生产库执行 scripts/rss_source.sql 建表）: {}", e.getMessage());
-        }
-        try {
             fetchAll();
         } catch (Exception e) {
             log.error("[RSS] 启动首轮拉取失败: {}", e.getMessage());
-        }
-    }
-
-    /** 表为空时写入默认源（URL 唯一索引保证幂等） */
-    private void seedDefaultSources() {
-        if (rssSourceRepository.count() > 0) return;
-        log.info("[RSS] rss_source 为空，写入 {} 个默认源（之后以数据库为准）", DEFAULT_SOURCES.size());
-        for (RssSource s : DEFAULT_SOURCES) {
-            rssSourceRepository.insertIfAbsent(s.name(), s.url(), s.viaWorker());
         }
     }
 
@@ -111,6 +87,9 @@ public class RssNewsScheduler implements ApplicationRunner {
             }
         } finally {
             running.set(false);
+
+            // 更新最新拉取时间
+            NewsUpdateUtil.updateTime();
         }
     }
 }
