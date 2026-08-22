@@ -119,6 +119,8 @@ export function setApiBaseUrl(url: string): void {
 }
 
 export interface NewsDetail {
+  /** 后端新闻 id：列表进入由 saveNewsDetail 写入，详情页分享时回带到分享路径 */
+  id?: string
   title: string
   summary: string
   url: string

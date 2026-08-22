@@ -8,7 +8,7 @@ import {
 } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { getAppVersion } from '../../utils/version'
-import { SHARE_IMAGE_URL } from '../../utils/share'
+import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
 
 Page({
   data: {
@@ -70,8 +70,8 @@ Page({
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     return {
-      title: '市场追踪助手 - 设置',
-      path: '/pages/settings/index',
+      title: '市场追踪助手',
+      path: SHARE_HOME_PATH,
       imageUrl: SHARE_IMAGE_URL,
     }
   },

@@ -115,6 +115,8 @@ Page({
     const item = this.data.items[index]
     if (!item) return
     saveNewsDetail({
+      // 缓存真实 id：详情页分享时回带到分享路径（接收方按 id 拉取明细）
+      id: item.id ? String(item.id) : undefined,
       title: item.title,
       summary: item.summary ?? '',
       url: item.url,

@@ -138,7 +138,7 @@ function sanitizeIcon(icon: string | undefined): string | undefined {
  * 把页面展示模型（MarketSection[]）归一化为海报分区数据：
  * - 无价格且无涨跌幅的指标跳过；
  * - hideChange（金店金价等无意义涨跌幅）不绘制涨跌幅；
- * - 涨跌幅 0 按 UI 惯例显示「—」。
+ * - 涨跌幅 0 正常展示「0%」（与页面一致，不再显示「—」）。
  */
 export function buildPosterSections(sections: MarketSection[]): PosterSection[] {
   const result: PosterSection[] = []
@@ -146,7 +146,7 @@ export function buildPosterSections(sections: MarketSection[]): PosterSection[] 
     const rows: PosterRow[] = []
     for (const metric of section.metrics ?? []) {
       const change = Number(metric.change) || 0
-      const changeText = metric.hideChange ? '' : change === 0 ? '—' : formatChange(change)
+      const changeText = metric.hideChange ? '' : formatChange(change)
       const value = String(metric.value ?? '')
       if (value === '' && changeText === '') continue
       rows.push({

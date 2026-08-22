@@ -1,5 +1,6 @@
 import { createStoreBindings } from 'mobx-miniprogram-bindings'
-import { getNewsDetail, type NewsDetail } from '../../utils/storage'
+import { getNewsDetail, saveNewsDetail, type NewsDetail } from '../../utils/storage'
+import { newsApi } from '../../api/news'
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
@@ -31,18 +32,34 @@ Page({
   },
   onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
+    // 分享进入：URL 带 id（onShareAppMessage 分享路径回带），按 id 调 /news/{id} 拉取明细；
+    // 列表进入不带 id，直接展示本地缓存 / URL 参数，不请求接口。
+    const id = decodeQuery(options.id)
+    if (id) {
+      void this.loadFromApi(id, {
+        title: decodeQuery(options.title),
+        url: decodeQuery(options.url),
+      })
+      return
+    }
     const title = decodeQuery(options.title)
     const url = decodeQuery(options.url)
     const cached = getNewsDetail()
     const news =
       cached && cached.url === url ? cached : { title, summary: '', url, source: '', time: '' }
+    this.applyNews(news)
+  },
+  /**
+   * 把新闻明细写入页面并注册富文本主题绑定
+   * （富文本颜色随主题注入：closure 捕获当前摘要原文，主题切换时自动重算）。
+   */
+  applyNews(news: NewsDetail) {
     this.setData({
       loading: false,
       news,
       error: news.title || news.summary ? '' : '新闻详情缺失',
       posterData: this.buildPosterData(news),
     })
-    // 富文本颜色随主题注入：主题切换时自动重算（closure 捕获 onLoad 时的摘要原文）
     const summary = news.summary
     registerStoreBinding(
       this,
@@ -54,6 +71,37 @@ Page({
         actions: [],
       }),
     )
+  },
+  /**
+   * 分享进入：按 id 拉取单条新闻明细；失败时降级展示分享 URL 携带的标题 / 原文链接，避免白屏。
+   */
+  async loadFromApi(id: string, fallback: { title: string; url: string }) {
+    this.setData({ loading: true })
+    try {
+      const item = await newsApi.getById(id)
+      const news: NewsDetail = {
+        id: item.id != null ? String(item.id) : id,
+        title: item.title,
+        summary: item.summary ?? '',
+        url: item.url,
+        source: item.source ?? '',
+        time: item.time ?? '',
+      }
+      // 与列表进入一致：写入缓存，便于再次进入 / 转发分享
+      saveNewsDetail(news)
+      this.applyNews(news)
+    } catch (error) {
+      console.warn('[news-detail] 按 id 拉取新闻明细失败:', error)
+      wx.showToast({ title: error instanceof Error ? error.message : '加载失败', icon: 'none' })
+      this.applyNews({
+        id,
+        title: fallback.title,
+        summary: '',
+        url: fallback.url,
+        source: '',
+        time: '',
+      })
+    }
   },
   /**
    * 组装分享海报数据：
@@ -108,8 +156,9 @@ Page({
     const news = this.data.news
     return {
       title: news?.title || '新闻详情',
-      // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）
-      path: buildSharePath('news-detail', { title: news?.title, url: news?.url }),
+      // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）；
+      // 携带 id：接收方从外部直接进入分享页时，详情页按 id 调 /news/{id} 拉取明细
+      path: buildSharePath('news-detail', { id: news?.id, title: news?.title, url: news?.url }),
       imageUrl: SHARE_IMAGE_URL,
     }
   },

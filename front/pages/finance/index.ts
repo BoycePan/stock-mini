@@ -13,6 +13,8 @@ import type { MarketPageData } from '../../types/market'
 interface NewsItemView {
   /** 列表渲染 key：后端部分条目 url 为空，不能用 url 作 wx:key */
   key: string
+  /** 后端条目 id：滚动加载时作为游标传给 /news/feed（第一页第一条 id，后端分页去重用） */
+  id?: string
   title: string
   /** 列表展示用纯文本摘要（后端摘要为 HTML，先剥离标签） */
   summary: string
@@ -47,8 +49,11 @@ function toNewsItemView(item: NewsSourceItem, index: number): NewsItemView {
   const rawSummary = item.summary ?? ''
   const source = item.source ?? ''
   const time = item.time ?? ''
+  // 后端 id 为数字（如 77415），统一转字符串作游标；无 id 时 id 留空（滚动加载不传后端），key 用下标兜底
+  const id = item.id ? String(item.id) : undefined
   return {
-    key: item.id ?? `finance-news-${index}`,
+    key: id ?? `finance-news-${index}`,
+    id,
     title: item.title,
     summary: stripHtml(rawSummary),
     rawSummary,
@@ -66,7 +71,8 @@ function toNewsView(page?: MarketPageData | null): NewsItemView[] {
   return (section?.metrics ?? []).map((metric, index) =>
     toNewsItemView(
       {
-        id: metric.id,
+        // 真实后端 id 存于 metric.detail（见 api/market.ts getFinanceMarketPage），滚动加载作游标用
+        id: metric.detail?.id,
         title: metric.name,
         summary: metric.detail?.summary ?? '',
         url: metric.detail?.url ?? '',
@@ -100,7 +106,7 @@ let returnedFromDetail = false
 interface RefreshBtnInstance {
   /** 刷新成功回调：记录成功时间，隐藏按钮并安排 10s 后重现 */
   refreshDone(): void
-  /** 恢复按钮为可点状态：立即显示（刷新失败 / 防抖拦截场景） */
+  /** 恢复按钮为可点状态：立即显示（仅刷新失败场景，允许稍后重试） */
   restore(): void
   /** 页面显示时同步按钮状态（距上次刷新成功 ≥10s 直接显示，否则按剩余时间计时） */
   sync(): void
@@ -168,9 +174,11 @@ Page({
     try {
       const requested = await this.loadData({ force: true })
       if (!requested) {
-        // 10s 防抖拦截（距上次请求不足 10s）：未真正发起刷新，先停止下拉动画，再恢复按钮可点状态
+        // 10s 防抖拦截（距上次请求不足 10s）：未真正发起刷新，先停止下拉动画。
+        // 按钮不立即重现（避免「还没到时间就出现」），改由 sync() 严格按距上次刷新成功的时间
+        // 处理：已满 delay 直接显示，未满则按剩余时间继续计时。
         this.setData({ refreshing: false })
-        this.getRefreshBtn()?.restore()
+        this.getRefreshBtn()?.sync()
         return
       }
       const failed = Boolean(rootStore.market.errors['finance'])
@@ -272,8 +280,10 @@ Page({
     this.setData({ loadingMore: true })
     try {
       const page = Math.floor(this.data.news.length / FINANCE_PAGE_SIZE) + 1
+      // 滚动加载携带第一页第一条 id（游标）供后端分页去重；刷新 / 首屏走 store，不传 id
+      const anchorId = this.data.news[0]?.id
       const { items, hasMore } = await newsApi.getFeedPage(page, FINANCE_PAGE_SIZE, {
-        skipLoginWait: true,
+        id: anchorId,
       })
       const base = this.data.news.length
       this.setData({
@@ -310,6 +320,8 @@ Page({
     const item = this.data.news[index]
     if (!item?.title) return
     saveNewsDetail({
+      // 缓存真实 id：详情页分享时回带到分享路径（接收方按 id 拉取明细）
+      id: item.id,
       title: item.title,
       // 透传原始 HTML 摘要，详情页用 rich-text 渲染富文本
       summary: item.rawSummary,
