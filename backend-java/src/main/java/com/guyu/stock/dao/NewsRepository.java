@@ -71,7 +71,7 @@ public class NewsRepository {
         boolean filterById = id != null && id > 0;
         List<Object> args = new ArrayList<>();
         if (filterById) {
-            sql += " AND id >= ?";
+            sql += " AND id <= ?";
             args.add(id);
         }
         sql += " ORDER BY published_at DESC LIMIT ? OFFSET ?";
