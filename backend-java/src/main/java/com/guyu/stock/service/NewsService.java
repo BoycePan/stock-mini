@@ -46,12 +46,12 @@ public class NewsService {
         return result;
     }
 
-    public Map<String, Object> feed(Integer page, Integer size, Long id) {
+    public Map<String, Object> feed(Integer page, Integer size, Long id, String keyword) {
         int p = (page == null || page <= 0) ? 1 : page;
         int s = (size == null || size <= 0) ? 20 : Math.min(size, 100);
         int offset = (p - 1) * s;
-        // 多取一条用于判断是否有下一页，再按 s 截断
-        List<NewsRow> rows = newsRepository.queryFeed(s + 1, offset, id);
+        // 关键字模糊匹配标题与内容（摘要），为空则不过滤；需多取一条判断下一页，再按 s 截断
+        List<NewsRow> rows = newsRepository.queryFeed(s + 1, offset, id, keyword);
         boolean hasMore = rows.size() > s;
         if (hasMore) rows = rows.subList(0, s);
 

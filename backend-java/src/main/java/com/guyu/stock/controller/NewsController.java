@@ -26,8 +26,9 @@ public class NewsController {
     @GetMapping("/news/feed")
     public ApiResponse<Map<String, Object>> feed(@RequestParam(value = "page", required = false) Integer page,
                                                  @RequestParam(value = "size", required = false) Integer size,
-                                                 @RequestParam(value = "id", required = false, defaultValue = "0") Long id) {
-        return ApiResponse.success(newsService.feed(page, size, id));
+                                                 @RequestParam(value = "id", required = false, defaultValue = "0") Long id,
+                                                 @RequestParam(value = "keyword", required = false) String keyword) {
+        return ApiResponse.success(newsService.feed(page, size, id, keyword));
     }
 
     @GetMapping("/news/{id}")

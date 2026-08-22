@@ -59,8 +59,9 @@ public class NewsRepository {
      * 通用新闻 feed 分页查询（stock_code 为空串：新浪 feed + RSS 来源）。
      * 按 published_at 倒序，limit 为每页条数、offset 为偏移。
      * id 大于 0 时追加 id <= ? 过滤（按 id 上限截取，用于滑动分页/增量拉取）。
+     * keyword 非空时对标题与内容（summary）做大小写不敏感的模糊匹配。
      */
-    public List<NewsRow> queryFeed(int limit, int offset, Long id) {
+    public List<NewsRow> queryFeed(int limit, int offset, Long id, String keyword) {
         if (limit <= 0) limit = 20;
         if (offset < 0) offset = 0;
         String sql = """
@@ -68,11 +69,18 @@ public class NewsRepository {
                        to_char(published_at, 'YYYY-MM-DD HH24:MI') AS published_at
                 FROM news_feed WHERE stock_code = ''
                 """;
-        boolean filterById = id != null && id > 0;
         List<Object> args = new ArrayList<>();
+        boolean filterById = id != null && id > 0;
         if (filterById) {
             sql += " AND id <= ?";
             args.add(id);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            // 标题与内容（summary）模糊匹配；LOWER 归一化保证英文大小写不敏感，H2 与 PostgreSQL 行为一致
+            sql += " AND (LOWER(title) LIKE LOWER(?) OR LOWER(summary) LIKE LOWER(?))";
+            String like = "%" + keyword.trim() + "%";
+            args.add(like);
+            args.add(like);
         }
         sql += " ORDER BY published_at DESC LIMIT ? OFFSET ?";
         args.add(limit);
