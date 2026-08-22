@@ -54,11 +54,11 @@ class NewsControllerTest {
     @Test
     void feedQueriesDatabaseWithPagination() throws Exception {
         newsRepository.batchSave(List.of(
-                new NewsRow("", "旧闻", "", "http://u/1", "新浪", "2026-08-05 10:30"),
-                new NewsRow("", "新闻B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
-                new NewsRow("", "新闻A", "", "http://u/3", "新浪", "2026-08-06 10:00"),
+                new NewsRow(null, "", "旧闻", "", "http://u/1", "新浪", "2026-08-05 10:30"),
+                new NewsRow(null, "", "新闻B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
+                new NewsRow(null, "", "新闻A", "", "http://u/3", "新浪", "2026-08-06 10:00"),
                 // 个股新闻不应混入通用 feed
-                new NewsRow("600519", "茅台新闻", "", "http://u/4", "新浪", "2026-08-06 11:00")));
+                new NewsRow(null, "600519", "茅台新闻", "", "http://u/4", "新浪", "2026-08-06 11:00")));
 
         mockMvc.perform(get("/api/v1/news/feed?page=1&size=2"))
                 .andExpect(status().isOk())
@@ -77,5 +77,47 @@ class NewsControllerTest {
                 .andExpect(jsonPath("$.data.count").value(1))
                 .andExpect(jsonPath("$.data.hasMore").value(false))
                 .andExpect(jsonPath("$.data.news[0].title").value("旧闻"));
+    }
+
+    @Test
+    void feedFiltersByIdWhenProvided() throws Exception {
+        newsRepository.batchSave(List.of(
+                new NewsRow(null, "", "旧闻", "", "http://u/1", "新浪", "2026-08-05 10:30"),
+                new NewsRow(null, "", "新闻B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
+                new NewsRow(null, "", "新闻A", "", "http://u/3", "新浪", "2026-08-06 10:00")));
+
+        // id >= 2：倒序为 新闻A(3)、新闻B(2)，不含 旧闻(1)
+        mockMvc.perform(get("/api/v1/news/feed?page=1&size=10&id=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.count").value(2))
+                .andExpect(jsonPath("$.data.news[0].title").value("新闻A"))
+                .andExpect(jsonPath("$.data.news[0].id").isNumber())
+                .andExpect(jsonPath("$.data.news[1].title").value("新闻B"));
+
+        // id 缺省/为 0 时不加过滤，仍是全量
+        mockMvc.perform(get("/api/v1/news/feed?page=1&size=10"))
+                .andExpect(jsonPath("$.data.count").value(3));
+    }
+
+    @Test
+    void newsDetailReturnsRowById() throws Exception {
+        newsRepository.batchSave(List.of(
+                new NewsRow(null, "", "旧闻", "摘要X", "http://u/1", "新浪", "2026-08-05 10:30")));
+        // id 由 identity 自增，首条为 1
+        mockMvc.perform(get("/api/v1/news/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.title").value("旧闻"))
+                .andExpect(jsonPath("$.data.summary").value("摘要X"))
+                .andExpect(jsonPath("$.data.source").value("新浪"));
+    }
+
+    @Test
+    void newsDetailNotFoundReturns404() throws Exception {
+        mockMvc.perform(get("/api/v1/news/99999"))
+                .andExpect(status().isOk()) // HTTP 200，业务 code 404
+                .andExpect(jsonPath("$.code").value(404));
     }
 }
