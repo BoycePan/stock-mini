@@ -94,6 +94,16 @@ const MIN_REQUEST_INTERVAL = 10000
  * lastFinanceRequestAt：最近一次真正发起请求的时间戳（loadData 防抖用）。
  */
 let lastFinanceRequestAt = 0
+/** 最新新闻轮询间隔：每 10s 检查一次（只拉第一页，与 store 首屏同源，见 checkNewNews） */
+const NEWS_POLL_INTERVAL = 10000
+let newsPollTimer: ReturnType<typeof setInterval> | null = null
+let newsPolling = false
+/**
+ * 刷新失败重试态：refresh 失败时 restore() 显示的按钮是「重试入口」，
+ * 不受轮询隐藏影响（否则 10s 后按钮会被 poll 隐藏，用户无法重试）；
+ * 刷新成功后清除。
+ */
+let refreshFailed = false
 
 /**
  * 是否刚从新闻详情页返回：onItemTap 跳转详情时置位，onShow 消费后清空。
@@ -102,15 +112,34 @@ let lastFinanceRequestAt = 0
  */
 let returnedFromDetail = false
 
-/** 悬浮刷新按钮组件（refresh-btn）对外方法：显示/计时逻辑全部在组件内 */
+/** 悬浮刷新按钮组件（refresh-btn）对外方法：显示/隐藏完全由页面驱动 */
 interface RefreshBtnInstance {
-  /** 刷新成功回调：记录成功时间，隐藏按钮并安排 10s 后重现 */
+  /** 刷新成功回调：隐藏按钮（重新出现由页面轮询按最新新闻驱动） */
   refreshDone(): void
   /** 恢复按钮为可点状态：立即显示（仅刷新失败场景，允许稍后重试） */
   restore(): void
-  /** 页面显示时同步按钮状态（距上次刷新成功 ≥10s 直接显示，否则按剩余时间计时） */
-  sync(): void
+  /** 页面轮询发现最新新闻时调用：显示按钮 */
+  show(): void
+  /** 轮询确认没有新新闻时调用：隐藏按钮（淡出动画由组件内 CSS 处理） */
+  hide(): void
 }
+
+/** 回到顶部按钮组件（back-to-top）对外方法 */
+interface BackToTopInstance {
+  /** 页面滚动回调：传入最新滚动位置（px），组件内部按「超过一屏 + 停止滚动」决定显示 */
+  scroll(scrollTop: number): void
+  /** 刷新按钮显示时抑制（true 隐藏回到顶部，两按钮互斥）；false 恢复滚动判定 */
+  setSuppressed(active: boolean): void
+}
+
+/** 回到顶部组件实例缓存：onScroll 高频调用，避免每次 selectComponent */
+let backToTopInstance: BackToTopInstance | null = null
+/**
+ * 列表代数：syncNewsFromStore（刷新 / 缓存水合）重建列表时 +1。
+ * onLoadMore 发起请求前记录、返回后比对：期间若列表已被重建（如下拉刷新），
+ * 丢弃过期追加结果，避免「刷新后的新首页 + 旧请求的下一页」混拼出重复条目。
+ */
+let financeListVersion = 0
 
 Page({
   data: {
@@ -125,6 +154,8 @@ Page({
     hasMore: false,
     /** 滚动加载请求中 */
     loadingMore: false,
+    /** 下一页页码（滚动加载游标）：列表重建后重置为 2，避免按列表长度反推页码时与去重相互干扰 */
+    nextPage: 2,
     /** scroll-view 滚动位置（刷新后回顶用；0/1 交替保证值变化触发滚动） */
     scrollTop: 0,
   },
@@ -175,21 +206,22 @@ Page({
       const requested = await this.loadData({ force: true })
       if (!requested) {
         // 10s 防抖拦截（距上次请求不足 10s）：未真正发起刷新，先停止下拉动画。
-        // 按钮不立即重现（避免「还没到时间就出现」），改由 sync() 严格按距上次刷新成功的时间
-        // 处理：已满 delay 直接显示，未满则按剩余时间继续计时。
+        // 悬浮按钮保持当前状态：若此前因最新新闻显示过，轮询会按新 id 重新拉起（自愈）。
         this.setData({ refreshing: false })
-        this.getRefreshBtn()?.sync()
         return
       }
       const failed = Boolean(rootStore.market.errors['finance'])
       if (failed) {
-        // 刷新失败：立即重现悬浮按钮，允许稍后重试
+        // 刷新失败：立即重现悬浮按钮（允许稍后重试），并抑制回到顶部（两按钮互斥）。
+        // 置位 refreshFailed：轮询确认无新新闻时不会把「重试入口」隐藏掉。
+        refreshFailed = true
         this.getRefreshBtn()?.restore()
+        this.getBackToTop()?.setSuppressed(true)
         if (this.isCurrentPage()) {
           wx.showToast({ title: '刷新失败', icon: 'none' })
         }
       } else if (this.isCurrentPage()) {
-        // 刷新成功：loadData 内已通知组件重置按钮计时（隐藏并 10s 后重现）
+        // 刷新成功：loadData 内已隐藏悬浮按钮（重新出现由轮询按最新新闻驱动）
         wx.showToast({ title: '已更新', icon: 'none' })
       }
     } finally {
@@ -199,27 +231,35 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
-    // 从新闻详情页返回：不自动刷新（列表 / 滚动位置保持原样），仅同步悬浮按钮状态
+    // 回到页面：重置刷新失败重试态，按钮显示与否重新由轮询按「本地是否有新新闻」决定
+    refreshFailed = false
+    // 从新闻详情页返回：不自动刷新（列表 / 滚动位置保持原样），仅恢复轮询
     if (returnedFromDetail) {
       returnedFromDetail = false
-      this.getRefreshBtn()?.sync()
+      this.startNewsPoll()
       return
     }
-    // 切换显示（tab 切回）时拉取最新数据：距上次请求 ≥10s 才真正发起（loadData 内 10s 防抖保证）。
-    // 无论是否即将刷新都调用 sync() 同步按钮状态：
-    // - 若实际触发刷新，loadData 成功后 refreshDone() 会重置按钮计时（sync 结果会被覆盖）；
-    // - 若被防抖拦截（10s 内），sync() 负责按剩余时间显示或恢复计时器。
-    this.getRefreshBtn()?.sync()
+    // 切回显示：悬浮刷新按钮此刻已隐藏（页面隐藏时组件自动隐藏），解除对回到顶部的抑制；
+    // 随后启动轮询检测最新新闻——若已有新新闻，会重新拉起刷新按钮。
+    this.getBackToTop()?.setSuppressed(false)
+    this.startNewsPoll()
+    // 切换显示（tab 切回）时拉取最新数据：距上次请求 ≥10s 才真正发起（loadData 内 10s 防抖保证）
     void this.loadData({ silent: true })
   },
+  onHide() {
+    // 页面不可见：停止轮询，避免后台持续请求
+    this.stopNewsPoll()
+  },
   onUnload() {
+    this.stopNewsPoll()
+    backToTopInstance = null
     releaseStoreBindings(this)
     unbindTheme(this)
   },
   /**
    * 请求财经数据。
    * - 防抖：距上次请求不足 10s 时跳过本次请求，返回 false；
-   * - 每次请求成功后把最新数据写入本地缓存，并通知悬浮按钮组件重置计时（隐藏、10s 后重现）；
+   * - 每次请求成功后把最新数据写入本地缓存，并隐藏悬浮按钮、解除对回到顶部的抑制；
    * - 是否弹 toast 由调用方决定：仅下拉刷新 / 悬浮按钮这类用户主动刷新提示，
    *   页面显示（onShow / 首次进入）触发的自动刷新不提示。
    * @returns 是否真正发起了请求
@@ -234,8 +274,10 @@ Page({
       // 刷新成功：以最新首屏重建列表并重置分页（滚动加载追加的条目被清空，回到第一页）
       this.syncNewsFromStore()
       this.saveFinanceCache()
-      // 刷新成功：通知悬浮按钮组件重置计时（隐藏、10s 后重现）
+      // 刷新成功：清除失败重试态，隐藏悬浮按钮（重新出现由轮询按最新新闻驱动），并解除对回到顶部的抑制
+      refreshFailed = false
       this.getRefreshBtn()?.refreshDone()
+      this.getBackToTop()?.setSuppressed(false)
     } catch (error) {
       if (silent) {
         console.warn('[finance] 自动刷新失败:', error)
@@ -261,10 +303,13 @@ Page({
    */
   syncNewsFromStore() {
     const news = toNewsView(rootStore.market.pages['finance'])
+    // 列表重建：作废在途的滚动加载追加（onLoadMore 返回后按版本号丢弃），并重置分页游标
+    financeListVersion += 1
     this.setData({
       news,
       hasMore: news.length >= FINANCE_PAGE_SIZE,
       loadingMore: false,
+      nextPage: 2,
       // 刷新后列表回到第一页，滚动位置同步回顶；scroll-top 值不变不触发，用 0/1 交替保证每次生效
       scrollTop: this.data.scrollTop === 0 ? 1 : 0,
     })
@@ -273,25 +318,43 @@ Page({
    * 滚动到底部 / 点击「加载更多」：向后端请求下一页并追加。
    * - 请求中或有加载失败时不重复发起；hasMore 用后端真实标记；
    * - 追加条目与首屏共用 toNewsItemView（摘要剥离 HTML、相对时间、快讯徽标）；
-   * - 追加条目 id 为空时 key 用「当前列表长度 + 页内下标」保证全局唯一，避免 wx:key 重复。
+   * - 追加条目 id 为空时 key 用「当前列表长度 + 页内下标」保证全局唯一，避免 wx:key 重复；
+   * - 追加条目按 id（无 id 时按 url）去重：feed 为偏移量分页且实时更新，下一页可能与
+   *   已加载页重叠，重复条目会造成 wx:key 重复（Do not set same key in wx:key）与列表渲染错乱；
+   * - 请求期间列表被刷新重建（下拉刷新 / 自动刷新）时丢弃本次追加（按 financeListVersion 比对）。
    */
   async onLoadMore() {
     if (this.data.loadingMore || !this.data.hasMore) return
     this.setData({ loadingMore: true })
+    const version = financeListVersion
     try {
-      const page = Math.floor(this.data.news.length / FINANCE_PAGE_SIZE) + 1
-      // 滚动加载携带第一页第一条 id（游标）供后端分页去重；刷新 / 首屏走 store，不传 id
+      const page = this.data.nextPage
+      // 滚动加载携带第一页第一条 id（游标）：后端支持时按其去重；不支持 / 忽略时由前端去重兜底
       const anchorId = this.data.news[0]?.id
       const { items, hasMore } = await newsApi.getFeedPage(page, FINANCE_PAGE_SIZE, {
         id: anchorId,
       })
-      const base = this.data.news.length
+      // 列表已在请求期间重建：本次追加过期，直接丢弃（loadingMore 由 syncNewsFromStore / finally 复位）
+      if (version !== financeListVersion) return
+      const existing = this.data.news
+      const seen = new Set<string>()
+      for (const item of existing) {
+        const dedupeKey = item.id ?? item.url
+        if (dedupeKey) seen.add(dedupeKey)
+      }
+      const fresh = items.filter((item) => {
+        const dedupeKey = item.id ? String(item.id) : item.url
+        if (!dedupeKey) return true
+        if (seen.has(dedupeKey)) return false
+        seen.add(dedupeKey)
+        return true
+      })
+      const base = existing.length
       this.setData({
-        news: [
-          ...this.data.news,
-          ...items.map((item, index) => toNewsItemView(item, base + index)),
-        ],
+        news: [...existing, ...fresh.map((item, index) => toNewsItemView(item, base + index))],
         hasMore,
+        // 页码显式推进：即使整页被去重清空也不重复请求同一页（避免 offset 滑动时无限重试）
+        nextPage: page + 1,
       })
     } catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '加载失败', icon: 'none' })
@@ -303,12 +366,85 @@ Page({
   onScrollLower() {
     this.onLoadMore()
   },
+  /** scroll-view 滚动（bindscroll）：把位置转发给回到顶部组件，由其决定是否显示 */
+  onScroll(event: WechatMiniprogram.ScrollViewScroll) {
+    this.getBackToTop()?.scroll(event.detail.scrollTop)
+  },
+  /** 点击回到顶部：scroll-view 滚回顶部（scroll-top 值不变不触发，0/1 交替保证每次生效） */
+  onBackToTop() {
+    this.setData({ scrollTop: this.data.scrollTop === 0 ? 1 : 0 })
+  },
+  /** 启动最新新闻轮询：立即检查一次，之后每 NEWS_POLL_INTERVAL 一次（onShow 调用，先停旧表幂等） */
+  startNewsPoll() {
+    if (newsPollTimer) {
+      clearInterval(newsPollTimer)
+      newsPollTimer = null
+    }
+    void this.checkNewNews()
+    newsPollTimer = setInterval(() => {
+      void this.checkNewNews()
+    }, NEWS_POLL_INTERVAL)
+  },
+  /** 停止轮询（onHide / onUnload 调用） */
+  stopNewsPoll() {
+    if (newsPollTimer) {
+      clearInterval(newsPollTimer)
+      newsPollTimer = null
+    }
+  },
+  /**
+   * 检查是否有最新新闻：只拉第一页（getFeed(1, 10)，与 store 首屏同源），
+   * 第一页里只要存在「本地已加载列表中没有的条目」就视为有新新闻：
+   * - 显示悬浮刷新按钮（用户点击后走与下拉刷新相同的流程）；
+   * - 抑制回到顶部按钮（两按钮互斥）。
+   * 没有新新闻时同步隐藏按钮（除非处于刷新失败重试态 refreshFailed），保证按钮只在
+   * 「有本地没有的新新闻」时出现，不会因历史轮询 / restore() 残留一直挂着。
+   * 只比首条 id 会误报：首条 id 缺失 / 列表排序变化 / 最新条目其实已在本地列表中时，
+   * 按钮也会出现，而用户并没有新的内容可看；因此按「id 是否已在本地列表」逐一比对。
+   * 列表尚未有数据时不拉起（loading / 空态交给页面自身处理）；无 id 的条目无法比对，直接忽略；
+   * 轮询失败静默忽略，等待下轮重试；请求在途时不重复发起。
+   */
+  async checkNewNews() {
+    if (newsPolling) return
+    newsPolling = true
+    try {
+      const items = await newsApi.getFeed(1, 10)
+      if (!items.length || this.data.news.length === 0) return
+      const localIds = new Set(
+        this.data.news.map((item) => item.id).filter((id): id is string => Boolean(id)),
+      )
+      const hasNewNews = items.some((item) => Boolean(item.id) && !localIds.has(String(item.id)))
+      if (hasNewNews) {
+        this.getRefreshBtn()?.show()
+        this.getBackToTop()?.setSuppressed(true)
+      } else if (!refreshFailed) {
+        // 没有新新闻：隐藏按钮并解除对回到顶部的抑制。
+        // 只加 show 不加 hide 会「只亮不灭」——按钮一旦因历史轮询 / restore() 显示，
+        // 后续轮询即使 hasNewNews=false 也一直挂着（本次 false 仍显示的原因）。
+        this.getRefreshBtn()?.hide()
+        this.getBackToTop()?.setSuppressed(false)
+      }
+    } catch {
+      // 轮询失败静默，下轮重试
+    } finally {
+      newsPolling = false
+    }
+  },
   onRetry() {
     void this.loadData({ force: true })
   },
   /** 获取悬浮刷新按钮组件实例（组件尚未就绪时返回 null，调用方用可选链保护） */
   getRefreshBtn(): RefreshBtnInstance | null {
     return this.selectComponent('#refresh-btn') as unknown as RefreshBtnInstance | null
+  },
+  /** 获取回到顶部组件实例：onScroll 高频调用，首次获取后缓存（组件尚未就绪时返回 null） */
+  getBackToTop(): BackToTopInstance | null {
+    if (!backToTopInstance) {
+      backToTopInstance = this.selectComponent(
+        '#back-to-top',
+      ) as unknown as BackToTopInstance | null
+    }
+    return backToTopInstance
   },
   /** 点击悬浮按钮：组件内已自行隐藏，这里触发与下拉刷新相同的刷新流程 */
   onRefreshBtnRefresh() {

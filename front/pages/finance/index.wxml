@@ -15,6 +15,7 @@
     refresher-default-style="{{ theme === 'dark' ? 'white' : 'black' }}"
     refresher-background="{{ theme === 'dark' ? '#151e2d' : '#eef3f8' }}"
     bindrefresherrefresh="onRefresherRefresh"
+    bindscroll="onScroll"
     bindscrolltolower="onScrollLower"
     lower-threshold="150"
     scroll-top="{{ scrollTop }}"
@@ -65,6 +66,8 @@
     <view class="bottom-space"></view>
   </scroll-view>
 
-  <!-- 悬浮刷新按钮组件：刷新成功 10s 后出现（淡入/淡出动画在组件内），点击触发下拉刷新 -->
+  <!-- 悬浮刷新按钮组件：轮询发现最新新闻时由页面驱动显示（淡入/淡出动画在组件内），点击触发下拉刷新 -->
   <refresh-btn id="refresh-btn" bind:refresh="onRefreshBtnRefresh"></refresh-btn>
+  <!-- 回到顶部按钮组件：滚动超过一屏且停止滚动后显示；刷新按钮显示时自动隐藏，点击回到顶部 -->
+  <back-to-top id="back-to-top" bind:totop="onBackToTop"></back-to-top>
 </view>

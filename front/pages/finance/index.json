@@ -3,6 +3,7 @@
     "app-header": "/components/app-header/index",
     "loading-state": "/components/loading-state/index",
     "disclaimer-footer": "/components/disclaimer-footer/index",
-    "refresh-btn": "/components/refresh-btn/index"
+    "refresh-btn": "/components/refresh-btn/index",
+    "back-to-top": "/components/back-to-top/index"
   }
 }

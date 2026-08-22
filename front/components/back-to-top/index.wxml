@@ -1,0 +1,7 @@
+<view
+  class="back-to-top {{ show ? 'show' : '' }} {{ theme === 'dark' ? 'dark' : '' }}"
+  hover-class="back-to-top-hover"
+  bindtap="onTap"
+>
+  <text class="back-to-top-icon">↑</text>
+</view>

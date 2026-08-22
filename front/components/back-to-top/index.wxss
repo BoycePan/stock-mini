@@ -1,13 +1,15 @@
 /* ---------------------------------------------------------------------------
- * 悬浮刷新按钮：右下角圆形，出现/隐藏由页面驱动（轮询发现最新新闻时显示）。
+ * 回到顶部悬浮按钮：右下角圆形，样式与悬浮刷新按钮（refresh-btn）一致，图标为向上箭头。
+ * 与刷新按钮互斥显示（刷新按钮显示时被页面抑制），因此占据同一位置；
+ * z-index 低于刷新按钮，极端情况下若同帧渲染，刷新按钮优先。
  * 出现/隐藏通过 .show 类切换 + transition 动画（淡入淡出 + 缩放弹跳）。
  * 组件样式隔离，深色规则写在组件内（根节点 .dark 类由 theme 切换）。
  * ------------------------------------------------------------------------- */
-.refresh-btn {
+.back-to-top {
   position: fixed;
   right: 32rpx;
-  bottom: 240rpx; /* 位于自定义 tabBar（122rpx + 安全区）上方 */
-  z-index: 50;
+  bottom: 240rpx; /* 位于自定义 tabBar（122rpx + 安全区）上方，与刷新按钮同位 */
+  z-index: 49; /* 低于刷新按钮（50） */
   width: 104rpx;
   height: 104rpx;
   border-radius: 50%;
@@ -25,17 +27,17 @@
     transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.refresh-btn.show {
+.back-to-top.show {
   opacity: 1;
   transform: scale(1) translateY(0);
   pointer-events: auto;
 }
 
-.refresh-btn-hover {
+.back-to-top-hover {
   transform: scale(0.88);
 }
 
-.refresh-btn-icon {
+.back-to-top-icon {
   font-size: 46rpx;
   line-height: 1;
   color: #fff;
@@ -43,7 +45,7 @@
 }
 
 /* 深色主题：更亮的强调蓝渐变，保证可读 */
-.refresh-btn.dark {
+.back-to-top.dark {
   background: linear-gradient(135deg, #8ab4ff, #5f93f5);
   box-shadow: 0 12rpx 28rpx rgba(111, 163, 255, 0.35);
 }
