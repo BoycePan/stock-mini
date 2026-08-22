@@ -15,6 +15,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -73,6 +75,8 @@ public class RssNewsScheduler implements ApplicationRunner {
                 try {
                     if (s.viaWorker() && !rssNewsClient.hasWorker()) {
                         log.warn("[RSS] 源 [{}] 标记 via-worker 但未配置 Worker 通道（app.rss.worker-base），跳过", s.name());
+                        rssSourceRepository.updateStatus(s.id(), "fail", "未配置 Worker 通道（app.rss.worker-base）",
+                                Timestamp.from(Instant.now()), 0);
                         continue;
                     }
                     List<RssItem> items = rssNewsClient.fetch(s.url(), s.viaWorker(), props.getMaxItemsPerFeed());
@@ -80,9 +84,11 @@ public class RssNewsScheduler implements ApplicationRunner {
                             .map(it -> new NewsRow(null, "", it.title(), it.summary(), it.link(), s.name(), it.publishedAt()))
                             .toList();
                     asyncNewsSaver.save(rows);
+                    rssSourceRepository.updateStatus(s.id(), "ok", null, Timestamp.from(Instant.now()), rows.size());
                     log.info("[RSS] 源 [{}] 解析 {} 条 → 异步落库", s.name(), rows.size());
                 } catch (Exception e) {
                     log.error("[RSS] 源 [{}] 拉取失败: {}", s.name(), e.getMessage());
+                    rssSourceRepository.updateStatus(s.id(), "fail", e.getMessage(), Timestamp.from(Instant.now()), 0);
                 }
             }
         } finally {

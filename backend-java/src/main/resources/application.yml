@@ -98,3 +98,10 @@ app:
     request-enabled: ${REQUEST_LOG_ENABLED:true}
     # 慢请求阈值（毫秒）：>0 时耗时 ≥ 该值的请求升级为 WARN 日志，0 表示全部按 INFO
     slow-request-ms: ${SLOW_REQUEST_MS:0}
+  mgr:
+    # 管理端接口 /api/mgr/** 拦截鉴权（MgrAuthInterceptor）：false 关闭拦截（调试用）
+    auth-enabled: ${MGR_AUTH_ENABLED:true}
+
+    # 管理员登录口令 root@Qwer1234@@（用户名@密码）的 base64
+    admin-token: cm9vdEBRd2VyMTIzNEBA
+
