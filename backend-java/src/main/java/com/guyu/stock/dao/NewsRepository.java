@@ -58,7 +58,7 @@ public class NewsRepository {
     /**
      * 通用新闻 feed 分页查询（stock_code 为空串：新浪 feed + RSS 来源）。
      * 按 published_at 倒序，limit 为每页条数、offset 为偏移。
-     * id 大于 0 时追加 id >= ? 过滤（客户端增量拉取用）。
+     * id 大于 0 时追加 id <= ? 过滤（按 id 上限截取，用于滑动分页/增量拉取）。
      */
     public List<NewsRow> queryFeed(int limit, int offset, Long id) {
         if (limit <= 0) limit = 20;

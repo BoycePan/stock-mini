@@ -86,14 +86,14 @@ class NewsControllerTest {
                 new NewsRow(null, "", "新闻B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
                 new NewsRow(null, "", "新闻A", "", "http://u/3", "新浪", "2026-08-06 10:00")));
 
-        // id >= 2：倒序为 新闻A(3)、新闻B(2)，不含 旧闻(1)
+        // id <= 2：倒序为 新闻B(2)、旧闻(1)，不含 新闻A(3)
         mockMvc.perform(get("/api/v1/news/feed?page=1&size=10&id=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.count").value(2))
-                .andExpect(jsonPath("$.data.news[0].title").value("新闻A"))
+                .andExpect(jsonPath("$.data.news[0].title").value("新闻B"))
                 .andExpect(jsonPath("$.data.news[0].id").isNumber())
-                .andExpect(jsonPath("$.data.news[1].title").value("新闻B"));
+                .andExpect(jsonPath("$.data.news[1].title").value("旧闻"));
 
         // id 缺省/为 0 时不加过滤，仍是全量
         mockMvc.perform(get("/api/v1/news/feed?page=1&size=10"))

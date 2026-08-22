@@ -74,18 +74,18 @@ class NewsRepositoryTest {
     }
 
     @Test
-    void queryFeedByIdOnlyReturnsRowsWithIdAtOrAbove() {
+    void queryFeedByIdOnlyReturnsRowsWithIdAtOrBelow() {
         repo.batchSave(List.of(
                 new NewsRow(null, "", "A", "", "http://u/1", "新浪", "2026-08-05 10:30"),
                 new NewsRow(null, "", "B", "", "http://u/2", "新浪", "2026-08-06 09:00"),
                 new NewsRow(null, "", "C", "", "http://u/3", "新浪", "2026-08-06 10:00")));
 
         // id 由 identity 自增：A=1, B=2, C=3（去重索引不冲突时自增连续）。
-        // 取 id >= 2 的新闻，倒序为 C(3)、B(2)，不含 A(1)。
+        // 取 id <= 2 的新闻，倒序为 B(2)、A(1)，不含 C(3)。
         List<NewsRow> rows = repo.queryFeed(10, 0, 2L);
         assertThat(rows).hasSize(2);
-        assertThat(rows.get(0).title()).isEqualTo("C");
-        assertThat(rows.get(1).title()).isEqualTo("B");
-        assertThat(rows.get(0).id()).isGreaterThanOrEqualTo(2L);
+        assertThat(rows.get(0).title()).isEqualTo("B");
+        assertThat(rows.get(1).title()).isEqualTo("A");
+        assertThat(rows.get(0).id()).isLessThanOrEqualTo(2L);
     }
 }
