@@ -79,6 +79,33 @@ export interface EastmoneyQuote {
   isStale: boolean
 }
 
+/** 东财 ulist.np/get 报价（分时页「基础信息」取数，fltt=2 十进制，与分时同 secid） */
+export interface EastmoneyUlistQuote {
+  secid: string
+  /** 代码（f12，如 DJIA） */
+  code: string
+  /** 市场号（f13，如 100） */
+  market: string
+  /** 名称（f14） */
+  name: string
+  /** 最新价（f2） */
+  price: number | null
+  /** 涨跌幅 %（f3） */
+  changePercent: number | null
+  /** 今开（f17） */
+  open: number | null
+  /** 最高（f15） */
+  high: number | null
+  /** 最低（f16） */
+  low: number | null
+  /** 昨收（f18） */
+  previousClose: number | null
+  /** 成交量（f5；A股为手、美股为股，页面统一按「手」展示） */
+  volume: number | null
+  /** 成交额（f6） */
+  amount: number | null
+}
+
 /** 多源聚合中的单个源报价 */
 export interface SourceQuote {
   price: number | null

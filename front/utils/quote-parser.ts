@@ -4,7 +4,7 @@
  * 本模块不发起任何网络请求，只做「文本 / JSON → 结构化数据」，可在 Node 测试中直接复用。
  */
 
-import type { EastmoneyQuote, SinaQuote, TencentQuote } from '../types/quote'
+import type { EastmoneyQuote, EastmoneyUlistQuote, SinaQuote, TencentQuote } from '../types/quote'
 
 // ---------------------------------------------------------------------------
 // 通用工具
@@ -462,6 +462,51 @@ export function parseEastmoneyAveragePrice(
     price,
     previousClose: toNumber(raw.f18),
     changePercent: toNumber(raw.f3),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ④d 东财 ulist 报价（ulist.np/get，分时页「基础信息」取数，与分时同 secid）
+// fltt=2 下价格为十进制：f2 最新价 / f3 涨跌幅 / f17 今开 / f15 最高 / f16 最低 /
+// f18 昨收 / f5 成交量 / f6 成交额 / f14 名称 / f12 代码 / f13 市场号。
+// 注：字段清单里的 f145（均价）实测恒为 0，均价仍取分时末点均价（trends2 f58）。
+// ---------------------------------------------------------------------------
+
+export interface EastmoneyUlistQuoteRaw {
+  f12?: string | number
+  f13?: string | number
+  f14?: string
+  f2?: number | string
+  f3?: number | string
+  f5?: number | string
+  f6?: number | string
+  f15?: number | string
+  f16?: number | string
+  f17?: number | string
+  f18?: number | string
+}
+
+/** ulist diff 条目 → 归一化报价；缺 f2（最新价）返回 null */
+export function parseEastmoneyUlistQuote(
+  secid: string,
+  raw: EastmoneyUlistQuoteRaw | null | undefined,
+): EastmoneyUlistQuote | null {
+  if (!raw) return null
+  const price = toNumber(raw.f2)
+  if (price === null) return null
+  return {
+    secid,
+    code: String(raw.f12 ?? ''),
+    market: String(raw.f13 ?? ''),
+    name: typeof raw.f14 === 'string' ? raw.f14 : '',
+    price,
+    changePercent: toNumber(raw.f3),
+    open: toNumber(raw.f17),
+    high: toNumber(raw.f15),
+    low: toNumber(raw.f16),
+    previousClose: toNumber(raw.f18),
+    volume: toNumber(raw.f5),
+    amount: toNumber(raw.f6),
   }
 }
 

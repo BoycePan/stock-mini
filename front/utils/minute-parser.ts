@@ -22,7 +22,10 @@ interface EastmoneyTrendsData {
 
 /**
  * 解析东财 trends2 响应。
- * 每行（fields2=f51..f58）：[0]时间 [1]现价 [5]成交量 [6]成交额 [7]均价
+ * 行按字段数自适应两种布局（现价均取 收盘/现价 f53）：
+ * - 4 字段（fields2=f51,f53,f56,f58，生产请求）：[0]时间 [1]现价 [2]成交量 [3]均价
+ * - 8 字段（fields2=f51..f58，兼容/兜底）：[0]时间 [1]开盘 [2]现价 [3]最高 [4]最低
+ *   [5]成交量 [6]成交额 [7]均价 —— 现价在 f[2]，不要读 f[1]（那是开盘价）
  * @param opts.keepFullTime 保留完整时间戳（"YYYY-MM-DD HH:mm"，字典序即时间序，
  *   用于美股代理股合成时的跨零点时间对齐）；默认输出短时间 HH:mm
  */
@@ -36,15 +39,20 @@ export function parseEastmoneyTrends(
   const points: MinutePoint[] = []
   for (const row of rows) {
     const f = row.split(',')
-    const price = Number(f[1])
+    if (f.length < 4) continue
+    const full = f.length >= 8
+    // 现价位置随布局不同：4字段=f[1]（f53），8字段=f[2]（f[1] 是开盘价）
+    const price = Number(full ? f[2] : f[1])
     // 价格为 0 / 空字段（Number('')=0）视为该分钟无成交，跳过：
     // 外汇等 24h 标的个别分钟可能无成交，0 价会污染价格线与纵轴（|0-昨收| 撑爆刻度）
-    if (f.length < 8 || !Number.isFinite(price) || price <= 0) continue
-    const volume = Number(f[5])
-    const amount = Number(f[6])
-    const avg = Number(f[7])
+    if (!Number.isFinite(price) || price <= 0) continue
+    const volume = Number(full ? f[5] : f[2])
+    const amount = full ? Number(f[6]) : undefined
+    const avg = Number(full ? f[7] : f[3])
     points.push({
       time: keepFull ? (f[0] ?? '') : shortTime(f[0] ?? ''),
+      // 东财行首即完整时间戳（"YYYY-MM-DD HH:mm"），触摸浮层展示「年月日 时分」需要它
+      timeFull: fullTimeOf(f[0] ?? ''),
       price,
       // 均价 > 0 才有效：东财对无成交分钟（如外汇成交量恒 0）返回 0.00000，
       // 0 均价没有意义（真实均价必为正），置 null 避免污染纵轴与均价线
@@ -151,8 +159,11 @@ export function parseYahooMinuteResult(result?: YahooChartResult): MinuteResult 
       typeof volumes[i] === 'number' && Number.isFinite(volumes[i]) ? (volumes[i] as number) : 0
     cumVolume += volume
     cumAmount += close * volume
+    const fullTime = formatMinuteTime(ts)
     points.push({
-      time: shortTime(formatMinuteTime(ts)),
+      time: shortTime(fullTime),
+      // Yahoo epoch 转本地完整时间戳，触摸浮层展示「年月日 时分」
+      timeFull: fullTime,
       price: close,
       avg: cumVolume > 0 ? cumAmount / cumVolume : null,
       volume,
@@ -193,6 +204,18 @@ export function shortTime(time: string): string {
     return `${time.slice(0, 2)}:${time.slice(2)}`
   }
   return time
+}
+
+/**
+ * 完整时间戳归一化为 "YYYY-MM-DD HH:mm"：
+ * - "2026-08-19 09:30" / "2026-08-19 09:30:00" / "2026-08-19T09:30:00" → "2026-08-19 09:30"
+ * - 无日期信息（腾讯 "0930"）→ undefined
+ */
+export function fullTimeOf(time: string): string | undefined {
+  if (!time) return undefined
+  const match = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(time)
+  if (!match) return undefined
+  return `${match[1]} ${match[2]}`
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +260,14 @@ export function buildCompositePoints(series: CompositeSeries[]): MinutePoint[] {
   const times = Array.from(byTime.keys()).sort()
   return times.map((time) => {
     const agg = byTime.get(time) as { sum: number; count: number; volume: number }
-    return { time: shortTime(time), price: agg.sum / agg.count, avg: null, volume: agg.volume }
+    return {
+      time: shortTime(time),
+      // 合成输入即完整时间戳（跨零点对齐用），触摸浮层展示「年月日 时分」
+      timeFull: fullTimeOf(time),
+      price: agg.sum / agg.count,
+      avg: null,
+      volume: agg.volume,
+    }
   })
 }
 
@@ -278,6 +308,8 @@ export function buildCrossPoints(
     if (!Number.isFinite(price)) continue
     points.push({
       time: shortTime(p.time),
+      // 合成输入即完整时间戳，触摸浮层展示「年月日 时分」
+      timeFull: fullTimeOf(p.time),
       // 四舍五入到 4 位小数，避免浮点噪声（如 1392.8/6.7225=207.1863…）
       price: Math.round(price * 10000) / 10000,
       avg: null,

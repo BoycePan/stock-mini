@@ -6,6 +6,7 @@ import {
   isAbnormalPct,
   normalizeEastmoneyQuote,
   parseEastmoneyAveragePrice,
+  parseEastmoneyUlistQuote,
   parseQuoteTime,
   parseSinaQuote,
   parseSinaText,
@@ -398,6 +399,56 @@ test('东财平均股价：缺 f2 视为无行情返回 null', () => {
   assert.equal(parseEastmoneyAveragePrice('47.800005', null), null)
   assert.equal(parseEastmoneyAveragePrice('47.800005', undefined), null)
   assert.equal(parseEastmoneyAveragePrice('47.800005', { f14: 'A股平均股价', f3: 1.25 }), null)
+})
+
+// ---------------------------------------------------------------------------
+// ④d 东财 ulist 报价（ulist.np/get，分时页「基础信息」取数）
+// ---------------------------------------------------------------------------
+
+test('东财 ulist 报价：今开/最高/最低/昨收/成交量/成交额字段映射', () => {
+  const quote = parseEastmoneyUlistQuote('100.DJIA', {
+    f12: 'DJIA',
+    f13: 100,
+    f14: '道琼斯',
+    f2: 53277.01,
+    f3: 0.98,
+    f5: 424065344,
+    f6: 0.0,
+    f15: 53355.92,
+    f16: 52768.87,
+    f17: 52768.87,
+    f18: 52759.21,
+  })
+  assert.ok(quote)
+  assert.equal(quote.secid, '100.DJIA')
+  assert.equal(quote.code, 'DJIA')
+  assert.equal(quote.market, '100')
+  assert.equal(quote.name, '道琼斯')
+  assert.equal(quote.price, 53277.01)
+  assert.equal(quote.changePercent, 0.98)
+  assert.equal(quote.open, 52768.87, 'f17 今开')
+  assert.equal(quote.high, 53355.92, 'f15 最高')
+  assert.equal(quote.low, 52768.87, 'f16 最低')
+  assert.equal(quote.previousClose, 52759.21, 'f18 昨收')
+  assert.equal(quote.volume, 424065344, 'f5 成交量')
+  assert.equal(quote.amount, 0, 'f6 成交额')
+})
+
+test('东财 ulist 报价：缺 f2 视为无行情返回 null；字符串数字兼容', () => {
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', null), null)
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', undefined), null)
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', { f14: '道琼斯', f3: 1.25 }), null)
+  // f2/f5 以字符串返回时仍能解析
+  const str = parseEastmoneyUlistQuote('1.000001', {
+    f12: '000001',
+    f13: 1,
+    f14: '上证指数',
+    f2: '3905.20',
+    f5: '446895868',
+  })
+  assert.ok(str)
+  assert.equal(str!.price, 3905.2)
+  assert.equal(str!.volume, 446895868)
 })
 
 // ---------------------------------------------------------------------------

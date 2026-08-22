@@ -35,12 +35,14 @@ async function fetchText(url: string, headers: Record<string, string> = {}): Pro
 }
 
 async function emMinute(secid: string, keepFullTime = false): Promise<MinuteResult | null> {
+  // 请求 URL 与 api/minute.ts 完全一致：只取 f51,f53,f56,f58 四字段（现价在 f[1]，见 parser）
   const params = [
     `secid=${encodeURIComponent(secid)}`,
-    'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13',
-    'fields2=f51,f52,f53,f54,f55,f56,f57,f58',
+    'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14',
+    'fields2=f51,f53,f56,f58',
     'ndays=1',
     'iscr=0',
+    'iscca=0',
   ].join('&')
   const text = await fetchText(`${EM_URL}?${params}`)
   const body = JSON.parse(text) as {

@@ -40,6 +40,12 @@ export interface KlinePoint {
 export interface MinutePoint {
   /** 时间，如 "09:30"（东财/腾讯）或 "2026-08-19 09:31"（Yahoo epoch 转本地） */
   time: string
+  /**
+   * 完整时间戳 "YYYY-MM-DD HH:mm"（源自带日期时保留，如东财 "2026-08-19 09:30"、
+   * Yahoo epoch 转本地；腾讯 HHmm 无日期信息则缺省）。
+   * 供触摸浮层十字光标展示「年月日 时分」，跨零点时段（美股 21:30→04:00）逐点准确。
+   */
+  timeFull?: string
   /** 现价 */
   price: number
   /** 均价（累计成交额/累计成交量）；源未提供时为空 */

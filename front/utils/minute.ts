@@ -9,6 +9,7 @@
  */
 
 import type { MinutePoint, MinuteResult } from '../types/stock'
+import type { EastmoneyUlistQuote } from '../types/quote'
 import { minuteApi } from '../api/minute'
 import { US_PROXY_NAMES, resolveMinuteSources, type MinuteSources } from '../config/minute'
 import type { MinuteSessionKind } from './minute-session'
@@ -62,6 +63,58 @@ export function sparseVolumeNote(
 
 /** 该卡片 code 是否支持当日分时图（任一源可用，供卡片「分时」角标展示） */
 export { hasMinuteSources } from '../config/minute'
+
+// ---------------------------------------------------------------------------
+// 分时页「基础信息」：东财 ulist 报价（今开/最高/最低/昨收/成交量）优先，
+// 缺字段 / 无报价（代理合成、交叉汇率、Yahoo 兜底等无单一 secid）时回退分时推算
+// ---------------------------------------------------------------------------
+
+export interface MinuteQuoteInfo {
+  /** 今开 */
+  open: number | null
+  /** 最高 */
+  high: number | null
+  /** 最低 */
+  low: number | null
+  /** 昨收 */
+  preClose: number | null
+  /** 成交量（当日累计；报价 f5 优先，否则逐分钟量求和） */
+  volume: number
+  /** 是否有成交量（>0；外汇等无成交量标的隐藏该格子） */
+  hasVolume: boolean
+}
+
+/**
+ * 合并「东财 ulist 报价」与「分时推算值」得到基础信息：
+ * - 今开/最高/最低/昨收：报价字段为正才采用，否则回退分时推算
+ *   （闭市/上游缺失时报价字段可能为 0 或空）；
+ * - 成交量：报价 f5 为正时优先，否则回退逐分钟量求和（外汇 f5=0 且分钟量也=0 → 0）；
+ * - 均价不在报价中（f145 实测恒 0），仍由调用方取分时末点均价（trends2 f58）。
+ */
+export function mergeMinuteQuoteInfo(
+  points: MinutePoint[],
+  preClose: number | null,
+  quote: EastmoneyUlistQuote | null,
+): MinuteQuoteInfo {
+  const prices = points.map((p) => p.price).filter((v): v is number => Number.isFinite(v))
+  const derivedOpen = points[0] && Number.isFinite(points[0].price) ? points[0].price : null
+  const derivedHigh = prices.length ? Math.max(...prices) : null
+  const derivedLow = prices.length ? Math.min(...prices) : null
+  const derivedVolume = points.reduce((sum, p) => sum + (p.volume || 0), 0)
+  const positive = (value: number | null | undefined, fallback: number | null): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
+  const quoteVolume =
+    typeof quote?.volume === 'number' && Number.isFinite(quote.volume) ? quote.volume : null
+  const volume = quoteVolume !== null && quoteVolume > 0 ? quoteVolume : derivedVolume
+  return {
+    open: positive(quote?.open, derivedOpen),
+    high: positive(quote?.high, derivedHigh),
+    low: positive(quote?.low, derivedLow),
+    preClose: positive(quote?.previousClose, preClose),
+    volume,
+    hasVolume: volume > 0,
+  }
+}
 
 /**
  * 依次尝试 东财 → 腾讯 → Yahoo 拉取当日分时，命中即返回。

@@ -423,7 +423,11 @@ Component({
 
       // 信息框内容
       const rows: Array<{ text: string; color: string }> = []
-      rows.push({ text: `时间 ${p.time}`, color: isDark ? '#c3cede' : '#66758a' })
+      // 触摸浮层展示「年月日 时分」：源带完整时间戳（东财/Yahoo/合成）用 timeFull，否则回退 HH:mm
+      rows.push({
+        text: `时间 ${p.timeFull || p.time}`,
+        color: isDark ? '#c3cede' : '#66758a',
+      })
       rows.push({ text: `价格 ${p.price.toFixed(2)}`, color: mainColor })
       if (hasPre) {
         const change = p.price - preClose

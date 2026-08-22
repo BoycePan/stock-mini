@@ -13,8 +13,12 @@
   显示「分时」角标，点击后 `wx.navigateTo` 跳转到 `pages/minute/index?code=<首页code>&name=<展示名>`；
 - 金店金价（`GS-*`）、财经新闻等无分时标的**不显示角标**，点击提示「该指标暂无分时数据」；
 - 分时页：App 头部（返回）+ 免责声明 + **基本信息卡片**（最新价 / 涨跌额 / 涨跌幅，以及今开 / 最高 / 最低 /
-  均价 / 成交量 / 昨收，均由分时数据推算）+ 分时图（新组件 `components/minute-chart`）+ 数据来源标签 +
+  均价 / 成交量 / 昨收）+ 分时图（新组件 `components/minute-chart`）+ 数据来源标签 +
   加载 / 错误 / 空态，支持下拉刷新与深浅主题；
+- **基本信息取数**：今开 / 最高 / 最低 / 昨收 / 成交量并发拉东财 `ulist.np/get` 报价
+  （`secid` 与分时同源，字段 `f17 今开 / f15 最高 / f16 最低 / f18 昨收 / f5 成交量`），
+  缺字段回退分时推算（代理合成 / 交叉汇率 / Yahoo 兜底无单一 secid 时整体回退）；
+  均价不在报价中（f145 实测恒 0），取分时末点均价（trends2 f58）；**成交量统一加「手」单位**；
 - 分时图 canvas：只绘制网格 / 昨收虚线 / 价格线 / 均价线 / 成交量柱 / 时间刻度，
   **不展示「当前价格」「昨收」常驻文字标签**；价格刻度在左侧留白内不遮挡图形；
   点击 / 拖动 canvas 显示同花顺式**十字光标** + 信息框（时间 / 价格 / 涨跌 / 均价 / 成交量）。
@@ -23,7 +27,13 @@
 
 | 源 | URL | 覆盖 | 说明 |
 | --- | --- | --- | --- |
-| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=1&iscr=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.) | **首选源**，覆盖绝大多数卡片；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,…,成交量,成交额,均价`（分钟级） |
+| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14&fields2=f51,f53,f56,f58&ndays=1&iscr=0&iscca=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.) | **首选源**，覆盖绝大多数卡片；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,成交量,均价`（分钟级，现价取 **f53 收盘价**，与真实最新价一致） |
+
+> **为什么只取 f51,f53,f56,f58 四个字段**：全字段版（`fields2=f51..f58`）行结构为
+> `时间,开盘,现价,最高,最低,成交量,成交额,均价`，**现价在 `f[2]`、`f[1]` 是该分钟开盘价**——
+> 若按「现价在 f[1]」解析会把每分钟的开盘价当成现价（开盘价≈上一分钟收盘价，整条曲线滞后 1 分钟，
+> 最新价落后一档；道琼斯实测单分钟开盘/现价可差数百点）。精简版把现价对齐到 `f[1]`，解析无歧义。
+> 成交额（f57）分时侧无消费方，一并省去以减小 8s 自动刷新带宽。
 | 腾讯分时 | `https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=<code>` | A股、港股 | 兜底；`data.<code>.data.data` 每行 `[HHmm,现价,成交量,成交额]`，均价由累计额/累计量推算 |
 | Yahoo 1分钟 | `https://query1.finance.yahoo.com/v8/finance/chart/<symbol>?range=1d&interval=1m` | 东财/腾讯分时均不覆盖的标的：KOSDAQ、VIX | 兜底源（**中国大陆访问被墙，仅作大陆外/兜底**）；`chart.result[0].timestamp` + `indicators.quote[0]`，昨收取 `meta.chartPreviousClose` |
 
@@ -37,7 +47,8 @@
 | `config/minute.ts` **新增** | 首页卡片 code → `{em?, tc?, yahoo?, note?}` 映射表（唯一需要维护的地方）+ `hasMinuteSources` / `resolveMinuteSources` |
 | `api/minute.ts` **新增** | 三个单接口封装（`fetchEastmoneyMinute` / `fetchTencentMinute` / `fetchYahooMinute`），失败降级 null，复用 `api/external.ts` 的 `requestExternal` |
 | `utils/minute-parser.ts` **新增** | 三个源响应的纯解析函数（含均价推算、时间归一 `shortTime`） |
-| `utils/minute.ts` **新增** | `fetchMinuteData(code)` 多源兜底链，返回 `{preClose, points, source, sourceLabel, note}` |
+| `utils/minute.ts` **新增** | `fetchMinuteData(code)` 多源兜底链，返回 `{preClose, points, source, sourceLabel, note}`；`mergeMinuteQuoteInfo` 合并 ulist 报价与分时推算值（基础信息） |
+| `api/quote.ts` **改** | 新增 `fetchEastmoneyUlistQuote(secid)`（ulist.np/get，今开/最高/最低/昨收/成交量，与分时同 secid）；`EM_AVG_PRICE_FIELDS` 更名 `EM_ULIST_FIELDS` 共用 |
 | `components/minute-chart/*` **新增** | 分时图组件（canvas 2d：价格线 + 均价线 + 昨收虚线 + 成交量柱，深浅主题） |
 | `pages/minute/index.*` **新增** | 分时查看页（4 个文件，主题/刷新/加载态齐全） |
 | `types/stock.ts` **改** | 新增 `MinutePoint` / `MinuteResult` 类型 |
