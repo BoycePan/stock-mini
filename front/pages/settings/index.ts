@@ -9,6 +9,9 @@ import {
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { getAppVersion } from '../../utils/version'
 import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
+import { isReleaseBuild } from '../../config/env'
+import { getEnvOverride } from '../../utils/storage'
+import type { EnvOverride } from '../../utils/storage'
 
 Page({
   data: {
@@ -17,6 +20,8 @@ Page({
     user: null as User | null,
     isLoggedIn: false,
     version: '',
+    isDev: !isReleaseBuild(),
+    envOverride: null as EnvOverride | null,
   },
   onLoad() {
     bindTheme(this)
@@ -29,6 +34,10 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
+    // 从 env-switch 页返回后刷新 pill 状态
+    if (this.data.isDev) {
+      this.setData({ envOverride: getEnvOverride() })
+    }
   },
 
   ensureAutoLogin() {
@@ -56,6 +65,9 @@ Page({
   },
   onFeedbackTap() {
     wx.navigateTo({ url: '/pages/custom/index' })
+  },
+  onEnvSwitchTap() {
+    wx.navigateTo({ url: '/pages/env-switch/index' })
   },
   onUnload() {
     releaseStoreBindings(this)

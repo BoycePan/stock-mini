@@ -12,7 +12,8 @@
     "pages/news/index",
     "pages/news-detail/index",
     "pages/legal/index",
-    "pages/custom/index"
+    "pages/custom/index",
+    "pages/env-switch/index"
   ],
   "window": {
     "navigationStyle": "custom",

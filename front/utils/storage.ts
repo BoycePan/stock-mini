@@ -8,6 +8,23 @@ const NEWS_DETAIL_KEY = 'market_tracker_news_detail'
 const SEARCH_HISTORY_KEY = 'market_tracker_search_history'
 const SEARCH_HISTORY_LIMIT = 10
 const FINANCE_CACHE_KEY = 'market_tracker_finance_cache'
+const ENV_OVERRIDE_KEY = 'market_tracker_env_override'
+
+export type EnvOverride = 'production' | 'local'
+
+export function getEnvOverride(): EnvOverride | null {
+  const value = read<string>(ENV_OVERRIDE_KEY, '')
+  if (value === 'production' || value === 'local') return value
+  return null
+}
+
+export function setEnvOverride(env: EnvOverride | null): void {
+  if (env === null) {
+    wx.removeStorageSync(ENV_OVERRIDE_KEY)
+  } else {
+    wx.setStorageSync(ENV_OVERRIDE_KEY, env)
+  }
+}
 
 export type ThemeMode = 'light' | 'dark'
 /** 主题偏好：'system' 表示跟随微信客户端主题（默认），'light' / 'dark' 为用户手动选择 */
@@ -175,4 +192,5 @@ export function clearAppStorage(): void {
   clearUser()
   wx.removeStorageSync(THEME_KEY)
   wx.removeStorageSync(API_BASE_URL_KEY)
+  wx.removeStorageSync(ENV_OVERRIDE_KEY)
 }

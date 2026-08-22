@@ -1,0 +1,234 @@
+/* ============ 滚动区 ============ */
+.env-content {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 24rpx 0;
+}
+
+/* ============ 说明提示 ============ */
+.env-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid #f5e2c8;
+  border-radius: 24rpx;
+  background: #fff8f0;
+}
+
+.env-notice-icon {
+  flex: 0 0 auto;
+  font-size: 32rpx;
+  line-height: 1.5;
+}
+
+.env-notice-text {
+  flex: 1;
+  min-width: 0;
+  color: #7a4e1e;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+/* ============ 分组标题 ============ */
+.section-heading {
+  display: block;
+  margin: 32rpx 14rpx 14rpx;
+  color: #8a98aa;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  text-transform: uppercase;
+}
+
+/* ============ 当前接口地址 ============ */
+.env-current-card {
+  padding: 20rpx 28rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 24rpx;
+  background: #f7faff;
+}
+
+.env-current-label {
+  color: #4278ed;
+  font-size: 24rpx;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+/* ============ 环境选项分组 ============ */
+.env-group {
+  border: 1rpx solid #e2eaf3;
+  border-radius: 32rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 28rpx rgba(64, 86, 116, 0.07);
+  overflow: hidden;
+}
+
+.env-row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  min-height: 108rpx;
+  box-sizing: border-box;
+  transition: background 0.15s;
+}
+
+.env-row.active {
+  background: #f4f8ff;
+}
+
+.env-row-hover {
+  opacity: 0.68;
+}
+
+.env-divider {
+  height: 1rpx;
+  margin-left: 122rpx;
+  background: #edf1f6;
+}
+
+/* ============ 图标 ============ */
+.env-icon-wrap {
+  flex: 0 0 auto;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 22rpx;
+  border-radius: 20rpx;
+}
+
+.env-icon-wrap.blue   { background: #e8f1ff; }
+.env-icon-wrap.orange { background: #fff3e8; }
+
+.env-icon-text {
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+/* ============ 文字区 ============ */
+.env-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.env-row-title {
+  display: block;
+  color: #152338;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.env-row-url {
+  display: block;
+  margin-top: 6rpx;
+  color: #8b99ab;
+  font-size: 20rpx;
+  word-break: break-all;
+}
+
+/* ============ 当前标记 badge ============ */
+.env-badge {
+  flex: 0 0 auto;
+  margin-left: 16rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 24rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.env-badge-prod {
+  background: #e8f1ff;
+  color: #4278ed;
+}
+
+.env-badge-dev {
+  background: #fff3e8;
+  color: #f07430;
+}
+
+/* ============ 重置行 ============ */
+.env-reset-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 32rpx;
+  padding: 20rpx;
+}
+
+.env-reset-text {
+  color: #8b99ab;
+  font-size: 26rpx;
+  text-decoration: underline;
+}
+
+/* ============ 底部占位 ============ */
+.bottom-space {
+  height: 120rpx;
+}
+
+/* ============================================================
+   深色主题
+   ============================================================ */
+.page.theme-dark .env-notice {
+  border-color: #4a3420;
+  background: #2a1e10;
+}
+
+.page.theme-dark .env-notice-text {
+  color: #c89060;
+}
+
+.page.theme-dark .section-heading {
+  color: #7f92a9;
+}
+
+.page.theme-dark .env-current-card {
+  border-color: #2a394e;
+  background: #1a2637;
+}
+
+.page.theme-dark .env-current-label {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .env-group {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+}
+
+.page.theme-dark .env-row.active {
+  background: #1d2d42;
+}
+
+.page.theme-dark .env-divider {
+  background: #2c3d53;
+}
+
+.page.theme-dark .env-icon-wrap.blue   { background: #1d3047; }
+.page.theme-dark .env-icon-wrap.orange { background: #3a2c20; }
+
+.page.theme-dark .env-row-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .env-row-url {
+  color: #6f8299;
+}
+
+.page.theme-dark .env-badge-prod {
+  background: #1d3047;
+  color: #6fa3ff;
+}
+
+.page.theme-dark .env-badge-dev {
+  background: #3a2c20;
+  color: #e8954a;
+}
+
+.page.theme-dark .env-reset-text {
+  color: #6f8299;
+}

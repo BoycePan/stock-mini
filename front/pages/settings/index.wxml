@@ -77,6 +77,26 @@
     <!-- 更多 -->
     <text class="section-heading">更多</text>
     <view class="setting-group">
+      <!-- 开发者选项：仅非线上版本可见 -->
+      <view
+        wx:if="{{ isDev }}"
+        class="setting-row clickable"
+        hover-class="row-hover"
+        bindtap="onEnvSwitchTap"
+      >
+        <view class="row-icon-wrap orange">
+          <text class="row-emoji">🛠</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">开发者选项</text>
+          <text class="row-desc">接口环境切换</text>
+        </view>
+        <view class="env-pill {{ envOverride === 'local' ? 'env-pill-dev' : 'env-pill-prod' }}">
+          {{ envOverride === 'local' ? '本地' : '线上' }}
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
+      </view>
+      <view wx:if="{{ isDev }}" class="row-divider"></view>
       <view
         class="setting-row clickable"
         hover-class="row-hover"

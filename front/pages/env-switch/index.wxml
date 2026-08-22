@@ -1,0 +1,62 @@
+<view class="page theme-{{ theme }} env-switch-page">
+  <app-header showShare="{{ false }}"></app-header>
+  <scroll-view scroll-y class="env-content">
+
+    <!-- 页面说明 -->
+    <view class="env-notice">
+      <text class="env-notice-icon">⚠️</text>
+      <text class="env-notice-text">仅开发 / 体验版可见。切换后小程序将自动重启，所有页面状态会清空。</text>
+    </view>
+
+    <!-- 当前接口地址 -->
+    <text class="section-heading">当前接口</text>
+    <view class="env-current-card">
+      <text class="env-current-label">{{ currentApiBaseUrl }}</text>
+    </view>
+
+    <!-- 环境选项 -->
+    <text class="section-heading">选择环境</text>
+    <view class="env-group">
+      <view
+        class="env-row {{ currentOverride === 'production' || currentOverride === null ? 'active' : '' }}"
+        hover-class="env-row-hover"
+        bindtap="onEnvSelect"
+        data-env="production"
+      >
+        <view class="env-icon-wrap blue">
+          <text class="env-icon-text">🌐</text>
+        </view>
+        <view class="env-row-main">
+          <text class="env-row-title">线上（默认）</text>
+          <text class="env-row-url">{{ productionUrl }}</text>
+        </view>
+        <view wx:if="{{ currentOverride === 'production' || currentOverride === null }}" class="env-badge env-badge-prod">当前</view>
+      </view>
+
+      <view class="env-divider"></view>
+
+      <view
+        class="env-row {{ currentOverride === 'local' ? 'active' : '' }}"
+        hover-class="env-row-hover"
+        bindtap="onEnvSelect"
+        data-env="local"
+      >
+        <view class="env-icon-wrap orange">
+          <text class="env-icon-text">🛠</text>
+        </view>
+        <view class="env-row-main">
+          <text class="env-row-title">本地开发</text>
+          <text class="env-row-url">{{ localUrl }}</text>
+        </view>
+        <view wx:if="{{ currentOverride === 'local' }}" class="env-badge env-badge-dev">当前</view>
+      </view>
+    </view>
+
+    <!-- 重置提示 -->
+    <view class="env-reset-row" bindtap="onResetEnv">
+      <text class="env-reset-text">恢复默认（线上）</text>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+</view>

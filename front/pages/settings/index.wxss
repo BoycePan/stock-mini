@@ -286,6 +286,26 @@
   box-shadow: 0 4rpx 14rpx rgba(76, 127, 255, 0.18);
 }
 
+/* ============ 环境状态 pill ============ */
+.env-pill {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 24rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.env-pill-prod {
+  background: #eef3f8;
+  color: #8a98aa;
+}
+
+.env-pill-dev {
+  background: #fff3e8;
+  color: #f07430;
+}
+
 /* ============ 页脚 ============ */
 .footer {
   margin-top: 48rpx;
@@ -410,3 +430,13 @@
 
 .page.theme-dark .footer-title { color: #7f92a9; }
 .page.theme-dark .footer-sub   { color: #5f7188; }
+
+.page.theme-dark .env-pill-prod {
+  background: #223248;
+  color: #6f8299;
+}
+
+.page.theme-dark .env-pill-dev {
+  background: #3a2c20;
+  color: #e8954a;
+}

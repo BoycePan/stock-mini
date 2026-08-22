@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "开发者选项",
+  "usingComponents": {
+    "app-header": "/components/app-header/index"
+  }
+}
