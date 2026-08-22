@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 经 AsyncNewsSaver 复用 news_feed 表（ON CONFLICT DO NOTHING 按 stock_code+title+published_at 去重）。
  * /news/feed 接口只查库，不再直接打新浪。</p>
  */
-@Component
+//@Component
 public class SinaFeedScheduler implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(SinaFeedScheduler.class);
