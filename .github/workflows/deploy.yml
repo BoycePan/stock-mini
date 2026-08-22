@@ -3,6 +3,11 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # 只有改动会影响镜像构建/部署的文件才触发；前端/文档/根目录配置不触发
+    paths:
+      - 'backend-java/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 jobs:
