@@ -26,6 +26,7 @@
         wx:for="{{ sections }}"
         wx:key="id"
         section="{{ item }}"
+        first="{{ index === 0 }}"
         bind:metrictap="onMetricTap"
       ></section-card>
     </block>

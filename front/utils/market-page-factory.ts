@@ -35,6 +35,9 @@ const SHARE_TITLES: Record<MarketPageKey, string> = {
   metals: '贵金属行情',
 }
 
+/** 行情页自动刷新间隔：8s（与 utils/auto-refresh.ts 的 startAutoRefresh intervalMs 参数配合） */
+const MARKET_REFRESH_INTERVAL = 8000
+
 export function createMarketPage(opts: MarketPageOptions) {
   const { pageKey } = opts
 
@@ -117,7 +120,8 @@ export function createMarketPage(opts: MarketPageOptions) {
       this.syncTabBar()
       // 距上次真正发起的请求超过 5s 才在 onShow 立即补一次刷新
       // （lastRequestAt 由 store 在 loadPage 实际请求处记录，缓存命中不更新）
-      startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey])
+      // 行情页轮询间隔 8s（MARKET_REFRESH_INTERVAL）
+      startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey], MARKET_REFRESH_INTERVAL)
     },
 
     onHide() {

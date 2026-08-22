@@ -1,5 +1,5 @@
 <view
-  class="section-card {{ section.tone }} {{ compact ? 'compact' : '' }} {{
+  class="section-card {{ section.tone }} {{ first ? 'first' : '' }} {{ compact ? 'compact' : '' }} {{
     section.minuteCorner ? 'minute-corner' : ''
   }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
 >

@@ -17,6 +17,8 @@ Component({
   properties: {
     section: { type: Object, value: {} as MarketSection },
     compact: { type: Boolean, value: false },
+    /** 是否为页面第一个卡片：收紧顶部间距，避免离页面顶部过远 */
+    first: { type: Boolean, value: false },
     theme: { type: String, value: 'light' },
   },
   data: {

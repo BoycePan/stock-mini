@@ -8,6 +8,11 @@
   box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
 }
 
+/* 页面第一个卡片：收紧顶部间距（配合 market-page 的 page-meta 底部 padding 减小） */
+.section-card.first {
+  margin-top: 4rpx;
+}
+
 .section-card.compact {
   padding-bottom: 20rpx;
 }

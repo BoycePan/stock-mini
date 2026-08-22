@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
+import test, { mock } from 'node:test'
 
 import { isPageLoading, startAutoRefresh, stopAutoRefresh } from '../utils/auto-refresh.ts'
 
@@ -64,4 +64,51 @@ test('startAutoRefresh: 距上次请求不足 5s 时不发起 onShow 补刷', ()
   startAutoRefresh(page, Date.now() - 1000)
   assert.equal(called, false)
   stopAutoRefresh(page)
+})
+
+test('startAutoRefresh: 同一页面重复调用不叠加轮询定时器（onShow 幂等）', () => {
+  mock.timers.enable({ apis: ['setInterval'] })
+  let tickCount = 0
+  const page = {
+    data: { loading: false },
+    loadData: async () => {
+      tickCount++
+    },
+  }
+  const now = Date.now()
+  // 模拟 onShow 反复触发（无 onHide 场景）：每次 start 应先停旧表再开新表
+  startAutoRefresh(page, now)
+  startAutoRefresh(page, now)
+  startAutoRefresh(page, now)
+  mock.timers.tick(10000)
+  // 只应存在 1 个定时器：一个周期只触发 1 次刷新
+  assert.equal(tickCount, 1)
+  mock.timers.tick(10000)
+  assert.equal(tickCount, 2)
+  stopAutoRefresh(page)
+  mock.timers.reset()
+})
+
+test('startAutoRefresh/stopAutoRefresh: 页面离开停止轮询，再次 onShow 重新开始', () => {
+  mock.timers.enable({ apis: ['setInterval'] })
+  let tickCount = 0
+  const page = {
+    data: { loading: false },
+    loadData: async () => {
+      tickCount++
+    },
+  }
+  const now = Date.now()
+  // onShow：开始轮询
+  startAutoRefresh(page, now)
+  // onHide：停止轮询，此后不再产生请求
+  stopAutoRefresh(page)
+  mock.timers.tick(10000)
+  assert.equal(tickCount, 0)
+  // 再次 onShow：重新开始轮询，恢复 10s 间隔
+  startAutoRefresh(page, now)
+  mock.timers.tick(10000)
+  assert.equal(tickCount, 1)
+  stopAutoRefresh(page)
+  mock.timers.reset()
 })

@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8rpx 32rpx 10rpx;
+  padding: 8rpx 24rpx 12rpx;
 }
 
 /* 交易状态 pill（开市=绿） */

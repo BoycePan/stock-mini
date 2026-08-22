@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8rpx 32rpx 10rpx;
+  padding: 8rpx 24rpx 12rpx;
 }
 
 .page-status {
@@ -47,7 +47,7 @@
 
 /* 新闻列表卡片 */
 .news-list {
-  margin-top: 18rpx;
+  margin-top: 8rpx;
   padding: 0 24rpx;
   border: 1rpx solid #e2eaf3;
   border-radius: 28rpx;
@@ -181,7 +181,7 @@
 
 /* 加载更多 / 没有更多 */
 .load-more {
-  padding: 26rpx 0 6rpx;
+  padding: 16rpx 0;
   color: #4278ed;
   font-size: 25rpx;
   text-align: center;

@@ -34,9 +34,18 @@ export class MarketStore {
     metals: 0,
     finance: 0,
   }
+  /**
+   * 各页进行中的数据请求（含静默刷新）Promise，用于并发去重：
+   * 同一页已有请求在途时（首屏 / 10s 轮询 / onShow 补刷 / 下拉刷新），
+   * 后续 loadPage 直接复用该 Promise，不再重复发请求——慢网络下防止请求堆积
+   * （silent 请求不置 loading，仅靠 loading 标志无法拦住并发）。
+   * 内部字段（勿在外部读写）：已通过 makeAutoObservable overrides 排除可观察性，
+   * 不参与 MobX 追踪。
+   */
+  inFlight: Partial<Record<MarketPageKey, Promise<MarketPageData>>> = {}
 
   constructor() {
-    makeAutoObservable(this)
+    makeAutoObservable(this, { inFlight: false })
   }
 
   /**
@@ -53,12 +62,27 @@ export class MarketStore {
   async loadPage(key: MarketPageKey, options: LoadPageOptions = {}) {
     const { force = false, silent = false } = options
     if (this.pages[key] && !force) return this.pages[key]
+    // 并发去重：同 key 已有请求在途（含静默轮询 / onShow 补刷）时复用同一请求，
+    // 不重复发接口；请求结束后才允许下一个请求开始。
+    const inFlight = this.inFlight[key]
+    if (inFlight) return inFlight
     if (!silent) {
       this.loading[key] = true
       this.errors[key] = ''
     }
+    const promise = this.requestPage(key, silent)
+    this.inFlight[key] = promise
     try {
-      this.lastRequestAt[key] = Date.now()
+      return await promise
+    } finally {
+      if (this.inFlight[key] === promise) delete this.inFlight[key]
+    }
+  }
+
+  /** 真正发起外部请求并落库（被 loadPage 包裹：并发去重 + loading/错误状态） */
+  async requestPage(key: MarketPageKey, silent: boolean): Promise<MarketPageData> {
+    this.lastRequestAt[key] = Date.now()
+    try {
       const data = await marketApi.getPage(key)
       runInAction(() => {
         this.pages[key] = data
