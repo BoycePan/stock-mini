@@ -100,10 +100,10 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- 工具库：仅用 hutool-core（NumberUtil 数值解析等），不再引全量 hutool-all -->
+        <!-- 工具库：hutool-all 全量（含 NumberUtil 数值解析、http/json/crypto 等），版本与 hutool-core 一致 -->
         <dependency>
             <groupId>cn.hutool</groupId>
-            <artifactId>hutool-core</artifactId>
+            <artifactId>hutool-all</artifactId>
             <version>5.8.47</version>
         </dependency>
 

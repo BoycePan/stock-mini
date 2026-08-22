@@ -2,6 +2,7 @@ package com.guyu.stock.controller;
 
 import com.guyu.stock.common.ApiResponse;
 import com.guyu.stock.service.NewsService;
+import com.guyu.stock.util.NewsUpdateUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -39,5 +40,13 @@ public class NewsController {
                                                           @RequestParam(value = "page", required = false) Integer page,
                                                           @RequestParam(value = "size", required = false) Integer size) {
         return ApiResponse.success(newsService.announcements(code, page, size));
+    }
+
+    /**
+     * 是否需要去拉取最新的新闻
+     */
+    @GetMapping("/news/needToPull")
+    public ApiResponse<Boolean>  needToPull(@RequestParam(value = "lastPullTime", required = false, defaultValue = "0") long lastPullTime) {
+        return ApiResponse.success(NewsUpdateUtil.needToPullNews(lastPullTime));
     }
 }

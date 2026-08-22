@@ -2,6 +2,7 @@ package com.guyu.stock.controller;
 
 import com.guyu.stock.common.ApiResponse;
 import com.guyu.stock.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +23,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req) {
-        return ApiResponse.success(authService.login(req.code()));
+    public ApiResponse<Map<String, Object>> login(HttpServletRequest request, @RequestBody LoginRequest req) {
+        return ApiResponse.success(authService.login(request, req.code()));
     }
 }
