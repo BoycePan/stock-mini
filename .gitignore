@@ -132,3 +132,6 @@ wx-app-stock.iml
 /keys/*.key
 /front/keys/*.key
 /front/keys/private.key
+
+project.config.json
+project.private.config.json
