@@ -46,18 +46,19 @@ public class NewsService {
         return result;
     }
 
-    public Map<String, Object> feed(Integer page, Integer size) {
+    public Map<String, Object> feed(Integer page, Integer size, Long id) {
         int p = (page == null || page <= 0) ? 1 : page;
         int s = (size == null || size <= 0) ? 20 : Math.min(size, 100);
         int offset = (p - 1) * s;
         // 多取一条用于判断是否有下一页，再按 s 截断
-        List<NewsRow> rows = newsRepository.queryFeed(s + 1, offset);
+        List<NewsRow> rows = newsRepository.queryFeed(s + 1, offset, id);
         boolean hasMore = rows.size() > s;
         if (hasMore) rows = rows.subList(0, s);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (NewsRow row : rows) {
             Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", row.id());
             item.put("title", row.title());
             item.put("summary", row.summary());
             item.put("url", row.url());
@@ -72,6 +73,19 @@ public class NewsService {
         result.put("count", items.size());
         result.put("hasMore", hasMore);
         result.put("news", items);
+        return result;
+    }
+
+    public Map<String, Object> newsDetail(Long id) {
+        NewsRow row = newsRepository.queryById(id);
+        if (row == null) throw new BizException(ErrCode.NOT_FOUND, "新闻不存在: id=" + id);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", row.id());
+        result.put("title", row.title());
+        result.put("summary", row.summary());
+        result.put("url", row.url());
+        result.put("source", row.source());
+        result.put("time", row.publishedAt());
         return result;
     }
 
@@ -94,7 +108,7 @@ public class NewsService {
     private List<NewsRow> toNewsRows(String code, List<SinaNewsClient.NewsItem> items) {
         List<NewsRow> rows = new ArrayList<>();
         for (SinaNewsClient.NewsItem n : items) {
-            rows.add(new NewsRow(code, n.title(), n.summary(), n.url(), n.source(), n.time()));
+            rows.add(new NewsRow(null, code, n.title(), n.summary(), n.url(), n.source(), n.time()));
         }
         return rows;
     }
@@ -102,7 +116,7 @@ public class NewsService {
     private List<NewsRow> toAnnouncementRows(String code, List<Announcement> items) {
         List<NewsRow> rows = new ArrayList<>();
         for (Announcement a : items) {
-            rows.add(new NewsRow(code, a.title(), "", a.url(), "巨潮资讯", a.time()));
+            rows.add(new NewsRow(null, code, a.title(), "", a.url(), "巨潮资讯", a.time()));
         }
         return rows;
     }

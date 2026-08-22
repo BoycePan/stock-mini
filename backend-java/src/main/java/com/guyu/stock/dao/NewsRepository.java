@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -17,7 +18,7 @@ public class NewsRepository {
     }
 
     private static final RowMapper<NewsRow> MAPPER = (rs, i) -> new NewsRow(
-            rs.getString("stock_code"), rs.getString("title"), rs.getString("summary"),
+            rs.getLong("id"), rs.getString("stock_code"), rs.getString("title"), rs.getString("summary"),
             rs.getString("url"), rs.getString("source"), rs.getString("published_at"));
 
     public void batchSave(List<NewsRow> rows) {
@@ -37,23 +38,45 @@ public class NewsRepository {
     public List<NewsRow> queryByStock(String code, int limit) {
         if (limit <= 0) limit = 50;
         return jdbcTemplate.query("""
-                SELECT stock_code, title, summary, url, source,
+                SELECT id, stock_code, title, summary, url, source,
                        to_char(published_at, 'YYYY-MM-DD HH24:MI') AS published_at
                 FROM news_feed WHERE stock_code = ? ORDER BY published_at DESC LIMIT ?
                 """, MAPPER, code, limit);
     }
 
+    /** 按主键 id 查询单条新闻（feed 与个股新闻、公告均在此表）。无匹配返回 null。 */
+    public NewsRow queryById(Long id) {
+        if (id == null || id <= 0) return null;
+        List<NewsRow> rows = jdbcTemplate.query("""
+                SELECT id, stock_code, title, summary, url, source,
+                       to_char(published_at, 'YYYY-MM-DD HH24:MI') AS published_at
+                FROM news_feed WHERE id = ?
+                """, MAPPER, id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
     /**
      * 通用新闻 feed 分页查询（stock_code 为空串：新浪 feed + RSS 来源）。
      * 按 published_at 倒序，limit 为每页条数、offset 为偏移。
+     * id 大于 0 时追加 id <= ? 过滤（按 id 上限截取，用于滑动分页/增量拉取）。
      */
-    public List<NewsRow> queryFeed(int limit, int offset) {
+    public List<NewsRow> queryFeed(int limit, int offset, Long id) {
         if (limit <= 0) limit = 20;
         if (offset < 0) offset = 0;
-        return jdbcTemplate.query("""
-                SELECT stock_code, title, summary, url, source,
+        String sql = """
+                SELECT id, stock_code, title, summary, url, source,
                        to_char(published_at, 'YYYY-MM-DD HH24:MI') AS published_at
-                FROM news_feed WHERE stock_code = '' ORDER BY published_at DESC LIMIT ? OFFSET ?
-                """, MAPPER, limit, offset);
+                FROM news_feed WHERE stock_code = ''
+                """;
+        boolean filterById = id != null && id > 0;
+        List<Object> args = new ArrayList<>();
+        if (filterById) {
+            sql += " AND id <= ?";
+            args.add(id);
+        }
+        sql += " ORDER BY published_at DESC LIMIT ? OFFSET ?";
+        args.add(limit);
+        args.add(offset);
+        return jdbcTemplate.query(sql, MAPPER, args.toArray());
     }
 }

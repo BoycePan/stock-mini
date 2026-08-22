@@ -51,4 +51,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # -Duser.timezone 与上方 ENV TZ=Asia/Shanghai 双保险，保证 JVM 默认时区为东8区（DAO 落库时间依赖它）
 # app.fetch.enabled=true（默认）时，FetchSidecarLauncher 启动后拉起 scripts/fetch_service.py 子进程，
 # JVM shutdown hook 在 Java 退出时 destroy 它 → Java 与 Python 同生命周期
+#
+# ── OpenTelemetry Java agent（SigNoz 监控）──
+# agent jar 不打包进镜像（避免 CI/服务器带宽消耗），部署时从宿主挂载并覆盖 CMD 加载：
+#   -v <宿主>/opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro \
+#   ... IMAGE java -javaagent:/app/opentelemetry-javaagent.jar -Duser.timezone=Asia/Shanghai -jar app.jar
+# OTEL_* 环境变量由 .env/部署环境注入（见 .env.example OTEL 段）；采集异步，SigNoz 不可达不影响业务。
 CMD ["java", "-Duser.timezone=Asia/Shanghai", "-jar", "app.jar"]

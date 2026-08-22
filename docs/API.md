@@ -718,11 +718,11 @@ GET /api/v1/stock/{code}/news?page={页码}
 ### 5.2 通用财经新闻
 
 ```
-GET /api/v1/news/feed?page={页码}&size={每页条数}
+GET /api/v1/news/feed?page={页码}&size={每页条数}&id={id 上限}
 ```
 
 通用新闻（新浪 feed + RSS 来源，`stock_code` 为空的记录）按发布时间倒序分页返回，只查 `news_feed` 表。
-新浪 feed 由后台定时任务（SinaFeedScheduler）每 5 分钟拉取落库，接口本身不再实时打新浪。**入参：** `page`（可选，默认 1）、`size`（可选，默认 20，最大 100）。**响应示例：**
+新浪 feed 由后台定时任务（SinaFeedScheduler）每 5 分钟拉取落库，接口本身不再实时打新浪。**入参：** `page`（可选，默认 1）、`size`（可选，默认 20，最大 100）、`id`（可选，默认 0；大于 0 时按 `news_feed.id <= id` 过滤，用于按 id 上限滑动分页）。**响应示例：**
 
 ```json
 {
@@ -734,13 +734,55 @@ GET /api/v1/news/feed?page={页码}&size={每页条数}
     "count": 2,
     "hasMore": false,
     "news": [
-      {"title": "*ST萃华俩股东被立案调查", "summary": "...", "url": "https://...", "time": "2026-08-05 21:00", "source": "市场资讯"}
+      {"id": 42, "title": "*ST萃华俩股东被立案调查", "summary": "...", "url": "https://...", "time": "2026-08-05 21:00", "source": "市场资讯"}
     ]
   }
 }
 ```
 
-### 5.3 个股公告
+| 字段 | 说明 |
+|------|------|
+| id | 记录主键（news_feed.id），可用于按 id 增量/滑动拉取 |
+| title | 新闻标题 |
+| summary | 新闻摘要（可能为空） |
+| url | 新闻详情页 URL |
+| time | 发布时间 |
+| source | 来源 |
+
+### 5.3 单条新闻详情
+
+```
+GET /api/v1/news/{id}
+```
+
+按 `news_feed` 主键查询单条新闻。**入参：** `id`（路径，必填）。不存在或 `id <= 0` 时返回业务码 `404`。**响应示例：**
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "id": 42,
+    "title": "*ST萃华俩股东被立案调查",
+    "summary": "...",
+    "url": "https://...",
+    "time": "2026-08-05 21:00",
+    "source": "市场资讯"
+  }
+}
+```
+
+不存在时：
+
+```json
+{
+  "code": 404,
+  "msg": "新闻不存在: id=99999",
+  "data": null
+}
+```
+
+### 5.4 个股公告
 
 ```
 GET /api/v1/stock/{code}/announcements?page={页码}&size={条数}

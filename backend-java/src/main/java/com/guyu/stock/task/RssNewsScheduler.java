@@ -101,7 +101,7 @@ public class RssNewsScheduler implements ApplicationRunner {
                     }
                     List<RssItem> items = rssNewsClient.fetch(s.url(), s.viaWorker(), props.getMaxItemsPerFeed());
                     List<NewsRow> rows = items.stream()
-                            .map(it -> new NewsRow("", it.title(), it.summary(), it.link(), s.name(), it.publishedAt()))
+                            .map(it -> new NewsRow(null, "", it.title(), it.summary(), it.link(), s.name(), it.publishedAt()))
                             .toList();
                     asyncNewsSaver.save(rows);
                     log.info("[RSS] 源 [{}] 解析 {} 条 → 异步落库", s.name(), rows.size());

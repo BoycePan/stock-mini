@@ -50,7 +50,7 @@ public class SinaFeedScheduler implements ApplicationRunner {
         try {
             List<SinaNewsClient.NewsItem> items = sinaNewsClient.fetchFeedNews(cfg.getFeedKeyword(), cfg.getFeedCount());
             List<NewsRow> rows = items.stream()
-                    .map(it -> new NewsRow("", it.title(), it.summary(), it.url(), it.source(), it.time()))
+                    .map(it -> new NewsRow(null, "", it.title(), it.summary(), it.url(), it.source(), it.time()))
                     .toList();
             asyncNewsSaver.save(rows);
             log.info("[sina-feed] 关键词 [{}] 解析 {} 条 → 异步落库", cfg.getFeedKeyword(), rows.size());

@@ -71,6 +71,20 @@ echo "==> 启动容器 stock-backend-java (port ${PORT}, network host)"
 echo "    日志挂载: ${LOG_DIR} -> /apps/logs (按天滚动，保留 3 天)"
 mkdir -p "$LOG_DIR"
 docker rm -f stock-backend-java 2>/dev/null || true
+
+# ── OpenTelemetry agent（SigNoz 监控）──
+# agent jar 从宿主挂载 + 覆盖 CMD 加载（不打包进镜像，省带宽）；
+# jar 不存在时优雅降级（无监控启动，业务不停）
+OTEL_JAR="$BACKEND_JAVA/opentelemetry-javaagent.jar"
+AGENT_ARGS=""
+if [ -f "$OTEL_JAR" ]; then
+  AGENT_ARGS="-v $OTEL_JAR:/app/opentelemetry-javaagent.jar:ro"
+  echo "    启用 OpenTelemetry agent ($OTEL_JAR)"
+else
+  echo "    !! $OTEL_JAR 不存在，本次以无监控模式启动（业务不受影响）。" >&2
+  echo "    !! 下载：curl -L -o $OTEL_JAR https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/2.31.0/opentelemetry-javaagent-2.31.0.jar" >&2
+fi
+
 docker run -d \
   --name stock-backend-java \
   --restart unless-stopped \
@@ -79,7 +93,9 @@ docker run -d \
   -e LOG_DIR=/apps/logs \
   -v "$LOG_DIR:/apps/logs" \
   --env-file "$ENV_FILE" \
-  "stock-backend-java:$TAG"
+  $AGENT_ARGS \
+  "stock-backend-java:$TAG" \
+  bash -lc 'if [ -f /app/opentelemetry-javaagent.jar ]; then exec java -javaagent:/app/opentelemetry-javaagent.jar -Duser.timezone=Asia/Shanghai -jar app.jar; else exec java -Duser.timezone=Asia/Shanghai -jar app.jar; fi'
 
 echo "==> 等待健康检查 ..."
 for i in $(seq 1 60); do
