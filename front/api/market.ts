@@ -30,6 +30,7 @@ import { newsApi } from './news'
 import {
   fetchEastmoneyAveragePrice,
   fetchEastmoneyQuote,
+  fetchEastmoneyUlistQuote,
   fetchSinaQuotes,
   fetchTencentQuotes,
 } from './quote'
@@ -41,6 +42,7 @@ import {
   fetchUsProxyChangeMap,
 } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
+import { resolveIndustryPhase, resolveIndustryUseA } from '../utils/market-clock'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
 import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
 import {
@@ -153,9 +155,11 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     })
   }
 
-  // ④ 行业板块：A股时段取东财板块涨跌幅；非 A 股时段取美股代理股涨跌幅均值
+  // ④ 行业板块：A股时段（含待盘前窗口 15:00–美股盘前开始前）取东财板块涨跌幅；
+  //    美股盘前/盘中/盘后及周末取美股代理股涨跌幅均值（resolveIndustryUseA，见 market-clock.ts）
+  const industryUseA = resolveIndustryUseA(session)
   const boardPct: Record<string, number> = {}
-  if (session.useA) {
+  if (industryUseA) {
     const boardMap = await fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code))
     for (const board of INDUSTRY_BOARDS) {
       const pct = boardMap[board.code] ?? boardMap[`90.${board.code}`]
@@ -179,7 +183,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
       price: null,
       pct: boardPct[board.code] ?? null,
     }
-    if (!session.useA) {
+    if (!industryUseA) {
       // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
       // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
       item.minuteCode = `us-${board.code}`
@@ -197,8 +201,9 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     sectors,
     statusLabel: '全球市场',
     statusTone: session.statusTone,
-    sectorBadge: session.useA ? 'A股时段' : '美股时段',
-    sectorTitle: session.useA ? '中国行业板块' : '美股行业板块',
+    sectorTitle: industryUseA ? '中国行业板块' : '美股行业板块',
+    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/待盘前；美股代理 → 美股盘前/盘中/盘后/休市
+    sectorPhase: resolveIndustryPhase(session),
   })
 }
 
@@ -321,31 +326,31 @@ async function fetchAsiaRates(): Promise<QuoteItem[]> {
   // ① 新浪批量 1 次（5 个汇率 key）
   const rows = await fetchSinaQuotes(ASIA_RATES.map((cfg) => cfg.sinaKey))
   const byKey = new Map(rows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
-  const results: Array<QuoteItem | null> = new Array(ASIA_RATES.length).fill(null)
-  const fallback: Array<{ cfg: AsiaRateConfig; index: number }> = []
-
-  ASIA_RATES.forEach((cfg, index) => {
-    const quote = byKey.get(cfg.sinaKey)
-    if (quote && quote.price !== null && quote.price > 0) {
-      results[index] = rateItem(cfg, quote.price, quote.changePercent)
-    } else {
-      fallback.push({ cfg, index })
-    }
-  })
-
-  // ② 东财汇率兜底：价格 ÷100（119 汇率 f43 为 10^4 倍精度，
-  //    normalizeEastmoneyQuote 按 f152=2 已 ÷100，这里需再 ÷100；USDKRW 同样适用）
-  await Promise.all(
-    fallback.map(async ({ cfg, index }) => {
-      const em = await fetchEastmoneyQuote(cfg.emSecid)
-      if (em && em.latestPrice !== null) {
-        const price = em.latestPrice / 100
-        results[index] = rateItem(cfg, price, em.changePercent)
-      } else {
-        results[index] = rateItem(cfg, null, null)
+  // ② 逐项解析：默认 新浪优先、东财兜底（价格 ÷100）；preferEm 的汇率（如 USDCNY）东财
+  //    ulist 优先（fltt=2 十进制，与分时页同 secid，见 config/minute.ts USDCNY），东财失败退回新浪。
+  const resolveOne = async (cfg: AsiaRateConfig): Promise<QuoteItem> => {
+    const sina = byKey.get(cfg.sinaKey)
+    const sinaItem =
+      sina && sina.price !== null && sina.price > 0
+        ? rateItem(cfg, sina.price, sina.changePercent)
+        : null
+    if (cfg.preferEm && cfg.emSecid) {
+      const em = await fetchEastmoneyUlistQuote(cfg.emSecid)
+      if (em && em.price !== null && em.price > 0) {
+        return rateItem(cfg, em.price, em.changePercent)
       }
-    }),
-  )
+      return sinaItem ?? rateItem(cfg, null, null)
+    }
+    if (sinaItem) return sinaItem
+    // 东财汇率兜底：价格 ÷100（119 汇率 f43 为 10^4 倍精度，
+    //    normalizeEastmoneyQuote 按 f152=2 已 ÷100，这里需再 ÷100；USDKRW 同样适用）
+    const em = await fetchEastmoneyQuote(cfg.emSecid)
+    if (em && em.latestPrice !== null && em.latestPrice > 0) {
+      return rateItem(cfg, em.latestPrice / 100, em.changePercent)
+    }
+    return rateItem(cfg, null, null)
+  }
+  const results = await Promise.all(ASIA_RATES.map((cfg) => resolveOne(cfg)))
   return results.filter((item): item is QuoteItem => item !== null)
 }
 
@@ -432,13 +437,46 @@ function metalMinuteVariant(
 
 async function resolveMetal(
   metal: MetalConfig,
-  ctx: { sinaBatch: Map<string, SinaQuote>; tcMap: Map<string, TencentQuote>; useA: boolean },
+  ctx: {
+    sinaBatch: Map<string, SinaQuote>
+    tcMap: Map<string, TencentQuote>
+    useA: boolean
+    /**
+     * 强制只取内盘(a)或外盘(us)口径（黄金内外盘同屏展示时使用）：
+     * 缺省按 useA 会话二选一；restrict='a' 只走 aKeys（国内），
+     * restrict='us' 只走 emSecid/usKeys（外盘），杜绝内外盘价格单位串口径。
+     */
+    restrict?: 'a' | 'us'
+  },
 ): Promise<QuoteItem> {
   const base = { code: metal.code, name: metal.name }
   // 分时取数随会话切换（外盘时段切 COMEX / 占位无源，见 metalMinuteVariant）
   const minute = metalMinuteVariant(metal, ctx.useA)
-  // ① 新浪批量：优先国内或外盘 key 列表（取决于 useA），区间校验通过即采用
-  const preferred = ctx.useA ? [...metal.aKeys, ...metal.usKeys] : [...metal.usKeys, ...metal.aKeys]
+  // ①b 外盘优先东财（金银 emSecid 与首页宏观卡片、分时页同源）：
+  //     新浪 hf_GC/hf_SI 的 [0] 最新价系统性偏高（实测黄金 4664.48 vs 东财 4661.60、
+  //     白银 69.725 vs 69.01），不再作外盘首选；东财失败时仍走下方新浪批量兜底。
+  //     取数走 fetchEastmoneyUlistQuote（ulist + fltt=2 十进制）：市场 101 的 stock/get
+  //     原始刻度无规则（GC×10 / SI×1000），10^f152 除数会得到错误价格被区间校验丢弃。
+  //     仅外盘口径（restrict='us' 或未 restrict 且外盘会话）尝试东财。
+  if (metal.emSecid && (ctx.restrict === 'us' || (ctx.restrict === undefined && !ctx.useA))) {
+    const emQuote = await fetchEastmoneyUlistQuote(metal.emSecid)
+    if (
+      emQuote &&
+      emQuote.price !== null &&
+      validateQuote(emQuote.price, metal.usRange?.[0], metal.usRange?.[1])
+    ) {
+      return { ...base, ...minute, price: emQuote.price, pct: emQuote.changePercent }
+    }
+  }
+  // ① 新浪批量：优先国内或外盘 key 列表（取决于 useA / restrict），区间校验通过即采用
+  const preferred = [
+    ...(ctx.useA ? metal.aKeys : metal.usKeys),
+    ...(ctx.useA ? metal.usKeys : metal.aKeys),
+  ].filter((key) => {
+    if (ctx.restrict === 'a') return metal.aKeys.includes(key)
+    if (ctx.restrict === 'us') return metal.usKeys.includes(key)
+    return true
+  })
   for (const key of preferred) {
     const quote = ctx.sinaBatch.get(key)
     if (!quote || quote.price === null) continue
@@ -448,8 +486,9 @@ async function resolveMetal(
     }
   }
 
-  // ② 腾讯批量命中（tc 类金属股 / 钨 sh600549）：展示的是个股股价，打「个股」标
-  if (metal.tc) {
+  // ② 腾讯批量命中（tc 类金属股 / 钨 sh600549）：展示的是个股股价，打「个股」标；
+  //    外盘口径（restrict='us'）不使用 A股个股源
+  if (metal.tc && ctx.restrict !== 'us') {
     const quote = ctx.tcMap.get(metal.tc)
     if (quote && quote.valid && quote.latestPrice !== null && !isAbnormalPct(quote.changePercent)) {
       return {
@@ -466,14 +505,14 @@ async function resolveMetal(
 
   // ③ 多源兜底：腾讯 → 新浪A股 → 东财（钨等再补外盘 hf_ key）
   const sources: QuoteSource[] = []
-  if (metal.tc) {
+  if (metal.tc && ctx.restrict !== 'us') {
     sources.push(
       { kind: 'tencent', key: metal.tc },
       { kind: 'sina_ashare', key: metal.tc.toLowerCase() },
       { kind: 'em', secid: aShareSecid(metal.tc) },
     )
   }
-  if (metal.usKeys.length) {
+  if (metal.usKeys.length && ctx.restrict !== 'a') {
     sources.push({
       kind: 'sina_hf',
       key: metal.usKeys,
@@ -513,16 +552,48 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   const tcRows = await fetchTencentQuotes(tcCodes)
   const tcMap = new Map(tcRows.map((row) => [row.code, row]))
 
-  // ③ 逐项解析（金银 / 工业金属 / 其他金属）
+  // ③ 金银内外盘同屏：黄金、白银恒同时解析内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘
+  //    （COMEX 美元/盎司）两路报价，不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；
+  //    其余金属仍随会话切换。
+  const goldCfg = METALS.find((metal) => metal.code === 'GOLD')!
+  const silverCfg = METALS.find((metal) => metal.code === 'SILVER')!
+  const [[goldCn, goldUs], [silverCn, silverUs]] = await Promise.all([
+    Promise.all([
+      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
+      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+    ]),
+    Promise.all([
+      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
+      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+    ]),
+  ])
+  const dualCards: Record<string, QuoteItem[]> = {
+    GOLD: [
+      { ...goldCn, name: '黄金·内盘', tags: ['元/克'] },
+      { ...goldUs, name: '黄金·外盘', tags: ['美元/盎司'] },
+    ],
+    SILVER: [
+      { ...silverCn, name: '白银·内盘', tags: ['元/千克'] },
+      { ...silverUs, name: '白银·外盘', tags: ['美元/盎司'] },
+    ],
+  }
+
+  // ④ 其余金属逐项解析（工业金属 / 其他金属，随会话切换）
+  const otherMetals = METALS.filter((metal) => metal.code !== 'GOLD' && metal.code !== 'SILVER')
   const items = await Promise.all(
-    METALS.map((metal) => resolveMetal(metal, { sinaBatch, tcMap, useA: session.useA })),
+    otherMetals.map((metal) => resolveMetal(metal, { sinaBatch, tcMap, useA: session.useA })),
   )
-  const itemByCode = new Map(METALS.map((metal, index) => [metal.code, items[index] as QuoteItem]))
+  const itemByCode = new Map(
+    otherMetals.map((metal, index) => [metal.code, items[index] as QuoteItem]),
+  )
   const groups: QuoteGroup[] = METAL_SECTIONS.map((section) => ({
     id: `metal-${section.id}`,
     title: section.title,
     tip: section.tip,
     items: section.codes.flatMap((code) => {
+      // 金银卡替换为 内盘+外盘 双卡；其余金属按原逻辑取一张卡
+      const dual = dualCards[code]
+      if (dual) return dual
       const item = itemByCode.get(code)
       return item ? [item] : []
     }),
@@ -541,7 +612,7 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   }
 
   if (
-    !items.some((item) => item.price !== null) &&
+    ![...items, goldCn, goldUs, silverCn, silverUs].some((item) => item.price !== null) &&
     !goldShopGroup?.items.length &&
     !physicalGoldGroup?.items.length
   ) {
@@ -550,7 +621,6 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   return buildQuoteMetalsPage({
     groups,
     statusTone: session.statusTone,
-    badge: session.useA ? '国内盘' : '外盘',
   })
 }
 

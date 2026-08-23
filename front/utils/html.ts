@@ -202,7 +202,7 @@ const BLOCK_FONT_TAGS = new Set([
 ])
 
 const BODY_FONT_SIZE = '15px'
-const BODY_LINE_HEIGHT = '1.9'
+const BODY_LINE_HEIGHT = '1.6'
 const HEADING_FONT_SIZES: Record<string, string> = {
   h1: '22px',
   h2: '19px',
@@ -263,104 +263,130 @@ const DANGEROUS_URL = /^(javascript|data|vbscript)\s*:/i
  * - 移除 script / style / iframe 等危险或不可见标签（含内容）；
  * - 白名单之外的标签剥掉、保留内容；
  * - 剥除 class / id / on* / data-* 等属性，仅保留 src / href / alt 等安全属性；
- * - img 注入自适应宽度与圆角，防止大图撑爆卡片；
+ * - img 注入自适应宽度与圆角，防止大图撑爆卡片；最多保留 maxImages 张（默认 3），
+ *   超出丢弃，限制 WebView 全尺寸解码图片的内存占用；
  * - 文字类标签注入随主题变化的 color（作者自带颜色保留），保证深浅色下可读。
  */
-export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
+export function sanitizeRichHtml(
+  html: string,
+  theme: RichHtmlTheme,
+  options?: { maxImages?: number },
+): string {
   if (!html || !/<[a-zA-Z]/.test(html)) return html.trim()
-  return html
-    .replace(REMOVE_BLOCK_RE, ' ')
-    .replace(
-      /<\/?([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)\/?>/g,
-      (match, tagName: string, attrStr: string) => {
-        const tag = tagName.toLowerCase()
-        const isClosing = match.startsWith('</')
-        if (isClosing) return ALLOWED_TAGS.has(tag) ? `</${tag}>` : ''
-        if (!ALLOWED_TAGS.has(tag)) return ''
-        if (tag === 'br') return '<br>'
-        if (tag === 'hr')
-          return `<hr style="border:none;border-top:1px solid ${theme === RICH_HTML_DARK_THEME ? '#2a394e' : '#e2eaf3'};margin:20px 0;">`
+  const maxImages = options?.maxImages ?? MAX_RICH_IMAGES
+  // 首段不缩进（中文排版惯例）：从第二个块级段落开始注入 2em 缩进
+  let firstParagraph = true
+  let imgCount = 0
+  return (
+    html
+      .replace(REMOVE_BLOCK_RE, ' ')
+      // 移除空段落 / 仅含空格、&nbsp; 或 br 的冗余空段，避免新闻源空段撑出巨大间距
+      .replace(/<(p|div)[^>]*>\s*(?:<br\s*\/?>|&nbsp;|&#160;|\s)*<\/\1>/gi, '')
+      // 连续多个 br 合并为单个 br
+      .replace(/(?:<br\s*\/?>\s*){2,}/gi, '<br>')
+      // 移除块级标签开头/结尾处多余的 br
+      .replace(/(?:<br\s*\/?>\s*)+(<\/(?:p|div|h[1-6]|li|blockquote)>)/gi, '$1')
+      .replace(/(<(?:p|div|h[1-6]|li|blockquote)[^>]*>)\s*(?:<br\s*\/?>\s*)+/gi, '$1')
+      .replace(
+        /<\/?([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)\/?>/g,
+        (match, tagName: string, attrStr: string) => {
+          const tag = tagName.toLowerCase()
+          const isClosing = match.startsWith('</')
+          if (isClosing) return ALLOWED_TAGS.has(tag) ? `</${tag}>` : ''
+          if (!ALLOWED_TAGS.has(tag)) return ''
+          if (tag === 'br') return '<br>'
+          if (tag === 'hr')
+            return `<hr style="border:none;border-top:1px solid ${theme === RICH_HTML_DARK_THEME ? '#2a394e' : '#e2eaf3'};margin:12px 0;">`
 
-        const attrs = parseAttrs(attrStr)
-        const style = parseStyle(attrs.get('style') ?? '')
+          const attrs = parseAttrs(attrStr)
+          const style = parseStyle(attrs.get('style') ?? '')
 
-        if (tag === 'img') {
-          const src = attrs.get('src') ?? ''
-          if (!src || DANGEROUS_URL.test(src)) return ''
-          const merged = {
-            display: 'block',
-            'max-width': '100%',
-            height: 'auto',
-            'border-radius': '12px',
-            margin: '16px auto',
-            ...style,
+          if (tag === 'img') {
+            const src = attrs.get('src') ?? ''
+            if (!src || DANGEROUS_URL.test(src)) return ''
+            if (imgCount >= maxImages) return ''
+            imgCount += 1
+            const merged = {
+              display: 'block',
+              'max-width': '100%',
+              height: 'auto',
+              'border-radius': '12px',
+              margin: '12px auto',
+              ...style,
+            }
+            const alt = attrs.get('alt')
+            const altAttr = alt ? ` alt="${escapeAttr(alt)}"` : ''
+            return `<img src="${escapeAttr(src)}"${altAttr} style="${buildStyle(merged)}">`
           }
-          const alt = attrs.get('alt')
-          const altAttr = alt ? ` alt="${escapeAttr(alt)}"` : ''
-          return `<img src="${escapeAttr(src)}"${altAttr} style="${buildStyle(merged)}">`
-        }
 
-        if (tag === 'a') {
-          const href = attrs.get('href') ?? ''
-          const merged = {
-            color: theme.link,
-            'text-decoration': 'none',
-            ...style,
+          if (tag === 'a') {
+            const href = attrs.get('href') ?? ''
+            const merged = {
+              color: theme.link,
+              'text-decoration': 'none',
+              ...style,
+            }
+            const safeHref = href && !DANGEROUS_URL.test(href) ? escapeAttr(href) : '#'
+            return `<a href="${safeHref}" style="${buildStyle(merged)}">`
           }
-          const safeHref = href && !DANGEROUS_URL.test(href) ? escapeAttr(href) : '#'
-          return `<a href="${safeHref}" style="${buildStyle(merged)}">`
-        }
 
-        if (TEXT_TAGS.has(tag)) {
-          // 未显式指定颜色时注入主题色；作者自带的颜色（涨红跌绿等）保留
-          if (!style.color) {
-            style.color = HEADING_TAGS.has(tag) ? theme.heading : theme.text
+          if (TEXT_TAGS.has(tag)) {
+            // 未显式指定颜色时注入主题色；作者自带的颜色（涨红跌绿等）保留
+            if (!style.color) {
+              style.color = HEADING_TAGS.has(tag) ? theme.heading : theme.text
+            }
+            // 块级标签统一字号 / 行高 / 间距，保证排版紧凑舒适且深浅色下一致
+            if (HEADING_TAGS.has(tag)) {
+              if (!style['font-size'])
+                style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
+              if (!style['font-weight']) style['font-weight'] = '700'
+              if (!style['line-height']) style['line-height'] = HEADING_LINE_HEIGHTS[tag] ?? '1.4'
+              if (!style['margin-top']) style['margin-top'] = '14px'
+              if (!style['margin-bottom']) style['margin-bottom'] = '6px'
+            } else if (BLOCK_FONT_TAGS.has(tag)) {
+              if (!style['font-size']) style['font-size'] = BODY_FONT_SIZE
+              if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
+              // 段落间距 + 首行缩进（首段不缩进）
+              if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
+                style['margin-bottom'] = '8px'
+              }
+              if (tag === 'p' && !style['text-indent']) {
+                if (firstParagraph) {
+                  firstParagraph = false
+                } else {
+                  style['text-indent'] = '2em'
+                }
+              }
+              // 引用块装饰
+              if (tag === 'blockquote') {
+                if (!style['border-left'])
+                  style['border-left'] =
+                    `3px solid ${theme === RICH_HTML_DARK_THEME ? '#3b6fd6' : '#4278ed'}`
+                if (!style['padding-left']) style['padding-left'] = '14px'
+                if (!style['margin']) style['margin'] = '10px 0'
+                if (!style['font-style']) style['font-style'] = 'italic'
+                if (!style.color)
+                  style.color = theme === RICH_HTML_DARK_THEME ? '#9cacc0' : '#718096'
+              }
+              // 代码块
+              if (tag === 'code') {
+                if (!style['background'])
+                  style['background'] = theme === RICH_HTML_DARK_THEME ? '#1a2637' : '#f2f6fa'
+                if (!style['border-radius']) style['border-radius'] = '4px'
+                if (!style['padding']) style['padding'] = '2px 6px'
+                if (!style['font-size']) style['font-size'] = '15px'
+              }
+            }
+            const styleAttr = buildStyle(style)
+            return `<${tag} style="${styleAttr}">`
           }
-          // 块级标签统一字号 / 行高 / 间距，保证排版舒展且深浅色下一致
-          if (HEADING_TAGS.has(tag)) {
-            if (!style['font-size']) style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
-            if (!style['font-weight']) style['font-weight'] = '700'
-            if (!style['line-height']) style['line-height'] = HEADING_LINE_HEIGHTS[tag] ?? '1.4'
-            if (!style['margin-top']) style['margin-top'] = '20px'
-            if (!style['margin-bottom']) style['margin-bottom'] = '10px'
-          } else if (BLOCK_FONT_TAGS.has(tag)) {
-            if (!style['font-size']) style['font-size'] = BODY_FONT_SIZE
-            if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
-            // 段落间距 + 首行缩进
-            if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
-              style['margin-bottom'] = '14px'
-            }
-            if (tag === 'p' && !style['text-indent']) {
-              style['text-indent'] = '2em'
-            }
-            // 引用块装饰
-            if (tag === 'blockquote') {
-              if (!style['border-left'])
-                style['border-left'] =
-                  `3px solid ${theme === RICH_HTML_DARK_THEME ? '#3b6fd6' : '#4278ed'}`
-              if (!style['padding-left']) style['padding-left'] = '14px'
-              if (!style['margin']) style['margin'] = '16px 0'
-              if (!style['font-style']) style['font-style'] = 'italic'
-              if (!style.color) style.color = theme === RICH_HTML_DARK_THEME ? '#9cacc0' : '#718096'
-            }
-            // 代码块
-            if (tag === 'code') {
-              if (!style['background'])
-                style['background'] = theme === RICH_HTML_DARK_THEME ? '#1a2637' : '#f2f6fa'
-              if (!style['border-radius']) style['border-radius'] = '4px'
-              if (!style['padding']) style['padding'] = '2px 6px'
-              if (!style['font-size']) style['font-size'] = '15px'
-            }
-          }
+
+          // 其余白名单标签（table 等）：保留作者样式，不做颜色注入
           const styleAttr = buildStyle(style)
-          return `<${tag} style="${styleAttr}">`
-        }
-
-        // 其余白名单标签（table 等）：保留作者样式，不做颜色注入
-        const styleAttr = buildStyle(style)
-        return styleAttr ? `<${tag} style="${styleAttr}">` : `<${tag}>`
-      },
-    )
+          return styleAttr ? `<${tag} style="${styleAttr}">` : `<${tag}>`
+        },
+      )
+  )
 }
 
 /**
@@ -370,4 +396,46 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
 export function buildRichHtml(summary: string, theme: 'light' | 'dark'): string {
   if (!summary || !/<[a-zA-Z]/.test(summary)) return ''
   return sanitizeRichHtml(summary, theme === 'dark' ? RICH_HTML_DARK_THEME : RICH_HTML_LIGHT_THEME)
+}
+
+// ---------------------------------------------------------------------------
+// 超大摘要内存保护
+// ---------------------------------------------------------------------------
+
+/**
+ * 详情页正文 HTML 的最大字符数。
+ * 后端摘要可能是整篇文章 HTML（几十 KB ~ 数百 KB），直接交给 <rich-text>
+ * 会解析出大量节点、解码大量全尺寸图片，低端机 WebView 易「内存溢出 / 页面崩溃」；
+ * 进入页面数据与渲染前统一截断，把内存占用压到安全范围。
+ */
+export const MAX_RICH_HTML_CHARS = 20_000
+
+/** <rich-text> 中最多保留的图片数量：超出丢弃，限制 WebView 图片解码内存 */
+export const MAX_RICH_IMAGES = 3
+
+/**
+ * 把超长 HTML（或纯文本）截断到 maxLength 字符以内：
+ * - 未超限原样返回，不做任何处理；
+ * - 超限时回退到「标签 / 实体之外」的安全边界再截断，避免把 <img src="… 或 &nbsp; 拦腰切断，
+ *   并避开 UTF-16 代理对（不切出半个 emoji），最后追加省略号。
+ */
+export function truncateRichHtml(html: string, maxLength = MAX_RICH_HTML_CHARS): string {
+  if (!html || html.length <= maxLength) return html
+  let cut = maxLength
+  // 截断点落在未闭合标签内（最后一个 < 之后到 cut 之间没有 >）→ 回退到该标签之前
+  const lastLt = html.lastIndexOf('<', cut - 1)
+  if (lastLt >= 0) {
+    const gt = html.indexOf('>', lastLt + 1)
+    if (gt === -1 || gt >= cut) cut = Math.min(cut, lastLt)
+  }
+  // 截断点落在 HTML 实体内（最后一个 & 之后到 cut 之间没有 ;）→ 回退到该实体之前
+  const lastAmp = html.lastIndexOf('&', cut - 1)
+  if (lastAmp >= 0) {
+    const semi = html.indexOf(';', lastAmp + 1)
+    if (semi === -1 || semi >= cut) cut = Math.min(cut, lastAmp)
+  }
+  // 避开 UTF-16 高位代理（避免切出半个 emoji 显示为乱码）
+  const hi = html.charCodeAt(cut - 1)
+  if (hi >= 0xd800 && hi <= 0xdbff) cut -= 1
+  return html.slice(0, cut) + '…'
 }

@@ -81,7 +81,9 @@ Component({
       if (pages.length > 1) {
         wx.navigateBack()
       } else {
-        wx.reLaunch({ url: '/pages/settings/index' })
+        // 无上级页面（分享卡片 / 外部深链经 redirectTo 进入，页面栈只剩当前页）：
+        // 回退到小程序首页（首个 tab 页），而不是跳去设置页
+        wx.switchTab({ url: '/pages/global/index' })
       }
     },
   },

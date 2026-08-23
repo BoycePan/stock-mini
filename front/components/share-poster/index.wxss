@@ -93,9 +93,16 @@
   text-align: center;
 }
 
+/* open-type=share 的原生 button 会带默认样式（边框 / 背景 / 行高），统一重置与 view 版一致 */
 .share-act-forward {
+  margin: 0;
+  line-height: 1.4;
   background: linear-gradient(135deg, #1a2332, #2a3648);
   color: #f5efe3;
+}
+
+.share-act-forward::after {
+  border: none;
 }
 
 .share-act-save {
@@ -106,6 +113,18 @@
 .share-act-close {
   background: #f0f3f8;
   color: #5c6675;
+}
+
+/* 卡片转发模式下「分享原图」次级入口（可发朋友圈） */
+.share-modal-extra {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.share-extra-text {
+  color: #718096;
+  font-size: 24rpx;
+  text-decoration: underline;
 }
 
 /* 深色主题 */
@@ -138,4 +157,8 @@
 .share-poster.theme-dark .share-act-close {
   background: #223248;
   color: #c6d2e2;
+}
+
+.share-poster.theme-dark .share-extra-text {
+  color: #9cacc0;
 }

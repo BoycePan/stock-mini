@@ -6,16 +6,18 @@
  * 由调用方按多源兜底链（新浪 → 腾讯 → 东财）自行补齐，避免单源故障拖垮整页。
  */
 
-import type { EastmoneyQuote, SinaRow, TencentQuote } from '../types/quote'
+import type { EastmoneyQuote, EastmoneyUlistQuote, SinaRow, TencentQuote } from '../types/quote'
 import {
   normalizeEastmoneyQuote,
   parseEastmoneyAveragePrice,
+  parseEastmoneyUlistQuote,
   parseSinaText,
   parseTencentText,
   tencentQuoteOf,
   type EastmoneyAveragePrice,
   type EastmoneyAveragePriceRaw,
   type EastmoneyRaw,
+  type EastmoneyUlistQuoteRaw,
 } from '../utils/quote-parser'
 import { requestExternal } from './external'
 
@@ -232,13 +234,14 @@ export async function fetchEastmoneyAShareSnapshot(): Promise<EastmoneyClistPage
 // ---------------------------------------------------------------------------
 // ④c 东财平均股价指数：GET .../api/qt/ulist.np/get?fltt=2&fields=...&secids=47.800005
 // 东财官方「A股平均股价」指数（通达信 880003 口径，全市场等权平均）。
+// ④d 东财 ulist 报价：同一 URL 与字段集，供分时页「基础信息」取数（与分时同 secid）。
 // 字段取自用户指定 URL：f17 今开 / f18 昨收 / f8 换手率 / f15 最高 / f12 代码 /
 // f16 最低 / f115 振幅 / f2 最新价 / f14 名称 / f5 成交量 / f6 成交额 / f3 涨跌幅 /
-// f20 总市值 / f13 市场 / f145 均价 / f100 涨速 / f265 60日涨跌幅 / f266 年初至今涨跌幅。
+// f20 总市值 / f13 市场 / f145 均价（实测恒 0，未消费）/ f100 涨速 / f265 60日涨跌幅 /
+// f266 年初至今涨跌幅。
 // ---------------------------------------------------------------------------
 
-const EM_AVG_PRICE_FIELDS =
-  'f17,f18,f8,f15,f12,f16,f115,f2,f14,f5,f6,f3,f20,f13,f145,f100,f265,f266'
+const EM_ULIST_FIELDS = 'f17,f18,f8,f15,f12,f16,f115,f2,f14,f5,f6,f3,f20,f13,f145,f100,f265,f266'
 /** 东财平均股价指数 secid（市场号 47 = 平均股价指数；调用方可覆盖） */
 export const EM_AVG_PRICE_SECID = '47.800005'
 
@@ -247,7 +250,7 @@ export async function fetchEastmoneyAveragePrice(
 ): Promise<EastmoneyAveragePrice | null> {
   const params = [
     'fltt=2',
-    `fields=${encodeURIComponent(EM_AVG_PRICE_FIELDS)}`,
+    `fields=${encodeURIComponent(EM_ULIST_FIELDS)}`,
     `secids=${secid}`,
   ].join('&')
   const url = `${HOSTS.eastmoney}/api/qt/ulist.np/get?${params}`
@@ -262,6 +265,25 @@ export async function fetchEastmoneyAveragePrice(
   }
 }
 
+/** 东财 ulist 报价：今开/最高/最低/昨收/成交量等（分时页基础信息，与分时同 secid） */
+export async function fetchEastmoneyUlistQuote(secid: string): Promise<EastmoneyUlistQuote | null> {
+  const params = [
+    'fltt=2',
+    `fields=${encodeURIComponent(EM_ULIST_FIELDS)}`,
+    `secids=${secid}`,
+  ].join('&')
+  const url = `${HOSTS.eastmoney}/api/qt/ulist.np/get?${params}`
+  try {
+    const body = await requestExternal<{ data?: { diff?: EastmoneyUlistQuoteRaw[] } }>(url, {
+      timeout: 10000,
+    })
+    return parseEastmoneyUlistQuote(secid, body?.data?.diff?.[0])
+  } catch (error) {
+    console.warn(`[quote] 东财 ulist 报价失败 ${secid}:`, error)
+    return null
+  }
+}
+
 export const quoteApi = {
   tencent: fetchTencentQuotes,
   sina: fetchSinaQuotes,
@@ -269,4 +291,5 @@ export const quoteApi = {
   eastmoneyList: fetchEastmoneyList,
   eastmoneyAShareSnapshot: fetchEastmoneyAShareSnapshot,
   eastmoneyAveragePrice: fetchEastmoneyAveragePrice,
+  eastmoneyUlistQuote: fetchEastmoneyUlistQuote,
 }

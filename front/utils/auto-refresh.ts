@@ -5,6 +5,10 @@
  * - 页面不可见（onHide/onUnload）时停止，不占用资源、不产生请求；
  * - 再次 onShow 重新开始轮询，重复调用 startAutoRefresh 幂等（先停旧表再开新表）；
  * - 已有加载进行中时跳过，避免并发重复请求（配合 MarketStore.loadPage 的在途请求去重）。
+ * - 页面提供 isCurrentPage 时，每次触发（onShow 补刷与轮询 tick）前都会校验页面是否仍为
+ *   当前展示页：页面不可见（tab 已切走 / 被 navigateTo 覆盖）时直接跳过，不再发起请求。
+ *   这是对「onHide 未触发」等框架边缘场景的兜底——正确性不再只押在生命周期回调上，
+ *   保证「页面切换走了就不调用，再次显示才调用」。
  *
  * 定时器不变量：**同一页面实例同时最多存在 1 个轮询定时器**。
  * timers 以页面实例为 key 存于 WeakMap，start 前必先 stop，onHide/onUnload 必 stop，
@@ -23,7 +27,17 @@ export interface AutoRefreshPage {
   data?: { loading?: boolean }
   /** 可选提供加载状态查询函数，优先于 page.data.loading（可直读 MobX store 单一数据源，避开 setData 异步时差） */
   isLoading?: () => boolean
+  /** 可选提供「页面是否仍为当前展示页」查询函数（getCurrentPages 栈顶 === 本页）。
+   *  提供后，onShow 补刷与每次轮询 tick 前都会校验，页面不在栈顶时不再发起请求——
+   *  对 onHide 未触发的边缘场景做兜底。缺省视为始终可见（不改变既有调用方行为）。 */
+  isCurrentPage?: () => boolean
   loadData: (options?: { silent?: boolean }) => Promise<boolean | void>
+}
+
+/** 页面是否可见：未提供 isCurrentPage 时视为始终可见（既有调用方行为不变） */
+export function isPageVisible(page: AutoRefreshPage): boolean {
+  if (typeof page.isCurrentPage !== 'function') return true
+  return page.isCurrentPage()
 }
 
 /** 获取页面当前的真实加载状态 */
@@ -47,14 +61,21 @@ export function startAutoRefresh(
 ): void {
   // 先停旧表再开新表：保证同一页面同时最多 1 个轮询定时器（不变量，见文件头注释）
   stopAutoRefresh(page)
-  // 回到当前页时立即补一次刷新：仅当距上次请求超过 5s 且无加载进行中时才发起，避免刚加载完又重复请求
-  if (!isPageLoading(page) && Date.now() - (lastLoadAt ?? 0) > MIN_REFRESH_GAP) {
+  // 回到当前页时立即补一次刷新：仅当页面仍为当前页、距上次请求超过 5s 且无加载进行中时才发起，
+  // 避免刚加载完又重复请求
+  if (
+    isPageVisible(page) &&
+    !isPageLoading(page) &&
+    Date.now() - (lastLoadAt ?? 0) > MIN_REFRESH_GAP
+  ) {
     void page.loadData({ silent: true })
   }
   timers.set(
     page,
     setInterval(() => {
-      if (!isPageLoading(page)) {
+      // 页面不可见（tab 切走 / 被覆盖 / onHide 未触发等边缘场景）时不发起请求：
+      // 「页面切换走了就不调用，再次显示才调用」的最终保证，不依赖生命周期回调
+      if (isPageVisible(page) && !isPageLoading(page)) {
         void page.loadData({ silent: true })
       }
     }, intervalMs),

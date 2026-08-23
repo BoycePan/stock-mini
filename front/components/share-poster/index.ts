@@ -32,6 +32,21 @@ Component({
     chartTitle: { type: String, value: 'K线走势' },
     /** 分时图数据：非空时在海报头部下方绘制「当日分时」走势图（优先于 klines） */
     minuteChart: { type: Object, value: {} },
+    /**
+     * 「转发」是否改为小程序卡片分享（open-type=share，触发页面 onShareAppMessage）：
+     * 卡片 path 由页面回带业务参数（如新闻 id），接收方进入后按参数拉取数据；
+     * 页面需在 onShareAppMessage 中把本组件生成的 sharePreviewPath 作为卡片封面图。
+     * 默认 false：转发走 wx.showShareImageMenu（分享原图，可发朋友圈）。
+     */
+    forwardAsCard: { type: Boolean, value: false },
+    /**
+     * 图片分享的「小程序入口路径」（wx.showShareImageMenu 的 entrancePath，基础库 3.2.0+）：
+     * 接收方在微信中点开分享图片上的「打开小程序」时进入的页面。
+     * 与卡片分享一致「经首页中转」，由页面用 utils/share.ts 的 buildSharePath(target, params)
+     * 生成（分享路径统一不带前导斜杠）；否则微信默认取「当前页面路径且不带参数」，
+     * 详情页会因缺少 code/id 等参数而无法加载。空串时不传 entrancePath（回退微信默认行为）。
+     */
+    entrancePath: { type: String, value: '' },
   },
   data: {
     theme: 'light',
@@ -151,13 +166,20 @@ Component({
       }
       this.setData({ modalVisible: false })
       setTimeout(() => {
-        wx.showShareImageMenu({
+        // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面。
+        // 不指定时微信默认取「当前页面路径且不带参数」，详情页（分时/个股/板块/新闻）
+        // 会因缺少 code/id 等参数而无法加载，因此必须与卡片分享一致经首页中转
+        // （页面传入 buildSharePath(target, params) 生成的路径，分享路径不带前导斜杠）。
+        // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
+        const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
           path: this.data.sharePreviewPath,
           fail: () => {
             // 旧版本不支持该接口时引导长按图片分享
             wx.showToast({ title: '请长按图片分享', icon: 'none' })
           },
-        })
+        }
+        if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
+        wx.showShareImageMenu(options)
       }, 150)
     },
   },

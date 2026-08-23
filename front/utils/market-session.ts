@@ -2,7 +2,7 @@
  * 市场会话判定（docs/tabbar-api.md 5.2）。
  *
  * - 纯时钟会话见 utils/market-clock.ts（可独立测试）；
- * - 实时会话（全球页）：并发探测 4 路腾讯行情（sh000001/sz399001/usQQQ/usSPY），
+ * - 实时会话（全球页）：并发探测 4 路腾讯行情（sh000001/sz399001/usIXIC/usINX），
  *   按行情时间戳「新鲜度」（90min 陈旧阈值）修正时钟判定，带 30s 内存缓存 + in-flight 去重；
  * - 有色页会话：时钟判定国内/外盘（避免额外探测请求）。
  */
@@ -38,7 +38,7 @@ function isFreshQuote(quote: TencentQuote | undefined): boolean {
 
 /**
  * 全球页实时会话：
- * 传入 4 路腾讯指数行情（sh000001/sz399001/usQQQ/usSPY，与展示数据同一次请求）时直接复用；
+ * 传入 4 路腾讯指数行情（sh000001/sz399001/usIXIC/usINX，与展示数据同一次请求）时直接复用；
  * 未传入则内部探测。按行情时间新鲜度修正时钟判定。
  */
 export async function resolveGlobalMarketSession(probes?: TencentQuote[]): Promise<MarketSession> {
@@ -49,7 +49,7 @@ export async function resolveGlobalMarketSession(probes?: TencentQuote[]): Promi
   if (!globalSessionInflight) {
     globalSessionInflight = (async () => {
       const quotes =
-        probes ?? (await fetchTencentQuotes(['sh000001', 'sz399001', 'usQQQ', 'usSPY']))
+        probes ?? (await fetchTencentQuotes(['sh000001', 'sz399001', 'usIXIC', 'usINX']))
       const value = sessionFromProbes(quotes)
       globalSessionCache = { at: Date.now(), value }
       return value
@@ -64,7 +64,7 @@ function sessionFromProbes(quotes: TencentQuote[]): MarketSession {
   const clock = getMarketSession()
   const byCode = new Map(quotes.map((quote) => [quote.code, quote]))
   const aFresh = isFreshQuote(byCode.get('sh000001')) || isFreshQuote(byCode.get('sz399001'))
-  const usFresh = isFreshQuote(byCode.get('usQQQ')) || isFreshQuote(byCode.get('usSPY'))
+  const usFresh = isFreshQuote(byCode.get('usIXIC')) || isFreshQuote(byCode.get('usINX'))
 
   if (aFresh && !usFresh) {
     return {

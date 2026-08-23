@@ -9,7 +9,7 @@
  */
 
 /** 分享入口统一指向的首页路径（app.json 首个页面，即小程序冷启动页） */
-export const SHARE_HOME_PATH = '/pages/global/index'
+export const SHARE_HOME_PATH = 'pages/global/index'
 
 /** 分享卡片统一配图（静态资源 CDN，建议 5:4 比例图） */
 export const SHARE_IMAGE_URL =
@@ -35,7 +35,23 @@ function safeDecode(value: string | undefined): string {
 }
 
 /**
- * 构造「经首页中转」的分享 path。
+ * 构造 URL query 字符串（统一 encodeURIComponent，跳过空值）。
+ * 用于 onShareTimeline 等不经首页中转、直接把参数拼进当前页 query 的分享场景。
+ */
+export function buildShareQuery(params: Record<string, string | undefined>): string {
+  const query: string[] = []
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === '') continue
+    query.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+  }
+  return query.join('&')
+}
+
+/**
+ * 构造「经首页中转」的分享 path（分享卡片 path 与分享原图的 entrancePath 共用）。
+ *
+ * 注意：分享路径统一**不带前导斜杠**（如 `pages/global/index?target=minute&...`），
+ * 由 SHARE_HOME_PATH 本身保证；微信对转发 path 与 entrancePath 均接受该格式。
  * @param target 目标页标识（见 SHARE_TARGET_ROUTES）
  * @param params 目标页参数（原样传入，内部统一 encodeURIComponent）
  */
@@ -43,12 +59,8 @@ export function buildSharePath(
   target: string,
   params: Record<string, string | undefined> = {},
 ): string {
-  const query: string[] = [`target=${encodeURIComponent(target)}`]
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === '') continue
-    query.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-  }
-  return `${SHARE_HOME_PATH}?${query.join('&')}`
+  const query = buildShareQuery({ ...params, target })
+  return `${SHARE_HOME_PATH}?${query}`
 }
 
 /**

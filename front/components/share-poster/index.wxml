@@ -26,9 +26,19 @@
       </scroll-view>
       <view class="share-modal-tip">长按图片可保存 / 分享</view>
       <view class="share-modal-actions">
-        <view class="share-act-forward" bindtap="openShareImageMenu">转发</view>
+        <!-- 转发：forwardAsCard 时分享小程序卡片（path 带业务参数，如新闻 id）；否则分享原图 -->
+        <button
+          wx:if="{{ forwardAsCard }}"
+          class="share-act-forward"
+          open-type="share"
+        >转发好友</button>
+        <view wx:else class="share-act-forward" bindtap="openShareImageMenu">转发</view>
         <view class="share-act-save" bindtap="saveShareImage">保存相册</view>
         <view class="share-act-close" bindtap="hideModal">关闭</view>
+      </view>
+      <!-- 卡片转发模式下仍保留分享原图入口（wx.showShareImageMenu，可发朋友圈） -->
+      <view wx:if="{{ forwardAsCard }}" class="share-modal-extra" bindtap="openShareImageMenu">
+        <text class="share-extra-text">分享原图（可发朋友圈）</text>
       </view>
     </view>
   </view>

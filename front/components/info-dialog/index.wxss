@@ -38,7 +38,11 @@
 }
 
 .info-confirm {
-  margin-top: 40rpx;
+  display: block;
+  width: 100%;
+  margin: 40rpx auto 0;
+  padding: 0;
+  box-sizing: border-box;
   height: 84rpx;
   line-height: 84rpx;
   border-radius: 42rpx;
@@ -46,6 +50,7 @@
   color: #fff;
   font-size: 30rpx;
   font-weight: 600;
+  text-align: center;
 }
 
 .info-confirm::after {

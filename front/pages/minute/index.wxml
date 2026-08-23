@@ -43,15 +43,15 @@
         </view>
         <view class="quote-grid">
           <view>
-            <text>开盘价</text>
+            <text>今开</text>
             <text>{{ quote.open }}</text>
           </view>
           <view>
-            <text>最高价</text>
+            <text>最高</text>
             <text>{{ quote.high }}</text>
           </view>
           <view>
-            <text>最低价</text>
+            <text>最低</text>
             <text>{{ quote.low }}</text>
           </view>
           <view>
@@ -63,7 +63,7 @@
             <text>{{ quote.volumeText }}</text>
           </view>
           <view>
-            <text>收盘价</text>
+            <text>{{ quote.preCloseLabel }}</text>
             <text>{{ quote.preClose }}</text>
           </view>
         </view>
@@ -94,5 +94,6 @@
     id="sharePoster"
     posterData="{{ posterData }}"
     minuteChart="{{ minutePoster }}"
+    entrancePath="{{ shareEntrancePath }}"
   ></share-poster>
 </view>

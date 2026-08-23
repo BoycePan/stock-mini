@@ -1,16 +1,13 @@
 <view
-  class="section-card {{ section.tone }} {{ first ? 'first' : '' }} {{ compact ? 'compact' : '' }} {{
-    section.minuteCorner ? 'minute-corner' : ''
-  }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
+  class="section-card {{ section.tone }} {{ first ? 'first' : '' }} {{
+    compact ? 'compact' : ''
+  }} {{ section.minuteCorner ? 'minute-corner' : '' }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
 >
   <view wx:if="{{ section.minuteCorner }}" class="minute-corner-badge"><text>分时</text></view>
   <view class="section-title-row">
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
-    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
-      <view class="market-status-dot"></view>
-      <text>{{ section.marketStatus }}</text>
-    </view>
+
     <view
       wx:if="{{ section.tip }}"
       class="section-tip"
@@ -19,6 +16,12 @@
       aria-label="查看说明"
       ><text>i</text></view
     >
+
+    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
+      <view class="market-status-dot"></view>
+      <text>{{ section.marketStatus }}</text>
+    </view>
+
     <text wx:if="{{ section.badge }}" class="section-badge">{{ section.badge }}</text>
   </view>
   <view class="metric-grid">
@@ -36,7 +39,9 @@
           >
           <text class="metric-name">{{ item.name }}</text>
           <block wx:for="{{ item.tags }}" wx:for-item="tag" wx:key="*this">
-            <view class="metric-tag"><text>{{ tag }}</text></view>
+            <view class="metric-tag"
+              ><text>{{ tag }}</text></view
+            >
           </block>
           <view
             wx:if="{{ item.minuteAvailable && !section.minuteCorner }}"

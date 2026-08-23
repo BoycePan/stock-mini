@@ -5,13 +5,19 @@ import {
   MIN_MINUTE_POINTS,
   buildCompositePoints,
   buildCrossPoints,
+  fullTimeOf,
   parseEastmoneyTrends,
   parseTencentMinuteNode,
   parseYahooMinuteResult,
   shortTime,
 } from '../utils/minute-parser.ts'
 import { MINUTE_SOURCES, US_PROXY_NAMES, hasMinuteSources } from '../config/minute.ts'
-import { computeMinuteVolumeDirections, sparseVolumeNote } from '../utils/minute.ts'
+import {
+  computeMinuteVolumeDirections,
+  mergeMinuteQuoteInfo,
+  sparseVolumeNote,
+} from '../utils/minute.ts'
+import type { EastmoneyUlistQuote } from '../types/quote.ts'
 import {
   ASIA_INDICES,
   ASIA_JP_STOCKS,
@@ -26,15 +32,17 @@ import {
 
 // ---------------------------------------------------------------------------
 // 东财分时（trends2）
-// 每行（fields2=f51..f58）：[0]时间 [1]现价 [5]成交量 [6]成交额 [7]均价
+// 生产请求 fields2=f51,f53,f56,f58，每行 [0]时间 [1]现价 [2]成交量 [3]均价；
+// 全字段版（f51..f58）行结构为 [时间,开盘,现价,最高,最低,成交量,成交额,均价]，
+// 现价在 f[2] 而非 f[1]（f[1] 是开盘价）——解析器按字段数自适应，现价一律取 f53。
 // ---------------------------------------------------------------------------
 
-test('东财：解析 trends 行为 MinutePoint，昨收透传', () => {
+test('东财：4字段行解析为 MinutePoint，昨收透传，现价取 f53 位置', () => {
   const data = {
     preClose: 3990.3,
     trends: [
-      '2026-08-19 09:30,3952.12,3952.12,3952.12,3952.12,5649180,13909757184.00,3951.819',
-      '2026-08-19 09:31,3953.55,3955.56,3955.68,3952.41,15142187,32132489728.00,3951.438',
+      '2026-08-19 09:30,3952.12,5649180,3951.819',
+      '2026-08-19 09:31,3955.56,15142187,3951.438',
     ],
   }
   const result = parseEastmoneyTrends(data)
@@ -43,12 +51,39 @@ test('东财：解析 trends 行为 MinutePoint，昨收透传', () => {
   assert.equal(result!.points.length, 2)
   assert.deepEqual(result!.points[0]!, {
     time: '09:30',
+    timeFull: '2026-08-19 09:30',
     price: 3952.12,
     avg: 3951.819,
     volume: 5649180,
-    amount: 13909757184,
+    amount: undefined,
   })
-  assert.equal(result!.points[1]!.time, '09:31')
+  // 第二分钟现价 = 行 f[1]（f53），不是开盘价（全字段版 f[1] 为开盘，实测可差数百点）
+  assert.deepEqual(result!.points[1]!, {
+    time: '09:31',
+    timeFull: '2026-08-19 09:31',
+    price: 3955.56,
+    avg: 3951.438,
+    volume: 15142187,
+    amount: undefined,
+  })
+})
+
+test('东财：8字段行（兼容/兜底）现价取 f[2]，不再误读 f[1] 开盘价', () => {
+  const data = {
+    preClose: 52759.21,
+    trends: [
+      '2026-08-21 21:30,52768.87,52768.87,52768.87,52768.87,0,0.00,52768.870',
+      '2026-08-21 21:31,52768.87,53026.14,53047.33,53026.14,43897382,0.00,52897.505',
+    ],
+  }
+  const result = parseEastmoneyTrends(data)
+  assert.ok(result)
+  assert.equal(result!.points[0]!.price, 52768.87)
+  // 现价应取 f[2]=53026.14（f[1]=52768.87 是该分钟开盘价，与上一分钟收盘相同）
+  assert.equal(result!.points[1]!.price, 53026.14)
+  assert.equal(result!.points[1]!.volume, 43897382)
+  assert.equal(result!.points[1]!.amount, 0)
+  assert.equal(result!.points[1]!.avg, 52897.505)
 })
 
 test('东财：空数据 / 非法行 / 点数不足返回 null', () => {
@@ -68,13 +103,13 @@ test('东财：外汇均价 0（无成交量）→ null；0 价 / 空价格行�
     preClose: 23.4957,
     trends: [
       // 正常行（成交量 0、均价 0）
-      '2026-08-20 05:00,23.4957,23.4957,23.4957,23.4957,0,0.0000,0.00000',
+      '2026-08-20 05:00,23.4957,0,0.00000',
       // 0 价行（无成交分钟）应跳过
-      '2026-08-20 05:01,0,0,0,0,0,0.0000,0.00000',
+      '2026-08-20 05:01,0,0,0.00000',
       // 空价格字段（Number('')=0）应跳过
-      '2026-08-20 05:02,,23.5,23.5,23.4,0,0.0000,0.00000',
+      '2026-08-20 05:02,,0,0.00000',
       // 正常行
-      '2026-08-20 05:03,23.52,23.52,23.53,23.51,0,0.0000,0.00000',
+      '2026-08-20 05:03,23.52,0,0.00000',
     ],
   }
   const result = parseEastmoneyTrends(data)
@@ -86,13 +121,41 @@ test('东财：外汇均价 0（无成交量）→ null；0 价 / 空价格行�
   assert.equal(result!.points[1]!.avg, null)
 })
 
+test('东财：昨结算透传（期货口径），非期货为 0/缺失 → null', () => {
+  // 沪银主连 113.agm 实测：preSettlement=16611（昨结算）、preClose=16771（昨收）
+  const futures = {
+    preClose: 16771,
+    preSettlement: 16611,
+    trends: ['2026-08-21 21:00,16896,0,0.0', '2026-08-21 21:01,16968,200,16910.0'],
+  }
+  const result = parseEastmoneyTrends(futures)
+  assert.ok(result)
+  assert.equal(result!.preClose, 16771, '昨收原样透传（展示用）')
+  assert.equal(result!.preSettlement, 16611, '昨结算透传（涨跌幅基准）')
+  // A股指数实测 preSettlement=0 → null（等同非期货）
+  const index = parseEastmoneyTrends({
+    preClose: 3903.72,
+    preSettlement: 0,
+    trends: ['2026-08-22 09:30,3900.1,100,3899.9', '2026-08-22 09:31,3901.2,200,3900.5'],
+  })
+  assert.ok(index)
+  assert.equal(index!.preSettlement, null, 'preSettlement=0 视为缺失')
+  // 缺失 preSettlement 字段 → null
+  const stock = parseEastmoneyTrends({
+    preClose: 98,
+    trends: ['2026-08-22 09:30,97.5,100,97.4', '2026-08-22 09:31,97.8,200,97.6'],
+  })
+  assert.ok(stock)
+  assert.equal(stock!.preSettlement, null)
+})
+
 test('东财：keepFullTime 保留完整时间戳，name 透传证券中文名', () => {
   const data = {
     preClose: 219.74,
     name: '英伟达',
     trends: [
-      '2026-08-19 21:30,221.670,222.070,222.070,221.670,2801010,618492368.000,220.8105',
-      '2026-08-20 00:00,219.225,219.321,219.350,219.210,124395,27275530.000,219.2459',
+      '2026-08-19 21:30,222.070,2801010,220.8105',
+      '2026-08-20 00:00,219.321,124395,219.2459',
     ],
   }
   // 默认短时间
@@ -101,11 +164,16 @@ test('东财：keepFullTime 保留完整时间戳，name 透传证券中文名',
   assert.equal(normal!.name, '英伟达')
   assert.equal(normal!.points[0]!.time, '21:30')
   assert.equal(normal!.points[1]!.time, '00:00')
+  // timeFull 始终保留完整时间戳（触摸浮层展示「年月日 时分」，跨零点逐点准确）
+  assert.equal(normal!.points[0]!.timeFull, '2026-08-19 21:30')
+  assert.equal(normal!.points[1]!.timeFull, '2026-08-20 00:00')
   // keepFullTime：保留完整时间戳（字典序即时间序，跨零点不重排）
   const full = parseEastmoneyTrends(data, { keepFullTime: true })
   assert.ok(full)
   assert.equal(full!.points[0]!.time, '2026-08-19 21:30')
   assert.equal(full!.points[1]!.time, '2026-08-20 00:00')
+  assert.equal(full!.points[0]!.timeFull, '2026-08-19 21:30')
+  assert.equal(full!.points[1]!.timeFull, '2026-08-20 00:00')
 })
 
 // ---------------------------------------------------------------------------
@@ -133,11 +201,14 @@ test('合成：多只代理股按完整时间戳对齐取均值，跨零点顺�
   ])
   assert.equal(points.length, 3)
   assert.equal(points[0]!.time, '21:30')
+  assert.equal(points[0]!.timeFull, '2026-08-19 21:30', '合成保留完整时间戳（触摸浮层用）')
   assert.equal(points[0]!.price, 100, '(100.5+99.5)/2')
   assert.equal(points[0]!.volume, 150, '成交量取代理之和')
   assert.equal(points[1]!.time, '21:31')
+  assert.equal(points[1]!.timeFull, '2026-08-19 21:31')
   assert.equal(points[1]!.price, 100, '(101+99)/2')
   assert.equal(points[2]!.time, '00:00', '跨零点 00:00 排在 21:31 之后')
+  assert.equal(points[2]!.timeFull, '2026-08-20 00:00', '跨零点后日期为次日')
   assert.equal(points[2]!.price, 102, '仅一只代理有数据时取该值')
   assert.equal(points[2]!.volume, 300)
   assert.equal(points[0]!.avg, null, '合成序列无均价')
@@ -170,8 +241,10 @@ test('交叉汇率：分子÷分母逐分钟相除，分母缺分钟跳过，输
   )
   assert.equal(points.length, 2)
   assert.equal(points[0]!.time, '05:00')
+  assert.equal(points[0]!.timeFull, '2026-08-20 05:00', '交叉合成保留完整时间戳')
   assert.equal(points[0]!.price, Math.round((1388.7175 / 6.7306) * 10000) / 10000, '分子÷分母')
   assert.equal(points[1]!.time, '05:02')
+  assert.equal(points[1]!.timeFull, '2026-08-20 05:02')
   assert.equal(points[1]!.volume, 0, '合成序列无成交量')
   assert.equal(points[1]!.avg, null, '合成序列无均价')
 })
@@ -206,6 +279,8 @@ test('腾讯：行解析 + 均价按累计成交额/成交量推算 + 昨收取 
   assert.equal(result!.preClose, 58.11)
   assert.equal(result!.points.length, 2)
   assert.equal(result!.points[0]!.time, '09:30')
+  // 腾讯行只有 "HHmm" 无日期信息 → timeFull 缺省（触摸浮层回退展示 HH:mm）
+  assert.equal(result!.points[0]!.timeFull, undefined)
   assert.equal(result!.points[0]!.price, 56.2)
   // 均价 = 32860140 / 5847
   assert.ok(Math.abs(result!.points[0]!.avg! - 32860140 / 5847) < 0.001)
@@ -262,6 +337,7 @@ test('Yahoo：timestamp + close 解析，昨收取 chartPreviousClose，均价�
   assert.equal(parsed!.preClose, 58.11)
   assert.equal(parsed!.points.length, 2)
   assert.equal(parsed!.points[0]!.time, '09:30')
+  assert.equal(parsed!.points[0]!.timeFull, '2026-08-19 09:30', 'Yahoo epoch 转本地完整时间戳')
   assert.equal(parsed!.points[0]!.price, 56.2)
   const cumAmt = 56.2 * 5847 + 56.6 * 20571
   const cumVol = 5847 + 20571
@@ -299,6 +375,16 @@ test('shortTime：ISO / 带秒 / 腾讯 HHmm 统一为 HH:mm', () => {
   assert.equal(shortTime(''), '')
 })
 
+test('fullTimeOf：ISO 完整时间戳归一化为 YYYY-MM-DD HH:mm，无日期信息返回 undefined', () => {
+  assert.equal(fullTimeOf('2026-08-19 09:30'), '2026-08-19 09:30')
+  assert.equal(fullTimeOf('2026-08-19 09:30:00'), '2026-08-19 09:30')
+  assert.equal(fullTimeOf('2026-08-19T09:30:00'), '2026-08-19 09:30')
+  // 腾讯 "HHmm" / 空串 / 无法解析的串无日期信息
+  assert.equal(fullTimeOf('0930'), undefined)
+  assert.equal(fullTimeOf(''), undefined)
+  assert.equal(fullTimeOf('09:30'), undefined)
+})
+
 test('sparseVolumeNote：东财韩/日市场分钟量稀疏时给出口径提示', () => {
   const sparse = Array.from({ length: 10 }, (_, i) => ({
     time: `${String(i).padStart(2, '0')}:00`,
@@ -324,6 +410,103 @@ test('sparseVolumeNote：东财韩/日市场分钟量稀疏时给出口径提示
   assert.equal(sparseVolumeNote(sparse, 'em', 'ashare'), '')
   // 空数据不提示
   assert.equal(sparseVolumeNote([], 'em', 'kr'), '')
+})
+
+// ---------------------------------------------------------------------------
+// 基础信息合并（mergeMinuteQuoteInfo）：东财 ulist 报价优先，缺字段回退分时推算
+// ---------------------------------------------------------------------------
+
+const quoteFixture = (overrides: Partial<EastmoneyUlistQuote> = {}): EastmoneyUlistQuote => ({
+  secid: '100.DJIA',
+  code: 'DJIA',
+  market: '100',
+  name: '道琼斯',
+  price: 102,
+  changePercent: null,
+  open: 99.5,
+  high: 103,
+  low: 99,
+  previousClose: 98.2,
+  volume: 500,
+  amount: null,
+  ...overrides,
+})
+
+test('基础信息合并：无报价时全部回退分时推算', () => {
+  const points = [
+    { time: '09:30', price: 100, avg: 99, volume: 100 },
+    { time: '09:31', price: 102, avg: 101, volume: 200 },
+  ]
+  assert.deepEqual(mergeMinuteQuoteInfo(points, { preClose: 98 }, null), {
+    open: 100,
+    high: 102,
+    low: 100,
+    preClose: 98,
+    preCloseLabel: '昨收',
+    volume: 300,
+    hasVolume: true,
+  })
+})
+
+test('基础信息合并：报价字段优先（今开/最高/最低/昨收/成交量）', () => {
+  const points = [
+    { time: '09:30', price: 100, avg: 99, volume: 100 },
+    { time: '09:31', price: 102, avg: 101, volume: 200 },
+  ]
+  assert.deepEqual(mergeMinuteQuoteInfo(points, { preClose: 98 }, quoteFixture()), {
+    open: 99.5,
+    high: 103,
+    low: 99,
+    preClose: 98.2,
+    preCloseLabel: '昨收',
+    volume: 500,
+    hasVolume: true,
+  })
+})
+
+test('基础信息合并：报价字段为 0/空 时回退分时推算（外汇等无成交量标的）', () => {
+  const points = [
+    { time: '05:00', price: 1394.1, avg: null, volume: 0 },
+    { time: '05:01', price: 1394.2, avg: null, volume: 0 },
+  ]
+  // 外汇：报价 f5=0、分钟量也全为 0 → 成交量 0、hasVolume false（隐藏格子）
+  const fx = mergeMinuteQuoteInfo(points, { preClose: 1393.5 }, quoteFixture({ volume: 0 }))
+  assert.equal(fx.volume, 0)
+  assert.equal(fx.hasVolume, false)
+  // 报价今开/最高/最低/昨收为 0 → 回退分时推算
+  const zeroed = mergeMinuteQuoteInfo(
+    points,
+    { preClose: 1393.5 },
+    quoteFixture({ open: 0, high: 0, low: 0, previousClose: 0 }),
+  )
+  assert.equal(zeroed.open, 1394.1)
+  assert.equal(zeroed.high, 1394.2)
+  assert.equal(zeroed.low, 1394.1)
+  assert.equal(zeroed.preClose, 1393.5)
+  assert.equal(zeroed.preCloseLabel, '昨收')
+})
+
+test('基础信息合并：期货昨结算优先于报价昨收（f18），涨跌幅口径一致', () => {
+  const points = [
+    { time: '21:00', price: 16900, avg: 16890, volume: 100 },
+    { time: '21:01', price: 16968, avg: 16910, volume: 200 },
+  ]
+  // 沪银主连实测：昨结算 16611、昨收（报价 f18）16771 —— 涨跌幅按昨结算（2.15%）
+  const info = mergeMinuteQuoteInfo(
+    points,
+    { preClose: 16771, preSettlement: 16611 },
+    quoteFixture({ previousClose: 16771, market: '113' }),
+  )
+  assert.equal(info.preClose, 16611, '结算基准优先，报价昨收不得覆盖')
+  assert.equal(info.preCloseLabel, '昨结算')
+  // 非期货（无 preSettlement）：仍按 报价昨收 → 分时推算 回退
+  const stock = mergeMinuteQuoteInfo(points, { preClose: 98 }, quoteFixture())
+  assert.equal(stock.preClose, 98.2)
+  assert.equal(stock.preCloseLabel, '昨收')
+  // preSettlement 为 0 / 缺失（A股指数实测为 0）→ 等同非期货
+  const index = mergeMinuteQuoteInfo(points, { preClose: 98, preSettlement: 0 }, quoteFixture())
+  assert.equal(index.preClose, 98.2)
+  assert.equal(index.preCloseLabel, '昨收')
 })
 
 test('MIN_MINUTE_POINTS 至少为 2（过滤腾讯外股单点数据）', () => {
@@ -401,6 +584,43 @@ test('覆盖性：汇率分时以东财系为主源（大陆可访问），Yahoo
   assert.equal(cross!.denominator, '133.USDCNH', '分母=美元/离岸人民币（东财 133）')
   assert.equal(MINUTE_SOURCES.CNYJPY?.em, '133.CNHJPY', 'CNYJPY 用离岸人民币兑日元')
   assert.equal(MINUTE_SOURCES.USDCNY?.em, '133.USDCNH', 'USDCNY 用离岸美元/人民币')
+  // USDCNY 卡片报价源与分时页同 secid（离岸，东财 133.USDCNH），保证「卡片=分时」数值一致
+  const usdcnyRate = ASIA_RATES.find((rate) => rate.code === 'USDCNY')
+  assert.ok(usdcnyRate, '缺少 USDCNY 汇率配置')
+  assert.equal(usdcnyRate!.name, '美元/离岸人民币', '卡片应明确标注离岸口径')
+  assert.equal(usdcnyRate!.emSecid, '133.USDCNH', 'USDCNY 卡片东财 secid 应与分时源一致')
+  assert.equal(usdcnyRate!.preferEm, true, 'USDCNY 卡片应东财优先（与分时同源）')
+})
+
+test('覆盖性：全球页 USDCNY 卡片与分时页同源（东财离岸 133.USDCNH）', () => {
+  const usdcny = MACRO_ASSETS.find((asset) => asset.code === 'USDCNY')
+  assert.ok(usdcny, '缺少 USDCNY 宏观资产配置')
+  assert.equal(usdcny.name, '美元/离岸人民币', '卡片应明确标注离岸口径')
+  const source = usdcny.sources[0]
+  assert.equal(source?.kind, 'em_ulist', '应走东财 ulist（fltt=2 十进制，与分时同构）')
+  assert.deepEqual(source?.secid, '133.USDCNH', '应与分时源 133.USDCNH 同 secid')
+})
+
+test('覆盖性：NG 卡片与分时页同源（东财 102.NG00Y 天然气），防误用铜 101.HG00Y', () => {
+  const ng = MACRO_ASSETS.find((asset) => asset.code === 'NG')
+  assert.ok(ng, '缺少 NG 宏观资产配置')
+  const source = ng.sources[0]
+  assert.equal(source?.kind, 'em_ulist')
+  assert.deepEqual(
+    source?.secid,
+    '102.NG00Y',
+    'NG 卡片应为 NYMEX 天然气 102.NG00Y（非 101.HG00Y 铜）',
+  )
+  assert.equal(MINUTE_SOURCES.NG?.em, '102.NG00Y', 'NG 分时源应为 102.NG00Y')
+})
+
+test('覆盖性：BRT 卡片与分时页同源（东财 112.B00Y 布伦特原油），防新浪 hf_OIL 口径不一致', () => {
+  const brt = MACRO_ASSETS.find((asset) => asset.code === 'BRT')
+  assert.ok(brt, '缺少 BRT 宏观资产配置')
+  const source = brt.sources[0]
+  assert.equal(source?.kind, 'em_ulist', '应走东财 ulist（fltt=2 十进制，与分时同构）')
+  assert.deepEqual(source?.secid, '112.B00Y', '应与分时源 112.B00Y 同 secid')
+  assert.equal(MINUTE_SOURCES.BRT?.em, '112.B00Y', 'BRT 分时源应为 112.B00Y')
 })
 
 test('覆盖性：每个 code 至少配置一个源，且源格式合法', () => {
