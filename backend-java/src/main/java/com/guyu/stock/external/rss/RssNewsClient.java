@@ -26,6 +26,9 @@ public class RssNewsClient {
     /** 单条 RSS 新闻（publishedAt 为东八区 yyyy-MM-dd HH:mm:ss 字符串，供 news_feed 落库） */
     public record RssItem(String title, String summary, String link, String publishedAt) {}
 
+    /** 解析结果：feed 标题（<channel><title>，可能为空串）+ 条目列表（供管理后台自动填源名称） */
+    public record FeedResult(String title, List<RssItem> items) {}
+
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.of("Asia/Shanghai"));
 
@@ -43,16 +46,28 @@ public class RssNewsClient {
     }
 
     public List<RssItem> fetch(String url, boolean viaWorker, int maxItems) {
+        return fetchWithTitle(url, viaWorker, maxItems).items();
+    }
+
+    /** 试抓并带 feed 标题（管理后台 check 用，供前端自动填源名称） */
+    public FeedResult fetchWithTitle(String url, boolean viaWorker, int maxItems) {
         DataSource source = viaWorker ? workerSource : directSource;
         byte[] raw = source.getBytes(url);
-        return parse(raw, maxItems);
+        return parseWithTitle(raw, maxItems);
     }
 
     /** package-private：解析逻辑独立出来便于单测（RssNewsClientTest 不联网） */
     List<RssItem> parse(byte[] xml, int maxItems) {
+        return parseWithTitle(xml, maxItems).items();
+    }
+
+    /** 解析并返回 feed 标题 + 条目列表 */
+    FeedResult parseWithTitle(byte[] xml, int maxItems) {
         List<RssItem> items = new ArrayList<>();
+        String title = "";
         try {
             SyndFeed feed = new SyndFeedInput().build(new XmlReader(new ByteArrayInputStream(xml)));
+            title = feed.getTitle() == null ? "" : feed.getTitle().trim();
             for (SyndEntry entry : feed.getEntries()) {
                 Date d = entry.getPublishedDate() != null ? entry.getPublishedDate() : entry.getUpdatedDate();
                 // 无发布/更新时间则跳过：news_feed 按 stock_code+title+published_at 去重，
@@ -70,7 +85,8 @@ public class RssNewsClient {
         }
         // 按时间倒序取前 maxItems：防个别源按旧→新排列时截到最旧的一批
         items.sort(Comparator.comparing(RssItem::publishedAt).reversed());
-        return items.size() > maxItems ? items.subList(0, maxItems) : items;
+        List<RssItem> limited = items.size() > maxItems ? items.subList(0, maxItems) : items;
+        return new FeedResult(title, limited);
     }
 
     /** 把原始响应转成可读预览（非打印字符用 · 占位），用于定位"返回的不是 XML"的问题 */

@@ -16,6 +16,7 @@ public class AppProperties {
     private Ths ths = new Ths();
     private Fetch fetch = new Fetch();
     private Logging logging = new Logging();
+    private Mgr mgr = new Mgr();
 
     @Data
     public static class Jwt {
@@ -109,5 +110,14 @@ public class AppProperties {
         private boolean requestEnabled = true;
         /** 慢请求阈值（毫秒），&gt;0 时耗时 ≥ 该值的请求以 WARN 记录，0 表示全部按 INFO */
         private int slowRequestMs = 0;
+    }
+
+    /** 管理端接口（/api/mgr/**）鉴权配置（MgrAuthInterceptor 使用） */
+    @Data
+    public static class Mgr {
+        /** 是否启用 /api/mgr/** 拦截，默认 true；false 时放行所有 mgr 请求（调试用） */
+        private boolean authEnabled = true;
+
+        private String adminToken;
     }
 }
