@@ -76,7 +76,8 @@ export const newsApi = {
    * 单条新闻明细（按 id 拉取）。
    * 同样需要登录鉴权（携带 Authorization）。
    * 仅「从分享外部直接进入详情页」（URL 带 id）时调用；列表进入走本地缓存，不请求。
-   * 注意：后端 NewsController 目前没有 /api/v1/news/{id} 端点，该请求会失败并走详情页降级逻辑。
+   * 后端接口 GET /api/v1/news/{id}（见 docs/API.md）：id 不存在或 <=0 时返回 404，
+   * 详情页会降级展示分享 URL 携带的标题 / 原文链接，避免白屏。
    */
   async getById(id: string | number) {
     return request<NewsItem>({

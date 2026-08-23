@@ -263,13 +263,20 @@ const DANGEROUS_URL = /^(javascript|data|vbscript)\s*:/i
  * - 移除 script / style / iframe 等危险或不可见标签（含内容）；
  * - 白名单之外的标签剥掉、保留内容；
  * - 剥除 class / id / on* / data-* 等属性，仅保留 src / href / alt 等安全属性；
- * - img 注入自适应宽度与圆角，防止大图撑爆卡片；
+ * - img 注入自适应宽度与圆角，防止大图撑爆卡片；最多保留 maxImages 张（默认 3），
+ *   超出丢弃，限制 WebView 全尺寸解码图片的内存占用；
  * - 文字类标签注入随主题变化的 color（作者自带颜色保留），保证深浅色下可读。
  */
-export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
+export function sanitizeRichHtml(
+  html: string,
+  theme: RichHtmlTheme,
+  options?: { maxImages?: number },
+): string {
   if (!html || !/<[a-zA-Z]/.test(html)) return html.trim()
+  const maxImages = options?.maxImages ?? MAX_RICH_IMAGES
   // 首段不缩进（中文排版惯例）：从第二个块级段落开始注入 2em 缩进
   let firstParagraph = true
+  let imgCount = 0
   return (
     html
       .replace(REMOVE_BLOCK_RE, ' ')
@@ -297,6 +304,8 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
           if (tag === 'img') {
             const src = attrs.get('src') ?? ''
             if (!src || DANGEROUS_URL.test(src)) return ''
+            if (imgCount >= maxImages) return ''
+            imgCount += 1
             const merged = {
               display: 'block',
               'max-width': '100%',
@@ -387,4 +396,46 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
 export function buildRichHtml(summary: string, theme: 'light' | 'dark'): string {
   if (!summary || !/<[a-zA-Z]/.test(summary)) return ''
   return sanitizeRichHtml(summary, theme === 'dark' ? RICH_HTML_DARK_THEME : RICH_HTML_LIGHT_THEME)
+}
+
+// ---------------------------------------------------------------------------
+// 超大摘要内存保护
+// ---------------------------------------------------------------------------
+
+/**
+ * 详情页正文 HTML 的最大字符数。
+ * 后端摘要可能是整篇文章 HTML（几十 KB ~ 数百 KB），直接交给 <rich-text>
+ * 会解析出大量节点、解码大量全尺寸图片，低端机 WebView 易「内存溢出 / 页面崩溃」；
+ * 进入页面数据与渲染前统一截断，把内存占用压到安全范围。
+ */
+export const MAX_RICH_HTML_CHARS = 20_000
+
+/** <rich-text> 中最多保留的图片数量：超出丢弃，限制 WebView 图片解码内存 */
+export const MAX_RICH_IMAGES = 3
+
+/**
+ * 把超长 HTML（或纯文本）截断到 maxLength 字符以内：
+ * - 未超限原样返回，不做任何处理；
+ * - 超限时回退到「标签 / 实体之外」的安全边界再截断，避免把 <img src="… 或 &nbsp; 拦腰切断，
+ *   并避开 UTF-16 代理对（不切出半个 emoji），最后追加省略号。
+ */
+export function truncateRichHtml(html: string, maxLength = MAX_RICH_HTML_CHARS): string {
+  if (!html || html.length <= maxLength) return html
+  let cut = maxLength
+  // 截断点落在未闭合标签内（最后一个 < 之后到 cut 之间没有 >）→ 回退到该标签之前
+  const lastLt = html.lastIndexOf('<', cut - 1)
+  if (lastLt >= 0) {
+    const gt = html.indexOf('>', lastLt + 1)
+    if (gt === -1 || gt >= cut) cut = Math.min(cut, lastLt)
+  }
+  // 截断点落在 HTML 实体内（最后一个 & 之后到 cut 之间没有 ;）→ 回退到该实体之前
+  const lastAmp = html.lastIndexOf('&', cut - 1)
+  if (lastAmp >= 0) {
+    const semi = html.indexOf(';', lastAmp + 1)
+    if (semi === -1 || semi >= cut) cut = Math.min(cut, lastAmp)
+  }
+  // 避开 UTF-16 高位代理（避免切出半个 emoji 显示为乱码）
+  const hi = html.charCodeAt(cut - 1)
+  if (hi >= 0xd800 && hi <= 0xdbff) cut -= 1
+  return html.slice(0, cut) + '…'
 }

@@ -36,13 +36,26 @@ Page({
     memberTotal: 0,
     error: '',
     posterData: null as PosterData | null,
+    /** 分享原图（wx.showShareImageMenu）的小程序入口路径：与卡片分享一致经首页中转（utils/share.ts） */
+    shareEntrancePath: '',
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
+    const code = options.code || ''
+    const cid = Number(options.cid || 0)
+    const name = options.name || '板块详情'
     this.setData({
-      code: options.code || '',
-      cid: Number(options.cid || 0),
-      title: options.name || '板块详情',
+      code,
+      cid,
+      title: name,
+      // 分享原图的小程序入口：与 onShareAppMessage 卡片分享同一路径（经首页中转），
+      // 接收方按 code/cid/name 还原同一板块，避免默认入口落在「当前页且无参数」导致无法加载；
+      // 分享路径统一不带前导斜杠（见 utils/share.ts 的 buildSharePath）
+      shareEntrancePath: buildSharePath('sector-detail', {
+        code,
+        cid: cid ? String(cid) : undefined,
+        name,
+      }),
     })
     await this.loadData()
   },

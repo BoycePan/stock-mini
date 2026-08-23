@@ -94,5 +94,6 @@
     id="sharePoster"
     posterData="{{ posterData }}"
     minuteChart="{{ minutePoster }}"
+    entrancePath="{{ shareEntrancePath }}"
   ></share-poster>
 </view>

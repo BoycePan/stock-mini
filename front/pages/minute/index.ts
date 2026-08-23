@@ -71,6 +71,8 @@ Page({
     posterData: null as PosterData | null,
     /** 分享海报内嵌分时图数据（points + 昨收 + 时段，传给 share-poster 组件） */
     minutePoster: null as MinutePosterChartData | null,
+    /** 分享原图（wx.showShareImageMenu）的小程序入口路径：与卡片分享一致经首页中转（utils/share.ts） */
+    shareEntrancePath: '',
   },
   isLoading() {
     return this.data.requesting
@@ -87,7 +89,19 @@ Page({
     const name = decodeURIComponent(options.name || '')
     // 分时取数代码：显式 mcode 优先（外盘/会话切换口径），缺省用展示 code
     const mcode = decodeURIComponent(options.mcode || '') || code
-    this.setData({ code, name, mcode })
+    this.setData({
+      code,
+      name,
+      mcode,
+      // 分享原图的小程序入口：与 onShareAppMessage 卡片分享同一路径（经首页中转），
+      // 接收方按 code/name/mcode 还原同一标的，避免默认入口落在「当前页且无参数」导致无法加载；
+      // 分享路径统一不带前导斜杠（见 utils/share.ts 的 buildSharePath）
+      shareEntrancePath: buildSharePath('minute', {
+        code,
+        name,
+        mcode: mcode && mcode !== code ? mcode : undefined,
+      }),
+    })
     if (!hasMinuteSources(mcode)) {
       this.setData({ loading: false, error: '该指标暂无分时数据' })
       return

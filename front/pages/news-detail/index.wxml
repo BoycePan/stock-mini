@@ -99,6 +99,11 @@
     <view class="bottom-space"></view>
   </scroll-view>
 
-  <!-- 分享海报（隐藏画布 + 预览弹窗） -->
-  <share-poster id="sharePoster" posterData="{{ posterData }}"></share-poster>
+  <!-- 分享海报（隐藏画布 + 预览弹窗；转发走小程序卡片，path 携带新闻 id，接收方按 id 拉取明细） -->
+  <share-poster
+    id="sharePoster"
+    posterData="{{ posterData }}"
+    forwardAsCard="{{true}}"
+    entrancePath="{{ shareEntrancePath }}"
+  ></share-poster>
 </view>
