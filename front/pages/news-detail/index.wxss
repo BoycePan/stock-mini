@@ -119,7 +119,7 @@
   display: flex;
   align-items: center;
   gap: 18rpx;
-  margin: 30rpx 36rpx 0;
+  margin: 24rpx 36rpx 0;
 }
 
 .detail-divider-line {
@@ -142,10 +142,10 @@
    ============================================================ */
 .detail-rich {
   display: block;
-  padding: 30rpx 36rpx 44rpx;
+  padding: 24rpx 36rpx 36rpx;
   color: #3d4c63;
   font-size: 30rpx;
-  line-height: 2;
+  line-height: 1.75;
   letter-spacing: 0.3rpx;
   word-break: break-word;
 }
@@ -154,10 +154,10 @@
    纯文本摘要（无 HTML 时）：导语高亮 + 正文
    ============================================================ */
 .detail-summary {
-  padding: 30rpx 36rpx 44rpx;
+  padding: 24rpx 36rpx 36rpx;
   color: #4a5a70;
   font-size: 30rpx;
-  line-height: 2;
+  line-height: 1.75;
   letter-spacing: 0.3rpx;
   word-break: break-word;
   text-indent: 2em;

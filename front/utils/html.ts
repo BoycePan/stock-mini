@@ -202,7 +202,7 @@ const BLOCK_FONT_TAGS = new Set([
 ])
 
 const BODY_FONT_SIZE = '15px'
-const BODY_LINE_HEIGHT = '1.8'
+const BODY_LINE_HEIGHT = '1.6'
 const HEADING_FONT_SIZES: Record<string, string> = {
   h1: '22px',
   h2: '19px',
@@ -268,99 +268,116 @@ const DANGEROUS_URL = /^(javascript|data|vbscript)\s*:/i
  */
 export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
   if (!html || !/<[a-zA-Z]/.test(html)) return html.trim()
-  return html
-    .replace(REMOVE_BLOCK_RE, ' ')
-    .replace(
-      /<\/?([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)\/?>/g,
-      (match, tagName: string, attrStr: string) => {
-        const tag = tagName.toLowerCase()
-        const isClosing = match.startsWith('</')
-        if (isClosing) return ALLOWED_TAGS.has(tag) ? `</${tag}>` : ''
-        if (!ALLOWED_TAGS.has(tag)) return ''
-        if (tag === 'br') return '<br>'
-        if (tag === 'hr')
-          return `<hr style="border:none;border-top:1px solid ${theme === RICH_HTML_DARK_THEME ? '#2a394e' : '#e2eaf3'};margin:20px 0;">`
+  // 首段不缩进（中文排版惯例）：从第二个块级段落开始注入 2em 缩进
+  let firstParagraph = true
+  return (
+    html
+      .replace(REMOVE_BLOCK_RE, ' ')
+      // 移除空段落 / 仅含空格、&nbsp; 或 br 的冗余空段，避免新闻源空段撑出巨大间距
+      .replace(/<(p|div)[^>]*>\s*(?:<br\s*\/?>|&nbsp;|&#160;|\s)*<\/\1>/gi, '')
+      // 连续多个 br 合并为单个 br
+      .replace(/(?:<br\s*\/?>\s*){2,}/gi, '<br>')
+      // 移除块级标签开头/结尾处多余的 br
+      .replace(/(?:<br\s*\/?>\s*)+(<\/(?:p|div|h[1-6]|li|blockquote)>)/gi, '$1')
+      .replace(/(<(?:p|div|h[1-6]|li|blockquote)[^>]*>)\s*(?:<br\s*\/?>\s*)+/gi, '$1')
+      .replace(
+        /<\/?([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)\/?>/g,
+        (match, tagName: string, attrStr: string) => {
+          const tag = tagName.toLowerCase()
+          const isClosing = match.startsWith('</')
+          if (isClosing) return ALLOWED_TAGS.has(tag) ? `</${tag}>` : ''
+          if (!ALLOWED_TAGS.has(tag)) return ''
+          if (tag === 'br') return '<br>'
+          if (tag === 'hr')
+            return `<hr style="border:none;border-top:1px solid ${theme === RICH_HTML_DARK_THEME ? '#2a394e' : '#e2eaf3'};margin:12px 0;">`
 
-        const attrs = parseAttrs(attrStr)
-        const style = parseStyle(attrs.get('style') ?? '')
+          const attrs = parseAttrs(attrStr)
+          const style = parseStyle(attrs.get('style') ?? '')
 
-        if (tag === 'img') {
-          const src = attrs.get('src') ?? ''
-          if (!src || DANGEROUS_URL.test(src)) return ''
-          const merged = {
-            display: 'block',
-            'max-width': '100%',
-            height: 'auto',
-            'border-radius': '12px',
-            margin: '16px auto',
-            ...style,
+          if (tag === 'img') {
+            const src = attrs.get('src') ?? ''
+            if (!src || DANGEROUS_URL.test(src)) return ''
+            const merged = {
+              display: 'block',
+              'max-width': '100%',
+              height: 'auto',
+              'border-radius': '12px',
+              margin: '12px auto',
+              ...style,
+            }
+            const alt = attrs.get('alt')
+            const altAttr = alt ? ` alt="${escapeAttr(alt)}"` : ''
+            return `<img src="${escapeAttr(src)}"${altAttr} style="${buildStyle(merged)}">`
           }
-          const alt = attrs.get('alt')
-          const altAttr = alt ? ` alt="${escapeAttr(alt)}"` : ''
-          return `<img src="${escapeAttr(src)}"${altAttr} style="${buildStyle(merged)}">`
-        }
 
-        if (tag === 'a') {
-          const href = attrs.get('href') ?? ''
-          const merged = {
-            color: theme.link,
-            'text-decoration': 'none',
-            ...style,
+          if (tag === 'a') {
+            const href = attrs.get('href') ?? ''
+            const merged = {
+              color: theme.link,
+              'text-decoration': 'none',
+              ...style,
+            }
+            const safeHref = href && !DANGEROUS_URL.test(href) ? escapeAttr(href) : '#'
+            return `<a href="${safeHref}" style="${buildStyle(merged)}">`
           }
-          const safeHref = href && !DANGEROUS_URL.test(href) ? escapeAttr(href) : '#'
-          return `<a href="${safeHref}" style="${buildStyle(merged)}">`
-        }
 
-        if (TEXT_TAGS.has(tag)) {
-          // 未显式指定颜色时注入主题色；作者自带的颜色（涨红跌绿等）保留
-          if (!style.color) {
-            style.color = HEADING_TAGS.has(tag) ? theme.heading : theme.text
+          if (TEXT_TAGS.has(tag)) {
+            // 未显式指定颜色时注入主题色；作者自带的颜色（涨红跌绿等）保留
+            if (!style.color) {
+              style.color = HEADING_TAGS.has(tag) ? theme.heading : theme.text
+            }
+            // 块级标签统一字号 / 行高 / 间距，保证排版紧凑舒适且深浅色下一致
+            if (HEADING_TAGS.has(tag)) {
+              if (!style['font-size'])
+                style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
+              if (!style['font-weight']) style['font-weight'] = '700'
+              if (!style['line-height']) style['line-height'] = HEADING_LINE_HEIGHTS[tag] ?? '1.4'
+              if (!style['margin-top']) style['margin-top'] = '14px'
+              if (!style['margin-bottom']) style['margin-bottom'] = '6px'
+            } else if (BLOCK_FONT_TAGS.has(tag)) {
+              if (!style['font-size']) style['font-size'] = BODY_FONT_SIZE
+              if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
+              // 段落间距 + 首行缩进（首段不缩进）
+              if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
+                style['margin-bottom'] = '8px'
+              }
+              if (tag === 'p' && !style['text-indent']) {
+                if (firstParagraph) {
+                  firstParagraph = false
+                } else {
+                  style['text-indent'] = '2em'
+                }
+              }
+              // 引用块装饰
+              if (tag === 'blockquote') {
+                if (!style['border-left'])
+                  style['border-left'] =
+                    `3px solid ${theme === RICH_HTML_DARK_THEME ? '#3b6fd6' : '#4278ed'}`
+                if (!style['padding-left']) style['padding-left'] = '14px'
+                if (!style['margin']) style['margin'] = '10px 0'
+                if (!style['font-style']) style['font-style'] = 'italic'
+                if (!style.color)
+                  style.color = theme === RICH_HTML_DARK_THEME ? '#9cacc0' : '#718096'
+              }
+              // 代码块
+              if (tag === 'code') {
+                if (!style['background'])
+                  style['background'] = theme === RICH_HTML_DARK_THEME ? '#1a2637' : '#f2f6fa'
+                if (!style['border-radius']) style['border-radius'] = '4px'
+                if (!style['padding']) style['padding'] = '2px 6px'
+                if (!style['font-size']) style['font-size'] = '15px'
+              }
+            }
+            const styleAttr = buildStyle(style)
+            return `<${tag} style="${styleAttr}">`
           }
-          // 块级标签统一字号 / 行高 / 间距，保证排版舒展且深浅色下一致
-          if (HEADING_TAGS.has(tag)) {
-            if (!style['font-size']) style['font-size'] = HEADING_FONT_SIZES[tag] ?? BODY_FONT_SIZE
-            if (!style['font-weight']) style['font-weight'] = '700'
-            if (!style['line-height']) style['line-height'] = HEADING_LINE_HEIGHTS[tag] ?? '1.4'
-            if (!style['margin-top']) style['margin-top'] = '20px'
-            if (!style['margin-bottom']) style['margin-bottom'] = '10px'
-          } else if (BLOCK_FONT_TAGS.has(tag)) {
-            if (!style['font-size']) style['font-size'] = BODY_FONT_SIZE
-            if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
-            // 段落间距 + 首行缩进
-            if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
-              style['margin-bottom'] = '16px'
-            }
-            if (tag === 'p' && !style['text-indent']) {
-              style['text-indent'] = '2em'
-            }
-            // 引用块装饰
-            if (tag === 'blockquote') {
-              if (!style['border-left'])
-                style['border-left'] =
-                  `3px solid ${theme === RICH_HTML_DARK_THEME ? '#3b6fd6' : '#4278ed'}`
-              if (!style['padding-left']) style['padding-left'] = '14px'
-              if (!style['margin']) style['margin'] = '16px 0'
-              if (!style['font-style']) style['font-style'] = 'italic'
-              if (!style.color) style.color = theme === RICH_HTML_DARK_THEME ? '#9cacc0' : '#718096'
-            }
-            // 代码块
-            if (tag === 'code') {
-              if (!style['background'])
-                style['background'] = theme === RICH_HTML_DARK_THEME ? '#1a2637' : '#f2f6fa'
-              if (!style['border-radius']) style['border-radius'] = '4px'
-              if (!style['padding']) style['padding'] = '2px 6px'
-              if (!style['font-size']) style['font-size'] = '15px'
-            }
-          }
+
+          // 其余白名单标签（table 等）：保留作者样式，不做颜色注入
           const styleAttr = buildStyle(style)
-          return `<${tag} style="${styleAttr}">`
-        }
-
-        // 其余白名单标签（table 等）：保留作者样式，不做颜色注入
-        const styleAttr = buildStyle(style)
-        return styleAttr ? `<${tag} style="${styleAttr}">` : `<${tag}>`
-      },
-    )
+          return styleAttr ? `<${tag} style="${styleAttr}">` : `<${tag}>`
+        },
+      )
+  )
 }
 
 /**

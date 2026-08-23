@@ -73,3 +73,12 @@ test('buildRichHtml: 纯文本摘要返回空串（回退普通 text 渲染）',
   assert.equal(buildRichHtml('', 'light'), '')
   assert.ok(buildRichHtml('<p>有标签</p>', 'dark').includes('<p'))
 })
+
+test('sanitizeRichHtml: 压缩冗余空段与段落间距', () => {
+  const html =
+    '<p>第一段</p><p><br></p><p>&nbsp;</p><p>第二段<br><br><br>第二段内容</p><p><br>第三段</p>'
+  const out = sanitizeRichHtml(html, RICH_HTML_LIGHT_THEME)
+  assert.ok(out.includes('margin-bottom:8px'), '段落间距应使用紧凑的 8px')
+  assert.ok(!out.includes('<p style="margin-bottom:8px;font-size:15px;line-height:1.6"><br></p>'))
+  assert.ok(!out.includes('<br><br>'), '连续多余 br 应被合并')
+})

@@ -36,6 +36,8 @@ const HOSTS = {
 interface EastmoneyTrendsBody {
   data?: {
     preClose?: number
+    /** 昨结算（期货涨跌幅基准，SHFE/COMEX 等返回；见 utils/minute-parser.ts 解析透传） */
+    preSettlement?: number
     /** 证券名（美股如「英伟达」，供代理股合成标注中文名） */
     name?: string
     trends?: string[]

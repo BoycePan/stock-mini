@@ -132,7 +132,7 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   {
     code: 'HG',
     // name: '铜',
-    // sources: [{ kind: 'sina_hf', key: 'hf_HG', min: 50, max: 2000 }],\
+    // sources: [{ kind: 'sina_hf', key: 'hf_HG', min: 50, max: 2000 }],
     name: 'COMEX铜',
 
     sources: [{ kind: 'em_ulist', secid: '101.HG00Y', min: 3, max: 20 }],
@@ -141,7 +141,8 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
     code: 'NG',
     name: '天然气',
     // 与分时页同源（东财 102.NG00Y NYMEX 天然气，见 config/minute.ts NG）；
-    // 原误配 101.HG00Y（COMEX 铜）会把铜价当天然气展示，且与分时源不一致。
+    // 原新浪 hf_NG 与分时源（东财 102.NG00Y）口径不一致，统一走东财 em_ulist
+    // （ulist.np/get + fltt=2 十进制，与 GC/SI 同模式），保证「卡片=分时」同源。
     sources: [{ kind: 'em_ulist', secid: '102.NG00Y', min: 0.5, max: 50 }],
   },
 ]

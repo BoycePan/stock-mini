@@ -7,6 +7,15 @@ import type {
 import { unwrapAnnouncementItems, unwrapNewsItems } from '../utils/api-normalizers'
 import { request } from './client'
 
+/**
+ * needToPull 时钟偏差容差（毫秒，2 分钟）：
+ * 客户端 Date.now() 可能略快于服务端时钟，直接以其为 lastPullTime 时
+ * 服务端 UPDATE_TIME（恒 <= 服务端当前时间）将永远不大于它，needToPull 恒返回 false，
+ * 财经页「有新新闻」悬浮按钮会静默失效。发送前回拨该容差，偏差在容差内的客户端仍能正常触发；
+ * 副作用是每次新闻更新后的容差时长内会多触发少量 getFeed(1,1) 轻量请求（见 needToPull 注释）。
+ */
+const CLOCK_SKEW_TOLERANCE_MS = 2 * 60 * 1000
+
 export const newsApi = {
   /**
    * 通用新闻 feed（财经页 / 新闻页共用）。
@@ -45,12 +54,19 @@ export const newsApi = {
   /**
    * 轻量判断是否需要拉取最新通用新闻（供财经页增量刷新轮询）。
    * 服务端在新闻更新时间 UPDATE_TIME > lastPullTime 时返回 true（data 为 boolean）。
-   * @param lastPullTime 客户端上次拉取时间戳（毫秒），默认 0 = 从未拉取（服务端恒返回 true）
+   * @param lastPullTime 客户端上次拉取时间戳（毫秒），默认 0 = 从未拉取（服务端恒返回 true）。
+   *   为规避客户端/服务端时钟偏差，发送前会回拨 CLOCK_SKEW_TOLERANCE_MS 容差：
+   *   客户端时钟略快于服务端时，直接比较会让 UPDATE_TIME 永远 <= lastPullTime、
+   *   needToPull 恒 false，「有新新闻」按钮静默失效；回拨后偏差在容差内的客户端仍能触发。
+   *   代价是每次新闻更新后最多多触发容差时长内的少量多余轻量请求（getFeed(1,1)），
+   *   与旧实现「每 10s 必拉一页」相比仍可接受。根治方案需后端在响应中返回 UPDATE_TIME
+   *   作为比对基准（当前仅返回 boolean，前端无法完全消除时钟依赖）。
    */
   async needToPull(lastPullTime = 0) {
+    const baseline = Math.max(0, lastPullTime - CLOCK_SKEW_TOLERANCE_MS)
     const response = await request<boolean>({
       path: '/api/v1/news/needToPull',
-      query: { lastPullTime },
+      query: { lastPullTime: baseline },
       withAuth: true,
     })
     return Boolean(response)
