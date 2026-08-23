@@ -614,6 +614,15 @@ test('覆盖性：NG 卡片与分时页同源（东财 102.NG00Y 天然气），
   assert.equal(MINUTE_SOURCES.NG?.em, '102.NG00Y', 'NG 分时源应为 102.NG00Y')
 })
 
+test('覆盖性：BRT 卡片与分时页同源（东财 112.B00Y 布伦特原油），防新浪 hf_OIL 口径不一致', () => {
+  const brt = MACRO_ASSETS.find((asset) => asset.code === 'BRT')
+  assert.ok(brt, '缺少 BRT 宏观资产配置')
+  const source = brt.sources[0]
+  assert.equal(source?.kind, 'em_ulist', '应走东财 ulist（fltt=2 十进制，与分时同构）')
+  assert.deepEqual(source?.secid, '112.B00Y', '应与分时源 112.B00Y 同 secid')
+  assert.equal(MINUTE_SOURCES.BRT?.em, '112.B00Y', 'BRT 分时源应为 112.B00Y')
+})
+
 test('覆盖性：每个 code 至少配置一个源，且源格式合法', () => {
   for (const [code, sources] of Object.entries(MINUTE_SOURCES)) {
     const hasProxies = (sources.emProxies?.length ?? 0) > 0

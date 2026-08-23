@@ -102,7 +102,7 @@ let lastFinanceRequestAt = 0
  */
 let lastNewsPullAt = 0
 /** 最新新闻轮询间隔：每 10s 检查一次（只拉第一页，与 store 首屏同源，见 checkNewNews） */
-const NEWS_POLL_INTERVAL = 10000
+const NEWS_POLL_INTERVAL = 30000
 let newsPollTimer: ReturnType<typeof setInterval> | null = null
 let newsPolling = false
 /**

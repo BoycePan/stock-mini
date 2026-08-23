@@ -77,7 +77,10 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   {
     code: 'BRT',
     name: '布伦特原油',
-    sources: [{ kind: 'sina_hf', key: 'hf_OIL', min: 20, max: 400 }],
+    // 与分时页同源（东财 112.B00Y，见 config/minute.ts BRT），保证「卡片=分时」口径一致；
+    // 新浪 hf_OIL 实测与东财不一致（92.30 vs 93.60，涨跌幅符号都相反），弃用新浪，
+    // 改用 em_ulist（ulist.np/get + fltt=2 十进制，与 GC/SI/HG/NG 同模式）。
+    sources: [{ kind: 'em_ulist', secid: '112.B00Y', min: 20, max: 400 }],
   },
   {
     code: 'UDI',
