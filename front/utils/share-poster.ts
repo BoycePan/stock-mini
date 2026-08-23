@@ -26,8 +26,6 @@ export const APP_NAME = '市场追踪助手'
 export const LOGO_PATH = '/static/images/logo.png'
 
 /** 海报调色：固定深色（参考项目同款），涨跌色沿用全局色板 */
-const BG_TOP = '#141d2e'
-const BG_BOTTOM = '#0e1524'
 const CARD_BG = '#1b2334'
 const TEXT_MAIN = '#f4efe6'
 const TEXT_DIM = '#8b93a7'

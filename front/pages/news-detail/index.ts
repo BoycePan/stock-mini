@@ -73,7 +73,6 @@ Page({
       posterData: this.buildPosterData(cappedNews),
       shareEntrancePath: cappedNews.id ? buildSharePath('news-detail', { id: cappedNews.id }) : '',
     })
-    console.log('🏷️ index.ts ~ 76 => ', buildSharePath('news-detail', { id: cappedNews.id }))
     registerStoreBinding(
       this,
       createStoreBindings(this, {
