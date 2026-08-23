@@ -852,7 +852,87 @@ Authorization: Bearer {token}
 
 ---
 
-## 七、定时任务
+## 七、用户行为打点
+
+### 7.1 批量上报事件
+
+```
+POST /api/v1/track/events
+Content-Type: application/json
+Authorization: Bearer {token}     // 可选：登录后携带以解析 user_id；匿名上报也放行
+```
+
+前端埋点 SDK 攒批上报，一次提交多条用户行为事件。服务端按 `event_id` 幂等去重（重复上报静默跳过，不重复计数）。
+
+**请求体（Request Body）：**
+
+```json
+{
+  "events": [
+    {
+      "eventId": "1724000000000-abc123-1",
+      "eventName": "search.submit",
+      "eventType": "action",
+      "page": "pages/search/index",
+      "target": "",
+      "props": { "keyword": "茅台" },
+      "durationMs": null,
+      "sessionId": "1724000000000-abc123",
+      "clientTs": 1724000000123,
+      "platform": "ios",
+      "appVersion": "1.2.3"
+    }
+  ]
+}
+```
+
+**入参（Request Parameters）**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| events | array | 是 | 事件数组，单批 ≤ 100（超出返回 400） |
+
+`events` 元素字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| eventId | string | 是 | 客户端幂等键（sessionId + 自增序号），唯一去重 |
+| eventName | string | 是 | 点分事件名，如 `search.submit` |
+| eventType | string | 否 | 事件大类：`page_view` / `page_hide` / `tap` / `action` |
+| page | string | 否 | 触发页路由，如 `pages/search/index` |
+| target | string | 否 | 目标：跳转页 / 标的 code / Tab 名 |
+| props | object | 否 | 扩展属性（任意 JSON 对象，如 `{"keyword":"茅台"}`） |
+| durationMs | integer | 否 | 页面停留时长（毫秒） |
+| sessionId | string | 否 | 会话 id（小程序一次启动） |
+| clientTs | integer | 否 | 客户端事件时间戳（毫秒） |
+| platform | string | 否 | `devtools` / `ios` / `android` |
+| appVersion | string | 否 | 小程序版本号 |
+
+**响应示例（Response Example）：**
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "accepted": 1,
+    "duplicated": 0,
+    "invalid": 0
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| accepted | 实际新入库条数 |
+| duplicated | 有效但 event_id 已存在、被幂等跳过的条数 |
+| invalid | 因缺少 eventId / eventName 被丢弃的条数 |
+
+> 事件命名规范见 `docs/埋点打点方案.md`；`user_id` 由后端从 JWT 解析（匿名上报为 null），`ip` / `server_ts` 由后端补充。
+
+---
+
+## 八、定时任务
 
 | 时间 | 任务 | 耗时 |
 |------|------|------|
@@ -864,7 +944,7 @@ Authorization: Bearer {token}
 
 ---
 
-## 八、数据库表
+## 九、数据库表
 
 | 表 | 说明 | 数据量 |
 |----|------|--------|
@@ -874,4 +954,5 @@ Authorization: Bearer {token}
 | concept_board | A 股概念板块 | 100 |
 | concept_stock | A 股板块成分股 | 7,641 |
 | news_feed | 新闻 / 公告 | 按需积累 |
+| click_event | 用户点击/行为打点（前端埋点批量上报） | 按需积累 |
 | users | 微信用户 | — |
