@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { getRegionStatus, isMarketHoliday, isMarketTradingDay } from '../utils/market-clock.ts'
+import {
+  getRegionStatus,
+  isMarketHoliday,
+  isMarketTradingDay,
+  resolveIndustryPhase,
+  resolveIndustryUseA,
+  type MarketSession,
+} from '../utils/market-clock.ts'
 
 /** 以 UTC 时刻构造 Date（各市场本地时间由被测函数换算） */
 const at = (iso: string): Date => new Date(iso)
@@ -187,4 +194,91 @@ test('韩股：节假日休市（2026 特别项与 2027 自动补休）', () => 
   assert.equal(getRegionStatus('kr', at('2027-09-15T01:00:00Z')).label, '休市') // 秋夕（周三）
   assert.equal(getRegionStatus('kr', at('2027-12-27T01:00:00Z')).label, '休市') // 圣诞节（12/25 周六补休）
   assert.equal(getRegionStatus('kr', at('2027-12-31T01:00:00Z')).label, '休市') // 年末休市
+})
+
+// ---------------------------------------------------------------------------
+// 行业板块数据源 / 盘面阶段（全球页「行业板块」分区，docs/美股盘前板块展示分析与改造方案.md 改动 1/2）
+// ---------------------------------------------------------------------------
+
+const session = (patch: Partial<MarketSession>): MarketSession => ({
+  phase: '',
+  label: '',
+  useA: false,
+  useUs: false,
+  usMode: 'off',
+  statusTone: 'rest',
+  ...patch,
+})
+
+test('resolveIndustryUseA：A股时段 + 待盘前窗口取 A 股板块，其余取美股代理股', () => {
+  // 2026-08-20（周四，夏令时）：A股 09:30–15:00（北京 01:30–07:00 UTC）+ 待盘前窗口 15:00–16:00（07:00–08:00 UTC）
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T02:00:00Z')), true) // 北京 10:00 A股盘中
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T06:30:00Z')), true) // 北京 14:30 A股盘中
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T07:30:00Z')), true) // 北京 15:30 待盘前窗口
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T08:00:00Z')), false) // 北京 16:00 美股盘前开始
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T09:00:00Z')), false) // 北京 17:00 美股盘前
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T14:30:00Z')), false) // 北京 22:30 美股盘中
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T01:20:00Z')), false) // 北京 09:20 A股集合竞价 → 美股代理股
+  assert.equal(resolveIndustryUseA(null, at('2026-08-22T02:00:00Z')), false) // 周六休市
+
+  // 2026-11-02（周一，冬令时）：待盘前窗口 15:00–17:00（北京 07:00–09:00 UTC）
+  assert.equal(resolveIndustryUseA(null, at('2026-11-02T08:00:00Z')), true) // 北京 16:00 待盘前窗口
+  assert.equal(resolveIndustryUseA(null, at('2026-11-02T09:00:00Z')), false) // 北京 17:00 美股盘前开始
+
+  // 显式会话优先：useA=true/useUs=false → true（周末也按 A 股口径）；useA=false/useUs=true → false
+  assert.equal(
+    resolveIndustryUseA(session({ useA: true, useUs: false }), at('2026-08-22T02:00:00Z')),
+    true,
+  )
+  assert.equal(
+    resolveIndustryUseA(session({ useA: false, useUs: true }), at('2026-08-20T02:00:00Z')),
+    false,
+  )
+  // 会话未给出明确口径（useA/useUs 同真或同假）→ 回退纯时钟
+  assert.equal(
+    resolveIndustryUseA(session({ useA: true, useUs: true }), at('2026-08-20T02:00:00Z')),
+    true,
+  )
+})
+
+test('resolveIndustryPhase：阶段映射（大A盘中/午间休市/待盘前/美股盘前/盘中/盘后/休市）', () => {
+  // A股时段
+  assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T02:00:00Z')), {
+    label: '大A盘中',
+    tone: 'active',
+  }) // 北京 10:00
+  assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T04:00:00Z')), {
+    label: '午间休市',
+    tone: 'quiet',
+  }) // 北京 12:00
+  assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T07:30:00Z')), {
+    label: '待盘前',
+    tone: 'rest',
+  }) // 北京 15:30 待盘前窗口
+  // 美股时段（usMode 来自会话）
+  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'pre' }), at('2026-08-20T09:00:00Z')), {
+    label: '美股盘前',
+    tone: 'quiet',
+  })
+  assert.deepEqual(
+    resolveIndustryPhase(session({ usMode: 'regular' }), at('2026-08-20T14:30:00Z')),
+    { label: '美股盘中', tone: 'active' },
+  )
+  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'post' }), at('2026-08-20T21:00:00Z')), {
+    label: '美股盘后',
+    tone: 'quiet',
+  })
+  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'off' }), at('2026-08-22T02:00:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  }) // 周六休市
+  // 无会话：纯时钟回退（周末 → 休市；夏令时 16:00 盘前 → 美股盘前）
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-08-22T02:00:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  })
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-08-20T08:00:00Z')), {
+    label: '美股盘前',
+    tone: 'quiet',
+  })
 })

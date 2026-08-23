@@ -147,6 +147,67 @@ export function getNonferrousMarketSession(now: Date = new Date()): NonferrousSe
 }
 
 // ---------------------------------------------------------------------------
+// 行业板块数据源 / 盘面阶段（全球页「行业板块」分区）
+// ---------------------------------------------------------------------------
+
+export interface IndustryPhase {
+  /** 展示文案：大A盘中 / 午间休市 / 待盘前 / 美股盘前 / 美股盘中 / 美股盘后 / 休市 */
+  label: string
+  /** 展示色调：active=盘中 / quiet=盘前盘后午休等 / rest=休市 */
+  tone: 'active' | 'quiet' | 'rest'
+}
+
+/**
+ * 行业板块是否取 A 股数据源（对齐参考项目 resolveIndustryUseA 语义，docs/美股盘前板块展示分析与改造方案.md 改动 1）：
+ * - 显式会话（useA/useUs 二选一为真且一致）时直接采用；
+ * - 否则回退纯时钟窗口：工作日 09:30–15:00（含午休）+ 待盘前窗口
+ *   （15:00–美股盘前开始，夏令时 16:00 / 冬令时 17:00）→ A 股板块；
+ *   其余（美股盘前/盘中/盘后、周末、夜间空档）→ 美股代理股涨跌幅均值。
+ */
+export function resolveIndustryUseA(
+  session: Pick<MarketSession, 'useA' | 'useUs'> | null,
+  now: Date = new Date(),
+): boolean {
+  if (session && session.useA && !session.useUs) return true
+  if (session && !session.useA && session.useUs) return false
+  const parts = beijingParts(now)
+  const workday = parts.weekday >= 1 && parts.weekday <= 5
+  const minutes = parts.hour * 60 + parts.minute
+  if (workday && minutes >= 570 && minutes < 900) return true // 09:30–15:00 A 股时段（含午休）
+  const preStart = isUsDst(now) ? 960 : 1020
+  if (workday && minutes >= 900 && minutes < preStart) return true // 待盘前窗口（对齐 ashare_post）
+  return false
+}
+
+/** 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段） */
+export function resolveIndustryPhase(
+  session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
+  now: Date = new Date(),
+): IndustryPhase {
+  if (resolveIndustryUseA(session, now)) {
+    const aPhase = getAStockPhase(now)
+    if (aPhase === 'morning' || aPhase === 'afternoon') {
+      return { label: '大A盘中', tone: 'active' }
+    }
+    if (aPhase === 'lunch') {
+      return { label: '午间休市', tone: 'quiet' }
+    }
+    return { label: '待盘前', tone: 'rest' }
+  }
+  const usMode = session?.usMode ?? getUsPhase(now)
+  switch (usMode) {
+    case 'pre':
+      return { label: '美股盘前', tone: 'quiet' }
+    case 'regular':
+      return { label: '美股盘中', tone: 'active' }
+    case 'post':
+      return { label: '美股盘后', tone: 'quiet' }
+    default:
+      return { label: '休市', tone: 'rest' }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 四地市场盘面状态（A股 / 美股 / 日股 / 韩股），供板块标题右侧状态胶囊使用。
 // 节假日日历见 config/holidays.ts（每年更新），判定以各市场本地日期+时间为准。
 // ---------------------------------------------------------------------------

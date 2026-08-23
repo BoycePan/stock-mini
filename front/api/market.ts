@@ -42,6 +42,7 @@ import {
   fetchUsProxyChangeMap,
 } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
+import { resolveIndustryPhase, resolveIndustryUseA } from '../utils/market-clock'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
 import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
 import {
@@ -154,9 +155,11 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     })
   }
 
-  // ④ 行业板块：A股时段取东财板块涨跌幅；非 A 股时段取美股代理股涨跌幅均值
+  // ④ 行业板块：A股时段（含待盘前窗口 15:00–美股盘前开始前）取东财板块涨跌幅；
+  //    美股盘前/盘中/盘后及周末取美股代理股涨跌幅均值（resolveIndustryUseA，见 market-clock.ts）
+  const industryUseA = resolveIndustryUseA(session)
   const boardPct: Record<string, number> = {}
-  if (session.useA) {
+  if (industryUseA) {
     const boardMap = await fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code))
     for (const board of INDUSTRY_BOARDS) {
       const pct = boardMap[board.code] ?? boardMap[`90.${board.code}`]
@@ -180,7 +183,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
       price: null,
       pct: boardPct[board.code] ?? null,
     }
-    if (!session.useA) {
+    if (!industryUseA) {
       // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
       // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
       item.minuteCode = `us-${board.code}`
@@ -198,10 +201,9 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     sectors,
     statusLabel: '全球市场',
     statusTone: session.statusTone,
-    sectorBadge: session.useA ? 'A股时段' : '美股时段',
-    sectorTitle: session.useA ? '中国行业板块' : '美股行业板块',
-    // 行业板块盘面状态与数据源一致：A股时段（东财板块）→ 中国市场状态；美股时段（美股代理）→ 美股市场状态
-    sectorRegion: session.useA ? 'cn' : 'us',
+    sectorTitle: industryUseA ? '中国行业板块' : '美股行业板块',
+    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/待盘前；美股代理 → 美股盘前/盘中/盘后/休市
+    sectorPhase: resolveIndustryPhase(session),
   })
 }
 
