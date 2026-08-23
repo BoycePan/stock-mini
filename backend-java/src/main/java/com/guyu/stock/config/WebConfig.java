@@ -20,8 +20,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/api/v1/user/**");
 
         registry.addInterceptor(mgrAuthInterceptor)
                 .addPathPatterns("/api/mgr/**")
@@ -32,9 +30,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/v1/track/**");
 
 
-//        registry.addInterceptor(authInterceptor)
-//                .addPathPatterns("/api/v1/user/**")
-//                .addPathPatterns("/api/v1/**")
-//                .excludePathPatterns("/api/v1/auth/**");
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/api/v1/user/**")
+                .addPathPatterns("/api/v1/**")
+                .excludePathPatterns("/api/v1/auth/**");
     }
 }
