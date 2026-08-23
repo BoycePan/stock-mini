@@ -25,6 +25,8 @@ const HOSTS = {
 // ---------------------------------------------------------------------------
 // 东方财富分时：GET /api/qt/stock/trends2/get（ndays=1 当日分钟线）
 // 出参 data.preClose（昨收）+ data.trends = ["2026-08-19 09:30,现价,成交量,均价", ...]
+// 期货（SHFE/COMEX 等）另有 data.preSettlement（昨结算，涨跌幅基准），解析为
+// MinuteResult.preSettlement 透传（见 utils/minute.ts mergeMinuteQuoteInfo）。
 // 行字段（fields2=f51,f53,f56,f58）：[0]时间 [1]现价（f53） [2]成交量（f56） [3]均价（f58）
 // 注：只请求 f51,f53,f56,f58 四个字段——全字段版（f51..f58）行结构为
 // [时间,开盘,现价,最高,最低,成交量,成交额,均价]，现价在 f[2] 而非 f[1]；

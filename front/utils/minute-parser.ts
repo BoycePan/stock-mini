@@ -16,6 +16,8 @@ export const MIN_MINUTE_POINTS = 2
 
 interface EastmoneyTrendsData {
   preClose?: number
+  /** 昨结算（期货口径涨跌幅基准；非期货为 0 或缺失） */
+  preSettlement?: number
   name?: string
   trends?: string[]
 }
@@ -63,8 +65,16 @@ export function parseEastmoneyTrends(
   }
   if (points.length < MIN_MINUTE_POINTS) return null
   const preClose = data?.preClose
+  // 昨结算透传（期货涨跌幅按昨结算计算，与昨收不同；非期货为 0/缺失 → null）
+  const preSettlement =
+    data?.preSettlement !== undefined &&
+    Number.isFinite(data.preSettlement) &&
+    (data.preSettlement as number) > 0
+      ? (data.preSettlement as number)
+      : null
   return {
     preClose: Number.isFinite(preClose) ? (preClose as number) : null,
+    preSettlement,
     points,
     ...(data?.name ? { name: data.name } : {}),
   }

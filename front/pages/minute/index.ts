@@ -34,6 +34,8 @@ interface MinuteQuoteView {
   /** 是否有成交量数据（无则隐藏「成交量」格子，不占位） */
   hasVolume: boolean
   preClose: string
+  /** 基准价名称（昨收 / 昨结算，期货按昨结算口径） */
+  preCloseLabel: '昨收' | '昨结算'
 }
 
 /** 分时数据自动刷新间隔：8s（与 utils/auto-refresh.ts 的 startAutoRefresh intervalMs 参数配合） */
@@ -132,7 +134,7 @@ Page({
         // 东财韩/日市场分钟量稀疏（部分分钟量=0），附加数据口径提示（见 utils/minute.ts sparseVolumeNote）
         const dataNote = sparseVolumeNote(result.points, result.source, session)
         // 基础信息：东财 ulist 报价优先，缺字段回退分时推算（见 utils/minute.ts mergeMinuteQuoteInfo）
-        const info = mergeMinuteQuoteInfo(result.points, result.preClose, quote)
+        const info = mergeMinuteQuoteInfo(result.points, result, quote)
         this.setData({
           loading: false,
           points: result.points,
@@ -199,6 +201,7 @@ Page({
       volumeText: info.hasVolume ? `${formatVolume(info.volume)}手` : formatVolume(info.volume),
       hasVolume: info.hasVolume,
       preClose: pre !== null ? pre.toFixed(2) : '--',
+      preCloseLabel: info.preCloseLabel,
     }
   },
   /** 组装分享海报数据（头部 + 行情指标分区；分时图由 share-poster 组件按 minutePoster 绘制） */
@@ -239,7 +242,7 @@ Page({
               tone: 'flat',
             },
             {
-              name: '昨收',
+              name: info.preCloseLabel,
               value: pre !== null ? pre.toFixed(2) : '--',
               changeText: '',
               tone: 'flat',

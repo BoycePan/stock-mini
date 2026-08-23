@@ -32,6 +32,8 @@ const CARD_BG = '#1b2334'
 const TEXT_MAIN = '#f4efe6'
 const TEXT_DIM = '#8b93a7'
 const GOLD = '#c9a86c'
+/** 新闻导语高亮（对齐详情页 .detail-summary-lead 的深色强调蓝） */
+const LEAD_COLOR = '#6fa3ff'
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
 const FLAT_COLOR = '#8b93a7'
@@ -72,6 +74,11 @@ export interface PosterSection {
    * 高度按实际换行行数计算（测量需传入 ctx，无 ctx 时按 CJK 宽度估算兜底）。
    */
   text?: string
+  /**
+   * 段落导语（新闻摘要开头的【…】等）：仅 text 分区生效，首行前缀用强调色加粗绘制，
+   * 对齐详情页 .detail-summary-lead 的导语高亮。
+   */
+  lead?: string
 }
 
 export interface PosterData {
@@ -186,6 +193,9 @@ const HERO_FONT_SIZE = 38 // 标题字号（加粗）
 const HERO_LINE_HEIGHT = 56 // 行高
 const HERO_MAX_LINES = 6 // 最多行数，超出截断
 const HERO_BOTTOM_GAP = 24 // 与下方分区的间距
+// 正文大标题左侧蓝色强调条（对齐详情页 .detail-title-bar）
+const HERO_BAR_W = 6
+const HERO_BAR_GAP = 18
 
 /** 按字符贪心换行（CJK / 拉丁混排均可），返回宽度不超过 maxWidth 的行 */
 function wrapTextLines(ctx: CanvasCtx, text: string, maxWidth: number): string[] {
@@ -226,7 +236,8 @@ function textSectionPanelHeight(ctx: CanvasCtx | undefined, section: PosterSecti
 /** 正文大标题（heroText）高度：含与下方分区的间距 */
 function heroTextHeight(ctx: CanvasCtx | undefined, text: string): number {
   let lineCount: number
-  const maxWidth = POSTER_WIDTH - M * 2
+  // 预留左侧强调条宽度，保证测量行数与绘制一致
+  const maxWidth = POSTER_WIDTH - M * 2 - HERO_BAR_W - HERO_BAR_GAP
   if (ctx) {
     ctx.font = `bold ${HERO_FONT_SIZE}px sans-serif`
     lineCount = wrapTextLines(ctx, text, maxWidth).length
@@ -611,19 +622,58 @@ export function drawPoster(
 
   // 正文大标题（新闻标题等）：整行宽、多行换行、超长才截断，绘制在头部与分区之间
   if (data.heroText) {
-    const heroMaxW = width - M * 2
+    const heroMaxW = width - M * 2 - HERO_BAR_W - HERO_BAR_GAP
+    const heroX = M + HERO_BAR_W + HERO_BAR_GAP
     ctx.font = `bold ${HERO_FONT_SIZE}px sans-serif`
     ctx.textAlign = 'left'
     ctx.fillStyle = TEXT_MAIN
     const heroLines = wrapTextLines(ctx, data.heroText, heroMaxW)
     const heroTruncated = heroLines.length > HERO_MAX_LINES
     const heroShown = heroLines.slice(0, HERO_MAX_LINES)
+    // 左侧蓝色渐变强调条（对齐详情页 .detail-title-bar）
+    const barTop = y + 6
+    const barBottom = y + heroShown.length * HERO_LINE_HEIGHT - 6
+    const barGrad = ctx.createLinearGradient(0, barTop, 0, barBottom)
+    barGrad.addColorStop(0, '#6fa3ff')
+    barGrad.addColorStop(1, '#4278ed')
+    roundRect(ctx, M, barTop, HERO_BAR_W, Math.max(0, barBottom - barTop), 3)
+    ctx.fillStyle = barGrad
+    ctx.fill()
     heroShown.forEach((line, i) => {
       const isLast = i === heroShown.length - 1
       const label = isLast && heroTruncated ? truncText(ctx, line + '…', heroMaxW) : line
-      ctx.fillText(label, M, y + HERO_FONT_SIZE)
+      ctx.fillText(label, heroX, y + HERO_FONT_SIZE)
       y += HERO_LINE_HEIGHT
     })
+    // 装饰分割线：渐变线 + 蓝色菱形（对齐详情页 .detail-divider）
+    const lineY = y + HERO_BOTTOM_GAP / 2
+    const midX = width / 2
+    const lineLen = (width - M * 2) / 2 - 26
+    const gradL = ctx.createLinearGradient(M, lineY, M + lineLen, lineY)
+    gradL.addColorStop(0, 'rgba(111,163,255,0)')
+    gradL.addColorStop(1, 'rgba(111,163,255,0.45)')
+    ctx.strokeStyle = gradL
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(M, lineY)
+    ctx.lineTo(M + lineLen, lineY)
+    ctx.stroke()
+    const gradR = ctx.createLinearGradient(width - M, lineY, width - M - lineLen, lineY)
+    gradR.addColorStop(0, 'rgba(111,163,255,0)')
+    gradR.addColorStop(1, 'rgba(111,163,255,0.45)')
+    ctx.strokeStyle = gradR
+    ctx.beginPath()
+    ctx.moveTo(width - M, lineY)
+    ctx.lineTo(width - M - lineLen, lineY)
+    ctx.stroke()
+    const dia = 12
+    ctx.save()
+    ctx.translate(midX, lineY)
+    ctx.rotate(Math.PI / 4)
+    ctx.fillStyle = LEAD_COLOR
+    roundRect(ctx, -dia / 2, -dia / 2, dia, dia, 3)
+    ctx.fill()
+    ctx.restore()
     y += HERO_BOTTOM_GAP
   }
 
@@ -675,13 +725,32 @@ export function drawPoster(
       ctx.strokeStyle = 'rgba(255,255,255,0.06)'
       ctx.lineWidth = 1
       ctx.stroke()
-      ctx.fillStyle = TEXT_MAIN
-      ctx.font = `${TEXT_FONT_SIZE}px sans-serif`
       ctx.textAlign = 'left'
+      const textX = panelX + TEXT_PAD
+      // 导语（【…】）从首行起用强调色加粗绘制，剩余部分回主色（对齐详情页 .detail-summary-lead）
+      let leadRemain = (section.lead || '').length
       shown.forEach((line, i) => {
         const isLast = i === shown.length - 1
         const label = isLast && truncated ? truncText(ctx, line + '…', textMaxW) : line
-        ctx.fillText(label, panelX + TEXT_PAD, y + TEXT_PAD + TEXT_LINE_HEIGHT * i + TEXT_FONT_SIZE)
+        const baseY = y + TEXT_PAD + TEXT_LINE_HEIGHT * i + TEXT_FONT_SIZE
+        if (leadRemain > 0) {
+          const leadPart = label.slice(0, Math.min(leadRemain, label.length))
+          leadRemain = Math.max(0, leadRemain - leadPart.length)
+          ctx.font = `bold ${TEXT_FONT_SIZE}px sans-serif`
+          ctx.fillStyle = LEAD_COLOR
+          ctx.fillText(leadPart, textX, baseY)
+          const restPart = label.slice(leadPart.length)
+          if (restPart) {
+            const leadW = ctx.measureText(leadPart).width
+            ctx.font = `${TEXT_FONT_SIZE}px sans-serif`
+            ctx.fillStyle = TEXT_MAIN
+            ctx.fillText(restPart, textX + leadW, baseY)
+          }
+        } else {
+          ctx.font = `${TEXT_FONT_SIZE}px sans-serif`
+          ctx.fillStyle = TEXT_MAIN
+          ctx.fillText(label, textX, baseY)
+        }
       })
       y += panelH + SECTION_GAP
       continue

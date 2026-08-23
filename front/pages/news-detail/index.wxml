@@ -15,22 +15,38 @@
         <!-- 来源徽标 + 时间 -->
         <view class="detail-meta" wx:if="{{news.source || news.time}}">
           <view wx:if="{{news.source}}" class="detail-source-badge">
+            <view class="detail-source-dot"></view>
             <text class="detail-source-text">{{news.source}}</text>
           </view>
           <text wx:if="{{news.time}}" class="detail-time">{{news.time}}</text>
         </view>
 
-        <!-- 标题 -->
-        <text class="detail-title">{{news.title}}</text>
+        <!-- 标题（左侧强调条） -->
+        <view class="detail-title-row">
+          <view class="detail-title-bar"></view>
+          <text class="detail-title">{{news.title}}</text>
+        </view>
 
-        <!-- 分割线 -->
-        <view class="detail-divider"></view>
+        <!-- 装饰分割线 -->
+        <view class="detail-divider">
+          <view class="detail-divider-line"></view>
+          <view class="detail-divider-diamond"></view>
+          <view class="detail-divider-line"></view>
+        </view>
 
         <!-- 正文富文本 / 纯文本 -->
         <rich-text wx:if="{{richHtml}}" class="detail-rich" nodes="{{richHtml}}"></rich-text>
-        <text wx:elif="{{news.summary}}" class="detail-summary">{{news.summary}}</text>
+        <view wx:elif="{{news.summary}}" class="detail-summary">
+          <block wx:if="{{summaryLead}}">
+            <text class="detail-summary-lead">{{summaryLead}}</text>
+            <text class="detail-summary-rest">{{summaryRest}}</text>
+          </block>
+          <text wx:else>{{news.summary}}</text>
+        </view>
         <view wx:else class="detail-empty">
-          <text class="detail-empty-icon">📄</text>
+          <view class="detail-empty-icon-wrap">
+            <text class="detail-empty-icon">📄</text>
+          </view>
           <text class="detail-empty-text">原文摘要暂未获取，可复制下方链接到浏览器查看全文。</text>
         </view>
       </view>
@@ -50,7 +66,7 @@
           <text class="link-url-text">{{news.url}}</text>
           <text class="link-copy-icon">⧉</text>
         </view>
-        <button class="detail-link {{copied ? 'detail-link-copied' : ''}}" bindtap="onCopyLink">
+        <button class="detail-link {{copied ? 'detail-link-copied' : ''}}" hover-class="detail-link-hover" hover-stay-time="120" bindtap="onCopyLink">
           <text class="detail-link-text">{{copied ? '✓ 已复制，去浏览器打开' : '复制原文链接'}}</text>
         </button>
       </view>

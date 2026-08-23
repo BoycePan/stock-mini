@@ -27,6 +27,9 @@ Page({
     richHtml: '',
     error: '',
     copied: false,
+    /** 纯文本摘要的导语分段：把「【标题】正文」拆成高亮导语 + 正文（仅纯文本路径） */
+    summaryLead: '',
+    summaryRest: '',
     /** 分享海报数据（标题 + 摘要段落，无 K 线纯文本海报） */
     posterData: null as PosterData | null,
   },
@@ -54,10 +57,15 @@ Page({
    * （富文本颜色随主题注入：closure 捕获当前摘要原文，主题切换时自动重算）。
    */
   applyNews(news: NewsDetail) {
+    // 纯文本摘要的导语分段：开头的【…】拆成高亮导语，其余为正文（HTML 摘要走 rich-text 路径，不受影响）
+    const rawSummary = news.summary ?? ''
+    const leadMatch = /^【[^】]+】/.exec(rawSummary)
     this.setData({
       loading: false,
       news,
       error: news.title || news.summary ? '' : '新闻详情缺失',
+      summaryLead: leadMatch ? leadMatch[0] : '',
+      summaryRest: leadMatch ? rawSummary.slice(leadMatch[0].length) : '',
       posterData: this.buildPosterData(news),
     })
     const summary = news.summary
@@ -106,16 +114,20 @@ Page({
   /**
    * 组装分享海报数据：
    * - 头部主标题用来源名（页面 detail-source-badge 的文案，短文案不会省略号）；
-   * - 新闻标题放正文上方（heroText）整行多行展示，不省略号；
-   * - 正文为摘要段落（不放原文链接）；不传 klines，纯文本海报。
+   * - 新闻标题放正文上方（heroText）整行多行展示，不省略号，带左侧蓝色强调条；
+   * - 正文为摘要段落（不放原文链接），开头的【…】拆成导语 lead，海报内强调蓝加粗；
+   * - 不传 klines，纯文本海报。
    */
   buildPosterData(news: NewsDetail): PosterData {
     const summary = stripHtml(news.summary || '').trim()
+    // 与详情页 .detail-summary-lead 一致：开头的【…】作为高亮导语
+    const leadMatch = /^【[^】]+】/.exec(summary)
     const sections: PosterData['sections'] = [
       {
         title: '新闻摘要',
         // 无摘要时给占位文案，保证海报始终有正文分区
         text: summary || '原文摘要暂未获取，可打开「市场追踪助手」小程序查看完整内容。',
+        ...(leadMatch ? { lead: leadMatch[0] } : {}),
       },
     ]
     return {

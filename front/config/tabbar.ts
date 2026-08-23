@@ -377,7 +377,7 @@ export const METAL_SECTIONS: MetalSectionConfig[] = [
     id: 'precious',
     title: '金银',
     codes: ['GOLD', 'SILVER'],
-    tip: '黄金同时展示内盘（沪金主连，元/克）与外盘（COMEX黄金，美元/盎司）两路报价；白银等其他金属随交易时段自动切换内/外盘口径',
+    tip: '黄金、白银同时展示内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘（COMEX 美元/盎司）；其余金属随交易时段自动切换内外盘口径',
   },
   { id: 'industrial', title: '工业金属', codes: ['COPPER', 'ALUMINUM', 'ZINC', 'NICKEL', 'TIN'] },
   {

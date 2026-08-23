@@ -59,6 +59,12 @@ export interface MinutePoint {
 export interface MinuteResult {
   /** 昨收（分时基准线），源未提供时为空 */
   preClose: number | null
+  /**
+   * 昨结算（期货口径的涨跌幅基准，如 SHFE 沪主连 / COMEX）：
+   * 期货的「昨收」是昨日最后成交价（如 沪银 16771），而涨跌幅按「昨结算」（16611）计算，
+   * 两者不同；非期货（股票 / 指数 / 汇率）无此字段或为 0。
+   */
+  preSettlement?: number | null
   points: MinutePoint[]
   /** 源返回的证券名（如东财美股「英伟达」），供代理股合成页标注中文名 */
   name?: string

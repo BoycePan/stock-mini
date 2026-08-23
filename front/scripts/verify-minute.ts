@@ -158,7 +158,9 @@ async function verifyOne(code: string): Promise<{ code: string; ok: boolean; det
         return {
           code,
           ok: true,
-          detail: `${label} ${result.points.length}点 昨收=${result.preClose ?? '?'}`,
+          detail: `${label} ${result.points.length}点 昨收=${result.preClose ?? '?'}${
+            result.preSettlement ? ` 昨结算=${result.preSettlement}` : ''
+          }`,
         }
       }
     } catch {

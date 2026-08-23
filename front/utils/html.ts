@@ -202,7 +202,7 @@ const BLOCK_FONT_TAGS = new Set([
 ])
 
 const BODY_FONT_SIZE = '15px'
-const BODY_LINE_HEIGHT = '1.9'
+const BODY_LINE_HEIGHT = '1.8'
 const HEADING_FONT_SIZES: Record<string, string> = {
   h1: '22px',
   h2: '19px',
@@ -328,7 +328,7 @@ export function sanitizeRichHtml(html: string, theme: RichHtmlTheme): string {
             if (!style['line-height']) style['line-height'] = BODY_LINE_HEIGHT
             // 段落间距 + 首行缩进
             if ((tag === 'p' || tag === 'div') && !style['margin-bottom']) {
-              style['margin-bottom'] = '14px'
+              style['margin-bottom'] = '16px'
             }
             if (tag === 'p' && !style['text-indent']) {
               style['text-indent'] = '2em'

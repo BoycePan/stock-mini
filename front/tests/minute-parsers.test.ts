@@ -121,6 +121,34 @@ test('东财：外汇均价 0（无成交量）→ null；0 价 / 空价格行�
   assert.equal(result!.points[1]!.avg, null)
 })
 
+test('东财：昨结算透传（期货口径），非期货为 0/缺失 → null', () => {
+  // 沪银主连 113.agm 实测：preSettlement=16611（昨结算）、preClose=16771（昨收）
+  const futures = {
+    preClose: 16771,
+    preSettlement: 16611,
+    trends: ['2026-08-21 21:00,16896,0,0.0', '2026-08-21 21:01,16968,200,16910.0'],
+  }
+  const result = parseEastmoneyTrends(futures)
+  assert.ok(result)
+  assert.equal(result!.preClose, 16771, '昨收原样透传（展示用）')
+  assert.equal(result!.preSettlement, 16611, '昨结算透传（涨跌幅基准）')
+  // A股指数实测 preSettlement=0 → null（等同非期货）
+  const index = parseEastmoneyTrends({
+    preClose: 3903.72,
+    preSettlement: 0,
+    trends: ['2026-08-22 09:30,3900.1,100,3899.9', '2026-08-22 09:31,3901.2,200,3900.5'],
+  })
+  assert.ok(index)
+  assert.equal(index!.preSettlement, null, 'preSettlement=0 视为缺失')
+  // 缺失 preSettlement 字段 → null
+  const stock = parseEastmoneyTrends({
+    preClose: 98,
+    trends: ['2026-08-22 09:30,97.5,100,97.4', '2026-08-22 09:31,97.8,200,97.6'],
+  })
+  assert.ok(stock)
+  assert.equal(stock!.preSettlement, null)
+})
+
 test('东财：keepFullTime 保留完整时间戳，name 透传证券中文名', () => {
   const data = {
     preClose: 219.74,
@@ -409,11 +437,12 @@ test('基础信息合并：无报价时全部回退分时推算', () => {
     { time: '09:30', price: 100, avg: 99, volume: 100 },
     { time: '09:31', price: 102, avg: 101, volume: 200 },
   ]
-  assert.deepEqual(mergeMinuteQuoteInfo(points, 98, null), {
+  assert.deepEqual(mergeMinuteQuoteInfo(points, { preClose: 98 }, null), {
     open: 100,
     high: 102,
     low: 100,
     preClose: 98,
+    preCloseLabel: '昨收',
     volume: 300,
     hasVolume: true,
   })
@@ -424,11 +453,12 @@ test('基础信息合并：报价字段优先（今开/最高/最低/昨收/成�
     { time: '09:30', price: 100, avg: 99, volume: 100 },
     { time: '09:31', price: 102, avg: 101, volume: 200 },
   ]
-  assert.deepEqual(mergeMinuteQuoteInfo(points, 98, quoteFixture()), {
+  assert.deepEqual(mergeMinuteQuoteInfo(points, { preClose: 98 }, quoteFixture()), {
     open: 99.5,
     high: 103,
     low: 99,
     preClose: 98.2,
+    preCloseLabel: '昨收',
     volume: 500,
     hasVolume: true,
   })
@@ -440,19 +470,43 @@ test('基础信息合并：报价字段为 0/空 时回退分时推算（外汇�
     { time: '05:01', price: 1394.2, avg: null, volume: 0 },
   ]
   // 外汇：报价 f5=0、分钟量也全为 0 → 成交量 0、hasVolume false（隐藏格子）
-  const fx = mergeMinuteQuoteInfo(points, 1393.5, quoteFixture({ volume: 0 }))
+  const fx = mergeMinuteQuoteInfo(points, { preClose: 1393.5 }, quoteFixture({ volume: 0 }))
   assert.equal(fx.volume, 0)
   assert.equal(fx.hasVolume, false)
   // 报价今开/最高/最低/昨收为 0 → 回退分时推算
   const zeroed = mergeMinuteQuoteInfo(
     points,
-    1393.5,
+    { preClose: 1393.5 },
     quoteFixture({ open: 0, high: 0, low: 0, previousClose: 0 }),
   )
   assert.equal(zeroed.open, 1394.1)
   assert.equal(zeroed.high, 1394.2)
   assert.equal(zeroed.low, 1394.1)
   assert.equal(zeroed.preClose, 1393.5)
+  assert.equal(zeroed.preCloseLabel, '昨收')
+})
+
+test('基础信息合并：期货昨结算优先于报价昨收（f18），涨跌幅口径一致', () => {
+  const points = [
+    { time: '21:00', price: 16900, avg: 16890, volume: 100 },
+    { time: '21:01', price: 16968, avg: 16910, volume: 200 },
+  ]
+  // 沪银主连实测：昨结算 16611、昨收（报价 f18）16771 —— 涨跌幅按昨结算（2.15%）
+  const info = mergeMinuteQuoteInfo(
+    points,
+    { preClose: 16771, preSettlement: 16611 },
+    quoteFixture({ previousClose: 16771, market: '113' }),
+  )
+  assert.equal(info.preClose, 16611, '结算基准优先，报价昨收不得覆盖')
+  assert.equal(info.preCloseLabel, '昨结算')
+  // 非期货（无 preSettlement）：仍按 报价昨收 → 分时推算 回退
+  const stock = mergeMinuteQuoteInfo(points, { preClose: 98 }, quoteFixture())
+  assert.equal(stock.preClose, 98.2)
+  assert.equal(stock.preCloseLabel, '昨收')
+  // preSettlement 为 0 / 缺失（A股指数实测为 0）→ 等同非期货
+  const index = mergeMinuteQuoteInfo(points, { preClose: 98, preSettlement: 0 }, quoteFixture())
+  assert.equal(index.preClose, 98.2)
+  assert.equal(index.preCloseLabel, '昨收')
 })
 
 test('MIN_MINUTE_POINTS 至少为 2（过滤腾讯外股单点数据）', () => {

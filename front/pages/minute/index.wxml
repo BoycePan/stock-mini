@@ -63,7 +63,7 @@
             <text>{{ quote.volumeText }}</text>
           </view>
           <view>
-            <text>昨收</text>
+            <text>{{ quote.preCloseLabel }}</text>
             <text>{{ quote.preClose }}</text>
           </view>
         </view>

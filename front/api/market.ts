@@ -550,20 +550,34 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   const tcRows = await fetchTencentQuotes(tcCodes)
   const tcMap = new Map(tcRows.map((row) => [row.code, row]))
 
-  // ③ 黄金内外盘同屏：黄金恒同时解析内盘（沪金主连 元/克）与外盘（COMEX 美元/盎司）两路报价，
-  //    不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；其余金属仍随会话切换。
+  // ③ 金银内外盘同屏：黄金、白银恒同时解析内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘
+  //    （COMEX 美元/盎司）两路报价，不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；
+  //    其余金属仍随会话切换。
   const goldCfg = METALS.find((metal) => metal.code === 'GOLD')!
-  const [goldCn, goldUs] = await Promise.all([
-    resolveMetal(goldCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
-    resolveMetal(goldCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+  const silverCfg = METALS.find((metal) => metal.code === 'SILVER')!
+  const [[goldCn, goldUs], [silverCn, silverUs]] = await Promise.all([
+    Promise.all([
+      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
+      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+    ]),
+    Promise.all([
+      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
+      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+    ]),
   ])
-  const goldCards: QuoteItem[] = [
-    { ...goldCn, name: '黄金·内盘', tags: ['元/克'] },
-    { ...goldUs, name: '黄金·外盘', tags: ['美元/盎司'] },
-  ]
+  const dualCards: Record<string, QuoteItem[]> = {
+    GOLD: [
+      { ...goldCn, name: '黄金·内盘', tags: ['元/克'] },
+      { ...goldUs, name: '黄金·外盘', tags: ['美元/盎司'] },
+    ],
+    SILVER: [
+      { ...silverCn, name: '白银·内盘', tags: ['元/千克'] },
+      { ...silverUs, name: '白银·外盘', tags: ['美元/盎司'] },
+    ],
+  }
 
-  // ④ 其余金属逐项解析（白银 / 工业金属 / 其他金属，随会话切换）
-  const otherMetals = METALS.filter((metal) => metal.code !== 'GOLD')
+  // ④ 其余金属逐项解析（工业金属 / 其他金属，随会话切换）
+  const otherMetals = METALS.filter((metal) => metal.code !== 'GOLD' && metal.code !== 'SILVER')
   const items = await Promise.all(
     otherMetals.map((metal) => resolveMetal(metal, { sinaBatch, tcMap, useA: session.useA })),
   )
@@ -575,8 +589,9 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
     title: section.title,
     tip: section.tip,
     items: section.codes.flatMap((code) => {
-      // 黄金卡替换为 内盘+外盘 双卡；其余金属按原逻辑取一张卡
-      if (code === 'GOLD') return goldCards
+      // 金银卡替换为 内盘+外盘 双卡；其余金属按原逻辑取一张卡
+      const dual = dualCards[code]
+      if (dual) return dual
       const item = itemByCode.get(code)
       return item ? [item] : []
     }),
@@ -595,7 +610,7 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   }
 
   if (
-    ![...items, goldCn, goldUs].some((item) => item.price !== null) &&
+    ![...items, goldCn, goldUs, silverCn, silverUs].some((item) => item.price !== null) &&
     !goldShopGroup?.items.length &&
     !physicalGoldGroup?.items.length
   ) {
