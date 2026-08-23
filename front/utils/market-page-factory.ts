@@ -71,6 +71,13 @@ export function createMarketPage(opts: MarketPageOptions) {
       return rootStore.market.loading[pageKey]
     },
 
+    /** 页面是否仍为当前展示页（页面栈最后一项）：轮询触发前据此校验，页面不可见时不再发起请求 */
+    isCurrentPage() {
+      const pages = getCurrentPages()
+      const current = pages[pages.length - 1] as WechatMiniprogram.Page.TrivialInstance | undefined
+      return current === (this as unknown as WechatMiniprogram.Page.TrivialInstance)
+    },
+
     onLoad(options: Record<string, string | undefined> = {}) {
       // 分享中转：所有分享统一先进首页，识别到 target 后自动跳转目标页（见 utils/share.ts）
       if (redirectFromShare(options)) {

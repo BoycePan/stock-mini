@@ -530,6 +530,34 @@ test('覆盖性：汇率分时以东财系为主源（大陆可访问），Yahoo
   assert.equal(cross!.denominator, '133.USDCNH', '分母=美元/离岸人民币（东财 133）')
   assert.equal(MINUTE_SOURCES.CNYJPY?.em, '133.CNHJPY', 'CNYJPY 用离岸人民币兑日元')
   assert.equal(MINUTE_SOURCES.USDCNY?.em, '133.USDCNH', 'USDCNY 用离岸美元/人民币')
+  // USDCNY 卡片报价源与分时页同 secid（离岸，东财 133.USDCNH），保证「卡片=分时」数值一致
+  const usdcnyRate = ASIA_RATES.find((rate) => rate.code === 'USDCNY')
+  assert.ok(usdcnyRate, '缺少 USDCNY 汇率配置')
+  assert.equal(usdcnyRate!.name, '美元/离岸人民币', '卡片应明确标注离岸口径')
+  assert.equal(usdcnyRate!.emSecid, '133.USDCNH', 'USDCNY 卡片东财 secid 应与分时源一致')
+  assert.equal(usdcnyRate!.preferEm, true, 'USDCNY 卡片应东财优先（与分时同源）')
+})
+
+test('覆盖性：全球页 USDCNY 卡片与分时页同源（东财离岸 133.USDCNH）', () => {
+  const usdcny = MACRO_ASSETS.find((asset) => asset.code === 'USDCNY')
+  assert.ok(usdcny, '缺少 USDCNY 宏观资产配置')
+  assert.equal(usdcny.name, '美元/离岸人民币', '卡片应明确标注离岸口径')
+  const source = usdcny.sources[0]
+  assert.equal(source?.kind, 'em_ulist', '应走东财 ulist（fltt=2 十进制，与分时同构）')
+  assert.deepEqual(source?.secid, '133.USDCNH', '应与分时源 133.USDCNH 同 secid')
+})
+
+test('覆盖性：NG 卡片与分时页同源（东财 102.NG00Y 天然气），防误用铜 101.HG00Y', () => {
+  const ng = MACRO_ASSETS.find((asset) => asset.code === 'NG')
+  assert.ok(ng, '缺少 NG 宏观资产配置')
+  const source = ng.sources[0]
+  assert.equal(source?.kind, 'em_ulist')
+  assert.deepEqual(
+    source?.secid,
+    '102.NG00Y',
+    'NG 卡片应为 NYMEX 天然气 102.NG00Y（非 101.HG00Y 铜）',
+  )
+  assert.equal(MINUTE_SOURCES.NG?.em, '102.NG00Y', 'NG 分时源应为 102.NG00Y')
 })
 
 test('覆盖性：每个 code 至少配置一个源，且源格式合法', () => {

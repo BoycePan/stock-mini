@@ -73,6 +73,12 @@ Page({
   isLoading() {
     return this.data.requesting
   },
+  /** 页面是否仍为当前展示页（页面栈最后一项）：轮询触发前据此校验，页面不可见时不再发起请求 */
+  isCurrentPage(): boolean {
+    const pages = getCurrentPages()
+    const current = pages[pages.length - 1] as WechatMiniprogram.Page.TrivialInstance | undefined
+    return current === (this as unknown as WechatMiniprogram.Page.TrivialInstance)
+  },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
     const code = decodeURIComponent(options.code || '')

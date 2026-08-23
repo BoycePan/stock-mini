@@ -54,9 +54,9 @@ function tencentLine(
 test('腾讯：解析 v_<code> 文本并按固定索引取值', () => {
   const text = [
     tencentLine('sh000001', '上证指数', 3421.5, 3400, 0.63, '21.50'),
-    tencentLine('usQQQ', '纳斯达克', 29722.3, 29500, 0.75, '222.30'),
+    tencentLine('usIXIC', '纳斯达克', 29722.3, 29500, 0.75, '222.30'),
   ].join('\n')
-  const map = parseTencentText(text, ['sh000001', 'usQQQ'])
+  const map = parseTencentText(text, ['sh000001', 'usIXIC'])
 
   const quote = tencentQuoteOf('sh000001', map.get('sh000001') ?? [])
   assert.equal(quote.valid, true)
@@ -67,7 +67,7 @@ test('腾讯：解析 v_<code> 文本并按固定索引取值', () => {
   assert.equal(quote.changePercent, 0.63)
   assert.equal(quote.quoteTime, '2026-08-17 15:00:00')
 
-  const us = tencentQuoteOf('usQQQ', map.get('usQQQ') ?? [])
+  const us = tencentQuoteOf('usIXIC', map.get('usIXIC') ?? [])
   assert.equal(us.latestPrice, 29722.3)
   assert.equal(us.valid, true)
 })
@@ -130,14 +130,28 @@ test('新浪 znb_ / int_ 指数：现价 [1]、涨跌额 [2]、涨跌幅 [3]', (
   assert.equal(nikkei.changePercent, 0.75)
 })
 
-test('新浪 DINIW 美元指数：现价 [1]、昨收 [7]（缺失时 [3]）', () => {
-  const fields = ['美元指数', '99.5', 'x', 'x', 'x', 'x', 'x', '99.2']
+test('新浪 DINIW 美元指数：现价 [1]、昨收 [3]（与 fx_ 同布局；[6]=最高、[7]=最低非昨收）', () => {
+  // 实测 2026-08-22 快照：05:10:03, 98.8461, 98.8461, 98.8687, 3514, 98.8733, 98.9129, 98.5615, 98.8461, 美元指数, 2026-08-22
+  // 与东财 100.UDI 对照：最高 [6]=98.9129≈98.91、最低 [7]=98.5615≈98.56、昨收 [3]=98.8687≈98.87
+  const fields = [
+    '05:10:03', // [0] 时间
+    '98.8461', // [1] 现价
+    '98.8461', // [2]
+    '98.8687', // [3] 昨收
+    '3514', // [4] 成交量
+    '98.8733', // [5] 今开
+    '98.9129', // [6] 最高
+    '98.5615', // [7] 最低
+    '98.8461', // [8] 现价
+    '美元指数', // [9] 名称
+    '2026-08-22', // [10] 日期
+  ]
   const quote = parseSinaQuote('DINIW', fields)
-  assert.equal(quote.price, 99.5)
-  assert.equal(quote.previousClose, 99.2)
-
-  const fallback = parseSinaQuote('DINIW', ['美元指数', '99.5', 'x', '99.0'])
-  assert.equal(fallback.previousClose, 99.0)
+  assert.equal(quote.price, 98.8461)
+  assert.equal(quote.previousClose, 98.8687)
+  // 涨跌幅 = (98.8461-98.8687)/98.8687 ≈ -0.023%（东财 100.UDI 同口径 -0.02%，两者一致）
+  assert.ok(Math.abs((quote.changePercent as number) - -0.0229) < 0.001)
+  assert.ok(Math.abs((quote.change as number) - -0.0226) < 0.001)
 })
 
 test('新浪 gb_ 美股（宏观消费方）：现价 [1]、昨收 [2]、涨跌幅 [3]', () => {

@@ -43,6 +43,20 @@ export const newsApi = {
   },
 
   /**
+   * 轻量判断是否需要拉取最新通用新闻（供财经页增量刷新轮询）。
+   * 服务端在新闻更新时间 UPDATE_TIME > lastPullTime 时返回 true（data 为 boolean）。
+   * @param lastPullTime 客户端上次拉取时间戳（毫秒），默认 0 = 从未拉取（服务端恒返回 true）
+   */
+  async needToPull(lastPullTime = 0) {
+    const response = await request<boolean>({
+      path: '/api/v1/news/needToPull',
+      query: { lastPullTime },
+      withAuth: true,
+    })
+    return Boolean(response)
+  },
+
+  /**
    * 单条新闻明细（按 id 拉取）。
    * 同样需要登录鉴权（携带 Authorization）。
    * 仅「从分享外部直接进入详情页」（URL 带 id）时调用；列表进入走本地缓存，不请求。

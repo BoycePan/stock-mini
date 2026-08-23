@@ -10,7 +10,7 @@
 
 /** 腾讯行情解析结果（v_<code>="..." 按 ~ 拆分） */
 export interface TencentQuote {
-  /** 行情代码（如 sh000001 / usQQQ / kr005930） */
+  /** 行情代码（如 sh000001 / usIXIC / kr005930） */
   code: string
   /** 名称 [1] */
   name: string
@@ -128,13 +128,20 @@ export type QuoteSourceKind =
   | 'sina_ashare'
   | 'tencent'
   | 'em'
+  /**
+   * 东财 ulist 报价（ulist.np/get + fltt=2，价格十进制不除 divisor）。
+   * 用于东财期货/商品市场（101 COMEX、102 NYMEX、112 ICE 等）：stock/get 无 fltt 时
+   * 这些市场的原始刻度随合约而异（GC×10 / SI×1000 / HG×10000…），f152 不可靠，
+   * 按 10^f152 除会得到错误价格并触发区间校验丢弃；ulist 路径与分时页「基础信息」同源同构。
+   */
+  | 'em_ulist'
 
 /** fetchAccurate 的数据源描述（docs/tabbar-api.md 5.1） */
 export interface QuoteSource {
   kind: QuoteSourceKind
   /** 新浪 key / 腾讯行情代码（如 usVIX / sh000001），可传数组逐个尝试 */
   key?: string | string[]
-  /** 东财 secid（如 105.QQQ），可传数组逐个尝试 */
+  /** 东财 secid（如 100.SPX / 105.NVDA），可传数组逐个尝试 */
   secid?: string | string[]
   /** 价格合理区间 [min,max]，价格不在区间内的源直接丢弃 */
   min?: number

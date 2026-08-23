@@ -94,6 +94,13 @@ const MIN_REQUEST_INTERVAL = 10000
  * lastFinanceRequestAt：最近一次真正发起请求的时间戳（loadData 防抖用）。
  */
 let lastFinanceRequestAt = 0
+/**
+ * 本页「上次拉取通用新闻」时间戳（毫秒）：needToPull 轻量轮询的比对基准。
+ * 每次真正看到最新一页（首屏刷新 loadData / 轮询 checkNewNews 拉到第一页）后更新；
+ * 滚动加载拉的是更旧页，不更新。模块级变量即可（页面常驻，tabBar keep-alive），无需持久化——
+ * 重启后为 0，首次轮询 needToPull 恒返回 true，退化为「拉最新一条比对」的旧行为，无功能损失。
+ */
+let lastNewsPullAt = 0
 /** 最新新闻轮询间隔：每 10s 检查一次（只拉第一页，与 store 首屏同源，见 checkNewNews） */
 const NEWS_POLL_INTERVAL = 10000
 let newsPollTimer: ReturnType<typeof setInterval> | null = null
@@ -273,6 +280,8 @@ Page({
     lastFinanceRequestAt = now
     try {
       await rootStore.market.loadPage('finance', { force: force || silent, silent })
+      // 本轮已看到最新一页：更新 needToPull 比对基准（下次轮询据此判断是否还有更新新闻）
+      lastNewsPullAt = Date.now()
       // 刷新成功：以最新首屏重建列表并重置分页（滚动加载追加的条目被清空，回到第一页）
       this.syncNewsFromStore()
       this.saveFinanceCache()
@@ -395,8 +404,9 @@ Page({
     }
   },
   /**
-   * 检查是否有最新新闻：只拉第一页（getFeed(1, 10)，与 store 首屏同源），
-   * 第一页里只要存在「本地已加载列表中没有的条目」就视为有新新闻：
+   * 检查是否有最新新闻：先调 needToPull 做轻量判断（服务端新闻更新时间 > 本地上次拉取时间
+   * 才返回 true），未超时直接跳过本轮，避免每 10s 都拉一页 feed；返回 true 时再拉第一页
+   * （getFeed(1, 1)，与 store 首屏同源），第一页里只要存在「本地已加载列表中没有的条目」就视为有新新闻：
    * - 显示悬浮刷新按钮（用户点击后走与下拉刷新相同的流程）；
    * - 抑制回到顶部按钮（两按钮互斥）。
    * 没有新新闻时同步隐藏按钮（除非处于刷新失败重试态 refreshFailed），保证按钮只在
@@ -412,8 +422,12 @@ Page({
     if (this.getRefreshBtn()?.isShown?.()) return
     newsPolling = true
     try {
+      // 先做轻量判断：服务端新闻更新时间未超过上次拉取时间，直接跳过（避免每 10s 都拉一页 feed）
+      if (!(await newsApi.needToPull(lastNewsPullAt))) return
       // 只拉最新 1 条：仅用于判断「有没有本地未收录的新新闻」，无需多条
       const items = await newsApi.getFeed(1, 1)
+      // 已看到最新一页：更新比对基准（无论有无新新闻都更新，避免服务端时间粒度误差导致反复命中）
+      lastNewsPullAt = Date.now()
       if (!items.length || this.data.news.length === 0) return
       const localIds = new Set(
         this.data.news.map((item) => item.id).filter((id): id is string => Boolean(id)),

@@ -55,8 +55,8 @@ export const QUOTE_ICONS: Record<string, string> = {
   sh000688: '🇨🇳', // 科创50
   AVG: '🧮', // A股平均股价（全市场等权自算）
   usDJI: '🇺🇸', // 道琼斯工业
-  usSPY: '🇺🇸',
-  usQQQ: '🇺🇸',
+  usINX: '🇺🇸',
+  usIXIC: '🇺🇸',
   // 宏观经济
   BRT: '🛢️',
   VIX: '📉',
@@ -198,6 +198,12 @@ export interface QuoteGlobalPageParams {
   sectorBadge?: string
   /** 板块标题：随数据源会话切换（A股时段 → 中国行业板块；美股时段 → 美股行业板块） */
   sectorTitle?: string
+  /**
+   * 行业板块当前数据源对应市场区域（A股时段 → 'cn'；美股时段 → 'us'）：
+   * 有值时板块标题右侧展示盘面状态（盘中/午休/盘前/盘后/休市，见 utils/market-clock.ts），
+   * 与数据源口径一致（展示的是哪个市场的行情，就标哪个市场的开闭状态）。
+   */
+  sectorRegion?: MarketRegion
 }
 
 export function buildQuoteGlobalPage(
@@ -217,10 +223,12 @@ export function buildQuoteGlobalPage(
   if (params.sectors.length) {
     // 板块本体为东方财富 A 股行业板块（BK 代码）；A股时段展示东财板块数据，标题为「中国行业板块」；
     // 非 A 股时段展示美股代理股涨跌幅均值，标题随之切换为「美股行业板块」。
+    // sectorRegion 与数据源会话一致（useA → 'cn'，否则 'us'），标题右侧展示对应市场的盘面状态。
     groups.push({
       id: 'industry-board',
       title: params.sectorTitle ?? '中国行业板块',
       items: params.sectors,
+      region: params.sectorRegion,
     })
   }
 

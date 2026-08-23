@@ -123,10 +123,14 @@ export function parseSinaQuote(key: string, fields: string[]): SinaQuote {
   if (key.startsWith('znb_') || key.startsWith('int_')) {
     return sinaIndex(key, fields)
   }
-  // 美元指数 DINIW：现价 [1]、昨收 [7]（缺失时 [3]）
+  // 美元指数 DINIW：现价 [1]、昨收 [3]（与新浪 fx_ 外汇同布局：今开 [5]、最高 [6]、最低 [7]、
+  // 名称 [9]、日期 [10]；无 fx_ 的 [10] 涨跌幅/[11] 涨跌额，涨跌幅需由 现价-昨收 反推）。
+  // 实测 2026-08-22 快照与东财 100.UDI 对照验证：最高 [6]=98.9129≈东财 98.91、最低 [7]=98.5615≈
+  // 东财 98.56（[7] 是当日最低，不是昨收——早期误把 [7] 当昨收会把涨跌幅虚高到 +0.29%，
+  // 且被 fetchAccurate 共识取中位数混成 +0.13%，与分时页（东财 100.UDI）的 -0.02% 不一致）。
   if (key.toUpperCase() === 'DINIW') {
     const price = numAt(fields, 1)
-    const prev = numAt(fields, 7) !== null ? numAt(fields, 7) : numAt(fields, 3)
+    const prev = numAt(fields, 3)
     return sinaWithPrevCloseValues(key, price, prev)
   }
   // 美股 gb_*（宏观资产消费方，quote.js sina_gb）：现价 [1]、昨收 [2]、涨跌幅 [3]

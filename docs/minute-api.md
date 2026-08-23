@@ -69,7 +69,7 @@
 | --- | --- | --- | --- | --- |
 | 全球·指数 | sh000001 / sz399001 / sz399006 / sh000688 | 1.000001 / 0.399001 / 0.399006 / 1.000688 | sh000001 / sz399001 / sz399006 / sh000688 | — |
 | 全球·指数 | AVG（A股平均股价） | 47.800005（东财官方平均股价指数） | — | — |
-| 全球·指数 | usDJI / usSPY / usQQQ | 100.DJIA / 107.SPY / 105.QQQ | — | — |
+| 全球·指数 | usDJI / usINX / usIXIC | 100.DJIA / 100.SPX / 100.NDX | — | — |
 | 全球·宏观 | BRT / UDI / TLT | 112.B00Y / 100.UDI / 105.TLT | — | — |
 | 全球·宏观 | GC / SI / HG / NG | 101.GC00Y / 101.SI00Y / 101.HG00Y / 102.NG00Y | — | — |
 | 全球·宏观 | SOX | 251.SOX | — | — |
@@ -83,13 +83,13 @@
 | 日韩·个股 | 8035…7974（日8） | 176.8035 … 176.7974 | — | <code>.T（兜底） |
 | 日韩·汇率 | USDKRW / USDJPY | 119.USDKRW / 119.USDJPY | — | KRW=X / JPY=X（兜底） |
 | 日韩·汇率 | CNYKRW / CNYJPY / USDCNY | CNYJPY→133.CNHJPY、USDCNY→133.USDCNH（离岸）；CNYKRW→119.USDKRW ÷ 133.USDCNH（交叉合成） | — | CNYKRW=X / CNYJPY=X / CNY=X（兜底） |
-| 有色·金银 | GOLD / SILVER | 113.aum 沪金主连 / 113.agm 沪银主连 | — | — |
+| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 101.GC00Y COMEX；SILVER | 113.aum / 113.agm | 101.GC00Y（外盘卡） | — |
 | 有色·工业金属 | COPPER / ALUMINUM / ZINC / NICKEL / TIN | 113.cum / 113.alm / 113.znm / 113.nim / 113.snm | — | — |
 | 有色·其他金属 | TUNGSTEN / MOLY / GERMANIUM / INDIUM / ANTIMONY | 1.600549 / 1.603993 / 0.002428 / 1.600961 / 1.601020 | sh600549 / sh603993 / sz002428 / sh600961 / sh601020 | — |
 
 > 说明：
 > - 金属「主连」= 东财 SHFE 连续合约（`<品种>m`），与首页国内价（`nf_*`）同口径，分时含夜盘；钨/钼/锗/铟/锑无现货/期货分时，取对应 A 股上市公司（与首页 tc 兜底同标的）。
-> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**，2026-08-20 起改为主源）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。KOSDAQ/VIX 东财无分时，仍仅 Yahoo。CNYKRW/CNYJPY/USDCNY 也改用东财系主源：USDCNY→133.USDCNH、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
+> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**，2026-08-20 起改为主源）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。KOSDAQ/VIX 东财无分时，仍仅 Yahoo。CNYKRW/CNYJPY/USDCNY 改用东财系主源：USDCNY→133.USDCNH（卡片已同步改为离岸、与分时同 secid，见 tabbar-api.md，无价差）、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
 > - 市场号更正：旧配置 `116.005930`（韩股）/ `151.8035`（日股）在 delay 主机返回 `data:null`，并非「东财不覆盖」，而是**市场号错误**（116=港股、151 非日股）；东财真实市场号为韩股 177、日股 176（`searchapi.eastmoney.com/api/suggest/get` 实测确认）。
 > - TOPIX（东证指数）：东财 / 腾讯 / Yahoo 均无东证指数本身分时（Yahoo `^TPX` 实测为空），用「日本东证指数ETF南方(513800)」（跟踪 TOPIX，同东财/腾讯家族）代理，页面展示说明。
 > - 金店金价（金投网零售价）**无分时**，不做角标、点击提示。
@@ -101,7 +101,9 @@
 
 | 场景 | 卡片展示 | 分时取数（mcode） |
 | --- | --- | --- |
-| 有色页 外盘时段 GOLD/SILVER/COPPER | COMEX 报价（美元/盎司、美元/磅） | `GOLD-US`/`SILVER-US`/`COPPER-US` → 东财 COMEX 分时（`101.GC00Y` 等，与全球页 GC/SI/HG 同一已验证源） |
+| 有色页 黄金·外盘卡（恒展示） | COMEX 黄金（美元/盎司） | `GOLD-US` → 东财 COMEX 分时（`101.GC00Y`，与全球页 GC 同一已验证源） |
+| 有色页 黄金·内盘卡（恒展示） | 沪金主连（元/克） | 既有源 `113.aum`（沪金主连） |
+| 有色页 外盘时段 SILVER/COPPER | COMEX 报价（美元/盎司、美元/磅） | `SILVER-US`/`COPPER-US` → 东财 COMEX 分时（`101.SI00Y`/`101.HG00Y`，与全球页 SI/HG 同一已验证源） |
 | 有色页 国内盘（其余时段） | 沪主连 / A股个股 | 既有源（`113.xm` / `shxxxxxx`） |
 | 有色页 外盘时段 铝/锌/镍/锡/钨 | 外盘报价（`hf_*`） | **无分时源**（`us-ALUMINUM` 等占位），点击给出提示 |
 | 全球页 行业板块 A股时段 | 东财板块涨跌幅 | `90.BKxxxx`（东财板块分时） |

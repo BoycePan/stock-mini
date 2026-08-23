@@ -63,7 +63,7 @@
 /* 盘面状态胶囊：板块标题右侧（盘中/午休/盘前/盘后/集合竞价/休市），
    用点 + 文案区分活跃度，颜色语义与全局 statusTone 对齐 */
 .market-status {
-  margin-left: auto;
+  margin-left: 12rpx;
   display: inline-flex;
   align-items: center;
   gap: 8rpx;
@@ -115,16 +115,16 @@
 }
 
 /* 防御性布局：状态胶囊与「i」说明、badge 并存时按序排列（当前业务无并存场景） */
-.market-status + .section-tip {
+.market-status+.section-tip {
   margin-left: 14rpx;
 }
 
-.market-status + .section-badge {
+.market-status+.section-badge {
   margin-left: 14rpx;
 }
 
 /* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
-.section-tip + .section-badge {
+.section-tip+.section-badge {
   margin-left: 14rpx;
 }
 
@@ -233,7 +233,7 @@
 
 /* 有「分时」角标的卡片：名称行右侧让位，避免名称/来源徽标钻到角标下方 */
 .metric-card.minute-badge-card .metric-name-row {
-  padding-right: 60rpx;
+  /* padding-right: 60rpx; */
 }
 
 /* 面板右上角「分时」小角标（行业板块等整面板场景）：代替逐卡片内联标签，
@@ -257,7 +257,7 @@
 
 /* 有右上角角标时，标题行让出右侧空间，避免与「A股时段」等徽标重叠 */
 .section-card.minute-corner .section-title-row {
-  padding-right: 48rpx;
+  padding-right: 18rpx;
 }
 
 /* 价格 + 涨跌幅同行容器 */
@@ -489,12 +489,15 @@
   0% {
     transform: translateY(0) scale(1);
   }
+
   30% {
     transform: translateY(-3rpx) scale(1.05);
   }
+
   60% {
     transform: translateY(1rpx) scale(0.99);
   }
+
   100% {
     transform: translateY(0) scale(1);
   }

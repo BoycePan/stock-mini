@@ -36,7 +36,7 @@ test('A股：工作日盘中 / 午休 / 集合竞价 / 休市', () => {
   assert.equal(getRegionStatus('cn', at('2026-08-20T00:00:00Z')).label, '休市') // 08:00 前
 })
 
-test('A股：法定节假日休市（2026 国庆 / 春节 / 劳动节 / 端午 / 中秋）', () => {
+test('A股：法定节假日休市（2026-2027 国庆 / 春节 / 劳动节 / 端午 / 中秋）', () => {
   assert.equal(getRegionStatus('cn', at('2026-10-01T02:00:00Z')).label, '休市') // 国庆
   assert.equal(getRegionStatus('cn', at('2026-10-07T02:00:00Z')).label, '休市')
   assert.equal(getRegionStatus('cn', at('2026-10-08T02:00:00Z')).label, '盘中') // 10/8 起开市
@@ -48,18 +48,28 @@ test('A股：法定节假日休市（2026 国庆 / 春节 / 劳动节 / 端午 /
   assert.equal(getRegionStatus('cn', at('2026-09-25T02:00:00Z')).label, '休市') // 中秋
   assert.equal(getRegionStatus('cn', at('2025-02-03T02:00:00Z')).label, '休市') // 2025 春节
   assert.equal(getRegionStatus('cn', at('2025-02-05T02:00:00Z')).label, '盘中')
+  // 2027 年节假日
+  assert.equal(getRegionStatus('cn', at('2027-01-01T02:00:00Z')).label, '休市') // 2027 元旦
+  assert.equal(getRegionStatus('cn', at('2027-02-05T02:00:00Z')).label, '休市') // 2027 除夕
+  assert.equal(getRegionStatus('cn', at('2027-02-12T02:00:00Z')).label, '休市') // 2027 初七
+  assert.equal(getRegionStatus('cn', at('2027-02-15T02:00:00Z')).label, '盘中') // 2027 春节后首个交易日
+  assert.equal(getRegionStatus('cn', at('2027-06-09T02:00:00Z')).label, '休市') // 2027 端午（周三）
+  assert.equal(getRegionStatus('cn', at('2027-09-15T02:00:00Z')).label, '休市') // 2027 中秋（周三）
 })
 
 test('A股：周末休市；未维护年份回退到周末判定', () => {
   assert.equal(getRegionStatus('cn', at('2026-08-22T02:00:00Z')).label, '休市') // 周六
   assert.equal(getRegionStatus('cn', at('2026-08-23T02:00:00Z')).label, '休市') // 周日
   assert.equal(
-    isMarketHoliday('cn', at('2027-01-01T02:00:00Z')),
+    isMarketHoliday('cn', at('2028-01-01T02:00:00Z')),
     false,
-    '2027 日历未发布，不做节假日判定',
+    '2028 日历未发布，不做节假日判定',
   )
   assert.equal(isMarketTradingDay('cn', at('2026-08-20T02:00:00Z')), true)
   assert.equal(isMarketTradingDay('cn', at('2026-10-01T02:00:00Z')), false)
+  assert.equal(isMarketTradingDay('cn', at('2027-01-01T02:00:00Z')), false)
+  assert.equal(isMarketTradingDay('cn', at('2027-02-05T02:00:00Z')), false)
+  assert.equal(isMarketTradingDay('cn', at('2027-02-15T02:00:00Z')), true)
 })
 
 // ---------------------------------------------------------------------------
@@ -91,13 +101,19 @@ test('美股：夏令时边界（3/8 后 EDT、11/1 后 EST）', () => {
   assert.equal(getRegionStatus('us', at('2026-11-02T15:30:00Z')).label, '盘中') // EST 10:30
 })
 
-test('美股：法定节假日休市（含 7/3 调休），半日市 13:00 收盘', () => {
+test('美股：法定节假日休市（含 7/3、6/18、12/24 调休），半日市 13:00 收盘', () => {
   assert.equal(getRegionStatus('us', at('2026-12-25T17:00:00Z')).label, '休市') // 圣诞
   assert.equal(getRegionStatus('us', at('2026-01-19T15:00:00Z')).label, '休市') // MLK
   assert.equal(getRegionStatus('us', at('2026-07-03T14:00:00Z')).label, '休市') // 独立日调休
   assert.equal(getRegionStatus('us', at('2026-12-24T17:00:00Z')).label, '盘中') // 平安夜半日市 12:00 仍交易
   assert.equal(getRegionStatus('us', at('2026-12-24T18:00:00Z')).label, '休市') // 平安夜 13:00 收盘
   assert.equal(getRegionStatus('us', at('2026-11-27T18:00:00Z')).label, '休市') // 感恩节后一天半日市 13:00 后
+  // 2027 美股节假日
+  assert.equal(getRegionStatus('us', at('2027-06-18T15:00:00Z')).label, '休市') // Juneteenth 调休
+  assert.equal(getRegionStatus('us', at('2027-07-05T15:00:00Z')).label, '休市') // 独立日调休
+  assert.equal(getRegionStatus('us', at('2027-11-26T17:00:00Z')).label, '盘中') // 感恩节次日半日市 12:00 仍交易
+  assert.equal(getRegionStatus('us', at('2027-11-26T18:00:00Z')).label, '休市') // 感恩节次日半日市 13:00 收盘
+  assert.equal(getRegionStatus('us', at('2027-12-24T15:00:00Z')).label, '休市') // 圣诞节调休
 })
 
 // ---------------------------------------------------------------------------
@@ -126,12 +142,15 @@ test('日股：盘中 / 午休 / 休市', () => {
   assert.equal(getRegionStatus('jp', at('2026-08-20T06:30:00Z')).label, '休市') // JST 15:30 收盘
 })
 
-test('日股：节假日休市（元旦 / 年初 / 宪法纪念日补休 / 勤劳感谢日）', () => {
+test('日股：节假日休市（元旦 / 年初 / 宪法纪念日补休 / 勤劳感谢日 / 2027 年末）', () => {
   assert.equal(getRegionStatus('jp', at('2026-05-05T01:00:00Z')).label, '休市') // こどもの日
   assert.equal(getRegionStatus('jp', at('2026-05-06T01:00:00Z')).label, '休市') // 5/3 周日补休
   assert.equal(getRegionStatus('jp', at('2026-01-02T01:00:00Z')).label, '休市') // 年末年始
   assert.equal(getRegionStatus('jp', at('2026-11-23T01:00:00Z')).label, '休市') // 勤労感謝の日
   assert.equal(getRegionStatus('jp', at('2026-11-24T01:00:00Z')).label, '盘中') // 次日正常开市
+  // 2027 日股节假日
+  assert.equal(getRegionStatus('jp', at('2027-03-22T01:00:00Z')).label, '休市') // 春分の日（3/21 周日补休）
+  assert.equal(getRegionStatus('jp', at('2027-12-31T01:00:00Z')).label, '休市') // 2027 年末休市
 })
 
 // ---------------------------------------------------------------------------
@@ -154,7 +173,7 @@ test('韩股：盘中无午休 / 休市', () => {
   assert.equal(getRegionStatus('kr', at('2026-08-19T23:59:00Z')).label, '休市') // KST 08:59
 })
 
-test('韩股：节假日休市（2026 特别项：选举日 / 制宪节 / 佛诞补休 / 显忠日无补休）', () => {
+test('韩股：节假日休市（2026 特别项与 2027 自动补休）', () => {
   assert.equal(getRegionStatus('kr', at('2026-06-03T01:00:00Z')).label, '休市') // 地方选举日
   assert.equal(getRegionStatus('kr', at('2026-07-17T01:00:00Z')).label, '休市') // 制宪节（2026 起新列公休日）
   assert.equal(getRegionStatus('kr', at('2026-05-25T01:00:00Z')).label, '休市') // 佛诞日（5/24 周日补休）
@@ -163,4 +182,9 @@ test('韩股：节假日休市（2026 特别项：选举日 / 制宪节 / 佛诞
   assert.equal(getRegionStatus('kr', at('2026-06-08T01:00:00Z')).label, '盘中') // 显忠日（周六）无补休，周一开市
   assert.equal(getRegionStatus('kr', at('2026-09-28T01:00:00Z')).label, '盘中') // 秋夕（周六）无补休，周一开市
   assert.equal(getRegionStatus('kr', at('2026-12-31T01:00:00Z')).label, '休市') // 年末休市
+  // 2027 韩股节假日
+  assert.equal(getRegionStatus('kr', at('2027-07-19T01:00:00Z')).label, '休市') // 制宪节（7/17 周六补休）
+  assert.equal(getRegionStatus('kr', at('2027-09-15T01:00:00Z')).label, '休市') // 秋夕（周三）
+  assert.equal(getRegionStatus('kr', at('2027-12-27T01:00:00Z')).label, '休市') // 圣诞节（12/25 周六补休）
+  assert.equal(getRegionStatus('kr', at('2027-12-31T01:00:00Z')).label, '休市') // 年末休市
 })

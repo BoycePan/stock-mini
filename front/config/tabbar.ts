@@ -25,9 +25,13 @@ export const GLOBAL_INDICES: GlobalIndexConfig[] = [
   { code: 'sz399001', name: '深证成指', market: 'cn' },
   { code: 'sz399006', name: '创业板指', market: 'cn' },
   { code: 'sh000688', name: '科创50', market: 'cn' },
-  { code: 'usDJI', name: '道琼斯工业', market: 'us' },
-  { code: 'usSPY', name: '标普500', market: 'us' },
-  { code: 'usQQQ', name: '纳斯达克', market: 'us' },
+  { code: 'usDJI', name: '道琼斯', market: 'us' },
+  // 标普500 用腾讯真实指数代码 usINX（= S&P 500 Index，约 7600 点），
+  // 不能用 usSPY（SPDR ETF，价格约为指数的 1/10，会显示成 7xx 的错值）
+  { code: 'usINX', name: '标普500', market: 'us' },
+  // 纳斯达克同样用腾讯真实指数 usIXIC（= Nasdaq Composite，约 2.6 万点），
+  // 不能用 usQQQ（Invesco QQQ ETF，只跟踪纳指100，价格 7xx 并非综合指数点位）
+  { code: 'usIXIC', name: '纳斯达克', market: 'us' },
 ]
 
 /**
@@ -78,6 +82,9 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   {
     code: 'UDI',
     name: '美元强弱',
+    // 与分时页同源（东财 100.UDI，见 config/minute.ts UDI），保证「卡片=分时」口径一致；
+    // 新浪 DINIW 作兜底：其昨收为 [3]（[7] 是当日最低，解析器已修正），两源涨跌幅吻合
+    // （实测 -0.023% vs -0.02%），fetchAccurate 共识取中位数不会产生偏差。
     sources: [
       { kind: 'sina_diniw', key: 'DINIW', min: 60, max: 200 },
       { kind: 'em', secid: '100.UDI', min: 60, max: 200 },
@@ -85,9 +92,11 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   },
   {
     code: 'USDCNY',
-    name: '美元/人民币',
-    // 人民币汇率仅新浪 fx_ 可用（腾讯无外汇代码、东财 119 无 USDCNY 标的，见 docs 表 A）
-    sources: [{ kind: 'sina_fx', key: 'fx_susdcny', min: 5, max: 10 }],
+    name: '美元/离岸人民币',
+    // 与分时页同源（东财 133.USDCNH，见 config/minute.ts USDCNY），保证「卡片=分时」数值一致；
+    // 在岸美元/人民币无可用分时源（东财 119 无直盘、腾讯外汇无分时、新浪分时不覆盖 fx），
+    // 故卡片统一展示离岸 USDCNH（em_ulist + fltt=2 十进制，同 GC/SI 模式）。
+    sources: [{ kind: 'em_ulist', secid: '133.USDCNH', min: 5, max: 10 }],
   },
   {
     code: 'TLT',
@@ -100,23 +109,40 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   },
   {
     code: 'GC',
-    name: '黄金盎司',
-    sources: [{ kind: 'sina_hf', key: ['hf_GC', 'hf_XAU'], min: 1200, max: 6000 }],
+    // name: '黄金盎司',
+    // sources: [{ kind: 'sina_hf', key: ['hf_GC', 'hf_XAU'], min: 1200, max: 6000 }],
+    name: 'COMEX黄金(纽约金)',
+    // 与分时页同源（东财 101.GC00Y，见 config/minute.ts GC），保证「卡片=分时」口径一致；
+    // 新浪 hf_GC 的 [0] 最新价（实测 4664.48）与东财 COMEX黄金最新价（4661.60）系统性不一致，
+    // 新浪 hf_ 贵金属字段语义不可靠（本仓库 docs 自相矛盾、伦敦金 hf_XAU 昨收字段连续冻结），
+    // 故改用东财。必须走 em_ulist（ulist.np/get + fltt=2 十进制）：stock/get 对市场 101 的
+    // 原始刻度无规则（GC×10 / SI×1000 / HG×10000），10^f152 除数会得到错误价格被区间校验丢弃。
+    // 且不能与新浪并存为多源：fetchAccurate 会把两者判相似取中位数（4663.04）。
+    sources: [{ kind: 'em_ulist', secid: '101.GC00Y', min: 1200, max: 8000 }],
   },
   {
     code: 'SI',
-    name: '白银盎司',
-    sources: [{ kind: 'sina_hf', key: ['hf_SI', 'hf_XAG'], min: 8, max: 120 }],
+    // name: '白银盎司',
+    // sources: [{ kind: 'sina_hf', key: ['hf_SI', 'hf_XAG'], min: 8, max: 120 }],
+    name: 'COMEX白银(纽约银)',
+    // 同 GC：新浪 hf_SI [0]（69.725）与东财 SI00Y（69.01）、伦敦银 hf_XAG（68.97）均不一致，
+    // 统一走东财 101.SI00Y（em_ulist），与分时页（config/minute.ts SI）同源。
+    sources: [{ kind: 'em_ulist', secid: '101.SI00Y', min: 8, max: 120 }],
   },
   {
     code: 'HG',
-    name: '铜',
-    sources: [{ kind: 'sina_hf', key: 'hf_HG', min: 50, max: 2000 }],
+    // name: '铜',
+    // sources: [{ kind: 'sina_hf', key: 'hf_HG', min: 50, max: 2000 }],\
+    name: 'COMEX铜',
+
+    sources: [{ kind: 'em_ulist', secid: '101.HG00Y', min: 3, max: 20 }],
   },
   {
     code: 'NG',
     name: '天然气',
-    sources: [{ kind: 'sina_hf', key: 'hf_NG', min: 0.5, max: 50 }],
+    // 与分时页同源（东财 102.NG00Y NYMEX 天然气，见 config/minute.ts NG）；
+    // 原误配 101.HG00Y（COMEX 铜）会把铜价当天然气展示，且与分时源不一致。
+    sources: [{ kind: 'em_ulist', secid: '102.NG00Y', min: 0.5, max: 50 }],
   },
 ]
 
@@ -257,6 +283,12 @@ export interface AsiaRateConfig {
   name: string
   sinaKey: string
   emSecid: string
+  /**
+   * 是否东财优先取数（走东财 ulist，fltt=2 十进制，与分时页同源）：
+   * 用于卡片口径与分时页不一致的汇率（如 USDCNY 卡片展示离岸 133.USDCNH，
+   * 与分时源完全同 secid，保证「卡片=分时」数值一致）；东财失败时退回新浪。
+   */
+  preferEm?: boolean
 }
 
 export const ASIA_RATES: AsiaRateConfig[] = [
@@ -264,7 +296,13 @@ export const ASIA_RATES: AsiaRateConfig[] = [
   { code: 'CNYJPY', name: '人民币/日元', sinaKey: 'fx_scnyjpy', emSecid: '119.CNYJPY' },
   { code: 'USDKRW', name: '美元/韩元', sinaKey: 'fx_susdkrw', emSecid: '119.USDKRW' },
   { code: 'USDJPY', name: '美元/日元', sinaKey: 'fx_susdjpy', emSecid: '119.USDJPY' },
-  { code: 'USDCNY', name: '美元/人民币', sinaKey: 'fx_susdcny', emSecid: '119.USDCNY' },
+  {
+    code: 'USDCNY',
+    name: '美元/离岸人民币',
+    sinaKey: 'fx_susdcnh',
+    emSecid: '133.USDCNH',
+    preferEm: true,
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -278,6 +316,8 @@ export interface MetalConfig {
   aKeys: string[]
   /** 外盘新浪 key */
   usKeys: string[]
+  /** 外盘优先的东财 secid（金银：与首页宏观卡片、分时页同源；新浪 hf_GC/hf_SI [0] 值系统性偏高不可靠） */
+  emSecid?: string
   /** 国内价格区间校验（aExtra） */
   aRange?: [number, number]
   /** 外盘价格区间校验（usExtra） */
@@ -292,6 +332,7 @@ export const METALS: MetalConfig[] = [
     name: '黄金',
     aKeys: ['nf_AU0', 'nf_AU'],
     usKeys: ['hf_GC', 'hf_XAU'],
+    emSecid: '101.GC00Y',
     aRange: [200, 1200],
     usRange: [1200, 6000],
   },
@@ -300,6 +341,7 @@ export const METALS: MetalConfig[] = [
     name: '白银',
     aKeys: ['nf_AG0', 'nf_AG'],
     usKeys: ['hf_SI', 'hf_XAG'],
+    emSecid: '101.SI00Y',
     aRange: [2000, 20000],
     usRange: [8, 120],
   },
@@ -331,7 +373,12 @@ export interface MetalSectionConfig {
 }
 
 export const METAL_SECTIONS: MetalSectionConfig[] = [
-  { id: 'precious', title: '金银', codes: ['GOLD', 'SILVER'] },
+  {
+    id: 'precious',
+    title: '金银',
+    codes: ['GOLD', 'SILVER'],
+    tip: '黄金同时展示内盘（沪金主连，元/克）与外盘（COMEX黄金，美元/盎司）两路报价；白银等其他金属随交易时段自动切换内/外盘口径',
+  },
   { id: 'industrial', title: '工业金属', codes: ['COPPER', 'ALUMINUM', 'ZINC', 'NICKEL', 'TIN'] },
   {
     id: 'other',

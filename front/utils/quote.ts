@@ -10,6 +10,7 @@ import {
   fetchEastmoneyAShareSnapshot,
   fetchEastmoneyList,
   fetchEastmoneyQuote,
+  fetchEastmoneyUlistQuote,
   fetchSinaQuotes,
   fetchTencentQuotes,
 } from '../api/quote'
@@ -51,6 +52,7 @@ const SOURCE_PRIORITY: Record<QuoteSourceKind, number> = {
   sina_fx: 3,
   tencent: 2,
   em: 4,
+  em_ulist: 4,
 }
 
 function sourceName(kind: QuoteSourceKind): string {
@@ -123,6 +125,29 @@ async function fetchOne(source: QuoteSource, batch: QuoteBatch): Promise<SourceQ
         quote.latestPrice,
         quote.previousClose,
         quote.change,
+        quote.changePercent,
+        quote.name,
+      )
+      if (result) return result
+    }
+    return null
+  }
+
+  // em_ulist：东财 ulist.np/get + fltt=2（十进制价格，不除 divisor）。
+  // 供东财期货/商品市场使用（101 COMEX / 102 NYMEX 等，stock/get 的 10^f152 除数不可靠）；
+  // 多个 secid 逐个尝试，与分时页「基础信息」同源同构。
+  if (kind === 'em_ulist') {
+    for (const secid of toArray(source.secid)) {
+      if (!secid) continue
+      const quote = await fetchEastmoneyUlistQuote(secid)
+      if (!quote || quote.price === null) continue
+      const result = toSourceQuote(
+        source,
+        quote.price,
+        quote.previousClose,
+        quote.price !== null && quote.previousClose !== null
+          ? quote.price - quote.previousClose
+          : null,
         quote.changePercent,
         quote.name,
       )

@@ -51,7 +51,7 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
 test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」且透传分时代码', () => {
   const page = buildQuoteGlobalPage({
     cnIndices: [],
-    usIndices: [index('usQQQ', '纳斯达克', 20000)],
+    usIndices: [index('usIXIC', '纳斯达克', 20000)],
     macro: [],
     // 美股时段板块由 api 层标记分时代码（us-BKxxxx → 代理股均值合成分时，见 api/market.ts）
     sectors: [
@@ -98,7 +98,7 @@ test('buildQuoteGlobalPage：全球指数按市场拆分为「中国指数」「
       index('sz399001', '深证成指', 10850.2),
       { code: 'AVG', name: 'A股平均股价', price: 21.33, pct: 0.5 },
     ],
-    usIndices: [index('usDJI', '道琼斯工业', 44150.6), index('usQQQ', '纳斯达克', 20000)],
+    usIndices: [index('usDJI', '道琼斯工业', 44150.6), index('usIXIC', '纳斯达克', 20000)],
     macro: [],
     sectors: [],
     statusLabel: '全球市场',
@@ -167,7 +167,7 @@ test('buildQuoteGlobalPage：A股指数 / 美股指数 板块附加盘面状态'
   const page = buildQuoteGlobalPage(
     {
       cnIndices: [index('sh000001', '上证指数', 3421.5)],
-      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
       macro: [{ code: 'VIX', name: '恐慌指数', price: 18.5, pct: -2 }],
       sectors: [],
       statusLabel: '全球市场',
@@ -195,7 +195,7 @@ test('buildQuoteGlobalPage：美股盘中时段状态为「盘中」', () => {
   const page = buildQuoteGlobalPage(
     {
       cnIndices: [index('sh000001', '上证指数', 3421.5)],
-      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
       macro: [],
       sectors: [],
       statusLabel: '全球市场',
@@ -211,6 +211,62 @@ test('buildQuoteGlobalPage：美股盘中时段状态为「盘中」', () => {
   assert.equal(us.marketStatus, '盘中')
   assert.equal(us.marketTone, 'active')
   assert.equal(cn.marketStatus, '休市')
+})
+
+test('buildQuoteGlobalPage：行业板块按 sectorRegion 展示盘面状态（A股时段/美股时段）', () => {
+  // 2026-08-20 02:00 UTC = 北京 10:00（A股盘中）、美东 8/19 22:00（美股休市）
+  const page = buildQuoteGlobalPage(
+    {
+      cnIndices: [index('sh000001', '上证指数', 3421.5)],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
+      macro: [],
+      sectors: [sector('BK1134', 'AI算力', 1.5)],
+      statusLabel: '全球市场',
+      statusTone: 'active',
+      sectorBadge: 'A股时段',
+      sectorTitle: '中国行业板块',
+      sectorRegion: 'cn',
+    },
+    new Date('2026-08-20T02:00:00Z'),
+  )
+  const board = page.sections.find((section) => section.id === 'industry-board')
+  assert.ok(board)
+  assert.equal(board.marketStatus, '盘中', 'A股时段板块状态应随中国市场时钟')
+  assert.equal(board.marketTone, 'active')
+
+  // 美股时段：sectorRegion='us' → 状态随美股市场时钟（此时美东 8/19 22:00 休市）
+  const usPage = buildQuoteGlobalPage(
+    {
+      cnIndices: [],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
+      macro: [],
+      sectors: [sector('BK1134', 'AI算力', 2.3)],
+      statusLabel: '全球市场',
+      statusTone: 'rest',
+      sectorBadge: '美股时段',
+      sectorTitle: '美股行业板块',
+      sectorRegion: 'us',
+    },
+    new Date('2026-08-20T02:00:00Z'),
+  )
+  const usBoard = usPage.sections.find((section) => section.id === 'industry-board')
+  assert.ok(usBoard)
+  assert.equal(usBoard.marketStatus, '休市', '美股时段板块状态应随美股市场时钟')
+  assert.equal(usBoard.marketTone, 'rest')
+
+  // 未传 sectorRegion：不展示盘面状态（向后兼容）
+  const noRegion = buildQuoteGlobalPage({
+    cnIndices: [],
+    usIndices: [],
+    macro: [],
+    sectors: [sector('BK1134', 'AI算力', 1.5)],
+    statusLabel: '全球市场',
+    statusTone: 'active',
+    sectorTitle: '中国行业板块',
+  })
+  const noRegionBoard = noRegion.sections.find((section) => section.id === 'industry-board')
+  assert.ok(noRegionBoard)
+  assert.equal(noRegionBoard.marketStatus, undefined)
 })
 
 test('buildQuoteAsiaPage：韩国/日本板块附加盘面状态，午休与无午休区分', () => {
