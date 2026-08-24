@@ -55,7 +55,7 @@ public interface RegionResolver {
 - xdb 数据文件固定 classpath 资源：`src/main/resources/ip2region/ip2region.xdb`（约 11MB），启动时加载；
 - xdb 缺失 / 加载失败：记 ERROR 日志，`resolve()` 一律返回 null（fail-open，打点接口不受影响）；
 - Caffeine 缓存 IP → 区域（约 1 万条，同 IP 只查一次，单次亚毫秒级）；
-- 解析结果取省、市字段拼 `省-市`；国家非中国或省份为 0 时返回 null；城市为 0 时仅返回省份（直辖市/仅省级数据场景）。
+- xdb 记录格式为「国家|省|市|ISP|国家码」（如「中国|广东省|广州市|移动|CN」），解析映射取省=第 2 列、市=第 3 列拼 `省-市`；国家非中国或省份为 0 → null；城市为 0 或省=市（直辖市）时仅返回省份。
 
 未来切换在线 API：新增 `OnlineRegionResolver` 实现同一接口，替换 Bean 即可，TrackService 零改动。
 

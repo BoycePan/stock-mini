@@ -2,10 +2,8 @@ package com.guyu.stock.service.region;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Ip2RegionResolverTest {
 
@@ -13,19 +11,20 @@ class Ip2RegionResolverTest {
 
     @Test
     void resolveKnownPublicChinaIpReturnsProvinceCity() {
-        // 阿里公共 DNS（浙江杭州）：只断言「省-市」格式，不断言具体城市（数据文件会更新）
-        String region = resolver.resolve("223.5.5.5");
-        assertNotNull(region, "公网中国 IP 应能解析出区域");
-        assertTrue(region.contains("-"), "期望「省-市」格式，实际: " + region);
+        // 阿里公共 DNS：中国|浙江省|杭州市|阿里|CN → 浙江省-杭州市
+        assertEquals("浙江省-杭州市", resolver.resolve("223.5.5.5"));
     }
 
     @Test
     void resolveCityZeroReturnsProvinceOnly() {
-        // 114DNS（江苏南京），原始串「中国|江苏省|南京市|0|CN」：城市字段（第 4 段）为 0 → 仅返回省份字段，不拼「省-市」
-        String region = resolver.resolve("114.114.114.114");
-        assertNotNull(region, "城市字段为 0 的公网中国 IP 应能解析出省份");
-        assertFalse(region.isBlank(), "返回应为非空白省份，实际: " + region);
-        assertFalse(region.contains("-"), "城市为 0 时应仅返回省份（不含「-」），实际: " + region);
+        // 中国|台湾省|0|中华电信|CN：城市字段为 0，仅返回省份
+        assertEquals("台湾省", resolver.resolve("210.241.0.1"));
+    }
+
+    @Test
+    void resolveMunicipalityReturnsProvinceOnly() {
+        // 中国|北京市|北京市|腾讯|CN：直辖市省=市，仅返回省份
+        assertEquals("北京市", resolver.resolve("119.29.29.29"));
     }
 
     @Test

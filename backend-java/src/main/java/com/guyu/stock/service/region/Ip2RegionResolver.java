@@ -54,7 +54,7 @@ public class Ip2RegionResolver implements RegionResolver {
         return cache.get(ip, this::doResolve);
     }
 
-    /** 原始串形如「中国|0|广东省|深圳市|电信」，解析为「省-市」；国家非中国或省份为 0 → null；城市为 0 时仅返回省份（直辖市/仅省级数据） */
+    /** 原始串形如「中国|广东省|广州市|移动|CN」（国家|省|市|ISP|国家码），解析为「省-市」；国家非中国或省份为 0 → null；城市为 0 或省=市（直辖市）时仅返回省份 */
     private String doResolve(String ip) {
         try {
             return toProvinceCity(ip2Region.search(ip));
@@ -67,12 +67,14 @@ public class Ip2RegionResolver implements RegionResolver {
     private String toProvinceCity(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String[] parts = raw.split("\\|");
+        // 实际 v4 xdb 数据格式：国家|省|市|ISP|国家码（如 中国|广东省|广州市|移动|CN）
         if (parts.length < 5) return null;
         if (!CN.equals(parts[0])) return null;          // 只统计国内用户区域
-        String province = parts[2];
-        String city = parts[3];
+        String province = parts[1];
+        String city = parts[2];
         if (province == null || province.isBlank() || ZERO.equals(province)) return null;
         if (city == null || city.isBlank() || ZERO.equals(city)) return province;
+        if (province.equals(city)) return province;     // 直辖市等省=市：只返回省份
         return province + "-" + city;
     }
 
