@@ -16,9 +16,21 @@
       desc="正在为您同步该标的当日分时走势，请稍候…"
     ></loading-state>
 
+    <!-- 暂无数据引导态：无分时源（KOSDAQ / TOPIX / VIX 等）或多次加载失败时展示 -->
+    <view wx:elif="{{ noData }}" class="no-data-card">
+      <view class="no-data-icon"><text>◌</text></view>
+      <text class="no-data-title">暂无分时数据</text>
+      <text class="no-data-desc">{{ noDataDesc }}</text>
+      <button wx:if="{{ noDataRetryable }}" class="no-data-retry" bindtap="onRetry"
+        >重新加载</button
+      >
+    </view>
+
+    <!-- 首次加载失败：错误提示 + 重试 -->
     <view wx:elif="{{ error }}" class="error-card">
-      <text>{{ error }}</text>
-      <button bindtap="onRetry">重新加载</button>
+      <view class="error-icon"><text>!</text></view>
+      <text class="error-text">{{ error }}</text>
+      <button class="error-retry" bindtap="onRetry">重新加载</button>
     </view>
 
     <block wx:else>

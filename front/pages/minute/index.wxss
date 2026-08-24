@@ -69,8 +69,7 @@
 }
 
 .panel,
-.quote-card,
-.error-card {
+.quote-card {
   margin-top: 18rpx;
   padding: 28rpx 24rpx;
   border: 1rpx solid #e2eaf3;
@@ -192,20 +191,106 @@
   color: #9cacc0;
 }
 
+/* 暂无数据引导卡（无分时源 / 多次加载失败） */
+.no-data-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 18rpx;
+  padding: 96rpx 48rpx 72rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.no-data-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #edf4ff 0%, #dbe9ff 100%);
+}
+
+.no-data-icon text {
+  color: #4278ed;
+  font-size: 52rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.no-data-title {
+  margin-top: 28rpx;
+  color: #152338;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.no-data-desc {
+  margin-top: 14rpx;
+  padding: 0 20rpx;
+  color: #718096;
+  font-size: 24rpx;
+  line-height: 40rpx;
+  text-align: center;
+}
+
+.no-data-retry {
+  margin-top: 36rpx;
+  padding: 0 64rpx;
+  border-radius: 40rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 26rpx;
+  line-height: 76rpx;
+}
+
+/* 首次加载失败卡：错误提示 + 重试 */
 .error-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 18rpx;
+  padding: 72rpx 48rpx 64rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+}
+
+.error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #fdf0ef;
+}
+
+.error-icon text {
+  color: #eb514d;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.error-text {
+  margin-top: 24rpx;
   color: #718096;
   font-size: 27rpx;
 }
 
-.error-card button {
-  margin-top: 24rpx;
-  border-radius: 34rpx;
+.error-retry {
+  margin-top: 32rpx;
+  padding: 0 64rpx;
+  border-radius: 40rpx;
   background: #edf4ff;
   color: #4278ed;
-  font-size: 25rpx;
+  font-size: 26rpx;
+  line-height: 76rpx;
 }
 
 .bottom-space {
@@ -216,11 +301,51 @@
   color: #f5f7fb;
 }
 
-.page.theme-dark .error-card {
+/* 深色主题 · 暂无数据 / 错误卡片 */
+.page.theme-dark .no-data-card {
+  border-color: #2a394e;
+  background: #1a2637;
+}
+
+.page.theme-dark .no-data-icon {
+  background: linear-gradient(145deg, #233046 0%, #1b2a44 100%);
+}
+
+.page.theme-dark .no-data-icon text {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .no-data-title {
+  color: #f5f7fb;
+}
+
+.page.theme-dark .no-data-desc {
   color: #9cacc0;
 }
 
-.page.theme-dark .error-card button {
+.page.theme-dark .no-data-retry {
+  background: #233046;
+  color: #6fa3ff;
+}
+
+.page.theme-dark .error-card {
+  border-color: #2a394e;
+  background: #1a2637;
+}
+
+.page.theme-dark .error-icon {
+  background: #3a2426;
+}
+
+.page.theme-dark .error-icon text {
+  color: #ff8a85;
+}
+
+.page.theme-dark .error-text {
+  color: #9cacc0;
+}
+
+.page.theme-dark .error-retry {
   background: #233046;
   color: #6fa3ff;
 }

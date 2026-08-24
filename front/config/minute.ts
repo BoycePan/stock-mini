@@ -5,8 +5,9 @@
  *   - em    东方财富分时  push2delay.eastmoney.com/api/qt/stock/trends2/get（ndays=1 当日分钟线，覆盖最广）
  *   - tc    腾讯分时     web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股兜底）
  *   - yahoo Yahoo 1分钟   query1.finance.yahoo.com/v8/finance/chart?range=1d&interval=1m
- *                        （东财/腾讯分时均不覆盖的标的：KOSDAQ 等；
- *                          恐慌指数 VIX 仅 Yahoo 有分时且大陆被墙，刻意不配置（见下）；
+ *                        （东财/腾讯分时均不覆盖且无大陆可直连源的标的刻意不配置：
+ *                          KOSDAQ（仅 Yahoo ^KQ11）、TOPIX（无东证指数本身分时）、
+ *                          恐慌指数 VIX（仅 Yahoo ^VIX），卡片不显示「分时」入口；
  *                          韩股/日股/USDKRW/USDJPY 已改由东财 177/176/119 覆盖；
  *                          汇率 CNYKRW/CNYJPY/USDCNY 已改由东财 119/133 或交叉合成覆盖；
  *                          Yahoo 仅作大陆外兜底，大陆访问被墙）
@@ -141,10 +142,11 @@ export const US_PROXY_NAMES: Record<string, string> = {
  * 首页行情卡片 code → 当日分时数据源。
  * 无条目的卡片（如金店金价 GS-*、财经新闻）不支持分时图。
  * 韩股/日股（东财 177/176）、USDKRW/USDJPY（东财 119）、USDCNY/CNYJPY（东财 133 离岸）、
- * CNYKRW（东财交叉合成）已由东财分时覆盖，Yahoo 1分钟保留兜底；KOSDAQ 东财无分时，仍仅配 Yahoo。
- * 恐慌指数 VIX **刻意不配置**：仅 Yahoo 有分时（^VIX），大陆访问 Yahoo 被墙，
- * 且无大陆可直连的真实 VIX 分时源。因此卡片不显示「分时」角标、点击提示暂无数据，
- * 避免大陆用户点进分时页后加载失败（见 utils/market-page-factory.ts onMetricTap）。
+ * CNYKRW（东财交叉合成）已由东财分时覆盖，Yahoo 1分钟保留兜底。
+ * 恐慌指数 VIX / KOSDAQ / TOPIX **刻意不配置**：VIX 与 KOSDAQ 仅 Yahoo 有分时（^VIX / ^KQ11）
+ * 且大陆被墙、TOPIX 无东证指数本身分时（原 ETF 代理不可用），均无大陆可直连源。
+ * 因此这些卡片不显示「分时」角标、点击提示暂无数据，避免大陆用户点进分时页后加载失败
+ * （见 utils/market-page-factory.ts onMetricTap）。
  */
 export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
@@ -206,15 +208,11 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // 日韩页 · 指数
   // -------------------------------------------------------------------------
   KS11: { em: '100.KS11' }, // KOSPI
-  KQ11: { yahoo: '^KQ11' }, // KOSDAQ：东财无，仅 Yahoo
+  // KOSDAQ / TOPIX **刻意不配置**分时源：
+  // - KOSDAQ：东财/腾讯均无分时，仅 Yahoo ^KQ11 有分时且大陆被墙，无大陆可直连源；
+  // - TOPIX：东财/腾讯/Yahoo 均无东证指数本身分时，原「日本东证指数ETF(513800)」代理不可用。
+  // 两者卡片均不显示「分时」角标、点击提示暂无数据（见 utils/market-page-factory.ts onMetricTap）。
   N225: { em: '100.N225' }, // 日经225
-  // TOPIX：东财/腾讯/Yahoo 均无东证指数本身分时（Yahoo ^TPX 无数据），
-  // 用「日本东证指数ETF南方(513800)」代理（跟踪 TOPIX，同东财/腾讯家族）。
-  TPX: {
-    em: '1.513800',
-    tc: 'sh513800',
-    note: '东证指数暂无直接分时，此图展示跟踪其走势的「日本东证指数ETF(513800)」',
-  },
   VNINDEX: { em: '100.VNINDEX' }, // 越南胡志明
   SENSEX: { em: '100.SENSEX' }, // 孟买SENSEX
 
