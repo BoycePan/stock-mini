@@ -155,8 +155,8 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     })
   }
 
-  // ④ 行业板块：A股时段（含待盘前窗口 15:00–美股盘前开始前）取东财板块涨跌幅；
-  //    美股盘前/盘中/盘后及周末取美股代理股涨跌幅均值（resolveIndustryUseA，见 market-clock.ts）
+  // ④ 行业板块：A股时段（09:15–美股开盘前，北京时间，含集合竞价、午休与美股盘前时段）取东财板块涨跌幅；
+  //    美股盘中/盘后及周末取美股代理股涨跌幅均值（resolveIndustryUseA，见 market-clock.ts）
   const industryUseA = resolveIndustryUseA(session)
   const boardPct: Record<string, number> = {}
   if (industryUseA) {
@@ -202,7 +202,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     statusLabel: '全球市场',
     statusTone: session.statusTone,
     sectorTitle: industryUseA ? '中国行业板块' : '美股行业板块',
-    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/待盘前；美股代理 → 美股盘前/盘中/盘后/休市
+    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/集合竞价/休市（含美股盘前时段）；美股代理 → 美股盘中/盘后/休市
     sectorPhase: resolveIndustryPhase(session),
   })
 }

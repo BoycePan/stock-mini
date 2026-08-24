@@ -83,7 +83,7 @@ test('A股：周末休市；未维护年份回退到周末判定', () => {
 // 美股（美东时间，含夏令时）
 // ---------------------------------------------------------------------------
 
-test('美股：盘前 / 盘中 / 盘后 / 休市（EDT）', () => {
+test('美股：盘前时段视为休市 / 盘中 / 盘后 / 休市（EDT）', () => {
   // 2026-08-20（周四）EDT
   assert.deepEqual(getRegionStatus('us', at('2026-08-20T14:30:00Z')), {
     kind: 'open',
@@ -91,10 +91,10 @@ test('美股：盘前 / 盘中 / 盘后 / 休市（EDT）', () => {
     tone: 'active',
   })
   assert.deepEqual(getRegionStatus('us', at('2026-08-20T12:00:00Z')), {
-    kind: 'pre',
-    label: '盘前',
-    tone: 'quiet',
-  })
+    kind: 'closed',
+    label: '休市',
+    tone: 'rest',
+  }) // ET 08:00 盘前 → 不展示「盘前」，按休市处理
   assert.deepEqual(getRegionStatus('us', at('2026-08-20T21:00:00Z')), {
     kind: 'post',
     label: '盘后',
@@ -210,20 +210,26 @@ const session = (patch: Partial<MarketSession>): MarketSession => ({
   ...patch,
 })
 
-test('resolveIndustryUseA：A股时段 + 待盘前窗口取 A 股板块，其余取美股代理股', () => {
-  // 2026-08-20（周四，夏令时）：A股 09:30–15:00（北京 01:30–07:00 UTC）+ 待盘前窗口 15:00–16:00（07:00–08:00 UTC）
+test('resolveIndustryUseA：A股时段（含集合竞价）+ 盘前窗口（含美股盘前时段）取 A 股板块，其余取美股代理股', () => {
+  // 2026-08-20（周四，夏令时）：A股 09:15–15:00（北京 01:15–07:00 UTC）+ 盘前窗口 15:00–美股开盘 21:30（07:00–13:30 UTC）
   assert.equal(resolveIndustryUseA(null, at('2026-08-20T02:00:00Z')), true) // 北京 10:00 A股盘中
   assert.equal(resolveIndustryUseA(null, at('2026-08-20T06:30:00Z')), true) // 北京 14:30 A股盘中
   assert.equal(resolveIndustryUseA(null, at('2026-08-20T07:30:00Z')), true) // 北京 15:30 待盘前窗口
-  assert.equal(resolveIndustryUseA(null, at('2026-08-20T08:00:00Z')), false) // 北京 16:00 美股盘前开始
-  assert.equal(resolveIndustryUseA(null, at('2026-08-20T09:00:00Z')), false) // 北京 17:00 美股盘前
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T08:00:00Z')), true) // 北京 16:00 美股盘前 → A 股板块
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T09:00:00Z')), true) // 北京 17:00 美股盘前 → A 股板块
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T13:29:00Z')), true) // 北京 21:29 美股开盘前
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T13:30:00Z')), false) // 北京 21:30 美股开盘 → 美股代理股
   assert.equal(resolveIndustryUseA(null, at('2026-08-20T14:30:00Z')), false) // 北京 22:30 美股盘中
-  assert.equal(resolveIndustryUseA(null, at('2026-08-20T01:20:00Z')), false) // 北京 09:20 A股集合竞价 → 美股代理股
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T01:14:00Z')), false) // 北京 09:14 集合竞价前 → 美股代理股
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T01:15:00Z')), true) // 北京 09:15 A股集合竞价 → A 股板块
+  assert.equal(resolveIndustryUseA(null, at('2026-08-20T01:20:00Z')), true) // 北京 09:20 A股集合竞价 → A 股板块
   assert.equal(resolveIndustryUseA(null, at('2026-08-22T02:00:00Z')), false) // 周六休市
 
-  // 2026-11-02（周一，冬令时）：待盘前窗口 15:00–17:00（北京 07:00–09:00 UTC）
+  // 2026-11-02（周一，冬令时）：盘前窗口 15:00–美股开盘 22:30（北京 07:00–14:30 UTC）
   assert.equal(resolveIndustryUseA(null, at('2026-11-02T08:00:00Z')), true) // 北京 16:00 待盘前窗口
-  assert.equal(resolveIndustryUseA(null, at('2026-11-02T09:00:00Z')), false) // 北京 17:00 美股盘前开始
+  assert.equal(resolveIndustryUseA(null, at('2026-11-02T09:00:00Z')), true) // 北京 17:00 美股盘前 → A 股板块
+  assert.equal(resolveIndustryUseA(null, at('2026-11-02T14:29:00Z')), true) // 北京 22:29 美股开盘前
+  assert.equal(resolveIndustryUseA(null, at('2026-11-02T14:30:00Z')), false) // 北京 22:30 美股开盘 → 美股代理股
 
   // 显式会话优先：useA=true/useUs=false → true（周末也按 A 股口径）；useA=false/useUs=true → false
   assert.equal(
@@ -234,6 +240,14 @@ test('resolveIndustryUseA：A股时段 + 待盘前窗口取 A 股板块，其余
     resolveIndustryUseA(session({ useA: false, useUs: true }), at('2026-08-20T02:00:00Z')),
     false,
   )
+  // 显式会话为美股盘前（useUs=true + usMode=pre）→ 仍按工作日盘前窗口取 A 股板块
+  assert.equal(
+    resolveIndustryUseA(
+      session({ useA: false, useUs: true, usMode: 'pre' }),
+      at('2026-08-20T09:00:00Z'),
+    ),
+    true,
+  )
   // 会话未给出明确口径（useA/useUs 同真或同假）→ 回退纯时钟
   assert.equal(
     resolveIndustryUseA(session({ useA: true, useUs: true }), at('2026-08-20T02:00:00Z')),
@@ -241,25 +255,40 @@ test('resolveIndustryUseA：A股时段 + 待盘前窗口取 A 股板块，其余
   )
 })
 
-test('resolveIndustryPhase：阶段映射（大A盘中/午间休市/待盘前/美股盘前/盘中/盘后/休市）', () => {
+test('resolveIndustryPhase：阶段映射（大A盘中/午间休市/休市/美股盘中/盘后），无「美股盘前」', () => {
   // A股时段
   assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T02:00:00Z')), {
     label: '大A盘中',
     tone: 'active',
   }) // 北京 10:00
+  assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T01:20:00Z')), {
+    label: '集合竞价',
+    tone: 'quiet',
+  }) // 北京 09:20 A股集合竞价
   assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T04:00:00Z')), {
     label: '午间休市',
     tone: 'quiet',
   }) // 北京 12:00
   assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T07:30:00Z')), {
-    label: '待盘前',
+    label: '休市',
     tone: 'rest',
   }) // 北京 15:30 待盘前窗口
-  // 美股时段（usMode 来自会话）
-  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'pre' }), at('2026-08-20T09:00:00Z')), {
-    label: '美股盘前',
-    tone: 'quiet',
+  // 美股盘前时段（北京 17:00）：已合并为 A 股板块，阶段展示「休市」，不再出现「美股盘前」
+  assert.deepEqual(resolveIndustryPhase(session({ useA: true }), at('2026-08-20T09:00:00Z')), {
+    label: '休市',
+    tone: 'rest',
   })
+  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'pre' }), at('2026-08-20T09:00:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  }) // 会话 usMode=pre 同样落到 A 股板块 → 休市
+  // 会话缓存滞后场景：数据已切美股（21:30 开盘），会话快照 usMode 仍为 pre →
+  // 阶段取当前时钟（美股盘中），避免胶囊短暂显示「休市」
+  assert.deepEqual(resolveIndustryPhase(session({ usMode: 'pre' }), at('2026-08-20T13:30:00Z')), {
+    label: '美股盘中',
+    tone: 'active',
+  })
+  // 美股时段（usMode 来自会话）
   assert.deepEqual(
     resolveIndustryPhase(session({ usMode: 'regular' }), at('2026-08-20T14:30:00Z')),
     { label: '美股盘中', tone: 'active' },
@@ -272,13 +301,13 @@ test('resolveIndustryPhase：阶段映射（大A盘中/午间休市/待盘前/�
     label: '休市',
     tone: 'rest',
   }) // 周六休市
-  // 无会话：纯时钟回退（周末 → 休市；夏令时 16:00 盘前 → 美股盘前）
+  // 无会话：纯时钟回退（周末 → 休市；夏令时 16:00 盘前 → A 股板块休市）
   assert.deepEqual(resolveIndustryPhase(null, at('2026-08-22T02:00:00Z')), {
     label: '休市',
     tone: 'rest',
   })
   assert.deepEqual(resolveIndustryPhase(null, at('2026-08-20T08:00:00Z')), {
-    label: '美股盘前',
-    tone: 'quiet',
+    label: '休市',
+    tone: 'rest',
   })
 })

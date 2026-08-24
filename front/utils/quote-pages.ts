@@ -195,7 +195,7 @@ export interface QuoteGlobalPageParams {
   statusLabel: string
   statusTone: 'active' | 'rest'
   /**
-   * 行业板块盘面阶段（大A盘中 / 午间休市 / 待盘前 / 美股盘前 / 美股盘中 / 美股盘后 / 休市，
+   * 行业板块盘面阶段（大A盘中 / 午间休市 / 休市 / 美股盘中 / 美股盘后，
    * 见 utils/market-clock.ts resolveIndustryPhase）：有值时板块标题右侧展示阶段化胶囊
    * （复用 marketStatus / marketTone 渲染），与数据源口径一致——展示的是哪个市场的数据，
    * 就标哪个市场的阶段（A股板块 → A股阶段；美股代理 → 美股阶段）。
@@ -241,14 +241,14 @@ export function buildQuoteGlobalPage(
       // 两个会话均有分时图，整面板右上角以单个「分时」角标提示
       section.minuteCorner = true
       if (params.sectorPhase) {
-        // 阶段化胶囊（大A盘中 / 待盘前 / 美股盘前 / 美股盘中 / 美股盘后 / 休市等）
+        // 阶段化胶囊（大A盘中 / 午间休市 / 休市 / 美股盘中 / 美股盘后等）
         section.marketStatus = params.sectorPhase.label
         section.marketTone = params.sectorPhase.tone
       }
       section.tip = [
         '板块数据随交易时段自动切换：',
-        '· 中国行业板块（A股时段）：北京时间 周一至周五 09:30–15:00（含午休），及 15:00–16:00/17:00（美股盘前开始前）；',
-        '· 美股行业板块（美股盘前/盘中/盘后及周末）：取美股代理股涨跌幅均值。',
+        '· 中国行业板块（A股时段）：北京时间 周一至周五 09:30–美股开盘前（夏令时 21:30 / 冬令时 22:30，含午休）；',
+        '· 美股行业板块（美股盘中/盘后及周末）：取美股代理股涨跌幅均值。',
         '',
         '全球产业数据根据公开产业信息整理，仅供信息参考。',
       ].join('\n')
