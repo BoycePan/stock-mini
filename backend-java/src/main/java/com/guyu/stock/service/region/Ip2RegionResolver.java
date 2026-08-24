@@ -54,7 +54,7 @@ public class Ip2RegionResolver implements RegionResolver {
         return cache.get(ip, this::doResolve);
     }
 
-    /** 原始串形如「中国|0|广东省|深圳市|电信」，解析为「省-市」；国家非中国/字段为 0 → null */
+    /** 原始串形如「中国|0|广东省|深圳市|电信」，解析为「省-市」；国家非中国或省份为 0 → null；城市为 0 时仅返回省份（直辖市/仅省级数据） */
     private String doResolve(String ip) {
         try {
             return toProvinceCity(ip2Region.search(ip));
