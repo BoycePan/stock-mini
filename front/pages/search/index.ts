@@ -4,6 +4,7 @@ import { addSearchHistory, clearSearchHistory, getSearchHistory } from '../../ut
 import type { StockInfo } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { SHARE_IMAGE_URL } from '../../utils/share'
+import { APP_NAME } from '../../config/app'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -89,7 +90,7 @@ Page({
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     return {
-      title: '股票搜索 - 市场追踪助手',
+      title: `股票搜索 - ${APP_NAME}`,
       path: '/pages/search/index',
       imageUrl: SHARE_IMAGE_URL,
     }

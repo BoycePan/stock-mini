@@ -12,6 +12,7 @@ import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
 import { isReleaseBuild } from '../../config/env'
 import { getEnvOverride } from '../../utils/storage'
 import type { EnvOverride } from '../../utils/storage'
+import { APP_NAME } from '../../config/app'
 
 Page({
   data: {
@@ -22,6 +23,8 @@ Page({
     version: '',
     isDev: !isReleaseBuild(),
     envOverride: null as EnvOverride | null,
+    /** 当前小程序名称（按 AppID 动态解析，页脚展示） */
+    appName: APP_NAME,
   },
   onLoad() {
     bindTheme(this)
@@ -82,7 +85,7 @@ Page({
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     return {
-      title: '市场追踪助手',
+      title: APP_NAME,
       path: SHARE_HOME_PATH,
       imageUrl: SHARE_IMAGE_URL,
     }

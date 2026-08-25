@@ -1,8 +1,10 @@
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
+import { APP_NAME } from '../../config/app'
 
 Component({
   properties: {
-    title: { type: String, value: '市场追踪助手' },
+    // 默认空串：未传 title 时展示当前小程序名称（appName，按 AppID 动态解析）
+    title: { type: String, value: '' },
     showShare: { type: Boolean, value: true },
     /** 是否显示「分享海报」按钮（生成海报，区别于右上角胶囊菜单分享） */
     posterShare: { type: Boolean, value: false },
@@ -13,6 +15,8 @@ Component({
   },
   data: {
     headerStyle: '',
+    /** 当前小程序名称（按 AppID 动态解析，模板中 title 为空时兜底展示） */
+    appName: APP_NAME,
     /** 胶囊按钮高度（px），分享按钮与之保持一致（兜底 32px） */
     capsuleHeight: 32,
     /** 胶囊圆角 = 高度一半（px） */

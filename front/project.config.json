@@ -1,5 +1,5 @@
 {
-  "description": "市场追踪助手",
+  "description": "行情追踪小程序（多 AppID 部署）",
   "packOptions": {
     "ignore": [
       {

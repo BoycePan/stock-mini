@@ -183,7 +183,7 @@
 
     <!-- 页脚 -->
     <view class="footer">
-      <text class="footer-title">市场追踪助手</text>
+      <text class="footer-title">{{appName}}</text>
       <text class="footer-sub">v{{ version }} · 数据仅供参考，不构成任何投资建议</text>
     </view>
 

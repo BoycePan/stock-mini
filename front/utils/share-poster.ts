@@ -7,7 +7,8 @@
  * - 海报固定深色底（深浅主题下都清晰可读），设计坐标系宽 750；
  * - 头部渐变卡片：logo（front/static/images/logo.png）+ 标题 + 品牌副标题 + 时间戳 + 状态胶囊；
  * - 分区数据按双列网格绘制（名称 + 数值 + 涨跌幅，涨跌着色）；
- * - 水印「微信小程序搜「市场追踪助手」查看实时行情」。
+ * - 水印「微信小程序搜「{品牌名}」查看实时行情」，品牌名按当前 AppID 动态取
+ *   config/app.ts 的 APP_NAME（多小程序部署下各端展示各自名称）。
  *
  * 调用方（market-page 组件）持有隐藏画布 <canvas type="2d" id="shareCanvas">，
  * 通过 renderSharePoster 导出临时文件，返回 Promise<tempFilePath>。
@@ -15,12 +16,13 @@
 
 import type { MarketSection } from '../types/market'
 import { formatChange } from './formatter'
+import { APP_NAME } from '../config/app'
+
+// 品牌名（水印 / 头部副标题）按当前 AppID 动态解析，re-export 保持既有调用方 import 不变
+export { APP_NAME }
 
 /** 海报设计宽度（px），隐藏画布 CSS 宽度固定 750 */
 export const POSTER_WIDTH = 750
-
-/** 品牌名（水印 / 头部副标题） */
-export const APP_NAME = '市场追踪助手'
 
 /** 品牌 logo（海报头部圆角裁切绘制） */
 export const LOGO_PATH = '/static/images/logo.png'
@@ -427,11 +429,12 @@ function drawHeader(
     ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
     ctx.restore()
   } else {
-    // logo 加载失败时占位：品牌首字
+    // logo 加载失败时占位：品牌名首字（多小程序部署下按当前名称动态取首字）
     ctx.fillStyle = GOLD
     ctx.font = 'bold 50px sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText('市', logoX + logoSize / 2, logoY + logoSize / 2 + 18)
+    const brandChar = Array.from(data.subtitle || APP_NAME)[0] || '市'
+    ctx.fillText(brandChar, logoX + logoSize / 2, logoY + logoSize / 2 + 18)
   }
 
   // 标题（左，最大宽度到状态胶囊左侧；无胶囊时延伸到右缘）
