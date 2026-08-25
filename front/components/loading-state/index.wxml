@@ -4,4 +4,10 @@
     <text class="loading-text">{{text}}</text>
     <text wx:if="{{desc}}" class="loading-desc">{{desc}}</text>
   </view>
+  <!-- 骨架预览行：模拟即将出现的卡片内容 -->
+  <view class="loading-skeleton-rows">
+    <view class="loading-skeleton-row wide"></view>
+    <view class="loading-skeleton-row medium"></view>
+    <view class="loading-skeleton-row narrow"></view>
+  </view>
 </view>

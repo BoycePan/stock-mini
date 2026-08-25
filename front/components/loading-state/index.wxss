@@ -72,3 +72,37 @@
 .loading-state.dark .loading-desc {
   color: #9cacc0;
 }
+
+/* ============ 骨架预览行 ============ */
+@keyframes loading-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.loading-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 40rpx;
+  width: 480rpx;
+}
+
+.loading-skeleton-row {
+  height: 28rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #e2eaf3 25%, #eef3f8 50%, #e2eaf3 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.6s ease-in-out infinite;
+}
+
+.loading-skeleton-row.wide   { width: 100%; }
+.loading-skeleton-row.medium { width: 72%; }
+.loading-skeleton-row.narrow { width: 48%; }
+
+/* 深色变体 */
+.loading-state.dark .loading-skeleton-row {
+  background: linear-gradient(90deg, #1c2b3e 25%, #243447 50%, #1c2b3e 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.6s ease-in-out infinite;
+}
+

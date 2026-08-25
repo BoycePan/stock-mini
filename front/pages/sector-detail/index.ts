@@ -2,7 +2,7 @@ import { sectorApi } from '../../api/sector'
 import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
-import { formatChange } from '../../utils/formatter'
+import { computeChangeView } from '../../utils/market'
 import {
   APP_NAME,
   formatShareStamp,
@@ -97,8 +97,7 @@ Page({
       code: quote.code,
       name: quote.name,
       priceText: String(quote.price),
-      changeText: formatChange(quote.pct_change),
-      changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+      ...computeChangeView(quote.pct_change),
     }))
   },
   async loadKlines(board: SectorBoard) {

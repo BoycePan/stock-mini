@@ -8,6 +8,11 @@
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
 
+    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
+      <view class="market-status-dot"></view>
+      <text>{{ section.marketStatus }}</text>
+    </view>
+
     <view
       wx:if="{{ section.tip }}"
       class="section-tip"
@@ -16,11 +21,6 @@
       aria-label="查看说明"
       ><text>i</text></view
     >
-
-    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
-      <view class="market-status-dot"></view>
-      <text>{{ section.marketStatus }}</text>
-    </view>
 
     <text wx:if="{{ section.badge }}" class="section-badge">{{ section.badge }}</text>
   </view>
@@ -56,11 +56,13 @@
           >
         </view>
         <view wx:if="{{ !section.singleLine }}" class="metric-value-row">
+          <!-- 有值时正常渲染，无值时显示骨架占位条 -->
           <text
             wx:if="{{ item.value }}"
             class="metric-value {{ bumpMap[item.id] ? 'bump' : '' }}"
             >{{ item.value }}</text
           >
+          <view wx:elif="{{ !item.value }}" class="metric-value-skeleton loading-skeleton-inner"></view>
           <view
             wx:if="{{ !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"

@@ -137,6 +137,15 @@
   color: #20a66a;
 }
 
+.quote-change.flat {
+  color: #8492a5;
+}
+
+/* 深色主题：0% 平盘中性色 */
+.page.theme-dark .quote-change.flat {
+  color: #9cacc0;
+}
+
 .quote-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

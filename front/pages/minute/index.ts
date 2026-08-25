@@ -12,6 +12,7 @@ import {
 } from '../../utils/minute'
 import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
 import type { MinutePoint } from '../../types/stock'
+import { computeChangeView } from '../../utils/market'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 import {
@@ -233,8 +234,7 @@ Page({
         : null
     const change = price !== null && pre !== null ? price - pre : null
     const pct = change !== null && pre !== null && pre !== 0 ? (change / pre) * 100 : null
-    const changeClass: MinuteQuoteView['changeClass'] =
-      change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down'
+    const changeClass: MinuteQuoteView['changeClass'] = computeChangeView(pct).changeClass
 
     const lastAvg = last?.avg
 
@@ -269,7 +269,8 @@ Page({
         : null
     const change = price !== null && pre !== null ? price - pre : null
     const pct = change !== null && pre !== null && pre !== 0 ? (change / pre) * 100 : null
-    const tone: PosterTone = change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down'
+    const pctView = computeChangeView(pct)
+    const tone: PosterTone = pctView.changeClass
 
     const lastAvg = last?.avg
 
@@ -287,7 +288,7 @@ Page({
               name: '最新价',
               value: price !== null ? price.toFixed(2) : '--',
               // 海报涨跌幅只展示百分比（页面同时展示涨跌额 + 涨跌幅，过长会与数值挤占）
-              changeText: pct !== null ? formatChange(pct) : '',
+              changeText: pct !== null ? pctView.changeText : '',
               tone,
             },
             {

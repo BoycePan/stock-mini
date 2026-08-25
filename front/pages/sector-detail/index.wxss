@@ -94,6 +94,14 @@
   color: #2db653;
 }
 
+.member-quote .flat {
+  color: #8492a5;
+}
+
+.page.theme-dark .member-quote .flat {
+  color: #9cacc0;
+}
+
 .member-note {
   padding-top: 18rpx;
   color: #99a6b7;

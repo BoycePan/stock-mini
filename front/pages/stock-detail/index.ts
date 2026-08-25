@@ -3,7 +3,8 @@ import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import { saveNewsDetail } from '../../utils/storage'
 import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
-import { formatChange, formatNumber, formatWan } from '../../utils/formatter'
+import { computeChangeView } from '../../utils/market'
+import { formatNumber, formatWan } from '../../utils/formatter'
 import { truncateRichHtml } from '../../utils/html'
 import {
   APP_NAME,
@@ -96,8 +97,7 @@ Page({
         loading: false,
         quote: {
           ...quote,
-          changeText: formatChange(quote.pct_change),
-          changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+          ...computeChangeView(quote.pct_change),
           volumeText: formatWan(quote.volume),
           amountText: formatWan(quote.amount),
         },
@@ -254,8 +254,8 @@ Page({
   },
   /** 组装分享海报数据（头部 + 行情指标分区；K 线图由 share-poster 组件按 klines 绘制） */
   buildPosterData(quote: StockQuote): PosterData {
-    const change = Number(quote.pct_change) || 0
-    const tone: PosterTone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+    const view = computeChangeView(quote.pct_change)
+    const tone: PosterTone = view.changeClass
     return {
       title: quote.name || '股票详情',
       subtitle: APP_NAME,
@@ -269,7 +269,7 @@ Page({
             {
               name: '最新价',
               value: formatNumber(quote.price, 2),
-              changeText: formatChange(change),
+              changeText: view.changeText,
               tone,
             },
             { name: '开盘', value: formatNumber(quote.open, 2), changeText: '', tone: 'flat' },

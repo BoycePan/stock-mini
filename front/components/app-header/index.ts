@@ -17,6 +17,8 @@ Component({
     capsuleHeight: 32,
     /** 胶囊圆角 = 高度一半（px） */
     capsuleRadius: 16,
+    /** 窗口未就绪时重试 getMenuButtonBoundingClientRect 的次数（防止无限重试） */
+    retryCount: 0,
   },
   lifetimes: {
     attached() {
@@ -43,12 +45,17 @@ Component({
     updateHeaderStyle() {
       const windowInfo = wx.getWindowInfo()
       const statusBarHeight = windowInfo.statusBarHeight ?? windowInfo.safeArea?.top ?? 0
-      const menuButton = wx.getMenuButtonBoundingClientRect()
-      const hasCapsule =
-        !!menuButton && menuButton.top > 0 && menuButton.left > 0 && menuButton.height > 0
-
+      let menuButton: ReturnType<typeof wx.getMenuButtonBoundingClientRect> | null = null
+      try {
+        menuButton = wx.getMenuButtonBoundingClientRect()
+      } catch {
+        // 冷启动窗口尚未就绪时，该同步 API 可能抛出
+        // "getMenuButtonBoundingClientRect:fail global.windowMap is not iterable"。
+        // 不能在这里中断组件初始化：先走兜底布局，并延迟重试以恢复精确对齐。
+        this.retryHeaderStyle()
+      }
       let headerStyle: string
-      if (hasCapsule) {
+      if (menuButton && menuButton.top > 0 && menuButton.left > 0 && menuButton.height > 0) {
         // 胶囊顶部到状态栏底部的距离
         const capsuleTopGap = Math.max(menuButton.top - statusBarHeight, 0)
         const navHeight = statusBarHeight + capsuleTopGap * 2 + menuButton.height
@@ -62,6 +69,8 @@ Component({
           capsuleHeight: menuButton.height,
           capsuleRadius: Math.round(menuButton.height / 2),
         })
+        // 重试成功后清零计数，让后续（resize 等）仍有完整重试预算
+        if (this.data.retryCount) this.setData({ retryCount: 0 })
       } else {
         // 兜底：拿不到胶囊信息时退化为旧逻辑（安全区顶部 + 估算值）
         const safeTop = windowInfo.safeArea?.top ?? statusBarHeight
@@ -69,6 +78,12 @@ Component({
         headerStyle = `padding-top: ${safeTop + basePaddingTop}px;`
         this.setData({ headerStyle })
       }
+    },
+    /** 窗口未就绪导致 getMenuButtonBoundingClientRect 抛错时，延迟重试以恢复精确胶囊布局 */
+    retryHeaderStyle() {
+      if (this.data.retryCount >= 2) return
+      this.setData({ retryCount: this.data.retryCount + 1 })
+      wx.nextTick(() => this.updateHeaderStyle())
     },
     onShare() {
       this.triggerEvent('share')
