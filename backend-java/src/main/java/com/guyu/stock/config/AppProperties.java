@@ -17,6 +17,7 @@ public class AppProperties {
     private Fetch fetch = new Fetch();
     private Logging logging = new Logging();
     private Mgr mgr = new Mgr();
+    private Tracking tracking = new Tracking();
 
     @Data
     public static class Jwt {
@@ -119,5 +120,15 @@ public class AppProperties {
         private boolean authEnabled = true;
 
         private String adminToken;
+    }
+
+    /** 用户行为打点上报配置（TrackService 使用） */
+    @Data
+    public static class Tracking {
+        /** 是否启用打点上报接口，默认 true；false 时 TrackController 仍可用但可直接关闭以省资源 */
+        private boolean enabled = true;
+
+        /** 单批最多接受的事件条数，默认 100（超出按 400 拒绝，防止恶意 / 超大 payload） */
+        private int maxBatchSize = 100;
     }
 }

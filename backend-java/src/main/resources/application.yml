@@ -8,6 +8,8 @@ server:
 logging:
   file:
     path: ${LOG_DIR:/Users/lilaiyun/Downloads/logs}
+  level:
+    org.springframework.jdbc.core: TRACE
 
 spring:
   application:
@@ -19,6 +21,10 @@ spring:
     hikari:
       maximum-pool-size: 25
       minimum-idle: 5
+      # 每个新连接初始化时钉死会话时区为东8区：保证 now()/CURRENT_TIMESTAMP 及 TIMESTAMPTZ
+      # 的显示都是北京时间，与 DAO 用 LocalDateTime.now()（JVM 默认 Asia/Shanghai）写入的
+      # 无时区 TIMESTAMP 列口径一致（数据库服务器 timezone 默认可能是 UTC）。
+      connection-init-sql: SET timezone TO 'Asia/Shanghai'
 
 app:
   collector:
@@ -104,4 +110,9 @@ app:
 
     # 管理员登录口令 root@Qwer1234@@（用户名@密码）的 base64
     admin-token: cm9vdEBRd2VyMTIzNEBA
+  tracking:
+    # 用户行为打点上报（/api/v1/track/events）：false 关闭上报接口
+    enabled: ${TRACKING_ENABLED:true}
+    # 单批最多接受的事件条数（超出按 400 拒绝）
+    max-batch-size: ${TRACKING_MAX_BATCH_SIZE:100}
 
