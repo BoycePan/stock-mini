@@ -16,6 +16,8 @@
     <view
       wx:if="{{ section.tip }}"
       class="section-tip"
+      hover-class="section-tip-hover"
+      hover-stay-time="80"
       catchtap="onTipTap"
       aria-role="button"
       aria-label="查看说明"

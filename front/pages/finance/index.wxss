@@ -210,7 +210,7 @@
 .page.theme-dark .news-list {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.16), 0 8rpx 28rpx rgba(0, 0, 0, 0.22);
 }
 
 .page.theme-dark .news-item {

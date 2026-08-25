@@ -10,11 +10,15 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #f5f8fc;
+  background: rgba(245, 248, 252, 0.9);
+  backdrop-filter: blur(16rpx);
+  -webkit-backdrop-filter: blur(16rpx);
 }
 
 .page.theme-dark .page-header {
-  background: #111827;
+  background: rgba(17, 24, 39, 0.9);
+  backdrop-filter: blur(16rpx);
+  -webkit-backdrop-filter: blur(16rpx);
 }
 
 .content-scroll {
@@ -75,7 +79,7 @@
   border: 1rpx solid #e2eaf3;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 28rpx rgba(40, 70, 120, 0.09);
 }
 
 .quote-card {
@@ -117,6 +121,8 @@
   font-size: 47rpx;
   font-weight: 750;
   line-height: 56rpx;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 .quote-change {
@@ -144,7 +150,7 @@
   gap: 20rpx 10rpx;
   margin-top: 30rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid #edf1f6;
+  border-top: 1rpx solid #e2eaf3;
 }
 
 .quote-grid view {
@@ -162,6 +168,8 @@
   color: #34445a;
   font-size: 26rpx;
   font-weight: 600;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 .panel-title {

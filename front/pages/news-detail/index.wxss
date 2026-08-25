@@ -18,7 +18,7 @@
   background: #fff;
   color: #718096;
   text-align: center;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 28rpx rgba(40, 70, 120, 0.09);
 }
 
 /* ============================================================
@@ -31,7 +31,7 @@
   border: 1rpx solid #e2eaf3;
   border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 10rpx 36rpx rgba(64, 86, 116, 0.1);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 10rpx 36rpx rgba(40, 70, 120, 0.09);
   overflow: hidden;
 }
 

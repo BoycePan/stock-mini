@@ -140,6 +140,12 @@
   font-size: 24rpx;
   font-weight: 700;
   font-family: Georgia, serif;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.section-tip-hover {
+  transform: scale(0.88);
+  opacity: 0.75;
 }
 
 .metric-grid {
