@@ -3,7 +3,14 @@
   border: 1rpx solid #e1e9f2;
   border-radius: 22rpx;
   background: #fff;
-  box-shadow: 0 8rpx 18rpx rgba(69, 91, 120, 0.06);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 20rpx rgba(40, 70, 120, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* press 态：轻微缩小 + 阴影收拢 */
+.market-card-hover {
+  transform: scale(0.975);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.04), 0 4rpx 10rpx rgba(40, 70, 120, 0.06);
 }
 
 .market-name {
@@ -38,3 +45,19 @@
 .market-change.down {
   color: #20a66a;
 }
+
+/* 深色主题（组件样式隔离） */
+.market-card.dark {
+  border-color: #34465e;
+  background: #223248;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.16), 0 8rpx 20rpx rgba(0, 0, 0, 0.22);
+}
+
+.market-card.dark .market-name {
+  color: #c8d6e8;
+}
+
+.market-card.dark .market-value {
+  color: #f5f7fb;
+}
+

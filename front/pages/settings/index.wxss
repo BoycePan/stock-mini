@@ -148,8 +148,8 @@
 .section-heading {
   display: block;
   margin: 32rpx 14rpx 14rpx;
-  color: #8a98aa;
-  font-size: 22rpx;
+  color: #7d8fa6;
+  font-size: 23rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
   text-transform: uppercase;
@@ -160,7 +160,7 @@
   border: 1rpx solid #e2eaf3;
   border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 8rpx 28rpx rgba(64, 86, 116, 0.07);
+  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.05), 0 8rpx 28rpx rgba(40, 70, 120, 0.08);
   overflow: hidden;
 }
 
@@ -276,13 +276,14 @@
   color: #65748a;
   font-size: 24rpx;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .theme-option.selected {
   background: #fff;
   color: #4278ed;
   font-weight: 700;
+  transform: scale(1.02);
   box-shadow: 0 4rpx 14rpx rgba(76, 127, 255, 0.18);
 }
 
@@ -309,6 +310,8 @@
 /* ============ 页脚 ============ */
 .footer {
   margin-top: 48rpx;
+  padding-top: 32rpx;
+  border-top: 1rpx solid #edf1f6;
   text-align: center;
 }
 
@@ -328,7 +331,8 @@
 
 /* ============ 通用交互 ============ */
 .row-hover {
-  opacity: 0.68;
+  opacity: 0.72;
+  transform: scale(0.99);
 }
 
 .bottom-space {
@@ -342,7 +346,7 @@
 .page.theme-dark .setting-group {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.14), 0 8rpx 32rpx rgba(0, 0, 0, 0.22);
 }
 
 .page.theme-dark .avatar-ring {
@@ -394,7 +398,7 @@
   background: linear-gradient(135deg, #d16a4e 0%, #c24552 100%);
 }
 
-.page.theme-dark .section-heading { color: #7f92a9; }
+.page.theme-dark .section-heading { color: #6a7e97; }
 
 .page.theme-dark .row-icon-wrap.theme {
   border: 1rpx solid #34465e;
@@ -426,6 +430,10 @@
   background: #25364d;
   color: #e8eef7;
   box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.28);
+}
+
+.page.theme-dark .footer {
+  border-top-color: #2c3d53;
 }
 
 .page.theme-dark .footer-title { color: #7f92a9; }
