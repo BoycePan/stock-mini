@@ -1,6 +1,6 @@
 <view class="page theme-{{ theme }} settings-page">
   <app-header showShare="{{ false }}"></app-header>
-  <scroll-view scroll-y class="content-scroll">
+  <view class="content-scroll">
     <!-- 用户信息卡片 -->
     <view class="user-card">
       <block wx:if="{{ isLoggedIn && user }}">
@@ -97,11 +97,7 @@
         <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
       <view wx:if="{{ isDev }}" class="row-divider"></view>
-      <view
-        class="setting-row clickable"
-        hover-class="row-hover"
-        bindtap="onFeedbackTap"
-      >
+      <view class="setting-row clickable" hover-class="row-hover" bindtap="onFeedbackTap">
         <view class="row-icon-wrap purple">
           <text class="row-emoji">💬</text>
         </view>
@@ -183,10 +179,10 @@
 
     <!-- 页脚 -->
     <view class="footer">
-      <text class="footer-title">{{appName}}</text>
+      <text class="footer-title">{{ appName }}</text>
       <text class="footer-sub">v{{ version }} · 数据仅供参考，不构成任何投资建议</text>
     </view>
 
     <view class="bottom-space"></view>
-  </scroll-view>
+  </view>
 </view>

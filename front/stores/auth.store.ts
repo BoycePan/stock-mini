@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx-miniprogram'
 import { authApi } from '../api/auth'
 import type { User } from '../types/user'
 import { clearToken, clearUser, getToken, getUser, setToken, setUser } from '../utils/storage'
+import { trackEvent } from '../utils/tracker'
 
 // 本次会话的登录 Promise：成功后会复用，失败则清空允许下次重试（模块级，避免被 mobx 观测）
 let loginPromise: Promise<boolean> | null = null
@@ -55,6 +56,7 @@ export class AuthStore {
       })
       setToken(result.token)
       setUser(result.user)
+      trackEvent('login.action')
       return result
     } catch (error) {
       runInAction(() => {

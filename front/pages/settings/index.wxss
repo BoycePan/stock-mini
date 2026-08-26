@@ -3,6 +3,7 @@
   flex: 1;
   min-height: 0;
   padding: 16rpx 24rpx 0;
+  overflow: scroll;
 }
 
 /* ============ 用户卡片 ============ */
@@ -208,15 +209,19 @@
 .row-icon-wrap.blue {
   background: #e8f1ff;
 }
+
 .row-icon-wrap.orange {
   background: #fff3e8;
 }
+
 .row-icon-wrap.green {
   background: #e6f7ef;
 }
+
 .row-icon-wrap.purple {
   background: #f0ebff;
 }
+
 .row-icon-wrap.gray {
   background: #eef2f6;
 }
@@ -410,6 +415,7 @@
 .page.theme-dark .banner-title {
   color: #e8eef7;
 }
+
 .page.theme-dark .banner-subtitle {
   color: #8fa3bd;
 }
@@ -434,15 +440,19 @@
 .page.theme-dark .row-icon-wrap.blue {
   background: #1d3047;
 }
+
 .page.theme-dark .row-icon-wrap.orange {
   background: #3a2c20;
 }
+
 .page.theme-dark .row-icon-wrap.green {
   background: #1d352b;
 }
+
 .page.theme-dark .row-icon-wrap.purple {
   background: #2c2740;
 }
+
 .page.theme-dark .row-icon-wrap.gray {
   background: #2a3442;
 }
@@ -481,6 +491,7 @@
 .page.theme-dark .footer-title {
   color: #7f92a9;
 }
+
 .page.theme-dark .footer-sub {
   color: #5f7188;
 }

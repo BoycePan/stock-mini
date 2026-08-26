@@ -15,6 +15,7 @@ import { metricViewModel } from './market'
 import { hasMinuteSources } from '../config/minute'
 import { registerStoreBinding, releaseStoreBindings } from './store-bindings'
 import { bindTheme, unbindTheme } from './theme'
+import { trackEvent } from './tracker'
 import { redirectFromShare, SHARE_IMAGE_URL } from './share'
 
 export type MarketPageKey = 'asia' | 'metals' | 'global'
@@ -48,6 +49,7 @@ export function createMarketPage(opts: MarketPageOptions) {
   const shareHandlers = {
     // 右上角胶囊菜单分享（海报生成由 market-page 组件内处理，见 components/market-page）
     onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+      trackEvent('share.trigger')
       return {
         title: SHARE_TITLES[pageKey],
         path: `/pages/${pageKey}/index`,
@@ -177,6 +179,8 @@ export function createMarketPage(opts: MarketPageOptions) {
       const metric = event.detail.metric
       const code = metric?.code ?? ''
       const minuteCode = metric?.minuteCode ?? code
+      // 埋点：点击行情卡片（查看分时），上报点的是哪个卡片（code / 名称 / 取数代码）
+      trackEvent('card.tap', { code, name: metric?.name, minuteCode })
       if (!minuteCode || !hasMinuteSources(minuteCode)) {
         wx.showToast({
           title: metric?.minuteUnavailableTip ?? '该指标暂无分时数据',

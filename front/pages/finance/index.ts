@@ -5,6 +5,7 @@ import { rootStore } from '../../stores/root.store'
 import { getFinanceCache, saveNewsDetail, setFinanceCache } from '../../utils/storage'
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { stripHtml, truncateRichHtml } from '../../utils/html'
 import { SHARE_IMAGE_URL } from '../../utils/share'
 import { formatNewsTime } from '../../utils/formatter'
@@ -529,6 +530,7 @@ Page({
     }
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: '财经新闻',
       path: '/pages/finance/index',

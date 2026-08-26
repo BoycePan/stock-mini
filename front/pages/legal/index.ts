@@ -1,4 +1,5 @@
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { rootStore } from '../../stores/root.store'
 import { SHARE_IMAGE_URL } from '../../utils/share'
 import { APP_NAME } from '../../config/app'
@@ -236,6 +237,7 @@ Page({
     unbindTheme(this)
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.title ? `${this.data.title} - ${APP_NAME}` : APP_NAME,
       path: this.data.type

@@ -6,12 +6,36 @@
 
 /* ============ 卡片通用 ============ */
 .card {
-  margin-top: 20rpx;
+  margin-top: 22rpx;
   padding: 34rpx 32rpx 36rpx;
   border: 1rpx solid #d4dfec;
   border-radius: 32rpx;
   background: #fff;
   box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+}
+
+/* ============ 卡片标题行 ============ */
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+/* 标题左侧竖向渐变强调条 */
+.card-title-bar {
+  flex: 0 0 auto;
+  width: 6rpx;
+  height: 28rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #4278ed 0%, #96c0ff 100%);
+}
+
+.card-title {
+  display: block;
+  color: #152338;
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: 0.3rpx;
 }
 
 /* ============ 引言卡 ============ */
@@ -28,6 +52,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1rpx solid rgba(66, 120, 237, 0.14);
   border-radius: 26rpx;
   background: linear-gradient(135deg, #eef4ff 0%, #ddeafd 100%);
   box-shadow: 0 4rpx 16rpx rgba(66, 120, 237, 0.14);
@@ -66,44 +91,47 @@
   background: linear-gradient(90deg, #dde6f2 0%, transparent 80%);
 }
 
+/* 引言正文：左侧渐变强调条 */
+.intro-quote {
+  display: flex;
+  align-items: stretch;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.intro-quote-bar {
+  flex: 0 0 auto;
+  width: 6rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #4278ed 0%, #96c0ff 100%);
+}
+
 .intro-body {
+  flex: 1;
+  min-width: 0;
   display: block;
-  margin-top: 16rpx;
   color: #3d4c60;
   font-size: 27rpx;
   line-height: 50rpx;
   letter-spacing: 0.3rpx;
 }
 
-/* ============ 卡片标题 ============ */
-.card-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-title {
-  display: block;
-  color: #152338;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
 /* ============ 二维码卡 ============ */
 .qr-wrap {
   margin-top: 26rpx;
-  padding: 26rpx;
+  padding: 24rpx;
   border: 1rpx solid #e2eaf3;
-  border-radius: 24rpx;
+  border-radius: 28rpx;
   background: #f2f6fa;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
 }
 
 .qr-image {
-  width: 420rpx;
-  border-radius: 12rpx;
+  width: 340rpx;
+  border-radius: 16rpx;
 }
 
 .qr-error {
@@ -125,12 +153,21 @@
 }
 
 .qr-error-retry {
+  margin-top: 6rpx;
   padding: 10rpx 30rpx;
   border-radius: 28rpx;
   background: #eef3fb;
   color: #4278ed;
   font-size: 24rpx;
   font-weight: 600;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.qr-error-retry-hover {
+  opacity: 0.72;
+  transform: scale(0.95);
 }
 
 .qr-hint {
@@ -139,13 +176,15 @@
   text-align: center;
   color: #718096;
   font-size: 24rpx;
+  line-height: 38rpx;
 }
 
 .qr-note {
   margin-top: 20rpx;
   padding: 18rpx 22rpx;
-  border-radius: 16rpx;
-  background: #f2f6fa;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 18rpx;
+  background: linear-gradient(135deg, #f5f9fd 0%, #edf3fa 100%);
   display: flex;
   align-items: flex-start;
   gap: 12rpx;
@@ -169,19 +208,25 @@
 .tip-line {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  gap: 14rpx;
+  margin-top: 24rpx;
 }
 
-.tip-line + .tip-line {
-  margin-top: 18rpx;
-}
-
-.tip-dot {
+.tip-num {
   flex: 0 0 auto;
-  color: #4278ed;
-  font-size: 28rpx;
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4278ed 0%, #6fa3ff 100%);
+  box-shadow: 0 4rpx 10rpx rgba(66, 120, 237, 0.22);
+  color: #fff;
+  font-size: 22rpx;
   font-weight: 700;
-  line-height: 42rpx;
+  line-height: 1;
 }
 
 .tip-text {
@@ -189,12 +234,12 @@
   min-width: 0;
   color: #4a5a70;
   font-size: 24rpx;
-  line-height: 42rpx;
+  line-height: 44rpx;
 }
 
 /* ============ 页脚留白 ============ */
 .bottom-space {
-  height: 80rpx;
+  height: 96rpx;
 }
 
 /* ============================================================
@@ -206,13 +251,22 @@
   box-shadow: 0 8rpx 28rpx rgba(0, 0, 0, 0.22);
 }
 
+.page.theme-dark .card-title-bar {
+  background: linear-gradient(180deg, #6fa3ff 0%, #3160c4 100%);
+}
+
+.page.theme-dark .card-title {
+  color: #f5f7fb;
+}
+
+
 .page.theme-dark .intro-icon-wrap {
+  border-color: rgba(111, 163, 255, 0.18);
   background: linear-gradient(135deg, #1d3252 0%, #192b46 100%);
   box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.25);
 }
 
-.page.theme-dark .intro-title,
-.page.theme-dark .card-title {
+.page.theme-dark .intro-title {
   color: #f5f7fb;
 }
 
@@ -232,10 +286,20 @@
   background: linear-gradient(90deg, #2a394e 0%, transparent 80%);
 }
 
+.page.theme-dark .intro-quote-bar {
+  background: linear-gradient(180deg, #4278ed 0%, #3160c4 100%);
+}
+
 /* 二维码容器保持白底，保证扫码识别率（与卡片背景无关） */
 .page.theme-dark .qr-wrap {
   border-color: #34465e;
   background: #fff;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.28);
+}
+
+/* 白底容器内的提示文字用深色，保证深色主题下仍可读 */
+.page.theme-dark .qr-wrap .qr-error-text {
+  color: #718096;
 }
 
 .page.theme-dark .qr-error-retry {
@@ -244,9 +308,10 @@
 }
 
 .page.theme-dark .qr-note {
-  background: #223248;
+  border-color: #34465e;
+  background: linear-gradient(135deg, #1d3047 0%, #223248 100%);
 }
 
-.page.theme-dark .tip-dot {
-  color: #6fa3ff;
+.page.theme-dark .tip-num {
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.3);
 }

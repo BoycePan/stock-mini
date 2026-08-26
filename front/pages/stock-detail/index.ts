@@ -13,6 +13,7 @@ import {
   type PosterTone,
 } from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const ANNOUNCEMENT_PAGE_SIZE = 20
@@ -294,6 +295,7 @@ Page({
     if (poster) poster.open()
   },
   onShareAppMessage() {
+    trackEvent('share.trigger')
     return {
       title: this.data.quote?.name || '股票详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

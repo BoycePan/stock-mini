@@ -4,6 +4,7 @@ import { saveNewsDetail } from '../../utils/storage'
 import { stripHtml, truncateRichHtml } from '../../utils/html'
 import type { NewsItem } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { SHARE_IMAGE_URL } from '../../utils/share'
 
 const FEED_PAGE_SIZE = 20
@@ -164,6 +165,7 @@ Page({
     })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.title || '财经新闻',
       // 个股新闻页透传 code，接收方打开后仍是同一只股票的新闻列表

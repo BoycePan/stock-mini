@@ -1,5 +1,6 @@
 import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { SHARE_IMAGE_URL } from '../../utils/share'
 import { APP_NAME } from '../../config/app'
 
@@ -32,6 +33,7 @@ Page({
     this.setData({ qrError: false })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: `意见反馈 - ${APP_NAME}`,
       path: '/pages/custom/index',

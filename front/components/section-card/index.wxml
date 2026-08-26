@@ -64,7 +64,10 @@
             class="metric-value {{ bumpMap[item.id] ? 'bump' : '' }}"
             >{{ item.value }}</text
           >
-          <view wx:elif="{{ !item.value }}" class="metric-value-skeleton loading-skeleton-inner"></view>
+          <view
+            wx:elif="{{ !item.value }}"
+            class="metric-value-skeleton loading-skeleton-inner"
+          ></view>
           <view
             wx:if="{{ !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
@@ -79,7 +82,7 @@
 
   <info-dialog
     visible="{{ tipVisible }}"
-    title="{{ section.title || '' }}"
+    title="{{ section.tipTitle || section.title || '' }}"
     content="{{ section.tip || '' }}"
     bind:close="onCloseTip"
   ></info-dialog>

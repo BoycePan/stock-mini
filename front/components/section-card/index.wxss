@@ -5,10 +5,10 @@
   border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
-  /* 双层阴影：近阴影增强边界感，远阴影强化浮起感 */
+  /* 双层阴影：近阴影增强边界感，远阴影强化浮起感（亮色主题调淡，贴近背景色） */
   box-shadow:
-    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
-    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+    0 2rpx 8rpx rgba(30, 60, 110, 0.04),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.06);
 }
 
 /* 页面第一个卡片：收紧顶部间距（配合 market-page 的 page-meta 底部 padding 减小） */
@@ -119,12 +119,12 @@
 
 /* 布局：盘面状态按市场区域紧跟标题右侧；「i」说明按钮与徽标固定在卡片右侧，
    与说明按钮并存时依次排列（如行业板块 = 状态 + 说明按钮） */
-.market-status + .section-badge {
+.market-status+.section-badge {
   margin-left: 14rpx;
 }
 
 /* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
-.section-tip + .section-badge {
+.section-tip+.section-badge {
   margin-left: 14rpx;
 }
 
@@ -165,9 +165,14 @@
   flex-direction: column;
   justify-content: center;
   padding: 18rpx 16rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #e2f0ff;
   border-radius: 20rpx;
-  background: #f2f6fa;
+  background: #ebf1f9;
+  /* 亮色主题：底色略深于白色外卡以分层（呼应页面背景 #eef3f8），
+     极淡蓝边收边 + 贴近背景色的淡阴影，区分但不突兀 */
+  box-shadow:
+    0 2rpx 6rpx rgba(30, 60, 110, 0.04),
+    0 8rpx 20rpx rgba(30, 60, 110, 0.05);
 }
 
 .metric-name-row {
@@ -349,8 +354,11 @@
 }
 
 .section-card.finance .metric-card {
-  border-color: #e4def5;
+  border: 1rpx solid #e6e1f6;
   background: #f4f3fb;
+  box-shadow:
+    0 2rpx 6rpx rgba(115, 92, 229, 0.05),
+    0 8rpx 20rpx rgba(115, 92, 229, 0.06);
 }
 
 /* 单行布局：无价格条目（如行业板块只有涨跌幅）名称 + 涨跌徽标并排一行 */
@@ -525,6 +533,7 @@
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }

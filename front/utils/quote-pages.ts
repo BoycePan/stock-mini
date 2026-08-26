@@ -251,6 +251,7 @@ export function buildQuoteGlobalPage(
         section.marketStatus = params.sectorPhase.label
         section.marketTone = params.sectorPhase.tone
       }
+      section.tipTitle = 'A股/美股行业板块'
       section.tip = [
         '📊 板块数据根据当前市场时段自动切换：',
         '· A股时段及收盘后窗口（工作日 09:15 至美股盘前开始）：显示中国行业板块涨跌情况；',

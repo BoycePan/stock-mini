@@ -14,6 +14,7 @@ import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute
 import type { MinutePoint } from '../../types/stock'
 import { computeChangeView } from '../../utils/market'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 import {
   APP_NAME,
@@ -354,6 +355,7 @@ Page({
   // 显式返回类型：方法体内引用 this.data 时，若无注解会触发 Page 泛型推断循环
   // （TCustom 回退默认值导致 this 上「丢失」loadData 等自定义方法），加注解可打破
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.name || '行情分时',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

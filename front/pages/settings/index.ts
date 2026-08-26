@@ -8,6 +8,7 @@ import {
 } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { getAppVersion } from '../../utils/version'
+import { trackEvent } from '../../utils/tracker'
 import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
 import { getEnv, isReleaseBuild } from '../../config/env'
 import { productionEnv } from '../../config/env.production'
@@ -60,6 +61,8 @@ Page({
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
     rootStore.settings.setTheme(value as ThemePreference)
+    // 埋点：用户主动切主题（跟随系统变化的自动切换不埋）
+    trackEvent('theme.switch', value)
   },
   onServiceTap(event: WechatMiniprogram.BaseEvent) {
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
@@ -84,6 +87,7 @@ Page({
     }
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: APP_NAME,
       path: SHARE_HOME_PATH,
