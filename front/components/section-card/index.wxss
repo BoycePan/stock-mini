@@ -6,7 +6,9 @@
   border-radius: 28rpx;
   background: #fff;
   /* 双层阴影：近阴影增强边界感，远阴影强化浮起感 */
-  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* 页面第一个卡片：收紧顶部间距（配合 market-page 的 page-meta 底部 padding 减小） */
@@ -117,12 +119,12 @@
 
 /* 布局：盘面状态按市场区域紧跟标题右侧；「i」说明按钮与徽标固定在卡片右侧，
    与说明按钮并存时依次排列（如行业板块 = 状态 + 说明按钮） */
-.market-status+.section-badge {
+.market-status + .section-badge {
   margin-left: 14rpx;
 }
 
 /* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
-.section-tip+.section-badge {
+.section-tip + .section-badge {
   margin-left: 14rpx;
 }
 
@@ -140,7 +142,9 @@
   font-size: 24rpx;
   font-weight: 700;
   font-family: Georgia, serif;
-  transition: transform 0.12s ease, opacity 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
 }
 
 .section-tip-hover {
@@ -308,7 +312,7 @@
   border: 1rpx solid transparent;
   border-radius: 24rpx;
   font-size: 22rpx;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 34rpx;
   white-space: nowrap;
   overflow: hidden;
@@ -377,7 +381,7 @@
   flex-shrink: 0;
   font-size: 26rpx;
   line-height: 34rpx;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .section-card .single-line-metric .metric-change.up,
@@ -404,7 +408,9 @@
 .section-card.theme-dark {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.14), 0 8rpx 32rpx rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 2rpx 8rpx rgba(0, 0, 0, 0.14),
+    0 8rpx 32rpx rgba(0, 0, 0, 0.22);
 }
 
 .section-card.theme-dark .section-title,
@@ -516,8 +522,12 @@
 
 /* ============ 骨架占位条（组件样式隔离，须在组件内复写动画） ============ */
 @keyframes section-card-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* 价格区骨架条：与 .metric-value 同行高，宽度固定撑开空间 */
@@ -535,4 +545,4 @@
   background: linear-gradient(90deg, #1c2b3e 25%, #243447 50%, #1c2b3e 75%);
   background-size: 200% 100%;
   animation: section-card-shimmer 1.6s ease-in-out infinite;
-}
+}

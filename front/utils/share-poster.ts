@@ -859,10 +859,15 @@ export function renderSharePoster(
           // （含文本分区的真实换行行数），再 resize 画布并重新取 ctx。
           const probe = canvas.getContext('2d')
           const height = measurePosterHeight(data, options?.chart, probe)
-          canvas.width = width * dpr
-          canvas.height = height * dpr
+          // Canvas 2D 画布物理像素单边上限 8192（微信限制，超出抛
+          // 「set height out of range」），分区多 / 内嵌 K 线图的海报易触顶：
+          // 超出时整体等比缩小（长宽同比例），保证画布创建成功且海报完整可导出。
+          const MAX_CANVAS_PX = 8192
+          const scale = Math.min(1, MAX_CANVAS_PX / (height * dpr), MAX_CANVAS_PX / (width * dpr))
+          canvas.width = Math.floor(width * dpr * scale)
+          canvas.height = Math.floor(height * dpr * scale)
           const ctx = canvas.getContext('2d')
-          ctx.scale(dpr, dpr)
+          ctx.scale(dpr * scale, dpr * scale)
           loadCanvasImage(canvas, LOGO_PATH)
             .then((logo) => {
               drawPoster(ctx, data, width, logo, options?.chart)
