@@ -2,11 +2,11 @@
   position: relative;
   margin: 16rpx 20rpx 0;
   padding: 22rpx 18rpx 20rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
   /* 双层阴影：近阴影增强边界感，远阴影强化浮起感 */
-  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 32rpx rgba(40, 70, 120, 0.10);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* 页面第一个卡片：收紧顶部间距（配合 market-page 的 page-meta 底部 padding 减小） */
@@ -161,10 +161,9 @@
   flex-direction: column;
   justify-content: center;
   padding: 18rpx 16rpx;
-  border: 1rpx solid #eaf0f8;
+  border: 1rpx solid #e2eaf3;
   border-radius: 20rpx;
-  background: #ffffff;
-  box-shadow: 0 2rpx 8rpx rgba(40, 70, 120, 0.07);
+  background: #f2f6fa;
 }
 
 .metric-name-row {
@@ -346,8 +345,8 @@
 }
 
 .section-card.finance .metric-card {
-  border-color: #e5e1fa;
-  background: linear-gradient(145deg, #fff 0%, #faf9ff 100%);
+  border-color: #e4def5;
+  background: #f4f3fb;
 }
 
 /* 单行布局：无价格条目（如行业板块只有涨跌幅）名称 + 涨跌徽标并排一行 */

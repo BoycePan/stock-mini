@@ -72,6 +72,10 @@ Page({
   onEnvSwitchTap() {
     wx.navigateTo({ url: '/pages/env-switch/index' })
   },
+  /** 美股盘前 DEMO（仅非线上版本可见的临时演示入口） */
+  onPremarketDemoTap() {
+    wx.navigateTo({ url: '/pages/premarket/index' })
+  },
   onUnload() {
     releaseStoreBindings(this)
     unbindTheme(this)

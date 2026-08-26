@@ -13,12 +13,12 @@
 .empty-wrap {
   margin-top: 20rpx;
   padding: 120rpx 24rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
   color: #718096;
   text-align: center;
-  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 28rpx rgba(40, 70, 120, 0.09);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* ============================================================
@@ -28,10 +28,10 @@
 .link-card,
 .guide-card {
   margin-top: 20rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 10rpx 36rpx rgba(40, 70, 120, 0.09);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 36rpx rgba(30, 60, 110, 0.14);
   overflow: hidden;
 }
 

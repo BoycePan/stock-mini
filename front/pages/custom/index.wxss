@@ -8,10 +8,10 @@
 .card {
   margin-top: 20rpx;
   padding: 34rpx 32rpx 36rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 6rpx 28rpx rgba(64, 86, 116, 0.07);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* ============ 引言卡 ============ */
@@ -93,9 +93,9 @@
 .qr-wrap {
   margin-top: 26rpx;
   padding: 26rpx;
-  border: 1rpx solid #e8edf4;
+  border: 1rpx solid #e2eaf3;
   border-radius: 24rpx;
-  background: #fff;
+  background: #f2f6fa;
   display: flex;
   justify-content: center;
   align-items: center;

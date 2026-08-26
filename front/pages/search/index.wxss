@@ -22,12 +22,12 @@
   flex: 1;
   height: 72rpx;
   padding: 0 28rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 36rpx;
   background: #ffffff;
   color: #17191d;
   font-size: 27rpx;
-  box-shadow: 0 2rpx 8rpx rgba(40, 70, 120, 0.06);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -52,10 +52,10 @@
 
 .result-list {
   overflow: hidden;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #ffffff;
-  box-shadow: 0 2rpx 6rpx rgba(40, 70, 120, 0.06), 0 8rpx 28rpx rgba(40, 70, 120, 0.09);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .result-row {
@@ -132,7 +132,7 @@
 
 .history-tag {
   padding: 14rpx 28rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 32rpx;
   background: #ffffff;
   color: #17191d;
