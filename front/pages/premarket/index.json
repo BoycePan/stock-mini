@@ -1,9 +1,0 @@
-{
-  "usingComponents": {
-    "app-header": "/components/app-header/index",
-    "section-card": "/components/section-card/index",
-    "loading-state": "/components/loading-state/index",
-    "disclaimer-footer": "/components/disclaimer-footer/index"
-  },
-  "enablePullDownRefresh": true
-}

@@ -311,7 +311,7 @@
   padding: 5rpx 8rpx;
   border: 1rpx solid transparent;
   border-radius: 24rpx;
-  font-size: 22rpx;
+  font-size: 25rpx;
   font-weight: 600;
   line-height: 34rpx;
   white-space: nowrap;
@@ -339,7 +339,7 @@
 
 .metric-change .metric-change-prefix {
   margin-right: 4rpx;
-  font-size: 22rpx;
+  font-size: 25rpx;
 }
 
 .section-card.asia .metric-card,

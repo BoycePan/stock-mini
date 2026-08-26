@@ -97,23 +97,6 @@
         <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
       <view wx:if="{{ isDev }}" class="row-divider"></view>
-      <!-- 美股盘前 DEMO（仅非线上版本可见，临时演示入口） -->
-      <view
-        wx:if="{{ isDev }}"
-        class="setting-row clickable"
-        hover-class="row-hover"
-        bindtap="onPremarketDemoTap"
-      >
-        <view class="row-icon-wrap blue">
-          <text class="row-emoji">📈</text>
-        </view>
-        <view class="row-main">
-          <text class="row-label">美股盘前</text>
-          <text class="row-desc">盘前涨跌情况 DEMO</text>
-        </view>
-        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
-      </view>
-      <view wx:if="{{ isDev }}" class="row-divider"></view>
       <view
         class="setting-row clickable"
         hover-class="row-hover"
