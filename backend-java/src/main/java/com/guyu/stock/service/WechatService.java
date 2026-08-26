@@ -36,7 +36,8 @@ public class WechatService {
      *  先按 String 读取再手动解析（对齐项目其他外部客户端）。 */
     public Map<String, Object> code2Session(String source, String code) {
         AppProperties.Wechat.App app = appProperties.getWechat().getApps().get(source);
-        if (app == null || app.getAppId() == null || app.getAppSecret() == null) {
+        if (app == null || app.getAppId() == null || app.getAppId().isBlank()
+                || app.getAppSecret() == null || app.getAppSecret().isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "未知的 source: " + source);
         }
         String body = restClient.get()
