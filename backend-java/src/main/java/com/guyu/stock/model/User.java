@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record User(
         long id,
+        /** 来源小程序标识（如 shiChang-tracker / hangQing-tracker），openid 仅在同 source 内唯一 */
+        String source,
         @JsonIgnore String openid,
         @JsonIgnore String unionid,
         @JsonIgnore String sessionKey,
@@ -21,6 +23,6 @@ public record User(
         @JsonProperty("updated_at") LocalDateTime updatedAt
 ) {
     public User withId(long newId) {
-        return new User(newId, openid, unionid, sessionKey, nickname, avatarUrl, phoneEnc, status, lastLoginAt, createdAt, updatedAt);
+        return new User(newId, source, openid, unionid, sessionKey, nickname, avatarUrl, phoneEnc, status, lastLoginAt, createdAt, updatedAt);
     }
 }

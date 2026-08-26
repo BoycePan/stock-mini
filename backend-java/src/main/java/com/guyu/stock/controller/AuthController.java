@@ -14,7 +14,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    public record LoginRequest(String code) {}
+    /** source 可选：标识来源小程序（如 shiChang-tracker / hangQing-tracker），缺省走 default-source（兼容旧小程序） */
+    public record LoginRequest(String code, String source) {}
 
     private final AuthService authService;
 
@@ -24,6 +25,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<Map<String, Object>> login(HttpServletRequest request, @RequestBody LoginRequest req) {
-        return ApiResponse.success(authService.login(request, req.code()));
+        return ApiResponse.success(authService.login(request, req.source(), req.code()));
     }
 }

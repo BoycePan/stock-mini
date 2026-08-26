@@ -826,8 +826,13 @@ Content-Type: application/json
 **请求体（Request Body）：**
 
 ```json
-{"code": "微信小程序 wx.login() 返回的 code"}
+{"code": "微信小程序 wx.login() 返回的 code", "source": "shiChang-tracker"}
 ```
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| code | string | 是 | 微信小程序 `wx.login()` 返回的 code |
+| source | string | 否 | 来源小程序标识（如 `shiChang-tracker` / `hangQing-tracker`）；不传或空白时使用配置的 `app.wechat.default-source`（默认 `shiChang-tracker`，兼容已发布旧小程序）。未配置的 source 返回 `400` |
 
 **响应（Response）：**
 
@@ -838,10 +843,12 @@ Content-Type: application/json
   "data": {
     "token": "eyJhbG...",
     "expires_in": 86400,
-    "user": {"id": 1, "nickname": null}
+    "user": {"id": 1, "source": "shiChang-tracker", "nickname": null}
   }
 }
 ```
+
+> 说明：多个小程序共用同一张 `users` 表，`openid` 仅在 `(source, openid)` 维度内唯一；token 由共享 `JWT_SECRET` 签发，各小程序登录 token 全接口通用。
 
 ### 6.2 用户信息（需认证）
 
