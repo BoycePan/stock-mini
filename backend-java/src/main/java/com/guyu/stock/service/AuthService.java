@@ -15,6 +15,7 @@ import java.util.Map;
 /**
  * 微信登录编排（对齐 Go service.NewAuthService）。
  * 吸收原 AuthController 的登录逻辑：code2Session → 用户 find-or-create → 签发 JWT → 组装响应。
+ * source 标识来源小程序（如 shiChang-tracker / hangQing-tracker），未携带时用配置的 default-source。
  */
 @Slf4j
 @Service
@@ -33,22 +34,26 @@ public class AuthService {
         this.appProperties = appProperties;
     }
 
-    public Map<String, Object> login(HttpServletRequest request, String code) {
+    public Map<String, Object> login(HttpServletRequest request, String source, String code) {
         if (code == null || code.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "code 不能为空");
         }
+        // 未携带 source 时走默认来源（兼容已发布旧小程序，无需发版）
+        String resolvedSource = (source == null || source.isBlank())
+                ? appProperties.getWechat().getDefaultSource()
+                : source;
         try {
-            Map<String, Object> session = wechatService.code2Session(code);
+            Map<String, Object> session = wechatService.code2Session(resolvedSource, code);
             String openid = (String) session.get("openid");
             String sessionKey = (String) session.get("session_key");
             String unionid = session.get("unionid") == null ? null : (String) session.get("unionid");
 
-            User user = userRepository.findByOpenId(openid);
+            User user = userRepository.findBySourceAndOpenId(resolvedSource, openid);
             if (user == null) {
-                user = userRepository.create(new User(0, openid, unionid, sessionKey, null, null, null, 1, null, null, null));
+                user = userRepository.create(new User(0, resolvedSource, openid, unionid, sessionKey, null, null, null, 1, null, null, null));
             } else {
                 user = new User(
-                        user.id(), user.openid(),
+                        user.id(), user.source(), user.openid(),
                         unionid != null ? unionid : user.unionid(),
                         sessionKey,
                         user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(),
