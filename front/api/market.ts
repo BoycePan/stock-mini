@@ -34,15 +34,17 @@ import {
   fetchSinaQuotes,
   fetchTencentQuotes,
 } from './quote'
-import { aShareSecid, bareCode } from '../utils/quote-consensus'
+import { aShareSecid } from '../utils/quote-consensus'
 import {
+  averageBoardPcts,
   fetchAccurate,
   fetchAShareAveragePrice,
   fetchAShareBoardChangeMap,
+  fetchUsProxyPremarketMap,
   fetchUsProxyChangeMap,
 } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
-import { resolveIndustryPhase, resolveIndustryUseA } from '../utils/market-clock'
+import { resolveIndustryPhase, resolveIndustrySource } from '../utils/market-clock'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
 import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
 import {
@@ -155,25 +157,27 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     })
   }
 
-  // ④ 行业板块：A股时段（09:15–美股开盘前，北京时间，含集合竞价、午休与美股盘前时段）取东财板块涨跌幅；
-  //    美股盘中/盘后及周末取美股代理股涨跌幅均值（resolveIndustryUseA，见 market-clock.ts）
-  const industryUseA = resolveIndustryUseA(session)
+  // ④ 行业板块：数据源随市场时段三态切换（utils/market-clock.ts resolveIndustrySource）：
+  //    - 'a'（A股时段 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 东财 A 股板块涨跌幅；
+  //    - 'us-pre'（美股盘前 美东 04:00–09:30，夏令时/冬令时对应北京 16:00–21:30 / 17:00–22:30）
+  //      → 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径，仅参考涨跌幅、无分时图）；
+  //    - 'us'（美股盘中/盘后、周末）→ 美股代理股涨跌幅均值（既有逻辑）。
+  const industrySource = resolveIndustrySource(session)
   const boardPct: Record<string, number> = {}
-  if (industryUseA) {
+  if (industrySource === 'a') {
     const boardMap = await fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code))
     for (const board of INDUSTRY_BOARDS) {
       const pct = boardMap[board.code] ?? boardMap[`90.${board.code}`]
       if (pct !== undefined) boardPct[board.code] = pct
     }
   } else {
-    const proxyMap = await fetchUsProxyChangeMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
+    const proxyMap =
+      industrySource === 'us-pre'
+        ? await fetchUsProxyPremarketMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
+        : await fetchUsProxyChangeMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
     for (const board of INDUSTRY_BOARDS) {
-      const pcts = board.proxies
-        .map((proxy) => proxyMap[proxy] ?? proxyMap[bareCode(proxy)])
-        .filter((pct): pct is number => typeof pct === 'number' && Number.isFinite(pct))
-      if (pcts.length) {
-        boardPct[board.code] = pcts.reduce((sum, pct) => sum + pct, 0) / pcts.length
-      }
+      const avg = averageBoardPcts(board.proxies, proxyMap)
+      if (avg !== null) boardPct[board.code] = avg
     }
   }
   const sectors: QuoteItem[] = INDUSTRY_BOARDS.map((board) => {
@@ -183,10 +187,16 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
       price: null,
       pct: boardPct[board.code] ?? null,
     }
-    if (!industryUseA) {
+    if (industrySource === 'us') {
       // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
       // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
       item.minuteCode = `us-${board.code}`
+    } else if (industrySource === 'us-pre') {
+      // 盘前仅支持查看参考涨跌幅、不支持分时图：minuteCode 置为无源占位（MINUTE_SOURCES 无
+      // 此 key → hasMinuteSources=false），点击卡片 toast 提示（见 market-page-factory onMetricTap
+      // 的 minuteUnavailableTip 分支），绝不跳转分时页。
+      item.minuteCode = `us-pre-${board.code}`
+      item.minuteUnavailableTip = '盘前仅支持查看参考涨跌幅，暂不支持分时图'
     }
     return item
   })
@@ -201,9 +211,12 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     sectors,
     statusLabel: '全球市场',
     statusTone: session.statusTone,
-    sectorTitle: industryUseA ? '中国行业板块' : '美股行业板块',
-    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/集合竞价/休市（含美股盘前时段）；美股代理 → 美股盘中/盘后/休市
-    sectorPhase: resolveIndustryPhase(session),
+    sectorTitle: industrySource === 'a' ? '中国行业板块' : '美股行业板块',
+    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/集合竞价/休市（含待盘前窗口）；
+    // 美股盘前 → 「美股盘前」（quiet 蓝）；美股代理 → 美股盘中/盘后/休市
+    sectorPhase: resolveIndustryPhase(session, new Date(), industrySource),
+    // 盘前仅支持参考涨跌幅：不展示「分时」角标（美股代理与 A 股板块照常）
+    sectorMinuteCorner: industrySource !== 'us-pre',
   })
 }
 

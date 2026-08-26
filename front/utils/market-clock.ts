@@ -165,6 +165,9 @@ export interface IndustryPhase {
  * - 否则回退纯时钟窗口：工作日 09:15–美股开盘前（北京时间，夏令时 21:30 / 冬令时 22:30，
  *   覆盖 A 股集合竞价、盘中含午休、待盘前窗口与美股盘前时段）→ A 股板块；
  *   其余（美股盘中/盘后、周末、夜间空档）→ 美股代理股涨跌幅均值。
+ *
+ * 注意：美股盘前时段（美东 04:00–09:30）现在由 resolveIndustrySource 单独路由为 'us-pre'
+ * （新浪盘前参考涨跌幅），本函数不再作为盘前时段的唯一判定（见改动 5）。
  */
 export function resolveIndustryUseA(
   session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
@@ -182,15 +185,53 @@ export function resolveIndustryUseA(
   return false
 }
 
+// ---------------------------------------------------------------------------
+// 行业板块数据源三态（A股板块 / 美股盘前 / 美股代理股），docs/美股盘前板块展示分析与改造方案.md 改动 5
+// ---------------------------------------------------------------------------
+
+export type IndustrySource = 'a' | 'us' | 'us-pre'
+
 /**
- * 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段）。
- * 已移除「美股盘前」阶段：工作日美股盘前时段统一展示 A 股板块，阶段为 A 股休市（「休市」）。
+ * 行业板块数据源（唯一判定入口，供 api/market.ts 取数与 resolveIndustryPhase 阶段胶囊共用）：
+ * - 'us-pre'：美股盘前（美东 04:00–09:30，周一至周五；夏令时/冬令时经 getUsPhase 自动换算，
+ *   对应北京时间 16:00–21:30 / 17:00–22:30）→ 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径）；
+ * - 'a'：A 股时段（工作日 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 东财 A 股板块；
+ * - 'us'：其余（美股盘中 ≥09:30 美东、盘后、周末、夜间空档）→ 美股代理股涨跌幅均值（既有逻辑）。
+ */
+export function resolveIndustrySource(
+  session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
+  now: Date = new Date(),
+): IndustrySource {
+  // 美股盘前优先判定（独立于会话快照，避免 30s 会话缓存导致开盘边界路由错位）
+  if (getUsPhase(now) === 'pre') return 'us-pre'
+  return resolveIndustryUseA(session, now) ? 'a' : 'us'
+}
+
+/**
+ * 美东当前日期部件（夏令时 -4 / 冬令时 -5 自动换算），供新浪盘前时间戳 isToday 判定
+ * （parseSinaPremarketTime 的 etNow 入参，见 utils/quote-parser.ts）。
+ */
+export function usEtParts(now: Date = new Date()): { month: number; day: number } {
+  const parts = offsetParts(now, isUsDst(now) ? -4 : -5)
+  return { month: parts.month + 1, day: parts.day }
+}
+
+/**
+ * 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段；
+ * 美股盘前 → 「美股盘前」，docs/美股盘前板块展示分析与改造方案.md 改动 5）。
+ * source 缺省时按 resolveIndustrySource 推导（盘前时段自动落为 'us-pre'）。
  */
 export function resolveIndustryPhase(
   session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
   now: Date = new Date(),
+  source?: IndustrySource,
 ): IndustryPhase {
-  if (resolveIndustryUseA(session, now)) {
+  const src = source ?? resolveIndustrySource(session, now)
+  if (src === 'us-pre') {
+    // 盘前仅展示参考涨跌幅（新浪 gb_ 盘前字段），quiet 蓝系胶囊
+    return { label: '美股盘前', tone: 'quiet' }
+  }
+  if (src === 'a') {
     const aPhase = getAStockPhase(now)
     if (aPhase === 'morning' || aPhase === 'afternoon') {
       return { label: '大A盘中', tone: 'active' }
@@ -212,7 +253,7 @@ export function resolveIndustryPhase(
     case 'post':
       return { label: '美股盘后', tone: 'quiet' }
     default:
-      // 美股盘前阶段已被工作日盘前窗口合并进 A 股板块（展示「休市」），此处兜底不出现「美股盘前」
+      // 盘前阶段已被 resolveIndustrySource 路由为 'us-pre'，此处兜底不出现「美股盘前」
       return { label: '休市', tone: 'rest' }
   }
 }

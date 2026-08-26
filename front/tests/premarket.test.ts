@@ -1,9 +1,10 @@
 /**
- * 美股盘前行情取数的纯函数测试（docs/global-us-premarket.md 四.2 板块均值）。
+ * 行业板块均值取数的纯函数测试（api/market.ts 行业板块三态路由的公共助手，
+ * 见 utils/quote.ts averageBoardPcts 与 docs/美股盘前板块展示分析与改造方案.md 改动 5）。
  *
  * 仅覆盖无网络依赖的纯逻辑（averageBoardPcts）；
- * fetchUsIndustryBoardPcts / getPremarketPage 依赖外部接口（wx.request），
- * 其数据链路由 docs/global-us-premarket.md + 仓库既有 quote-parsers 测试覆盖。
+ * fetchUsProxyPremarketMap / fetchUsProxyChangeMap 依赖外部接口（wx.request），
+ * 其数据链路由 docs/tabbar-api.md + 仓库既有 quote-parsers 测试覆盖。
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'

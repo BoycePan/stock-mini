@@ -195,14 +195,19 @@ export interface QuoteGlobalPageParams {
   statusLabel: string
   statusTone: 'active' | 'rest'
   /**
-   * 行业板块盘面阶段（大A盘中 / 午间休市 / 休市 / 美股盘中 / 美股盘后，
+   * 行业板块盘面阶段（大A盘中 / 午间休市 / 休市 / 美股盘前 / 美股盘中 / 美股盘后，
    * 见 utils/market-clock.ts resolveIndustryPhase）：有值时板块标题右侧展示阶段化胶囊
    * （复用 marketStatus / marketTone 渲染），与数据源口径一致——展示的是哪个市场的数据，
-   * 就标哪个市场的阶段（A股板块 → A股阶段；美股代理 → 美股阶段）。
+   * 就标哪个市场的阶段（A股板块 → A股阶段；美股盘前 → 盘前；美股代理 → 美股阶段）。
    */
   sectorPhase?: IndustryPhase
   /** 板块标题：随数据源会话切换（A股时段 → 中国行业板块；美股时段 → 美股行业板块） */
   sectorTitle?: string
+  /**
+   * 行业板块「分时」角标：美股盘前仅支持参考涨跌幅、无分时图（false），
+   * A 股时段 / 美股时段默认 true（东财板块分时 / 代理股合成分时）。
+   */
+  sectorMinuteCorner?: boolean
 }
 
 export function buildQuoteGlobalPage(
@@ -237,20 +242,22 @@ export function buildQuoteGlobalPage(
     if (group.id === 'industry-board') {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
-      // 板块分时随会话切换：A股时段 → 东财板块分时；美股时段 → 美股代理股均值合成分时。
-      // 两个会话均有分时图，整面板右上角以单个「分时」角标提示
-      section.minuteCorner = true
+      // 板块分时随会话切换：A股时段 → 东财板块分时；美股时段 → 美股代理股均值合成分时；
+      // 美股盘前仅支持参考涨跌幅、无分时图（sectorMinuteCorner=false，无「分时」角标）。
+      // 两个有分时的会话以面板右上角单个「分时」角标提示
+      section.minuteCorner = params.sectorMinuteCorner !== false
       if (params.sectorPhase) {
-        // 阶段化胶囊（大A盘中 / 午间休市 / 休市 / 美股盘中 / 美股盘后等）
+        // 阶段化胶囊（大A盘中 / 午间休市 / 休市 / 美股盘前 / 美股盘中 / 美股盘后等）
         section.marketStatus = params.sectorPhase.label
         section.marketTone = params.sectorPhase.tone
       }
       section.tip = [
-        '📊 板块数据会根据当前市场时段自动切换：',
-        '· A股交易时段（工作日 09:30 至晚上美股开盘前）：显示中国行业板块涨跌情况；',
-        '· 美股交易时段（北京时间约 21:30 开盘，冬季顺延至 22:30，至次日凌晨收盘，及周末）：显示美股行业板块涨跌情况。',
+        '📊 板块数据根据当前市场时段自动切换：',
+        '· A股时段及收盘后窗口（工作日 09:15 至美股盘前开始）：显示中国行业板块涨跌情况；',
+        '· 美股盘前（夏令时 16:00–21:30 / 冬令时 17:00–22:30）：显示美股行业板块盘前参考涨跌幅，暂不支持分时图；',
+        '· 美股盘中/盘后（约 21:30 至次日 08:00/09:00）及周末夜间：显示美股行业板块涨跌情况（休市时段为上一交易日数据）。',
         '',
-        '💡 全球产业数据来源于公开市场信息，仅供参考，不构成投资建议。',
+        '💡 数据来源于公开市场信息，仅供参考，不构成投资建议。',
       ].join('\n')
     }
     sections.push(section)

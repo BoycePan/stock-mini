@@ -91,8 +91,8 @@
           <text class="row-label">开发者选项</text>
           <text class="row-desc">接口环境切换</text>
         </view>
-        <view class="env-pill {{ envOverride === 'local' ? 'env-pill-dev' : 'env-pill-prod' }}">
-          {{ envOverride === 'local' ? '本地' : '线上' }}
+        <view class="env-pill {{ envIsProd ? 'env-pill-prod' : 'env-pill-dev' }}">
+          {{ envIsProd ? '线上' : '本地' }}
         </view>
         <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>

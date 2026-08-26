@@ -9,9 +9,8 @@ import {
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { getAppVersion } from '../../utils/version'
 import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
-import { isReleaseBuild } from '../../config/env'
-import { getEnvOverride } from '../../utils/storage'
-import type { EnvOverride } from '../../utils/storage'
+import { getEnv, isReleaseBuild } from '../../config/env'
+import { productionEnv } from '../../config/env.production'
 import { APP_NAME } from '../../config/app'
 
 Page({
@@ -22,7 +21,8 @@ Page({
     isLoggedIn: false,
     version: '',
     isDev: !isReleaseBuild(),
-    envOverride: null as EnvOverride | null,
+    /** 当前实际生效环境是否为线上（按 getEnv() 推导，无覆盖的默认态按真实地址判定） */
+    envIsProd: true,
     /** 当前小程序名称（按 AppID 动态解析，页脚展示） */
     appName: APP_NAME,
   },
@@ -37,9 +37,9 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
-    // 从 env-switch 页返回后刷新 pill 状态
+    // 从 env-switch 页返回后刷新 pill 状态（按实际生效地址，而非覆盖值）
     if (this.data.isDev) {
-      this.setData({ envOverride: getEnvOverride() })
+      this.setData({ envIsProd: getEnv().apiBaseUrl === productionEnv.apiBaseUrl })
     }
   },
 

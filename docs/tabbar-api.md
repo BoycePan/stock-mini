@@ -95,6 +95,7 @@
 **`gb_` 美股字段的分消费方差异（迁移时注意）**
 
 - 全球页行业板块美股代理（`fetchUsProxyChangeMap`）：取 `[2]` 作为涨跌幅。
+- 全球页行业板块美股盘前（`fetchUsProxyPremarketMap`，美股盘前时段，数据源对齐 `us-sector-premarket.js`）：取 `[21]`=盘前价、`[22]`=盘前涨跌幅%、`[23]`=盘前涨跌额、`[24]`=盘前时间（如 `Aug 26 05:29AM EDT`，夏令时 EDT / 冬令时 EST）、`[26]`=昨收；板块涨跌幅 = 有实时盘前数据（盘前价有效且盘前时间戳为美东当天）成分的 `[22]` 等权均值。
 - 全球页宏观资产（`quote.js` 的 `sina_gb`）：`[1]`=现价、`[2]`=昨收、`[3]`=涨跌幅；涨跌幅缺失时从末尾 8 个字段中取首个 `|值|<80` 的数字。
 - `api.fetchStockQuote`（当前页面未调用）：`[0]`=名称、`[1]`=现价、`[2]`=涨跌幅、`[3]`=时间、`[4]`=涨跌额。
 
@@ -158,6 +159,7 @@
 - 两个消费函数同构：
   - `fetchAShareBoardChangeMap(codes)`：入参为板块代码数组（`['BK1134',…]`），自动补 `90.` 前缀；
   - `fetchUsProxyChangeMap(proxies, mode)`：入参为带市场号的代理股数组（`['105.NVDA',…]`），**新浪优先**（市场 100/105/106/107 先取新浪 `gb_` 涨跌幅），东财 ulist 兜底合并；`mode`（pre/post/regular/live）仅作会话提示，不改变取数策略。
+- **美股盘前变体** `fetchUsProxyPremarketMap(proxies)`（`utils/quote.ts`，仅美股盘前时段使用）：新浪 `gb_` 盘前字段（`[21]`/`[22]`/`[23]`/`[24]`）批量取数，**只统计有实时盘前数据**（盘前价有效且盘前时间戳为美东当天，`parseSinaPremarketTime` 判定）的成分；不做东财兜底（东财无法提供盘前时间戳 isToday 判定）。板块均值由 `averageBoardPcts(proxies, map)` 等权计算。
 
 ---
 

@@ -8,11 +8,13 @@ import {
   parseEastmoneyAveragePrice,
   parseEastmoneyUlistQuote,
   parseQuoteTime,
+  parseSinaPremarketTime,
   parseSinaQuote,
   parseSinaText,
   parseTencentText,
   priceDivisor,
   quoteTimeToDate,
+  sinaGbPremarketFields,
   sinaGbProxyPct,
   tencentQuoteOf,
   validateQuote,
@@ -165,6 +167,87 @@ test('新浪 gb_ 美股（宏观消费方）：现价 [1]、昨收 [2]、涨跌�
 test('新浪 gb_ 美股代理（fetchUsProxyChangeMap 消费方）：涨跌幅取 [2]', () => {
   assert.equal(sinaGbProxyPct(['英伟达', '200.5', '1.23', 'x']), 1.23)
   assert.equal(sinaGbProxyPct(['x', 'x', '95.0']), null) // |pct|>=80 丢弃
+})
+
+test('新浪 gb_ 盘前字段（fetchUsProxyPremarketMap 消费方，us-sector-premarket.js 口径）：[21]盘前价 / [22]盘前涨跌幅 / [23]盘前涨跌额 / [24]盘前时间', () => {
+  // 实测 2026-08-26 新浪 gb_nvda 36 字段夹具（字段索引即实测布局）
+  const fields = [
+    '英伟达', // [0] 名称
+    '213.0500', // [1] 现价（上一交易日收盘）
+    '2.19', // [2] 盘中涨跌幅%
+    '2026-08-26 17:29:55', // [3] 行情时间（北京时间）
+    '4.5700', // [4] 涨跌额
+    '211.0250', // [5] 今开
+    '214.7300', // [6] 最高
+    '210.1100', // [7] 最低
+    '236.2900', // [8] 52周最高
+    '163.7900', // [9] 52周最低
+    '122308928', // [10] 成交量
+    '102575805', // [11]
+    '5160956881713', // [12] 总市值
+    '6.57', // [13]
+    '32.430000', // [14]
+    '0.00', // [15]
+    '0.00', // [16]
+    '0.00', // [17]
+    '0.00', // [18]
+    '24224158093', // [19] 流通市值
+    '69', // [20]
+    '213.5300', // [21] 盘前价
+    '0.23', // [22] 盘前涨跌幅%
+    '0.48', // [23] 盘前涨跌额
+    'Aug 26 05:29AM EDT', // [24] 盘前时间
+    'Aug 25 04:00PM EDT', // [25] 上一交易日收盘时间
+    '208.4800', // [26] 昨收
+    '573723', // [27] 盘前成交量
+    '1', // [28]
+    '2026', // [29]
+    '25975156381.4949', // [30]
+    '214.3000', // [31]
+    '213.0500', // [32]
+    '122614306.2317', // [33]
+    '213.8300', // [34]
+    '213.0500', // [35]
+  ]
+  const pre = sinaGbPremarketFields(fields)
+  assert.equal(pre.price, 213.53)
+  assert.equal(pre.pct, 0.23)
+  assert.equal(pre.chg, 0.48)
+  assert.equal(pre.time, 'Aug 26 05:29AM EDT')
+  // 无盘前数据（如空行）→ price/pct null
+  const empty = sinaGbPremarketFields([])
+  assert.equal(empty.price, null)
+  assert.equal(empty.pct, null)
+  assert.equal(empty.time, '')
+})
+
+test('parseSinaPremarketTime：EDT/EST 均识别，isToday 与美东日期比对，垃圾串返回 null', () => {
+  const aug26 = { month: 8, day: 26 }
+  // 夏令时 EDT（参考脚本仅匹配 EDT，此处兼容 EST）
+  assert.deepEqual(parseSinaPremarketTime('Aug 26 05:29AM EDT', aug26), {
+    hour: 5,
+    minute: 29,
+    isToday: true,
+  })
+  // 冬令时 EST
+  assert.deepEqual(parseSinaPremarketTime('Jan 15 08:10AM EST', { month: 1, day: 15 }), {
+    hour: 8,
+    minute: 10,
+    isToday: true,
+  })
+  // 12 小时制下午
+  assert.deepEqual(parseSinaPremarketTime('Aug 26 04:05PM EDT', aug26), {
+    hour: 16,
+    minute: 5,
+    isToday: true,
+  })
+  // 非当天（昨日盘后 / 隔天）→ isToday false
+  assert.equal(parseSinaPremarketTime('Aug 25 04:00PM EDT', aug26)?.isToday, false)
+  assert.equal(parseSinaPremarketTime('Aug 27 04:00AM EDT', aug26)?.isToday, false)
+  // 无法识别 → null
+  assert.equal(parseSinaPremarketTime('', aug26), null)
+  assert.equal(parseSinaPremarketTime('--', aug26), null)
+  assert.equal(parseSinaPremarketTime('Aug 26 05:29', aug26), null)
 })
 
 test('新浪 fx_ 外汇：优先用新浪自带 [10] 涨跌幅 / [11] 涨跌额（实测 fx_ 字段布局）', () => {
