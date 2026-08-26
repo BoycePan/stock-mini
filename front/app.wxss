@@ -1,7 +1,7 @@
 @import './styles/font.wxss';
 
 page {
-  background: #eef3f8;
+  background: #e8eef6;
   color: #142033;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
   box-sizing: border-box;
@@ -25,7 +25,7 @@ button::after {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(180deg, #f5f8fc 0%, #edf2f7 52%, #e9eff5 100%);
+  background: linear-gradient(180deg, #eef3f9 0%, #e4ecf5 55%, #dde7f2 100%);
   color: #142033;
 }
 
@@ -124,4 +124,49 @@ button::after {
 .page.theme-dark .board-row,
 .page.theme-dark .member-row {
   border-color: #2c3d53;
+}
+
+/* ============ 骨架屏脉冲动画（全局可用） ============ */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.loading-skeleton {
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #e2eaf3 25%, #eef3f8 50%, #e2eaf3 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.page.theme-dark .loading-skeleton {
+  background: linear-gradient(90deg, #1c2b3e 25%, #243447 50%, #1c2b3e 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ============ 全局可点击行 press 态 ============ */
+.press-scale {
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.press-scale:active {
+  transform: scale(0.97);
+  opacity: 0.8;
 }

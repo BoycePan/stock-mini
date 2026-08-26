@@ -111,13 +111,14 @@ const A_PHASE_LABEL: Record<AStockPhase, string> = {
 }
 
 const US_PHASE_LABEL: Record<UsPhase, string> = {
-  pre: '美股盘前',
+  // 美股盘前不再作为独立状态展示：开盘前统一按「美股休市」口径
+  pre: '美股休市',
   regular: '美股盘中',
   post: '美股盘后',
   off: '美股休市',
 }
 
-/** 纯时钟会话（全球页） */
+/** 纯时钟会话（全球页）。美股盘前不再作为独立状态：会话标签按休市口径展示。 */
 export function getMarketSession(now: Date = new Date()): MarketSession {
   const aPhase = getAStockPhase(now)
   const usPhase = getUsPhase(now)
@@ -151,7 +152,7 @@ export function getNonferrousMarketSession(now: Date = new Date()): NonferrousSe
 // ---------------------------------------------------------------------------
 
 export interface IndustryPhase {
-  /** 展示文案：大A盘中 / 午间休市 / 待盘前 / 美股盘前 / 美股盘中 / 美股盘后 / 休市 */
+  /** 展示文案：大A盘中 / 午间休市 / 休市 / 美股盘中 / 美股盘后 */
   label: string
   /** 展示色调：active=盘中 / quiet=盘前盘后午休等 / rest=休市 */
   tone: 'active' | 'quiet' | 'rest'
@@ -159,32 +160,78 @@ export interface IndustryPhase {
 
 /**
  * 行业板块是否取 A 股数据源（对齐参考项目 resolveIndustryUseA 语义，docs/美股盘前板块展示分析与改造方案.md 改动 1）：
- * - 显式会话（useA/useUs 二选一为真且一致）时直接采用；
- * - 否则回退纯时钟窗口：工作日 09:30–15:00（含午休）+ 待盘前窗口
- *   （15:00–美股盘前开始，夏令时 16:00 / 冬令时 17:00）→ A 股板块；
- *   其余（美股盘前/盘中/盘后、周末、夜间空档）→ 美股代理股涨跌幅均值。
+ * - 显式会话（useA/useUs 二选一为真且一致）时直接采用；美股盘前阶段（usMode='pre'）
+ *   不强制按「美股」口径切数据源，统一走下方工作日盘前窗口；
+ * - 否则回退纯时钟窗口：工作日 09:15–美股开盘前（北京时间，夏令时 21:30 / 冬令时 22:30，
+ *   覆盖 A 股集合竞价、盘中含午休、待盘前窗口与美股盘前时段）→ A 股板块；
+ *   其余（美股盘中/盘后、周末、夜间空档）→ 美股代理股涨跌幅均值。
+ *
+ * 注意：美股盘前时段（美东 04:00–09:30）现在由 resolveIndustrySource 单独路由为 'us-pre'
+ * （新浪盘前参考涨跌幅），本函数不再作为盘前时段的唯一判定（见改动 5）。
  */
 export function resolveIndustryUseA(
-  session: Pick<MarketSession, 'useA' | 'useUs'> | null,
+  session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
   now: Date = new Date(),
 ): boolean {
   if (session && session.useA && !session.useUs) return true
-  if (session && !session.useA && session.useUs) return false
+  if (session && !session.useA && session.useUs && session.usMode !== 'pre') return false
   const parts = beijingParts(now)
   const workday = parts.weekday >= 1 && parts.weekday <= 5
   const minutes = parts.hour * 60 + parts.minute
-  if (workday && minutes >= 570 && minutes < 900) return true // 09:30–15:00 A 股时段（含午休）
-  const preStart = isUsDst(now) ? 960 : 1020
-  if (workday && minutes >= 900 && minutes < preStart) return true // 待盘前窗口（对齐 ashare_post）
+  // 美股开盘（北京时间）：夏令时 21:30 / 冬令时 22:30（美东 09:30）
+  const usOpen = isUsDst(now) ? 21 * 60 + 30 : 22 * 60 + 30
+  // 工作日 09:15–美股开盘前 → A 股板块（含集合竞价、午休、待盘前窗口与美股盘前时段）
+  if (workday && minutes >= 555 && minutes < usOpen) return true
   return false
 }
 
-/** 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段） */
+// ---------------------------------------------------------------------------
+// 行业板块数据源三态（A股板块 / 美股盘前 / 美股代理股），docs/美股盘前板块展示分析与改造方案.md 改动 5
+// ---------------------------------------------------------------------------
+
+export type IndustrySource = 'a' | 'us' | 'us-pre'
+
+/**
+ * 行业板块数据源（唯一判定入口，供 api/market.ts 取数与 resolveIndustryPhase 阶段胶囊共用）：
+ * - 'us-pre'：美股盘前（美东 04:00–09:30，周一至周五；夏令时/冬令时经 getUsPhase 自动换算，
+ *   对应北京时间 16:00–21:30 / 17:00–22:30）→ 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径）；
+ * - 'a'：A 股时段（工作日 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 东财 A 股板块；
+ * - 'us'：其余（美股盘中 ≥09:30 美东、盘后、周末、夜间空档）→ 美股代理股涨跌幅均值（既有逻辑）。
+ */
+export function resolveIndustrySource(
+  session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
+  now: Date = new Date(),
+): IndustrySource {
+  // 美股盘前优先判定（独立于会话快照，避免 30s 会话缓存导致开盘边界路由错位）
+  if (getUsPhase(now) === 'pre') return 'us-pre'
+  return resolveIndustryUseA(session, now) ? 'a' : 'us'
+}
+
+/**
+ * 美东当前日期部件（夏令时 -4 / 冬令时 -5 自动换算），供新浪盘前时间戳 isToday 判定
+ * （parseSinaPremarketTime 的 etNow 入参，见 utils/quote-parser.ts）。
+ */
+export function usEtParts(now: Date = new Date()): { month: number; day: number } {
+  const parts = offsetParts(now, isUsDst(now) ? -4 : -5)
+  return { month: parts.month + 1, day: parts.day }
+}
+
+/**
+ * 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段；
+ * 美股盘前 → 「美股盘前」，docs/美股盘前板块展示分析与改造方案.md 改动 5）。
+ * source 缺省时按 resolveIndustrySource 推导（盘前时段自动落为 'us-pre'）。
+ */
 export function resolveIndustryPhase(
   session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
   now: Date = new Date(),
+  source?: IndustrySource,
 ): IndustryPhase {
-  if (resolveIndustryUseA(session, now)) {
+  const src = source ?? resolveIndustrySource(session, now)
+  if (src === 'us-pre') {
+    // 盘前仅展示参考涨跌幅（新浪 gb_ 盘前字段），quiet 蓝系胶囊
+    return { label: '美股盘前', tone: 'quiet' }
+  }
+  if (src === 'a') {
     const aPhase = getAStockPhase(now)
     if (aPhase === 'morning' || aPhase === 'afternoon') {
       return { label: '大A盘中', tone: 'active' }
@@ -192,17 +239,21 @@ export function resolveIndustryPhase(
     if (aPhase === 'lunch') {
       return { label: '午间休市', tone: 'quiet' }
     }
-    return { label: '待盘前', tone: 'rest' }
+    if (aPhase === 'pre') {
+      return { label: '集合竞价', tone: 'quiet' }
+    }
+    return { label: '休市', tone: 'rest' }
   }
-  const usMode = session?.usMode ?? getUsPhase(now)
+  // 美股阶段以当前时钟为准：会话中的 usMode 是会话计算时刻的快照，30s 会话缓存期间
+  // 若按快照判定，会在美股开盘边界出现短暂的阶段错位（数据已切美股、胶囊仍显示旧状态）。
+  const usMode = getUsPhase(now)
   switch (usMode) {
-    case 'pre':
-      return { label: '美股盘前', tone: 'quiet' }
     case 'regular':
       return { label: '美股盘中', tone: 'active' }
     case 'post':
       return { label: '美股盘后', tone: 'quiet' }
     default:
+      // 盘前阶段已被 resolveIndustrySource 路由为 'us-pre'，此处兜底不出现「美股盘前」
       return { label: '休市', tone: 'rest' }
   }
 }
@@ -214,7 +265,7 @@ export function resolveIndustryPhase(
 
 export type { MarketRegion } from '../config/holidays'
 
-export type RegionStatusKind = 'auction' | 'open' | 'break' | 'pre' | 'post' | 'closed'
+export type RegionStatusKind = 'auction' | 'open' | 'break' | 'post' | 'closed'
 
 export interface RegionStatus {
   kind: RegionStatusKind
@@ -276,8 +327,8 @@ const REST: RegionStatus = { kind: 'closed', label: '休市', tone: 'rest' }
 /**
  * 四地市场盘面状态：
  * - cn：集合竞价 09:15-09:30 / 盘中 09:30-11:30 + 13:00-15:00 / 午休 11:30-13:00；
- * - us：盘前 04:00-09:30 / 盘中 09:30-16:00 / 盘后 16:00-20:00（美东时间；
- *       半日市 13:00 收盘，见 US_EARLY_CLOSE）；
+ * - us：盘中 09:30-16:00 / 盘后 16:00-20:00（美东时间；半日市 13:00 收盘，见 US_EARLY_CLOSE）。
+ *       盘前 04:00-09:30 不再作为独立状态展示，统一按休市处理（见下方注释）；
  * - jp：盘中 09:00-11:30 + 12:30-15:30 / 午休 11:30-12:30（东京时间；
  *       2024-11-05 起收盘延至 15:30，午休保留）；
  * - kr：盘中 09:00-15:30（首尔时间，无午休）。
@@ -308,9 +359,7 @@ export function getRegionStatus(region: MarketRegion, now: Date = new Date()): R
       const key = localDateKey(parts)
       const earlyClose = US_EARLY_CLOSE[parts.year]?.includes(key) ?? false
       const regularEnd = earlyClose ? 13 * 60 : 16 * 60
-      if (minutes >= 4 * 60 && minutes < 9 * 60 + 30) {
-        return { kind: 'pre', label: '盘前', tone: 'quiet' }
-      }
+      // 美股盘前 04:00-09:30（美东）不再展示「盘前」状态：开盘前统一按休市处理
       if (minutes >= 9 * 60 + 30 && minutes < regularEnd) {
         return { kind: 'open', label: '盘中', tone: 'active' }
       }

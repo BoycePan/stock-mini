@@ -7,7 +7,8 @@
  * - 海报固定深色底（深浅主题下都清晰可读），设计坐标系宽 750；
  * - 头部渐变卡片：logo（front/static/images/logo.png）+ 标题 + 品牌副标题 + 时间戳 + 状态胶囊；
  * - 分区数据按双列网格绘制（名称 + 数值 + 涨跌幅，涨跌着色）；
- * - 水印「微信小程序搜「市场追踪助手」查看实时行情」。
+ * - 水印「微信小程序搜「{品牌名}」查看实时行情」，品牌名按当前 AppID 动态取
+ *   config/app.ts 的 APP_NAME（多小程序部署下各端展示各自名称）。
  *
  * 调用方（market-page 组件）持有隐藏画布 <canvas type="2d" id="shareCanvas">，
  * 通过 renderSharePoster 导出临时文件，返回 Promise<tempFilePath>。
@@ -15,19 +16,18 @@
 
 import type { MarketSection } from '../types/market'
 import { formatChange } from './formatter'
+import { APP_NAME } from '../config/app'
+
+// 品牌名（水印 / 头部副标题）按当前 AppID 动态解析，re-export 保持既有调用方 import 不变
+export { APP_NAME }
 
 /** 海报设计宽度（px），隐藏画布 CSS 宽度固定 750 */
 export const POSTER_WIDTH = 750
-
-/** 品牌名（水印 / 头部副标题） */
-export const APP_NAME = '市场追踪助手'
 
 /** 品牌 logo（海报头部圆角裁切绘制） */
 export const LOGO_PATH = '/static/images/logo.png'
 
 /** 海报调色：固定深色（参考项目同款），涨跌色沿用全局色板 */
-const BG_TOP = '#141d2e'
-const BG_BOTTOM = '#0e1524'
 const CARD_BG = '#1b2334'
 const TEXT_MAIN = '#f4efe6'
 const TEXT_DIM = '#8b93a7'
@@ -429,11 +429,12 @@ function drawHeader(
     ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
     ctx.restore()
   } else {
-    // logo 加载失败时占位：品牌首字
+    // logo 加载失败时占位：品牌名首字（多小程序部署下按当前名称动态取首字）
     ctx.fillStyle = GOLD
     ctx.font = 'bold 50px sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText('市', logoX + logoSize / 2, logoY + logoSize / 2 + 18)
+    const brandChar = Array.from(data.subtitle || APP_NAME)[0] || '市'
+    ctx.fillText(brandChar, logoX + logoSize / 2, logoY + logoSize / 2 + 18)
   }
 
   // 标题（左，最大宽度到状态胶囊左侧；无胶囊时延伸到右缘）
@@ -858,10 +859,15 @@ export function renderSharePoster(
           // （含文本分区的真实换行行数），再 resize 画布并重新取 ctx。
           const probe = canvas.getContext('2d')
           const height = measurePosterHeight(data, options?.chart, probe)
-          canvas.width = width * dpr
-          canvas.height = height * dpr
+          // Canvas 2D 画布物理像素单边上限 8192（微信限制，超出抛
+          // 「set height out of range」），分区多 / 内嵌 K 线图的海报易触顶：
+          // 超出时整体等比缩小（长宽同比例），保证画布创建成功且海报完整可导出。
+          const MAX_CANVAS_PX = 8192
+          const scale = Math.min(1, MAX_CANVAS_PX / (height * dpr), MAX_CANVAS_PX / (width * dpr))
+          canvas.width = Math.floor(width * dpr * scale)
+          canvas.height = Math.floor(height * dpr * scale)
           const ctx = canvas.getContext('2d')
-          ctx.scale(dpr, dpr)
+          ctx.scale(dpr * scale, dpr * scale)
           loadCanvasImage(canvas, LOGO_PATH)
             .then((logo) => {
               drawPoster(ctx, data, width, logo, options?.chart)

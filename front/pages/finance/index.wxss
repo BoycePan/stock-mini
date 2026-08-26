@@ -49,10 +49,10 @@
 .news-list {
   margin-top: 8rpx;
   padding: 0 24rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .news-item {
@@ -172,11 +172,12 @@
 .empty-hint {
   margin-top: 18rpx;
   padding: 120rpx 24rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
   color: #8491a4;
   text-align: center;
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* 加载更多 / 没有更多 */
@@ -210,7 +211,7 @@
 .page.theme-dark .news-list {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.16), 0 8rpx 28rpx rgba(0, 0, 0, 0.22);
 }
 
 .page.theme-dark .news-item {

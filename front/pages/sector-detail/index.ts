@@ -2,7 +2,7 @@ import { sectorApi } from '../../api/sector'
 import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
-import { formatChange } from '../../utils/formatter'
+import { computeChangeView } from '../../utils/market'
 import {
   APP_NAME,
   formatShareStamp,
@@ -10,6 +10,7 @@ import {
   type PosterTone,
 } from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const MEMBER_QUOTE_LIMIT = 20
@@ -97,8 +98,7 @@ Page({
       code: quote.code,
       name: quote.name,
       priceText: String(quote.price),
-      changeText: formatChange(quote.pct_change),
-      changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+      ...computeChangeView(quote.pct_change),
     }))
   },
   async loadKlines(board: SectorBoard) {
@@ -170,6 +170,7 @@ Page({
     wx.navigateTo({ url: `/pages/stock-detail/index?code=${member.code}` })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.title || '板块详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

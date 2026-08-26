@@ -1,6 +1,26 @@
-# 市场追踪助手小程序
+# 行情追踪小程序（多 AppID 部署）
 
 原生微信小程序前端，使用 TypeScript + MobX，服务于仓库中的股票行情后端。
+
+## 多小程序部署（品牌名称）
+
+同一份代码部署到多个微信小程序，**每个 AppID 对应不同的小程序名称**，
+运行时按当前 AppID 自动展示对应名称，所有展示位置（导航标题、分享标题、页脚、
+海报水印、协议文案等）统一读取 `config/app.ts` 的 `APP_NAME`。
+
+已登记 AppID：
+
+| AppID                | 小程序名称   |
+| -------------------- | ------------ |
+| `wx2cfd1556edf21a24` | 市场追踪助手 |
+| `wx0ecd2049e54fbca8` | 行情追踪助手 |
+
+**新增小程序**：只需在 `front/config/app.ts` 的 `APP_BRANDS` 中加一行
+「AppID → 名称」映射，其余代码零改动；上传时用 `pnpm upload -- --appid=<新AppID>`
+（或 `WX_APPID` 环境变量，密钥按 `keys/private.<appid>.key` 查找）。
+
+> 命名约定：小程序内部**禁止再硬编码**「市场追踪助手」等名称字符串，
+> 一律引用 `config/app.ts` 的 `APP_NAME`（或在页面 data 中绑定后由 WXML 展示）。
 
 ## 打开项目
 
@@ -50,6 +70,11 @@ http://100.90.180.33:18487
 3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
 4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
+   （腾讯 `qt.gtimg.cn` 返回 GBK 文本，`wx.request` 默认按 UTF-8 解码在**真机**会直接失败
+   ——`request:fail response data convert to UTF8 fail`；新浪同理。`api/external.ts`
+   的 `requestExternal` 已通过 `responseType: 'arraybuffer'` 拿原始字节、
+   `rawBytesToString` 逐字节保留（Latin-1），数值/ASCII 结构不受影响，GBK 中文名由
+   `displayName()` 回退配置名兜底。
 
 ## 依赖安装
 

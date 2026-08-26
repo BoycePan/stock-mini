@@ -5,6 +5,7 @@ import { rootStore } from '../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
 import { buildRichHtml, MAX_RICH_HTML_CHARS, stripHtml, truncateRichHtml } from '../../utils/html'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, buildShareQuery, SHARE_IMAGE_URL } from '../../utils/share'
 import { APP_NAME, formatShareStamp, type PosterData } from '../../utils/share-poster'
 
@@ -62,6 +63,8 @@ Page({
     const rawSummary = news.summary ?? ''
     const summary = truncateRichHtml(rawSummary, MAX_RICH_HTML_CHARS)
     const cappedNews: NewsDetail = summary === rawSummary ? news : { ...news, summary }
+    // 埋点：查看新闻详情，上报新闻 id + 标题（列表进入 / 分享进入都走这里，只上报一次）
+    trackEvent('news.view', { id: cappedNews.id, title: cappedNews.title })
     // 纯文本摘要的导语分段：开头的【…】拆成高亮导语，其余为正文（HTML 摘要走 rich-text 路径，不受影响）
     const leadMatch = /^【[^】]+】/.exec(summary)
     this.setData({
@@ -73,7 +76,6 @@ Page({
       posterData: this.buildPosterData(cappedNews),
       shareEntrancePath: cappedNews.id ? buildSharePath('news-detail', { id: cappedNews.id }) : '',
     })
-    console.log('🏷️ index.ts ~ 76 => ', buildSharePath('news-detail', { id: cappedNews.id }))
     registerStoreBinding(
       this,
       createStoreBindings(this, {
@@ -131,7 +133,7 @@ Page({
       {
         title: '新闻摘要',
         // 无摘要时给占位文案，保证海报始终有正文分区
-        text: summary || '原文摘要暂未获取，可打开「市场追踪助手」小程序查看完整内容。',
+        text: summary || `原文摘要暂未获取，可打开「${APP_NAME}」小程序查看完整内容。`,
         ...(leadMatch ? { lead: leadMatch[0] } : {}),
       },
     ]
@@ -181,6 +183,8 @@ Page({
   },
   onShareAppMessage() {
     const news = this.data.news
+    // 上报被分享的新闻 id + 标题（右上角菜单转发 / 海报弹窗「转发好友」共用本回调）
+    trackEvent('share.trigger', { id: news?.id, title: news?.title })
     return {
       title: news?.title || '新闻详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）；
@@ -192,6 +196,8 @@ Page({
   },
   onShareTimeline() {
     const news = this.data.news
+    // 朋友圈分享同样上报被分享的新闻 id + 标题
+    trackEvent('share.trigger', { id: news?.id, title: news?.title })
     return {
       title: news?.title || '新闻详情',
       // 朋友圈分享直接落在本页路径，query 携带 id，进入后同样按 id 拉取明细

@@ -222,6 +222,76 @@ export function sinaGbProxyPct(fields: string[]): number | null {
   return pct
 }
 
+/**
+ * 新浪 gb_ 美股盘前字段（实测 36 字段布局，见 docs/tabbar-api.md ②）：
+ * [21] 盘前价 / [22] 盘前涨跌幅% / [23] 盘前涨跌额 / [24] 盘前时间（如 "Aug 26 05:29AM EDT"）。
+ * 数据源与取数口径对齐参考脚本 us-sector-premarket.js（新浪 hq.sinajs.cn 实时盘前）。
+ */
+export interface SinaGbPremarket {
+  /** 盘前价 [21] */
+  price: number | null
+  /** 盘前涨跌幅% [22]（板块等权均值消费方） */
+  pct: number | null
+  /** 盘前涨跌额 [23] */
+  chg: number | null
+  /** 盘前时间原始串 [24] */
+  time: string
+}
+
+export function sinaGbPremarketFields(fields: string[]): SinaGbPremarket {
+  return {
+    price: numAt(fields, 21),
+    pct: numAt(fields, 22),
+    chg: numAt(fields, 23),
+    time: fields[24] ?? '',
+  }
+}
+
+const SINA_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
+export interface SinaPremarketTime {
+  hour: number
+  minute: number
+  /** 是否为美东当天（盘前实时性判定，见 utils/quote.ts fetchUsProxyPremarketMap） */
+  isToday: boolean
+}
+
+/**
+ * 解析新浪盘前时间串 "Aug 26 05:29AM EDT" / "Jan 15 08:10AM EST" → 结构化时间。
+ * 与当前美东日期（etNow = { month: 1-12, day }，DST 感知由调用方经 market-clock 换算）比对得 isToday。
+ * 注意：参考脚本 us-sector-premarket.js 仅匹配 EDT（冬令时 EST 会失效），此处兼容 EDT|EST。
+ * 无法识别返回 null（该成分视为无实时盘前数据，剔除出板块均值）。
+ */
+export function parseSinaPremarketTime(
+  time: string,
+  etNow: { month: number; day: number },
+): SinaPremarketTime | null {
+  if (!time) return null
+  const m = time.match(/^(\w{3})\s+(\d{1,2})\s+(\d{1,2}):(\d{2})(AM|PM)\s+(EDT|EST)/i)
+  if (!m) return null
+  const mo = SINA_MONTHS.indexOf(m[1]![0]!.toUpperCase() + m[1]!.slice(1).toLowerCase())
+  if (mo < 0) return null
+  let hour = parseInt(m[3]!, 10)
+  const minute = parseInt(m[4]!, 10)
+  const isPm = m[5]!.toUpperCase() === 'PM'
+  if (isPm && hour < 12) hour += 12
+  if (!isPm && hour === 12) hour = 0
+  return { hour, minute, isToday: mo + 1 === etNow.month && parseInt(m[2]!, 10) === etNow.day }
+}
+
 function lastEightDigitsPct(fields: string[]): number | null {
   const tail = fields.slice(-8)
   for (const value of tail) {

@@ -42,14 +42,14 @@
 .page-status {
   display: inline-flex;
   align-items: center;
-  padding: 10rpx 20rpx;
+  padding: 8rpx 18rpx;
   border: 1rpx solid #cdeedb;
   border-radius: 30rpx;
   background: #effaf3;
   color: #1c9d59;
   font-size: 24rpx;
   font-weight: 600;
-  box-shadow: 0 4rpx 12rpx rgba(28, 157, 89, 0.1);
+  box-shadow: 0 4rpx 12rpx rgba(28, 157, 89, 0.10);
 }
 
 /* 休市（非交易时段）状态：灰色 */
@@ -66,7 +66,7 @@
   margin-right: 10rpx;
   border-radius: 50%;
   background: #24b86b;
-  box-shadow: 0 0 0 5rpx rgba(36, 184, 107, 0.12);
+  box-shadow: 0 0 0 4rpx rgba(36, 184, 107, 0.14);
 }
 
 .page-status.rest .status-dot {

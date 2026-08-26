@@ -22,7 +22,15 @@ import type {
   TencentQuote,
 } from '../types/quote'
 import { aShareSecid, bareCode, findConsensus, toArray, type SimilarTols } from './quote-consensus'
-import { isAbnormalPct, parseSinaQuote, sinaGbProxyPct, validateQuote } from './quote-parser'
+import {
+  isAbnormalPct,
+  parseSinaPremarketTime,
+  parseSinaQuote,
+  sinaGbPremarketFields,
+  sinaGbProxyPct,
+  validateQuote,
+} from './quote-parser'
+import { usEtParts } from './market-clock'
 
 /** 多源聚合时可复用的预取数据，避免同一 key 被重复请求 */
 export interface QuoteBatch {
@@ -251,6 +259,48 @@ export async function fetchUsProxyChangeMap(proxies: string[]): Promise<Record<s
     }
   }
   return result
+}
+
+/**
+ * 美股代理股盘前涨跌幅（美股盘前时段行业板块，数据源对齐 us-sector-premarket.js）：
+ * 新浪 gb_ 的 [22] 盘前涨跌幅%（[21] 盘前价 / [24] 盘前时间），**只统计有实时盘前数据的成分**
+ * （盘前价有效且盘前时间戳为美东当天，夏令时/冬令时自动换算）。
+ * 板块涨跌幅 = 成分盘前涨跌幅等权均值（averageBoardPcts），无实时盘前数据的成分剔除。
+ * 不做东财兜底：东财 ulist 无法提供「盘前时间戳 isToday」判定，兜底会引入陈旧数据。
+ * 出参 map 同时含完整 secid 与裸代码两个 key；全部无实时数据时返回空 map（板块显示 --）。
+ */
+export async function fetchUsProxyPremarketMap(proxies: string[]): Promise<Record<string, number>> {
+  const result: Record<string, number> = {}
+  if (!proxies.length) return result
+
+  const sinaKeys = proxies.map((proxy) => `gb_${bareCode(proxy).toLowerCase()}`)
+  const rows = await fetchSinaQuotes(sinaKeys)
+  const etNow = usEtParts()
+  rows.forEach((row, index) => {
+    const proxy = proxies[index]
+    if (!proxy) return
+    const pre = sinaGbPremarketFields(row.fields)
+    const timeInfo = parseSinaPremarketTime(pre.time, etNow)
+    const isLive = pre.price != null && pre.price !== 0 && timeInfo?.isToday === true
+    if (isLive && pre.pct !== null && !isAbnormalPct(pre.pct)) {
+      result[proxy] = pre.pct
+      result[bareCode(proxy)] = pre.pct
+    }
+  })
+  return result
+}
+
+/**
+ * 板块涨跌幅 = 成分代理股涨跌幅的等权均值（只统计 map 中命中的成分）：
+ * 完整 secid 缺失时回退裸代码查表；非有限数值命中被剔除；无命中返回 null（板块占位 --）。
+ */
+export function averageBoardPcts(proxies: string[], map: Record<string, number>): number | null {
+  const pcts: number[] = []
+  for (const proxy of proxies) {
+    const pct = map[proxy] ?? map[bareCode(proxy)]
+    if (typeof pct === 'number' && Number.isFinite(pct)) pcts.push(pct)
+  }
+  return pcts.length ? pcts.reduce((sum, pct) => sum + pct, 0) / pcts.length : null
 }
 
 /**

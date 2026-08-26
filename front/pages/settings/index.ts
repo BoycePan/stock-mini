@@ -8,10 +8,11 @@ import {
 } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { getAppVersion } from '../../utils/version'
+import { trackEvent } from '../../utils/tracker'
 import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
-import { isReleaseBuild } from '../../config/env'
-import { getEnvOverride } from '../../utils/storage'
-import type { EnvOverride } from '../../utils/storage'
+import { getEnv, isReleaseBuild } from '../../config/env'
+import { productionEnv } from '../../config/env.production'
+import { APP_NAME } from '../../config/app'
 
 Page({
   data: {
@@ -21,7 +22,10 @@ Page({
     isLoggedIn: false,
     version: '',
     isDev: !isReleaseBuild(),
-    envOverride: null as EnvOverride | null,
+    /** 当前实际生效环境是否为线上（按 getEnv() 推导，无覆盖的默认态按真实地址判定） */
+    envIsProd: true,
+    /** 当前小程序名称（按 AppID 动态解析，页脚展示） */
+    appName: APP_NAME,
   },
   onLoad() {
     bindTheme(this)
@@ -34,9 +38,9 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
-    // 从 env-switch 页返回后刷新 pill 状态
+    // 从 env-switch 页返回后刷新 pill 状态（按实际生效地址，而非覆盖值）
     if (this.data.isDev) {
-      this.setData({ envOverride: getEnvOverride() })
+      this.setData({ envIsProd: getEnv().apiBaseUrl === productionEnv.apiBaseUrl })
     }
   },
 
@@ -57,6 +61,8 @@ Page({
   onThemeChange(event: WechatMiniprogram.BaseEvent) {
     const value = (event.currentTarget as unknown as { dataset: { value: string } }).dataset.value
     rootStore.settings.setTheme(value as ThemePreference)
+    // 埋点：用户主动切主题（跟随系统变化的自动切换不埋）
+    trackEvent('theme.switch', value)
   },
   onServiceTap(event: WechatMiniprogram.BaseEvent) {
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
@@ -81,8 +87,9 @@ Page({
     }
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
-      title: '市场追踪助手',
+      title: APP_NAME,
       path: SHARE_HOME_PATH,
       imageUrl: SHARE_IMAGE_URL,
     }

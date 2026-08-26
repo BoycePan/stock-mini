@@ -537,8 +537,19 @@ test('覆盖性：日韩页全部卡片 code（指数/个股/汇率）均有分�
     ...ASIA_JP_STOCKS.map((item) => item.code),
     ...ASIA_RATES.map((item) => item.code),
   ]
-  const missing = codes.filter((code) => !hasMinuteSources(code))
+  // KOSDAQ / TOPIX 刻意不配置分时源（KOSDAQ 仅 Yahoo ^KQ11 被墙、TOPIX 无直连源，
+  // 卡片不显示「分时」角标、点击提示暂无数据，见 config/minute.ts MINUTE_SOURCES 注释）。
+  const missing = codes.filter((code) => !['KQ11', 'TPX'].includes(code) && !hasMinuteSources(code))
   assert.deepEqual(missing, [], `缺少分时源: ${missing.join(', ')}`)
+})
+
+test('覆盖性：KOSDAQ / TOPIX 刻意不配置分时源（大陆无可用直连源）', () => {
+  // KOSDAQ：东财/腾讯无分时，仅 Yahoo ^KQ11 有分时且大陆被墙；
+  // TOPIX：东财/腾讯/Yahoo 均无东证指数本身分时（原 ETF 代理 513800 不可用）。
+  // 两者卡片不显示「分时」入口，点击给出「该指标暂无分时数据」提示（与 VIX 同策略）。
+  for (const code of ['KQ11', 'TPX']) {
+    assert.equal(hasMinuteSources(code), false, `${code} 不应配置分时源`)
+  }
 })
 
 test('覆盖性：有色页全部金属 code 均有分时源', () => {

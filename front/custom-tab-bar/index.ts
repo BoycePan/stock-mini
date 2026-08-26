@@ -1,4 +1,5 @@
 import { bindTheme, getTheme, unbindTheme } from '../utils/theme'
+import { trackEvent } from '../utils/tracker'
 
 /**
  * 原生自定义 tabBar（app.json tabBar.custom = true 时由框架自动挂载，路径固定在项目根 custom-tab-bar/）。
@@ -40,6 +41,8 @@ Component({
     onTab(event: WechatMiniprogram.BaseEvent) {
       const key = (event.currentTarget as unknown as { dataset: { key: string } }).dataset.key
       if (!key || key === this.data.selected) return
+      // 埋点：切换底部 Tab，target = tab key
+      trackEvent('tab.switch', key)
       // 先更新高亮保证点击即时反馈；页面 onShow 会再次同步（幂等）
       this.setData({ selected: key })
       wx.switchTab({ url: `/pages/${key}/index` })

@@ -11,7 +11,7 @@
   width: 104rpx;
   height: 104rpx;
   margin-bottom: 18rpx;
-  border-radius: 32rpx;
+  border-radius: 24rpx;
   background: #edf3fb;
   color: #8ca3bd;
   font-size: 66rpx;

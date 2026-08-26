@@ -3,7 +3,9 @@ import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import { saveNewsDetail } from '../../utils/storage'
 import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
-import { formatChange, formatNumber, formatWan } from '../../utils/formatter'
+import { computeChangeView } from '../../utils/market'
+import { formatNumber, formatWan } from '../../utils/formatter'
+import { truncateRichHtml } from '../../utils/html'
 import {
   APP_NAME,
   formatShareStamp,
@@ -11,15 +13,31 @@ import {
   type PosterTone,
 } from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const ANNOUNCEMENT_PAGE_SIZE = 20
+/**
+ * 新闻 / 公告列表最大条数：滚动加载无限追加会让 this.data 与 DOM 持续膨胀，
+ * 超过上限后丢弃最旧条目，保证内存有上界。
+ */
+const MAX_LIST_ITEMS = 100
+/**
+ * 新闻条目透传详情页用的原始摘要最大字符数：单条摘要可能是整篇文章 HTML，
+ * 列表层先截断（详情页渲染还有 20KB 保护），防长列表累积撑爆内存。
+ */
+const MAX_RAW_SUMMARY_CHARS = 10_000
 
 type QuoteView = StockQuote & {
   changeText: string
   changeClass: string
   volumeText: string
   amountText: string
+}
+
+/** 新闻条目摘要截断到安全上限（truncateRichHtml 未超限时原样返回） */
+function capNewsSummary(item: NewsItem): NewsItem {
+  return { ...item, summary: truncateRichHtml(item.summary ?? '', MAX_RAW_SUMMARY_CHARS) }
 }
 
 Page({
@@ -80,14 +98,13 @@ Page({
         loading: false,
         quote: {
           ...quote,
-          changeText: formatChange(quote.pct_change),
-          changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+          ...computeChangeView(quote.pct_change),
           volumeText: formatWan(quote.volume),
           amountText: formatWan(quote.amount),
         },
         klines: klineResult.klines,
         posterData: this.buildPosterData(quote),
-        news: newsResult,
+        news: newsResult.map(capNewsSummary),
         newsPage: 1,
         newsHasMore: newsResult.length > 0,
         announcements: announcementResult,
@@ -122,34 +139,75 @@ Page({
       wx.showToast({ title: 'K线加载失败', icon: 'none' })
     }
   },
+  /**
+   * 新闻列表触底追加：条数达到 MAX_LIST_ITEMS 后不再追加（超过上限时丢弃最旧条目），
+   * 未超上限时用增量 setData（news[N] 下标路径）只传输新增条目，避免整数组序列化。
+   */
   async onLoadMoreNews() {
     if (this.data.loadingMoreNews || !this.data.newsHasMore) return
+    // 列表已达显示上限：不再追加，newsHasMore 置 false 使加载态自洽（下拉刷新会重建列表恢复）
+    if (this.data.news.length >= MAX_LIST_ITEMS) {
+      this.setData({ newsHasMore: false })
+      return
+    }
     const nextPage = this.data.newsPage + 1
     this.setData({ loadingMoreNews: true })
     try {
       const items = await newsApi.getStockNews(this.data.code, nextPage)
-      this.setData({
-        news: [...this.data.news, ...items],
+      const capped = items.map(capNewsSummary)
+      const base = this.data.news.length
+      const merged = this.data.news.concat(capped)
+      const patch: Record<string, unknown> = {
         newsPage: nextPage,
         newsHasMore: items.length > 0,
-      })
+      }
+      if (merged.length > MAX_LIST_ITEMS) {
+        // 超上限：整体重建并丢弃最旧条目（新闻越旧价值越低，保留最新）
+        patch.news = merged.slice(merged.length - MAX_LIST_ITEMS)
+      } else {
+        // 未超上限：增量 setData 只传输新增条目的路径
+        capped.forEach((item, i) => {
+          patch[`news[${base + i}]`] = item
+        })
+      }
+      this.setData(patch)
     } catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '新闻加载失败', icon: 'none' })
     } finally {
       this.setData({ loadingMoreNews: false })
     }
   },
+  /**
+   * 公告列表触底追加：条数达到 MAX_LIST_ITEMS 后不再追加（超过上限时丢弃最旧条目），
+   * 未超上限时用增量 setData（announcements[N] 下标路径）只传输新增条目。
+   */
   async onLoadMoreAnnouncements() {
     if (this.data.loadingMoreAnnouncements || !this.data.announcementHasMore) return
+    // 列表已达显示上限：不再追加，announcementHasMore 置 false 使加载态自洽（下拉刷新会重建列表恢复）
+    if (this.data.announcements.length >= MAX_LIST_ITEMS) {
+      this.setData({ announcementHasMore: false })
+      return
+    }
     const nextPage = this.data.announcementPage + 1
     this.setData({ loadingMoreAnnouncements: true })
     try {
       const items = await newsApi.getAnnouncements(this.data.code, nextPage)
-      this.setData({
-        announcements: [...this.data.announcements, ...items],
+      const base = this.data.announcements.length
+      const merged = this.data.announcements.concat(items)
+      const patch: Record<string, unknown> = {
         announcementPage: nextPage,
         announcementHasMore: items.length >= ANNOUNCEMENT_PAGE_SIZE,
-      })
+      }
+      if (merged.length > MAX_LIST_ITEMS) {
+        // 超上限：整体重建并丢弃最旧条目（公告越旧价值越低，保留最新）
+        patch.announcements = merged.slice(merged.length - MAX_LIST_ITEMS)
+      } else {
+        // 未超上限：增量 setData 只传输新增条目的路径
+        items.forEach((item, i) => {
+          patch[`announcements[${base + i}]`] = item
+        })
+      }
+      this.setData(patch)
     } catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '公告加载失败', icon: 'none' })
     } finally {
@@ -197,8 +255,8 @@ Page({
   },
   /** 组装分享海报数据（头部 + 行情指标分区；K 线图由 share-poster 组件按 klines 绘制） */
   buildPosterData(quote: StockQuote): PosterData {
-    const change = Number(quote.pct_change) || 0
-    const tone: PosterTone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+    const view = computeChangeView(quote.pct_change)
+    const tone: PosterTone = view.changeClass
     return {
       title: quote.name || '股票详情',
       subtitle: APP_NAME,
@@ -212,7 +270,7 @@ Page({
             {
               name: '最新价',
               value: formatNumber(quote.price, 2),
-              changeText: formatChange(change),
+              changeText: view.changeText,
               tone,
             },
             { name: '开盘', value: formatNumber(quote.open, 2), changeText: '', tone: 'flat' },
@@ -237,6 +295,7 @@ Page({
     if (poster) poster.open()
   },
   onShareAppMessage() {
+    trackEvent('share.trigger')
     return {
       title: this.data.quote?.name || '股票详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

@@ -2,10 +2,13 @@
   position: relative;
   margin: 16rpx 20rpx 0;
   padding: 22rpx 18rpx 20rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  /* 双层阴影：近阴影增强边界感，远阴影强化浮起感（亮色主题调淡，贴近背景色） */
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.04),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.06);
 }
 
 /* 页面第一个卡片：收紧顶部间距（配合 market-page 的 page-meta 底部 padding 减小） */
@@ -25,12 +28,12 @@
 }
 
 .title-accent {
-  width: 8rpx;
-  height: 38rpx;
+  width: 6rpx;
+  height: 40rpx;
   margin-right: 14rpx;
-  border-radius: 10rpx;
+  border-radius: 12rpx;
   background: linear-gradient(180deg, #ff9c5c 0%, #ff625f 100%);
-  box-shadow: 0 6rpx 12rpx rgba(255, 98, 95, 0.22);
+  box-shadow: 0 4rpx 14rpx rgba(255, 98, 95, 0.28);
 }
 
 .section-card.asia .title-accent {
@@ -114,11 +117,8 @@
   background: #c3ccd8;
 }
 
-/* 防御性布局：状态胶囊与「i」说明、badge 并存时按序排列（当前业务无并存场景） */
-.market-status+.section-tip {
-  margin-left: 14rpx;
-}
-
+/* 布局：盘面状态按市场区域紧跟标题右侧；「i」说明按钮与徽标固定在卡片右侧，
+   与说明按钮并存时依次排列（如行业板块 = 状态 + 说明按钮） */
 .market-status+.section-badge {
   margin-left: 14rpx;
 }
@@ -142,6 +142,14 @@
   font-size: 24rpx;
   font-weight: 700;
   font-family: Georgia, serif;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.section-tip-hover {
+  transform: scale(0.88);
+  opacity: 0.75;
 }
 
 .metric-grid {
@@ -157,9 +165,14 @@
   flex-direction: column;
   justify-content: center;
   padding: 18rpx 16rpx;
-  border: 1rpx solid #edf1f6;
+  border: 1rpx solid #e2f0ff;
   border-radius: 20rpx;
-  background: linear-gradient(145deg, #f8fafc 0%, #f2f6fa 100%);
+  background: #ebf1f9;
+  /* 亮色主题：底色略深于白色外卡以分层（呼应页面背景 #eef3f8），
+     极淡蓝边收边 + 贴近背景色的淡阴影，区分但不突兀 */
+  box-shadow:
+    0 2rpx 6rpx rgba(30, 60, 110, 0.04),
+    0 8rpx 20rpx rgba(30, 60, 110, 0.05);
 }
 
 .metric-name-row {
@@ -303,8 +316,8 @@
   padding: 5rpx 8rpx;
   border: 1rpx solid transparent;
   border-radius: 24rpx;
-  font-size: 24rpx;
-  font-weight: 500;
+  font-size: 25rpx;
+  font-weight: 600;
   line-height: 34rpx;
   white-space: nowrap;
   overflow: hidden;
@@ -331,7 +344,7 @@
 
 .metric-change .metric-change-prefix {
   margin-right: 4rpx;
-  font-size: 22rpx;
+  font-size: 25rpx;
 }
 
 .section-card.asia .metric-card,
@@ -341,8 +354,11 @@
 }
 
 .section-card.finance .metric-card {
-  border-color: #e5e1fa;
-  background: linear-gradient(145deg, #fff 0%, #faf9ff 100%);
+  border: 1rpx solid #e6e1f6;
+  background: #f4f3fb;
+  box-shadow:
+    0 2rpx 6rpx rgba(115, 92, 229, 0.05),
+    0 8rpx 20rpx rgba(115, 92, 229, 0.06);
 }
 
 /* 单行布局：无价格条目（如行业板块只有涨跌幅）名称 + 涨跌徽标并排一行 */
@@ -373,7 +389,7 @@
   flex-shrink: 0;
   font-size: 26rpx;
   line-height: 34rpx;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .section-card .single-line-metric .metric-change.up,
@@ -400,7 +416,9 @@
 .section-card.theme-dark {
   border-color: #2a394e;
   background: #1a2637;
-  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 2rpx 8rpx rgba(0, 0, 0, 0.14),
+    0 8rpx 32rpx rgba(0, 0, 0, 0.22);
 }
 
 .section-card.theme-dark .section-title,
@@ -421,8 +439,9 @@
 }
 
 .section-card.theme-dark .metric-card {
-  border-color: #34465e;
-  background: #223248;
+  border-color: #2f4260;
+  background: #1f3148;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
 }
 
 .section-card.theme-dark .metric-change.flat {
@@ -507,4 +526,32 @@
 .metric-change.bump {
   animation: metric-bump 0.45s ease;
   transform-origin: left center;
+}
+
+/* ============ 骨架占位条（组件样式隔离，须在组件内复写动画） ============ */
+@keyframes section-card-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 价格区骨架条：与 .metric-value 同行高，宽度固定撑开空间 */
+.metric-value-skeleton {
+  height: 44rpx;
+  width: 120rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #e2eaf3 25%, #eef3f8 50%, #e2eaf3 75%);
+  background-size: 200% 100%;
+  animation: section-card-shimmer 1.6s ease-in-out infinite;
+}
+
+/* 深色变体 */
+.section-card.theme-dark .metric-value-skeleton {
+  background: linear-gradient(90deg, #1c2b3e 25%, #243447 50%, #1c2b3e 75%);
+  background-size: 200% 100%;
+  animation: section-card-shimmer 1.6s ease-in-out infinite;
 }

@@ -1,6 +1,8 @@
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { rootStore } from '../../stores/root.store'
 import { SHARE_IMAGE_URL } from '../../utils/share'
+import { APP_NAME } from '../../config/app'
 
 interface LegalSection {
   heading: string
@@ -105,7 +107,7 @@ const LEGAL_DOCS: Record<string, LegalDoc> = {
     icon: '📄',
     updatedAt: '2026-08-19',
     intro: [
-      '欢迎使用市场追踪助手（以下简称"本小程序"）。在开始使用前，请仔细阅读本协议。使用本小程序即视为你已阅读并同意本协议全部内容。',
+      `欢迎使用${APP_NAME}（以下简称"本小程序"）。在开始使用前，请仔细阅读本协议。使用本小程序即视为你已阅读并同意本协议全部内容。`,
     ],
     sections: [
       {
@@ -235,8 +237,9 @@ Page({
     unbindTheme(this)
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
-      title: this.data.title ? `${this.data.title} - 市场追踪助手` : '市场追踪助手',
+      title: this.data.title ? `${this.data.title} - ${APP_NAME}` : APP_NAME,
       path: this.data.type
         ? `/pages/legal/index?type=${encodeURIComponent(this.data.type)}`
         : '/pages/legal/index',

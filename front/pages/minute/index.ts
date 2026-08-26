@@ -12,7 +12,9 @@ import {
 } from '../../utils/minute'
 import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
 import type { MinutePoint } from '../../types/stock'
+import { computeChangeView } from '../../utils/market'
 import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 import {
   APP_NAME,
@@ -60,6 +62,18 @@ Page({
     /** 是否有请求进行中（含静默刷新），供自动刷新跳过并发 */
     requesting: false,
     error: '',
+    /**
+     * 连续加载失败次数（成功即清零）：
+     * - 首次失败 → 展示错误 + 重试按钮；
+     * - 第二次及以后失败 → 切换为「暂无数据」引导空态（数据源暂未更新 / 网络不可达等）。
+     */
+    failCount: 0,
+    /** 暂无数据引导态：无分时源（如 KOSDAQ/TOPIX/VIX）或多次加载失败时展示 */
+    noData: false,
+    /** 暂无数据态的引导文案（说明原因 / 给用户下一步指引） */
+    noDataDesc: '',
+    /** 暂无数据态是否提供「重新加载」按钮（无分时源时不可重试，多次加载失败时可重试） */
+    noDataRetryable: false,
     points: [] as MinutePoint[],
     preClose: 0,
     sourceLabel: '',
@@ -103,7 +117,14 @@ Page({
       }),
     })
     if (!hasMinuteSources(mcode)) {
-      this.setData({ loading: false, error: '该指标暂无分时数据' })
+      // 无分时源（KOSDAQ / TOPIX / VIX 等刻意不配置的标的）：直接展示「暂无数据」引导空态，
+      // 无需重试（重试也无法取到数据）。通常经分享链接进入，卡片入口已屏蔽。
+      this.setData({
+        loading: false,
+        noData: true,
+        noDataDesc: '该指标暂不支持分时图，请回到行情页查看实时数据',
+        noDataRetryable: false,
+      })
       return
     }
     await this.loadData()
@@ -134,7 +155,7 @@ Page({
     const { silent = false } = options ?? {}
     lastMinuteRequestAt = Date.now()
     this.setData({ requesting: true })
-    if (!silent) this.setData({ loading: true, error: '' })
+    if (!silent) this.setData({ loading: true, error: '', noData: false })
     try {
       const code = this.data.mcode || this.data.code
       const emSecid = resolveMinuteSources(code)?.em ?? null
@@ -151,6 +172,7 @@ Page({
         const info = mergeMinuteQuoteInfo(result.points, result, quote)
         this.setData({
           loading: false,
+          failCount: 0,
           points: result.points,
           preClose: info.preClose ?? 0,
           sourceLabel: `数据来源：${result.sourceLabel}`,
@@ -166,8 +188,12 @@ Page({
           },
         })
       } else if (!silent) {
-        this.setData({
+        // 查不到数据：首次失败展示「错误 + 重试」，第二次及以后失败引导「暂无数据」
+        // （数据源暂未更新 / 网络不可达等），样式见 index.wxml 的 no-data-card / error-card
+        const failCount = this.data.failCount + 1
+        const reset = {
           loading: false,
+          failCount,
           points: [],
           preClose: 0,
           sourceLabel: '',
@@ -175,8 +201,25 @@ Page({
           quote: null,
           posterData: null,
           minutePoster: null,
-          error: '分时数据加载失败，请下拉或点击重试',
-        })
+        }
+        if (failCount >= 2) {
+          this.setData({
+            ...reset,
+            error: '',
+            noData: true,
+            noDataDesc:
+              '暂时无法获取该指标的分时数据，可能是数据源暂未更新或网络不可达，请稍后重试',
+            noDataRetryable: true,
+          })
+        } else {
+          this.setData({
+            ...reset,
+            error: '分时数据加载失败，请点击下方按钮重试',
+            noData: false,
+            noDataDesc: '',
+            noDataRetryable: false,
+          })
+        }
       }
     } finally {
       this.setData({ requesting: false })
@@ -192,8 +235,7 @@ Page({
         : null
     const change = price !== null && pre !== null ? price - pre : null
     const pct = change !== null && pre !== null && pre !== 0 ? (change / pre) * 100 : null
-    const changeClass: MinuteQuoteView['changeClass'] =
-      change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down'
+    const changeClass: MinuteQuoteView['changeClass'] = computeChangeView(pct).changeClass
 
     const lastAvg = last?.avg
 
@@ -228,7 +270,8 @@ Page({
         : null
     const change = price !== null && pre !== null ? price - pre : null
     const pct = change !== null && pre !== null && pre !== 0 ? (change / pre) * 100 : null
-    const tone: PosterTone = change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down'
+    const pctView = computeChangeView(pct)
+    const tone: PosterTone = pctView.changeClass
 
     const lastAvg = last?.avg
 
@@ -246,7 +289,7 @@ Page({
               name: '最新价',
               value: price !== null ? price.toFixed(2) : '--',
               // 海报涨跌幅只展示百分比（页面同时展示涨跌额 + 涨跌幅，过长会与数值挤占）
-              changeText: pct !== null ? formatChange(pct) : '',
+              changeText: pct !== null ? pctView.changeText : '',
               tone,
             },
             {
@@ -312,6 +355,7 @@ Page({
   // 显式返回类型：方法体内引用 this.data 时，若无注解会触发 Page 泛型推断循环
   // （TCustom 回退默认值导致 this 上「丢失」loadData 等自定义方法），加注解可打破
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.name || '行情分时',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

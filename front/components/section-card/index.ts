@@ -1,5 +1,6 @@
 import type { MarketMetric, MarketSection } from '../../types/market'
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 
 /** 用于对比两次刷新之间单个指标是否变化的快照 */
 interface MetricSnapshot {
@@ -76,6 +77,8 @@ Component({
     },
     onTipTap() {
       if (this.data.section?.tip) {
+        // 埋点：点击「i」图标打开说明弹窗，上报所属分区（标题）
+        trackEvent('tip.open', this.data.section.title)
         this.setData({ tipVisible: true })
       }
     },
