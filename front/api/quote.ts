@@ -19,7 +19,7 @@ import {
   type EastmoneyRaw,
   type EastmoneyUlistQuoteRaw,
 } from '../utils/quote-parser'
-import { requestExternal } from './external'
+import { rawBytesToString, requestExternal } from './external'
 
 const HOSTS = {
   tencent: 'https://qt.gtimg.cn',
@@ -36,11 +36,14 @@ export async function fetchTencentQuotes(codes: string[]): Promise<TencentQuote[
   if (!codes.length) return []
   const url = `${HOSTS.tencent}/q=${codes.join(',')}`
   try {
-    const text = await requestExternal<string>(url, {
+    // 腾讯返回 GBK 文本，微信默认 UTF-8 解码在真机会直接失败；改为原始字节 + 逐字节保留
+    const raw = await requestExternal<ArrayBuffer>(url, {
       timeout: 10000,
       referer: 'https://qt.gtimg.cn',
+      responseType: 'arraybuffer',
     })
-    const map = parseTencentText(String(text ?? ''), codes)
+    const text = rawBytesToString(raw)
+    const map = parseTencentText(text, codes)
     return codes.map((code) => tencentQuoteOf(code, map.get(code) ?? []))
   } catch (error) {
     console.warn('[quote] 腾讯行情请求失败:', error)
@@ -56,11 +59,15 @@ export async function fetchSinaQuotes(keys: string[]): Promise<SinaRow[]> {
   if (!keys.length) return []
   const url = `${HOSTS.sina}/list=${keys.join(',')}`
   try {
-    const text = await requestExternal<string>(url, {
+    // 新浪返回 GBK 文本，微信默认 UTF-8 解码在真机会直接失败（response data convert to UTF8 fail）；
+    // 改为原始字节 + 逐字节保留，GBK 中文名由上层 displayName() 回退配置名兜底，数值字段不受影响。
+    const raw = await requestExternal<ArrayBuffer>(url, {
       timeout: 12000,
       referer: 'https://finance.sina.com.cn',
+      responseType: 'arraybuffer',
     })
-    const map = parseSinaText(String(text ?? ''), keys)
+    const text = rawBytesToString(raw)
+    const map = parseSinaText(text, keys)
     return keys.map((key) => {
       const fields = map.get(key) ?? []
       return { key, fields, raw: fields.join(',') }

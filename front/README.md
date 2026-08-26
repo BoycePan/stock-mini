@@ -70,6 +70,11 @@ http://100.90.180.33:18487
 3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
 4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
+   （腾讯 `qt.gtimg.cn` 返回 GBK 文本，`wx.request` 默认按 UTF-8 解码在**真机**会直接失败
+   ——`request:fail response data convert to UTF8 fail`；新浪同理。`api/external.ts`
+   的 `requestExternal` 已通过 `responseType: 'arraybuffer'` 拿原始字节、
+   `rawBytesToString` 逐字节保留（Latin-1），数值/ASCII 结构不受影响，GBK 中文名由
+   `displayName()` 回退配置名兜底。
 
 ## 依赖安装
 
