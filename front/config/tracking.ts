@@ -104,6 +104,17 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
     },
   },
 
+  /** 首页美股指数区点「市值TOP100」入口：trackEvent('us.top100.enter') */
+  'us.top100.enter': { name: 'us.top100.enter', type: TrackEventType.Tap },
+
+  /** 点美股TOP100行进入分时：trackEvent('us.top100.tap', { code, name, secid }) → target=code */
+  'us.top100.tap': {
+    name: 'us.top100.tap',
+    type: TrackEventType.Tap,
+    target: 'code',
+    props: { code: 'code', name: 'name', secid: 'secid' },
+  },
+
   /** 切主题：trackEvent('theme.switch', 'dark') → props.theme（system/light/dark） */
   'theme.switch': {
     name: 'theme.switch',

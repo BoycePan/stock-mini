@@ -35,6 +35,15 @@ export interface QuoteItem {
   minuteCode?: string
   /** 无分时源时点击卡片的提示文案（覆盖默认「该指标暂无分时数据」） */
   minuteUnavailableTip?: string
+  /**
+   * 展示值文本：覆盖默认「价格」渲染（如入口卡「查看」）。
+   * 有值时即使 price 为 null 也不显示骨架占位。
+   */
+  valueText?: string
+  /** 始终隐藏涨跌徽标（入口卡等无行情涨跌语义的条目） */
+  hideChange?: boolean
+  /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
+  hideFromPoster?: boolean
 }
 
 export interface QuoteGroup {
@@ -63,6 +72,7 @@ export const QUOTE_ICONS: Record<string, string> = {
   usDJI: '🇺🇸', // 道琼斯工业
   usINX: '🇺🇸',
   usIXIC: '🇺🇸',
+  'us-top100': '🇺🇸', // 美股TOP100 入口卡
   // 宏观经济
   BRT: '🛢️',
   VIX: '📉',
@@ -154,10 +164,14 @@ function metricOf(
     minuteCode: item.minuteCode,
     minuteUnavailableTip: item.minuteUnavailableTip,
     name: item.name,
-    value: item.price === null ? '' : formatNumber(item.price),
+    value: item.valueText ?? (item.price === null ? '' : formatNumber(item.price)),
     change: item.pct ?? 0,
-    // 汇率等场景：涨跌幅缺失或恰好为 0 时隐藏涨跌徽标，避免展示无意义的 "— —"
-    hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
+    // 汇率等场景：涨跌幅缺失或恰好为 0 时隐藏涨跌徽标，避免展示无意义的 "— —"；
+    // 入口卡等条目显式 hideChange 时始终隐藏
+    hideChange:
+      item.hideChange === true ||
+      (opts?.hideFlatChange === true && (item.pct === null || item.pct === 0)),
+    hideFromPoster: item.hideFromPoster === true,
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
     iconImage: item.iconImage ?? QUOTE_ICON_ASSETS[item.code],

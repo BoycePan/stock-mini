@@ -11,7 +11,12 @@
     {
       "root": "packageQuote",
       "name": "quote",
-      "pages": ["pages/minute/index", "pages/stock-detail/index", "pages/sector-detail/index"]
+      "pages": [
+        "pages/minute/index",
+        "pages/stock-detail/index",
+        "pages/sector-detail/index",
+        "pages/us-top100/index"
+      ]
     },
     {
       "root": "packageNews",

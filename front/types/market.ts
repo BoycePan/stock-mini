@@ -26,6 +26,8 @@ export interface MarketMetric {
   updatedAt?: string
   /** 无涨跌幅（缺失或恰好为 0）时隐藏涨跌徽标，避免展示无意义的「— —」 */
   hideChange?: boolean
+  /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
+  hideFromPoster?: boolean
   /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
   detail?: Record<string, string | undefined>
 }

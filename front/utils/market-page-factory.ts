@@ -179,6 +179,13 @@ export function createMarketPage(opts: MarketPageOptions) {
       const metric = event.detail.metric
       const code = metric?.code ?? ''
       const minuteCode = metric?.minuteCode ?? code
+      // 入口卡拦截（如 美股指数区「市值TOP100」）：跳转对应列表页，不走分时逻辑。
+      // 代码与目标页路由集中在此，新增入口只改这里（见 docs/us-top100-api.md）。
+      if (code === 'us-top100') {
+        trackEvent('us.top100.enter')
+        wx.navigateTo({ url: '/packageQuote/pages/us-top100/index' })
+        return
+      }
       // 埋点：点击行情卡片（查看分时），上报点的是哪个卡片（code / 名称 / 取数代码）
       trackEvent('card.tap', { code, name: metric?.name, minuteCode })
       if (!minuteCode || !hasMinuteSources(minuteCode)) {

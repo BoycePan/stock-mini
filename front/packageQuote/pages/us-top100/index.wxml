@@ -1,0 +1,64 @@
+<view class="page theme-{{ theme }}">
+  <view class="page-header">
+    <app-header
+      title="美股TOP100"
+      showShare="{{ false }}"
+      showBack="{{ true }}"
+      showBrand="{{ false }}"
+    ></app-header>
+  </view>
+  <view class="content-scroll">
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载美股TOP100"
+      desc="正在为您同步美股市值前100个股，请稍候…"
+    ></loading-state>
+
+    <!-- 首次加载失败 / 空数据：错误提示 + 重试 -->
+    <view wx:elif="{{ error }}" class="error-card">
+      <view class="error-icon"><text>!</text></view>
+      <text class="error-text">{{ error }}</text>
+      <button class="error-retry" bindtap="onRetry">重新加载</button>
+    </view>
+
+    <block wx:else>
+      <view class="data-notice">
+        <view class="notice-icon">!</view>
+        <text class="notice-text"
+          >排名与行情来自东方财富公开接口（延迟行情），市值口径为美元。数据可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text
+        >
+      </view>
+
+      <view class="list-updated" wx:if="{{ updatedLabel }}">{{ updatedLabel }}</view>
+
+      <view class="list-head">
+        <text class="hd-rank">#</text>
+        <text class="hd-name">名称</text>
+        <text class="hd-price">最新价</text>
+        <text class="hd-pct">涨跌幅</text>
+        <text class="hd-cap">总市值</text>
+      </view>
+
+      <view
+        class="stock-row"
+        wx:for="{{ items }}"
+        wx:key="code"
+        data-index="{{ index }}"
+        bindtap="onRowTap"
+        hover-class="row-hover"
+      >
+        <text class="hd-rank rank-no">{{ index + 1 }}</text>
+        <view class="hd-name name-col">
+          <text class="stock-name">{{ item.name }}</text>
+          <text class="stock-code">{{ item.code }}</text>
+        </view>
+        <text class="hd-price price-text">{{ item.priceText }}</text>
+        <text class="hd-pct pct-text {{ item.pctClass }}">{{ item.pctText }}</text>
+        <text class="hd-cap cap-text">{{ item.capText }}</text>
+      </view>
+    </block>
+
+    <disclaimer-footer></disclaimer-footer>
+    <view class="bottom-space"></view>
+  </view>
+</view>

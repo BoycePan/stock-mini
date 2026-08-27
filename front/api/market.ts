@@ -119,6 +119,17 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   // 全球指数按市场归属拆分展示：A股指数（A股四大指数）+ 美股指数（三大指数）
   const cnIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'cn').map(indexItem)
   const usIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'us').map(indexItem)
+  // 美股指数区末尾的入口卡：点击进入「美股市值TOP100」列表（纯前端直连东财 clist/get，
+  // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）
+  usIndices.push({
+    code: 'us-top100',
+    name: '市值TOP100',
+    price: null,
+    pct: null,
+    valueText: '查看',
+    hideChange: true,
+    hideFromPoster: true,
+  })
   // A股平均股价插在A股指数末尾（属于 A 股口径，不放入美股指数）；
   // 分时源与卡片报价同 secid（47.800005，东财官方平均股价指数，见 config/minute.ts AVG）
   const avgPrice = await resolveAShareAveragePrice(indexQuotes)

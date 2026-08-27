@@ -154,6 +154,8 @@ export function buildPosterSections(sections: MarketSection[]): PosterSection[] 
   for (const section of sections ?? []) {
     const rows: PosterRow[] = []
     for (const metric of section.metrics ?? []) {
+      // 入口卡等无行情语义的条目不出现在海报中
+      if (metric.hideFromPoster) continue
       const change = Number(metric.change) || 0
       const changeText = metric.hideChange ? '' : formatChange(change)
       const value = String(metric.value ?? '')

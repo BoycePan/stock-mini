@@ -312,12 +312,25 @@ function buildUsBoardMinuteSources(): Record<string, MinuteSources> {
   return entries
 }
 
-/** 该卡片 code 是否支持当日分时图（有任一可用源） */
+/**
+ * 东财美股个股 secid 模式（如 105.NVDA / 106.BRK_B / 107.AAPL）：
+ * 供美股TOP100列表等场景直连东财个股分时（trends2）与报价（ulist.np/get），
+ * 无需为每只个股在 MINUTE_SOURCES 逐条登记。
+ * 仅匹配美股三大市场号：105=纳斯达克 / 106=纽交所 / 107=美交所。
+ */
+export const EM_US_SECID_RE = /^(105|106|107)\.[A-Z][A-Z0-9._]*$/i
+
+/** 该卡片 code 是否支持当日分时图（有任一可用源；美股个股 secid 走兜底） */
 export function hasMinuteSources(code: string): boolean {
-  return !!code && !!MINUTE_SOURCES[code]
+  return !!code && !!resolveMinuteSources(code)
 }
 
-/** 取某卡片的分时源（无源返回 null） */
+/**
+ * 取某卡片的分时源（无源返回 null）。
+ * 美股个股 secid 未在 MINUTE_SOURCES 登记时直接按东财分时兜底（见 EM_US_SECID_RE）。
+ */
 export function resolveMinuteSources(code: string): MinuteSources | null {
-  return MINUTE_SOURCES[code] ?? null
+  if (MINUTE_SOURCES[code]) return MINUTE_SOURCES[code]
+  if (EM_US_SECID_RE.test(code)) return { em: code }
+  return null
 }
