@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { EM_US_SECID_RE, hasMinuteSources, resolveMinuteSources } from '../config/minute.ts'
 import { resolveMinuteSession } from '../utils/minute-session.ts'
-import { formatUsMarketCap, parseUsTop100 } from '../utils/us-stocks.ts'
+import { formatUsMarketCap, parseUsTop100, sortUsStocks } from '../utils/us-stocks.ts'
 
 // ---------------------------------------------------------------------------
 // parseUsTop100：clist/get 响应 → 归一化列表
@@ -124,6 +124,97 @@ test('formatUsMarketCap：万亿 / 亿 / 万 / 元 分段', () => {
 test('formatUsMarketCap：null / 非有限数返回 --', () => {
   assert.equal(formatUsMarketCap(null), '--')
   assert.equal(formatUsMarketCap(Number.NaN), '--')
+})
+
+// ---------------------------------------------------------------------------
+// sortUsStocks：总市值 / 涨跌幅 排序
+// ---------------------------------------------------------------------------
+
+function sampleStocks() {
+  return [
+    {
+      code: 'NVDA',
+      market: 105 as const,
+      secid: '105.NVDA',
+      name: '英伟达',
+      price: 209.66,
+      pct: -1.59,
+      change: -3.39,
+      marketCap: 5052806000000,
+    },
+    {
+      code: 'AAPL',
+      market: 105 as const,
+      secid: '105.AAPL',
+      name: '苹果',
+      price: 313.45,
+      pct: 1.15,
+      change: 3.55,
+      marketCap: 4574545721000,
+    },
+    {
+      code: 'QULL',
+      market: 107 as const,
+      secid: '107.QULL',
+      name: 'ETRACS 2x',
+      price: null,
+      pct: null,
+      change: null,
+      marketCap: 272654434250,
+    },
+    {
+      code: 'MSFT',
+      market: 105 as const,
+      secid: '105.MSFT',
+      name: '微软',
+      price: 496.37,
+      pct: 3.42,
+      change: 16.4,
+      marketCap: 3685818015368,
+    },
+  ]
+}
+
+test('sortUsStocks：总市值降序（默认），null 市值排最后', () => {
+  const sorted = sortUsStocks(sampleStocks(), 'cap', 'desc')
+  assert.deepEqual(
+    sorted.map((s) => s.code),
+    ['NVDA', 'AAPL', 'MSFT', 'QULL'],
+  )
+})
+
+test('sortUsStocks：总市值升序', () => {
+  const sorted = sortUsStocks(sampleStocks(), 'cap', 'asc')
+  assert.deepEqual(
+    sorted.map((s) => s.code),
+    ['QULL', 'MSFT', 'AAPL', 'NVDA'],
+  )
+})
+
+test('sortUsStocks：涨跌幅降序，null 涨跌幅排最后', () => {
+  const sorted = sortUsStocks(sampleStocks(), 'pct', 'desc')
+  assert.deepEqual(
+    sorted.map((s) => s.code),
+    ['MSFT', 'AAPL', 'NVDA', 'QULL'],
+  )
+})
+
+test('sortUsStocks：涨跌幅升序，null 涨跌幅仍排最后', () => {
+  const sorted = sortUsStocks(sampleStocks(), 'pct', 'asc')
+  assert.deepEqual(
+    sorted.map((s) => s.code),
+    ['NVDA', 'AAPL', 'MSFT', 'QULL'],
+  )
+})
+
+test('sortUsStocks：不修改入参数组', () => {
+  const input = sampleStocks()
+  const snapshot = input.map((s) => s.code)
+  sortUsStocks(input, 'pct', 'desc')
+  assert.deepEqual(
+    input.map((s) => s.code),
+    snapshot,
+  )
 })
 
 // ---------------------------------------------------------------------------

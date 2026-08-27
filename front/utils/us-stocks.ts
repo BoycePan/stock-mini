@@ -56,6 +56,31 @@ export function parseUsTop100(body: EastmoneyClistBody | null | undefined): UsTo
   return items
 }
 
+/** 列表排序键：cap=总市值 / pct=涨跌幅 */
+export type UsSortKey = 'cap' | 'pct'
+
+/** 排序方向 */
+export type UsSortDir = 'asc' | 'desc'
+
+/**
+ * 美股市值TOP100 排序（纯前端内存排序，不重新请求）：
+ * - cap：按总市值（美元）排序；
+ * - pct：按涨跌幅排序；
+ * - 无数据（null）行（如杠杆产品 "--"）始终排到最后，无论方向，保证有效行不被打断。
+ * 返回新数组，不修改入参。
+ */
+export function sortUsStocks(items: UsTopStock[], key: UsSortKey, dir: UsSortDir): UsTopStock[] {
+  const value = (item: UsTopStock): number | null => (key === 'cap' ? item.marketCap : item.pct)
+  return [...items].sort((a, b) => {
+    const av = value(a)
+    const bv = value(b)
+    if (av === null && bv === null) return 0
+    if (av === null) return 1
+    if (bv === null) return -1
+    return dir === 'desc' ? bv - av : av - bv
+  })
+}
+
 /**
  * 总市值展示（美元口径，东财 f20 对美股返回美元）：
  * - ≥ 1万亿 → $x.xx万亿（如 $5.05万亿）

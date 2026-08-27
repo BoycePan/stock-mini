@@ -99,6 +99,24 @@
   font-size: 22rpx;
 }
 
+/* 可排序列（涨跌幅 / 总市值）：点击切换排序，激活列高亮 + 方向箭头 */
+.list-head .hd-pct,
+.list-head .hd-cap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4rpx;
+}
+
+.list-head .sort-col.active text {
+  color: #4278ed;
+  font-weight: 600;
+}
+
+.sort-hover {
+  opacity: 0.6;
+}
+
 /* 列宽（与 .stock-row 各列一致） */
 .hd-rank {
   width: 64rpx;
@@ -252,6 +270,10 @@
 
 .page.theme-dark .list-head text {
   color: #9cacc0;
+}
+
+.page.theme-dark .list-head .sort-col.active text {
+  color: #6fa3ff;
 }
 
 /* 首次加载失败卡：错误提示 + 重试 */

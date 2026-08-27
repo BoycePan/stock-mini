@@ -2,7 +2,8 @@
   "usingComponents": {
     "app-header": "/components/app-header/index",
     "loading-state": "/components/loading-state/index",
-    "disclaimer-footer": "/components/disclaimer-footer/index"
+    "disclaimer-footer": "/components/disclaimer-footer/index",
+    "t-icon": "tdesign-miniprogram/icon/icon"
   },
   "enablePullDownRefresh": true
 }

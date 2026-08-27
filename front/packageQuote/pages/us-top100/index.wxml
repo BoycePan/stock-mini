@@ -35,8 +35,34 @@
         <text class="hd-rank">#</text>
         <text class="hd-name">名称</text>
         <text class="hd-price">最新价</text>
-        <text class="hd-pct">涨跌幅</text>
-        <text class="hd-cap">总市值</text>
+        <view
+          class="hd-pct sort-col {{ sortKey === 'pct' ? 'active' : '' }}"
+          data-key="pct"
+          bindtap="onSortTap"
+          hover-class="sort-hover"
+        >
+          <text>涨跌幅</text>
+          <t-icon
+            wx:if="{{ sortKey === 'pct' }}"
+            name="{{ sortDir === 'desc' ? 'arrow-down' : 'arrow-up' }}"
+            size="26rpx"
+            color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
+          />
+        </view>
+        <view
+          class="hd-cap sort-col {{ sortKey === 'cap' ? 'active' : '' }}"
+          data-key="cap"
+          bindtap="onSortTap"
+          hover-class="sort-hover"
+        >
+          <text>总市值</text>
+          <t-icon
+            wx:if="{{ sortKey === 'cap' }}"
+            name="{{ sortDir === 'desc' ? 'arrow-down' : 'arrow-up' }}"
+            size="26rpx"
+            color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
+          />
+        </view>
       </view>
 
       <view

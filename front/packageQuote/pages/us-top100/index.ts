@@ -6,7 +6,12 @@ import { formatNumber } from '../../../utils/formatter'
 import { computeChangeView } from '../../../utils/market'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { trackEvent } from '../../../utils/tracker'
-import { formatUsMarketCap } from '../../../utils/us-stocks'
+import {
+  formatUsMarketCap,
+  sortUsStocks,
+  type UsSortDir,
+  type UsSortKey,
+} from '../../../utils/us-stocks'
 
 /** 列表自动刷新间隔：30s（市值排名变化慢，价格随延迟行情刷新） */
 const LIST_REFRESH_INTERVAL = 30000
@@ -44,7 +49,14 @@ Page({
     error: '',
     /** 是否有请求进行中（含静默刷新），供自动刷新跳过并发 */
     requesting: false,
+    /** 拉取到的原始条目（未排序，100 行；排序在内存进行，不重新请求） */
+    rawItems: [] as UsTopStock[],
+    /** 当前展示条目（按 sortKey/sortDir 排序后的视图） */
     items: [] as UsTopStockView[],
+    /** 排序键：cap=总市值（默认）/ pct=涨跌幅 */
+    sortKey: 'cap' as UsSortKey,
+    /** 排序方向：默认总市值降序 */
+    sortDir: 'desc' as UsSortDir,
     updatedLabel: '',
   },
 
@@ -97,21 +109,32 @@ Page({
       // 排名接口原样返回100条；空列表视为加载失败（正常情况不可能为 0 条）
       if (!items.length) {
         if (!silent) {
-          this.setData({ loading: false, error: '美股TOP100加载失败，请点击下方按钮重试', items: [] })
+          this.setData({
+            loading: false,
+            error: '美股TOP100加载失败，请点击下方按钮重试',
+            items: [],
+            rawItems: [],
+          })
         }
         return
       }
       this.setData({
         loading: false,
         error: '',
-        items: items.map(toView),
+        rawItems: items,
+        items: sortUsStocks(items, this.data.sortKey, this.data.sortDir).map(toView),
         updatedLabel: this.buildUpdatedLabel(),
       })
     } catch (error) {
       // fetchUsTop100 内部已降级为空数组，此处兜底（不应触发）
       console.warn('[us-top100] 加载异常:', error)
       if (!silent) {
-        this.setData({ loading: false, error: '美股TOP100加载失败，请点击下方按钮重试', items: [] })
+        this.setData({
+          loading: false,
+          error: '美股TOP100加载失败，请点击下方按钮重试',
+          items: [],
+          rawItems: [],
+        })
       }
     } finally {
       this.setData({ requesting: false })
@@ -123,6 +146,20 @@ Page({
     const hh = String(d.getHours()).padStart(2, '0')
     const mm = String(d.getMinutes()).padStart(2, '0')
     return `${hh}:${mm} 更新`
+  },
+
+  /** 点击列标题排序：同一列再次点击切换升降序，切换列时默认降序 */
+  onSortTap(event: WechatMiniprogram.TouchEvent) {
+    const key = event.currentTarget.dataset.key as UsSortKey | undefined
+    if (key !== 'cap' && key !== 'pct') return
+    const { sortKey, sortDir } = this.data
+    const nextDir: UsSortDir = sortKey === key ? (sortDir === 'desc' ? 'asc' : 'desc') : 'desc'
+    if (nextDir === sortDir && key === sortKey) return
+    this.setData({
+      sortKey: key,
+      sortDir: nextDir,
+      items: sortUsStocks(this.data.rawItems, key, nextDir).map(toView),
+    })
   },
 
   onRetry() {
