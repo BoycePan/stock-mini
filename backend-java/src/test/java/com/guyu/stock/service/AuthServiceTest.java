@@ -28,14 +28,16 @@ class AuthServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final JwtService jwtService = mock(JwtService.class);
     private final AppProperties appProperties = mock(AppProperties.class);
+    private final AppConfigService appConfigService = mock(AppConfigService.class);
     private final HttpServletRequest request = mock(HttpServletRequest.class);
     private final AuthService authService =
-            new AuthService(wechatService, userRepository, jwtService, appProperties);
+            new AuthService(wechatService, userRepository, jwtService, appProperties, appConfigService);
 
     @BeforeEach
     void setUp() {
         when(appProperties.getWechat()).thenReturn(wechatCfg());
         when(appProperties.getJwt()).thenReturn(new AppProperties.Jwt());
+        when(appConfigService.deliveryMap(anyString(), anyString())).thenReturn(Map.of());
     }
 
     private AppProperties.Wechat wechatCfg() {
@@ -71,6 +73,9 @@ class AuthServiceTest {
         assertEquals("jwt-token", result.get("token"));
         // expireHours=0 兜底 24h
         assertEquals(86400L, result.get("expires_in"));
+        // 登录响应携带 cfg_type='login' 的配置（按端全局）
+        assertEquals(Map.of(), result.get("config"));
+        verify(appConfigService).deliveryMap("shiChang-tracker", "login");
         User user = (User) result.get("user");
         assertNotNull(user);
         assertEquals("shiChang-tracker", user.source());

@@ -25,13 +25,16 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final AppProperties appProperties;
+    private final AppConfigService appConfigService;
 
     public AuthService(WechatService wechatService, UserRepository userRepository,
-                       JwtService jwtService, AppProperties appProperties) {
+                       JwtService jwtService, AppProperties appProperties,
+                       AppConfigService appConfigService) {
         this.wechatService = wechatService;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.appProperties = appProperties;
+        this.appConfigService = appConfigService;
     }
 
     public Map<String, Object> login(HttpServletRequest request, String source, String code) {
@@ -69,6 +72,8 @@ public class AuthService {
             result.put("token", token);
             result.put("expires_in", (long) expireHours * 3600);
             result.put("user", user);
+            // 跟随登录下发 cfg_type='login' 的配置（按端全局，同来源所有用户同份）
+            result.put("config", appConfigService.deliveryMap(resolvedSource, "login"));
 
             // id 存入上下文，方便后续打日志
             request.setAttribute("user_id", user.id());
