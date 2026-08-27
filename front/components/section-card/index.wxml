@@ -49,7 +49,7 @@
           class="featured-arrow"
           name="chevron-right"
           size="36rpx"
-          color="{{ theme === 'dark' ? '#6fa3ff' : 'rgba(255,255,255,0.9)' }}"
+          color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
         />
       </view>
       <view

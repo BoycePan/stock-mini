@@ -158,38 +158,26 @@
   gap: 12rpx;
 }
 
-/* 特殊入口卡（如 美股指数区「市值TOP100」）：整行渐变横幅，区别于普通行情卡片 */
+/* 特殊入口卡（如 美股指数区「市值TOP100」）：整行浅色入口行，比普通卡片突出但保持克制 */
 .featured-card {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  min-height: 132rpx;
-  padding: 24rpx 28rpx;
+  gap: 18rpx;
+  min-height: 120rpx;
+  padding: 22rpx 26rpx;
+  border: 1rpx solid #cfe0ff;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #4278ed 0%, #6b5bff 100%);
-  box-shadow:
-    0 6rpx 18rpx rgba(66, 120, 237, 0.24),
-    0 12rpx 32rpx rgba(107, 91, 255, 0.18);
+  background: linear-gradient(135deg, #f7faff 0%, #eef4ff 100%);
+  box-shadow: 0 2rpx 8rpx rgba(66, 120, 237, 0.05), 0 8rpx 20rpx rgba(66, 120, 237, 0.05);
 }
 
 .featured-hover {
-  opacity: 0.9;
+  background: #eaf2ff;
 }
 
 .featured-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  width: 76rpx;
-  height: 76rpx;
-  border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1rpx solid rgba(255, 255, 255, 0.32);
-}
-
-.featured-icon text {
   font-size: 40rpx;
   line-height: 1;
 }
@@ -202,14 +190,14 @@
 }
 
 .featured-title {
-  color: #ffffff;
-  font-size: 31rpx;
-  font-weight: 700;
+  color: #152338;
+  font-size: 30rpx;
+  font-weight: 600;
 }
 
 .featured-desc {
   margin-top: 6rpx;
-  color: rgba(255, 255, 255, 0.82);
+  color: #718096;
   font-size: 22rpx;
 }
 
@@ -517,14 +505,13 @@
 }
 
 .section-card.theme-dark .featured-card {
-  border: 1rpx solid #3a55a0;
-  background: linear-gradient(135deg, #1d3a6e 0%, #2c2a5c 100%);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.25);
+  border-color: #3a55a0;
+  background: linear-gradient(135deg, #1e2c42 0%, #1a2637 100%);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
 }
 
-.section-card.theme-dark .featured-icon {
-  background: rgba(111, 163, 255, 0.14);
-  border-color: rgba(111, 163, 255, 0.3);
+.section-card.theme-dark .featured-hover {
+  background: #22314a;
 }
 
 .section-card.theme-dark .featured-title {
@@ -532,7 +519,7 @@
 }
 
 .section-card.theme-dark .featured-desc {
-  color: rgba(245, 247, 251, 0.72);
+  color: #9cacc0;
 }
 
 .section-card.theme-dark .metric-card {
