@@ -36,7 +36,14 @@
         bindtap="onMetricTap"
         hover-class="featured-hover"
       >
-        <view wx:if="{{ item.icon }}" class="featured-icon"
+        <view wx:if="{{ item.iconImage }}" class="featured-icon">
+          <image
+            class="featured-icon-img"
+            src="{{ item.iconImage }}"
+            mode="aspectFit"
+          ></image>
+        </view>
+        <view wx:elif="{{ item.icon }}" class="featured-icon"
           ><text>{{ item.icon }}</text></view
         >
         <view class="featured-body">

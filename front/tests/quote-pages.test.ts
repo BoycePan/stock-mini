@@ -37,6 +37,7 @@ test('buildQuoteGlobalPage：featured 入口卡透传 featured/featuredDesc 到 
         hideFromPoster: true,
         featured: true,
         featuredDesc: '美股三大市场 · 市值前100个股',
+        iconImage: '/static/icons/emoji/1f1fa-1f1f8.png',
       },
     ],
     macro: [],
@@ -51,6 +52,7 @@ test('buildQuoteGlobalPage：featured 入口卡透传 featured/featuredDesc 到 
   assert.ok(metric, '美股指数区应包含 us-top100 入口卡')
   assert.equal(metric.featured, true)
   assert.equal(metric.featuredDesc, '美股三大市场 · 市值前100个股')
+  assert.equal(metric.iconImage, '/static/icons/emoji/1f1fa-1f1f8.png', '入口卡应带美国国旗图片')
   assert.equal(metric.hideChange, true)
   assert.equal(metric.hideFromPoster, true)
   assert.equal(metric.value, '查看')

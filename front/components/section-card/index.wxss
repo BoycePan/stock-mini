@@ -119,12 +119,12 @@
 
 /* 布局：盘面状态按市场区域紧跟标题右侧；「i」说明按钮与徽标固定在卡片右侧，
    与说明按钮并存时依次排列（如行业板块 = 状态 + 说明按钮） */
-.market-status + .section-badge {
+.market-status+.section-badge {
   margin-left: 14rpx;
 }
 
 /* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
-.section-tip + .section-badge {
+.section-tip+.section-badge {
   margin-left: 14rpx;
 }
 
@@ -166,10 +166,15 @@
   gap: 18rpx;
   min-height: 120rpx;
   padding: 22rpx 26rpx;
-  border: 1rpx solid #cfe0ff;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #f7faff 0%, #eef4ff 100%);
-  box-shadow: 0 2rpx 8rpx rgba(66, 120, 237, 0.05), 0 8rpx 20rpx rgba(66, 120, 237, 0.05);
+
+  border: 1rpx solid #e2f0ff;
+  background: #ebf1f9;
+  /* 亮色主题：底色略深于白色外卡以分层（呼应页面背景 #eef3f8），
+     极淡蓝边收边 + 贴近背景色的淡阴影，区分但不突兀 */
+  box-shadow:
+    0 2rpx 6rpx rgba(30, 60, 110, 0.04),
+    0 8rpx 20rpx rgba(30, 60, 110, 0.05);
 }
 
 .featured-hover {
@@ -180,6 +185,13 @@
   flex-shrink: 0;
   font-size: 40rpx;
   line-height: 1;
+}
+
+.featured-icon-img {
+  display: block;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 6rpx;
 }
 
 .featured-body {
@@ -505,8 +517,8 @@
 }
 
 .section-card.theme-dark .featured-card {
-  border-color: #3a55a0;
-  background: linear-gradient(135deg, #1e2c42 0%, #1a2637 100%);
+  border-color: #2f4260;
+  background: #1f3148;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
 }
 
