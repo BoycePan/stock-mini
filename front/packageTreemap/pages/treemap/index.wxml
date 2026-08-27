@@ -1,0 +1,78 @@
+<view class="page theme-{{theme}} treemap-page">
+  <app-header
+    title="{{ level === 'industry' ? '大盘云图' : currentBoardName }}"
+    showShare="{{false}}"
+    showBack="{{true}}"
+    showBrand="{{false}}"
+  ></app-header>
+
+  <!-- 顶栏指数状态条 -->
+  <view class="index-bar">
+    <view class="index-item" wx:for="{{indices}}" wx:key="code">
+      <text class="index-name">{{item.name}}</text>
+      <text class="index-price {{item.pct >= 0 ? 'up' : 'down'}}">{{item.priceText}}</text>
+      <text class="index-pct {{item.pct >= 0 ? 'up' : 'down'}}">{{item.pctText}}</text>
+    </view>
+  </view>
+
+  <!-- 层级导航（钻取后显示返回；加载中隐藏计数） -->
+  <view class="level-bar" wx:if="{{level === 'stock' && !loading}}">
+    <view class="level-back" bindtap="onBackToIndustry">
+      <text class="level-back-icon">‹</text>
+      <text>全部行业</text>
+    </view>
+    <text class="level-name">{{currentBoardName}}</text>
+    <text class="level-count">{{nodes.length}} 只</text>
+  </view>
+  <view class="level-bar" wx:elif="{{level === 'industry' && !loading}}">
+    <text class="level-name">行业板块</text>
+    <text class="level-count">{{nodes.length}} 个板块</text>
+  </view>
+  <view class="level-bar" wx:else>
+    <text class="level-name">{{level === 'stock' ? currentBoardName : '行业板块'}}</text>
+    <text class="level-count">加载中…</text>
+  </view>
+
+  <!-- 主体 -->
+  <view class="chart-wrap">
+    <loading-state wx:if="{{loading}}" text="正在加载行情" desc="首次加载需拉取全市场数据，请稍候…"></loading-state>
+    <view wx:elif="{{error}}" class="error-card">
+      <text>{{error}}</text>
+      <button class="retry-btn" bindtap="onRetry">重新加载</button>
+    </view>
+    <treemap-chart
+      wx:else
+      class="treemap-chart"
+      nodes="{{nodes}}"
+      theme="{{theme}}"
+      emptyText="{{emptyText}}"
+      bind:select="onSelect"
+    ></treemap-chart>
+  </view>
+
+  <!-- 底部统计条 -->
+  <view class="stats-bar" wx:if="{{!loading && !error}}">
+    <view class="stat-item">
+      <text class="stat-label">上涨</text>
+      <text class="stat-num up">{{summary.up}}</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-label">平盘</text>
+      <text class="stat-num">{{summary.flat}}</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-label">下跌</text>
+      <text class="stat-num down">{{summary.down}}</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-label">成交额</text>
+      <text class="stat-num">{{summary.amountText}}</text>
+    </view>
+    <view class="stat-item stat-time">
+      <text class="stat-label">更新</text>
+      <text class="stat-num">{{updatedText}}</text>
+    </view>
+  </view>
+
+  <disclaimer-footer></disclaimer-footer>
+</view>

@@ -73,7 +73,7 @@ ok(`全部 ${allPages.size} 个页面的 4 件套存在`)
 console.log('== usingComponents 解析 ==')
 let compRefs = 0
 const npmRoot = join(ROOT, 'miniprogram_npm')
-for (const root of ['pages', 'packageQuote', 'packageNews', 'packageAbout', 'components']) {
+for (const root of ['pages', 'packageQuote', 'packageNews', 'packageAbout', 'packageTreemap', 'components']) {
   const base = join(ROOT, root)
   if (!existsSync(base)) continue
   for (const jf of walkFiles(base, '.json')) {
@@ -102,7 +102,7 @@ ok(`校验 ${compRefs} 条 usingComponents 引用`)
 // ---------- 4. 导航 / 分享目标合法性 ----------
 console.log('== 导航 / 分享目标 ==')
 const tsFiles = []
-for (const root of ['pages', 'packageQuote', 'packageNews', 'packageAbout', 'components', 'utils', 'custom-tab-bar']) {
+for (const root of ['pages', 'packageQuote', 'packageNews', 'packageAbout', 'packageTreemap', 'components', 'utils', 'custom-tab-bar']) {
   const base = join(ROOT, root)
   if (existsSync(base)) tsFiles.push(...walkFiles(base, '.ts'))
 }
@@ -151,7 +151,7 @@ ok('页面分享 path 校验完成')
 
 // ---------- 5. 跨包静态引用规则 ----------
 console.log('== 跨包静态引用规则 ==')
-const subRoots = ['packageQuote', 'packageNews', 'packageAbout']
+const subRoots = ['packageQuote', 'packageNews', 'packageAbout', 'packageTreemap']
 const importRe = /from\s+['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)/g
 function checkImports(file, owner) {
   const src = readFileSync(file, 'utf8')

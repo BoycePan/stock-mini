@@ -77,6 +77,17 @@
     <!-- 更多 -->
     <text class="section-heading">更多</text>
     <view class="setting-group">
+      <view class="setting-row clickable" hover-class="row-hover" bindtap="onTreemapTap">
+        <view class="row-icon-wrap blue">
+          <text class="row-emoji">🗺️</text>
+        </view>
+        <view class="row-main">
+          <text class="row-label">大盘云图</text>
+          <text class="row-desc">A股行业热力图 · 板块钻取</text>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
+      </view>
+      <view class="row-divider"></view>
       <!-- 开发者选项：仅非线上版本可见 -->
       <view
         wx:if="{{ isDev }}"

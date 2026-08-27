@@ -1,0 +1,172 @@
+.treemap-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 顶栏指数状态条 */
+.index-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 16rpx 24rpx 12rpx;
+  gap: 28rpx;
+  background: transparent;
+}
+.index-item {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 2rpx;
+}
+.index-name {
+  font-size: 22rpx;
+  color: #718096;
+}
+.index-price {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #152338;
+}
+.index-pct {
+  font-size: 20rpx;
+}
+.index-price.up,
+.index-pct.up {
+  color: #eb514d;
+}
+.index-price.down,
+.index-pct.down {
+  color: #20a66a;
+}
+
+/* 层级导航 */
+.level-bar {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 24rpx 16rpx;
+  gap: 16rpx;
+}
+.level-back {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 18rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  color: #4278ed;
+  background: rgba(66, 120, 237, 0.1);
+}
+.level-back-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  margin-right: 4rpx;
+}
+.level-name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #152338;
+}
+.level-count {
+  font-size: 22rpx;
+  color: #718096;
+}
+
+/* 主体 */
+.chart-wrap {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24rpx;
+  position: relative;
+}
+.chart-wrap .treemap-chart {
+  width: 100%;
+  height: 100%;
+}
+.error-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  color: #718096;
+  font-size: 26rpx;
+}
+.retry-btn {
+  padding: 12rpx 48rpx;
+  border-radius: 32rpx;
+  background: #4278ed;
+  color: #ffffff;
+  font-size: 26rpx;
+  border: none;
+  line-height: 1.6;
+}
+
+/* 底部统计条 */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx 20rpx;
+  gap: 24rpx;
+  border-top: 1rpx solid #e2eaf3;
+  background: transparent;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  flex-shrink: 0;
+}
+.stat-label {
+  font-size: 20rpx;
+  color: #718096;
+}
+.stat-num {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #152338;
+}
+.stat-num.up {
+  color: #eb514d;
+}
+.stat-num.down {
+  color: #20a66a;
+}
+.stat-time {
+  margin-left: auto;
+}
+.stat-time .stat-num {
+  font-weight: 400;
+  font-size: 22rpx;
+}
+
+/* ---------- 深色主题 ---------- */
+.page.theme-dark .index-name {
+  color: #9cacc0;
+}
+.page.theme-dark .index-price {
+  color: #f5f7fb;
+}
+.page.theme-dark .level-back {
+  color: #6fa3ff;
+  background: rgba(111, 163, 255, 0.12);
+}
+.page.theme-dark .level-name {
+  color: #f5f7fb;
+}
+.page.theme-dark .level-count {
+  color: #9cacc0;
+}
+.page.theme-dark .error-card {
+  color: #9cacc0;
+}
+.page.theme-dark .stats-bar {
+  border-top-color: #2a394e;
+}
+.page.theme-dark .stat-label {
+  color: #9cacc0;
+}
+.page.theme-dark .stat-num {
+  color: #f5f7fb;
+}

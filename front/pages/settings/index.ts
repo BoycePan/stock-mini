@@ -75,6 +75,9 @@ Page({
   onEnvSwitchTap() {
     wx.navigateTo({ url: '/packageAbout/pages/env-switch/index' })
   },
+  onTreemapTap() {
+    wx.navigateTo({ url: '/packageTreemap/pages/treemap/index' })
+  },
   onUnload() {
     releaseStoreBindings(this)
     unbindTheme(this)

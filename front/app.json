@@ -22,6 +22,11 @@
       "root": "packageAbout",
       "name": "about",
       "pages": ["pages/legal/index", "pages/custom/index", "pages/env-switch/index"]
+    },
+    {
+      "root": "packageTreemap",
+      "name": "treemap",
+      "pages": ["pages/treemap/index"]
     }
   ],
   "preloadRule": {

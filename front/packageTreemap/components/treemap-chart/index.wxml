@@ -1,0 +1,8 @@
+<view class="treemap-chart {{ theme === 'dark' ? 'theme-dark' : '' }}">
+  <canvas
+    type="2d"
+    id="treemap-canvas"
+    class="treemap-canvas"
+    bindtap="onTap"
+  ></canvas>
+</view>
