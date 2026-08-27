@@ -28,7 +28,32 @@
   </view>
   <view class="metric-grid">
     <block wx:for="{{ section.metrics }}" wx:key="id">
+      <!-- 特殊入口卡（如 美股指数区「市值TOP100」）：整行渐变横幅，区别于普通行情卡片 -->
       <view
+        wx:if="{{ item.featured }}"
+        class="featured-card"
+        data-index="{{ index }}"
+        bindtap="onMetricTap"
+        hover-class="featured-hover"
+      >
+        <view wx:if="{{ item.icon }}" class="featured-icon"
+          ><text>{{ item.icon }}</text></view
+        >
+        <view class="featured-body">
+          <text class="featured-title">{{ item.name }}</text>
+          <text wx:if="{{ item.featuredDesc }}" class="featured-desc"
+            >{{ item.featuredDesc }}</text
+          >
+        </view>
+        <t-icon
+          class="featured-arrow"
+          name="chevron-right"
+          size="36rpx"
+          color="{{ theme === 'dark' ? '#6fa3ff' : 'rgba(255,255,255,0.9)' }}"
+        />
+      </view>
+      <view
+        wx:elif="{{ !item.featured }}"
         class="metric-card {{ compact ? 'compact-metric' : '' }} {{
           section.singleLine ? 'single-line-metric' : ''
         }} {{ item.minuteAvailable && !section.minuteCorner ? 'minute-badge-card' : '' }}"
@@ -36,7 +61,10 @@
         bindtap="onMetricTap"
       >
         <view class="metric-name-row">
-          <view wx:if="{{ item.icon || item.iconImage }}" class="metric-icon-chip">
+          <view
+            wx:if="{{ item.icon || item.iconImage }}"
+            class="metric-icon-chip {{ item.iconImage ? 'metric-icon-chip-img' : '' }}"
+          >
             <image
               wx:if="{{ item.iconImage }}"
               class="metric-icon-img"

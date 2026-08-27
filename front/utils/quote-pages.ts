@@ -44,6 +44,10 @@ export interface QuoteItem {
   hideChange?: boolean
   /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
   hideFromPoster?: boolean
+  /** 特殊入口卡：以整行渐变横幅渲染（区别于普通行情卡片，见 section-card） */
+  featured?: boolean
+  /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
+  featuredDesc?: string
 }
 
 export interface QuoteGroup {
@@ -172,6 +176,8 @@ function metricOf(
       item.hideChange === true ||
       (opts?.hideFlatChange === true && (item.pct === null || item.pct === 0)),
     hideFromPoster: item.hideFromPoster === true,
+    featured: item.featured === true,
+    featuredDesc: item.featuredDesc,
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
     iconImage: item.iconImage ?? QUOTE_ICON_ASSETS[item.code],

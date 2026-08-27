@@ -119,12 +119,12 @@
 
 /* 布局：盘面状态按市场区域紧跟标题右侧；「i」说明按钮与徽标固定在卡片右侧，
    与说明按钮并存时依次排列（如行业板块 = 状态 + 说明按钮） */
-.market-status+.section-badge {
+.market-status + .section-badge {
   margin-left: 14rpx;
 }
 
 /* 说明图标：无徽标时推到最右，有徽标时徽标跟在图标右侧 */
-.section-tip+.section-badge {
+.section-tip + .section-badge {
   margin-left: 14rpx;
 }
 
@@ -156,6 +156,65 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12rpx;
+}
+
+/* 特殊入口卡（如 美股指数区「市值TOP100」）：整行渐变横幅，区别于普通行情卡片 */
+.featured-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  min-height: 132rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #4278ed 0%, #6b5bff 100%);
+  box-shadow:
+    0 6rpx 18rpx rgba(66, 120, 237, 0.24),
+    0 12rpx 32rpx rgba(107, 91, 255, 0.18);
+}
+
+.featured-hover {
+  opacity: 0.9;
+}
+
+.featured-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1rpx solid rgba(255, 255, 255, 0.32);
+}
+
+.featured-icon text {
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.featured-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.featured-title {
+  color: #ffffff;
+  font-size: 31rpx;
+  font-weight: 700;
+}
+
+.featured-desc {
+  margin-top: 6rpx;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 22rpx;
+}
+
+.featured-arrow {
+  flex-shrink: 0;
 }
 
 .metric-card {
@@ -194,10 +253,18 @@
   background: rgba(66, 120, 237, 0.1);
 }
 
-/* 图标图片（本地静态图，如品牌/公司 logo、金条银条、Twemoji PNG） */
+/* 图标图片（本地静态图，如品牌/公司 logo、金条银条、Twemoji PNG）：
+   图片撑满整个图标容器（不留内边距），圆角由容器 overflow 裁剪 */
+.metric-icon-chip-img {
+  overflow: hidden;
+  background: transparent;
+  border-radius: 8rpx;
+}
+
 .metric-icon-img {
-  width: 32rpx;
-  height: 32rpx;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .metric-icon {
@@ -442,6 +509,30 @@
 
 .section-card.theme-dark .metric-icon-chip {
   background: rgba(111, 163, 255, 0.16);
+}
+
+/* 图片撑满的图标容器：深色下同样去掉底色，图片即容器 */
+.section-card.theme-dark .metric-icon-chip-img {
+  background: transparent;
+}
+
+.section-card.theme-dark .featured-card {
+  border: 1rpx solid #3a55a0;
+  background: linear-gradient(135deg, #1d3a6e 0%, #2c2a5c 100%);
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.25);
+}
+
+.section-card.theme-dark .featured-icon {
+  background: rgba(111, 163, 255, 0.14);
+  border-color: rgba(111, 163, 255, 0.3);
+}
+
+.section-card.theme-dark .featured-title {
+  color: #f5f7fb;
+}
+
+.section-card.theme-dark .featured-desc {
+  color: rgba(245, 247, 251, 0.72);
 }
 
 .section-card.theme-dark .metric-card {

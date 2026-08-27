@@ -123,12 +123,14 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）
   usIndices.push({
     code: 'us-top100',
-    name: '市值TOP100',
+    name: '美股市值TOP100',
     price: null,
     pct: null,
     valueText: '查看',
     hideChange: true,
     hideFromPoster: true,
+    featured: true,
+    featuredDesc: '美股三大市场 · 市值前100个股',
   })
   // A股平均股价插在A股指数末尾（属于 A 股口径，不放入美股指数）；
   // 分时源与卡片报价同 secid（47.800005，东财官方平均股价指数，见 config/minute.ts AVG）

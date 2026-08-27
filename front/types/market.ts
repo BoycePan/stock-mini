@@ -28,6 +28,10 @@ export interface MarketMetric {
   hideChange?: boolean
   /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
   hideFromPoster?: boolean
+  /** 特殊入口卡：以整行渐变横幅渲染（区别于普通行情卡片，见 section-card） */
+  featured?: boolean
+  /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
+  featuredDesc?: string
   /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
   detail?: Record<string, string | undefined>
 }

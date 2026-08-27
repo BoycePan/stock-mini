@@ -2,6 +2,7 @@
   "component": true,
   "componentGenerics": {},
   "usingComponents": {
-    "info-dialog": "/components/info-dialog/index"
+    "info-dialog": "/components/info-dialog/index",
+    "t-icon": "tdesign-miniprogram/icon/icon"
   }
 }
