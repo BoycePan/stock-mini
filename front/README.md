@@ -62,7 +62,7 @@ http://100.90.180.33:18487
 1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
    `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
    `https://push2.eastmoney.com`（A股平均股价全市场快照的 clist 权威端点，push2delay 覆盖不足时回退）；
-2. **首页卡片点击查看当日分时**（`pages/minute/index`，纯前端直连）还需追加：
+2. **首页卡片点击查看当日分时**（`packageQuote/pages/minute/index`，纯前端直连）还需追加：
    `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
    （Yahoo 1分钟，仅 VIX/KOSDAQ 等东财腾讯无分时的标的做兜底，见 `docs/minute-api.md`；
    汇率已改走东财 119/133 或交叉合成，大陆可直连，不加 Yahoo 域名只影响 VIX/KOSDAQ）；
@@ -90,17 +90,31 @@ pnpm --filter market-tracker-mini lint
 
 ## 页面
 
+主包（TabBar 页面 + 搜索）：
+
 - `/pages/global/index`：全球
 - `/pages/asia/index`：日韩
 - `/pages/metals/index`：有色
 - `/pages/finance/index`：财经
 - `/pages/settings/index`：设置
 - `/pages/search/index`：股票搜索（四个市场页头部入口）
-- `/pages/stock-detail/index?code=000001`：股票详情（行情 / K线图 / 新闻 / 公告，支持分页与下拉刷新）
-- `/pages/sector-detail/index?cid=300382`：板块详情（板块K线图 / 成分股行情）
-- `/pages/news/index`：新闻（支持分页与下拉刷新）
-- `/pages/news-detail/index`：新闻详情
-- `/pages/legal/index?type=data-notice`：协议与说明
+
+分包 `packageQuote`（行情详情，首页进入时预下载）：
+
+- `/packageQuote/pages/minute/index?code=xxx`：当日分时
+- `/packageQuote/pages/stock-detail/index?code=000001`：股票详情（行情 / K线图 / 新闻 / 公告，支持分页与下拉刷新）
+- `/packageQuote/pages/sector-detail/index?cid=300382`：板块详情（板块K线图 / 成分股行情）
+
+分包 `packageNews`（资讯，财经页进入时预下载）：
+
+- `/packageNews/pages/news/index`：新闻（支持分页与下拉刷新）
+- `/packageNews/pages/news-detail/index`：新闻详情
+
+分包 `packageAbout`（关于与工具）：
+
+- `/packageAbout/pages/legal/index?type=data-notice`：协议与说明
+- `/packageAbout/pages/custom/index`：意见反馈
+- `/packageAbout/pages/env-switch/index`：开发者环境切换
 
 ## 自动上传 / 预览（miniprogram-ci）
 

@@ -1,5 +1,5 @@
-import type { KlinePoint } from '../../types/stock'
-import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
+import type { KlinePoint } from '../../../types/stock'
+import { bindTheme, getTheme, unbindTheme } from '../../../utils/theme'
 import {
   candleBody,
   computeKlineRange,
@@ -11,7 +11,7 @@ import {
   priceToY,
   timeLabelIndexes,
   volumeBarHeight,
-} from '../../utils/kline'
+} from '../../../utils/kline'
 
 type CanvasNode = WechatMiniprogram.Canvas
 type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D

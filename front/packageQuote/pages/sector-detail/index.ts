@@ -1,17 +1,17 @@
-import { sectorApi } from '../../api/sector'
-import { rootStore } from '../../stores/root.store'
-import { stockApi } from '../../api/stock'
-import type { KlinePoint, SectorBoard } from '../../types/stock'
-import { computeChangeView } from '../../utils/market'
+import { sectorApi } from '../../../api/sector'
+import { rootStore } from '../../../stores/root.store'
+import { stockApi } from '../../../api/stock'
+import type { KlinePoint, SectorBoard } from '../../../types/stock'
+import { computeChangeView } from '../../../utils/market'
 import {
   APP_NAME,
   formatShareStamp,
   type PosterData,
   type PosterTone,
-} from '../../utils/share-poster'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { trackEvent } from '../../utils/tracker'
-import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
+} from '../../../utils/share-poster'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
 
 const MEMBER_QUOTE_LIMIT = 20
 
@@ -167,7 +167,7 @@ Page({
     if (index === undefined) return
     const member = this.data.members[index]
     if (!member) return
-    wx.navigateTo({ url: `/pages/stock-detail/index?code=${member.code}` })
+    wx.navigateTo({ url: `/packageQuote/pages/stock-detail/index?code=${member.code}` })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     trackEvent('share.trigger')

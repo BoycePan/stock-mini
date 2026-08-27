@@ -73,7 +73,7 @@ Page({
     // 埋点：点搜索结果，target = 股票 code
     trackEvent('search.result_tap', stock.code)
     this.recordHistory(this.data.keyword)
-    wx.navigateTo({ url: `/pages/stock-detail/index?code=${stock.code}` })
+    wx.navigateTo({ url: `/packageQuote/pages/stock-detail/index?code=${stock.code}` })
   },
 
   recordHistory(keyword: string) {

@@ -519,7 +519,7 @@ Page({
     // 标记本次跳转详情：返回时 onShow 不触发自动刷新
     returnedFromDetail = true
     wx.navigateTo({
-      url: `/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
+      url: `/packageNews/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
     })
   },
   /** 同步底部自定义 tabBar 的激活态到当前页（custom-tab-bar 常驻渲染层，由框架管理） */

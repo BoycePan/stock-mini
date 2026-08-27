@@ -1,5 +1,5 @@
-import type { MinutePoint } from '../../types/stock'
-import { computeMinuteVolumeDirections } from '../../utils/minute'
+import type { MinutePoint } from '../../../types/stock'
+import { computeMinuteVolumeDirections } from '../../../utils/minute'
 import {
   buildMinuteGrid,
   minuteToSlot,
@@ -7,8 +7,8 @@ import {
   sessionTimeLabels,
   type MinuteGrid,
   type MinuteSessionKind,
-} from '../../utils/minute-session'
-import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
+} from '../../../utils/minute-session'
+import { bindTheme, getTheme, unbindTheme } from '../../../utils/theme'
 
 type CanvasNode = WechatMiniprogram.Canvas
 type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D

@@ -1,10 +1,10 @@
-import { rootStore } from '../../stores/root.store'
-import { developmentEnv } from '../../config/env.development'
-import { productionEnv } from '../../config/env.production'
-import { getEnvOverride, setEnvOverride } from '../../utils/storage'
-import { getEnv, isReleaseBuild } from '../../config/env'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import type { EnvOverride } from '../../utils/storage'
+import { rootStore } from '../../../stores/root.store'
+import { developmentEnv } from '../../../config/env.development'
+import { productionEnv } from '../../../config/env.production'
+import { getEnvOverride, setEnvOverride } from '../../../utils/storage'
+import { getEnv, isReleaseBuild } from '../../../config/env'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import type { EnvOverride } from '../../../utils/storage'
 
 Page({
   data: {

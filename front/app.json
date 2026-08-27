@@ -5,16 +5,35 @@
     "pages/metals/index",
     "pages/finance/index",
     "pages/settings/index",
-    "pages/search/index",
-    "pages/minute/index",
-    "pages/stock-detail/index",
-    "pages/sector-detail/index",
-    "pages/news/index",
-    "pages/news-detail/index",
-    "pages/legal/index",
-    "pages/custom/index",
-    "pages/env-switch/index"
+    "pages/search/index"
   ],
+  "subpackages": [
+    {
+      "root": "packageQuote",
+      "name": "quote",
+      "pages": ["pages/minute/index", "pages/stock-detail/index", "pages/sector-detail/index"]
+    },
+    {
+      "root": "packageNews",
+      "name": "news",
+      "pages": ["pages/news/index", "pages/news-detail/index"]
+    },
+    {
+      "root": "packageAbout",
+      "name": "about",
+      "pages": ["pages/legal/index", "pages/custom/index", "pages/env-switch/index"]
+    }
+  ],
+  "preloadRule": {
+    "pages/global/index": {
+      "network": "all",
+      "packages": ["packageQuote"]
+    },
+    "pages/finance/index": {
+      "network": "all",
+      "packages": ["packageNews"]
+    }
+  },
   "window": {
     "navigationStyle": "custom",
     "backgroundColor": "@windowBg",

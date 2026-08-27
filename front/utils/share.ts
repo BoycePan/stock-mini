@@ -16,12 +16,12 @@ export const SHARE_IMAGE_URL =
   'https://jzo2o-pan-oss.oss-cn-hangzhou.aliyuncs.com/images/wx-stock-share_2.jpg'
 // 'https://wx-stock-static.guyu.org.cn/resource/wx-stock-share.jpg?now=1787329299'
 
-/** 分享目标页路由表：target 标识 → 页面路径 */
+/** 分享目标页路由表：target 标识 → 页面路径（非 TabBar 页均位于分包内） */
 const SHARE_TARGET_ROUTES: Record<string, string> = {
-  minute: '/pages/minute/index',
-  'stock-detail': '/pages/stock-detail/index',
-  'news-detail': '/pages/news-detail/index',
-  'sector-detail': '/pages/sector-detail/index',
+  minute: '/packageQuote/pages/minute/index',
+  'stock-detail': '/packageQuote/pages/stock-detail/index',
+  'news-detail': '/packageNews/pages/news-detail/index',
+  'sector-detail': '/packageQuote/pages/sector-detail/index',
 }
 
 /** 安全解码：微信 onLoad options 可能已被解码，避免重复解码抛 URIError */

@@ -1,8 +1,8 @@
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { trackEvent } from '../../utils/tracker'
-import { rootStore } from '../../stores/root.store'
-import { SHARE_IMAGE_URL } from '../../utils/share'
-import { APP_NAME } from '../../config/app'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
+import { rootStore } from '../../../stores/root.store'
+import { SHARE_IMAGE_URL } from '../../../utils/share'
+import { APP_NAME } from '../../../config/app'
 
 interface LegalSection {
   heading: string
@@ -241,8 +241,8 @@ Page({
     return {
       title: this.data.title ? `${this.data.title} - ${APP_NAME}` : APP_NAME,
       path: this.data.type
-        ? `/pages/legal/index?type=${encodeURIComponent(this.data.type)}`
-        : '/pages/legal/index',
+        ? `/packageAbout/pages/legal/index?type=${encodeURIComponent(this.data.type)}`
+        : '/packageAbout/pages/legal/index',
       imageUrl: SHARE_IMAGE_URL,
     }
   },

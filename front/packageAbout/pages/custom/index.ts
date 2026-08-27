@@ -1,8 +1,8 @@
-import { rootStore } from '../../stores/root.store'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { trackEvent } from '../../utils/tracker'
-import { SHARE_IMAGE_URL } from '../../utils/share'
-import { APP_NAME } from '../../config/app'
+import { rootStore } from '../../../stores/root.store'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
+import { SHARE_IMAGE_URL } from '../../../utils/share'
+import { APP_NAME } from '../../../config/app'
 
 /** 开发者联系方式二维码（阿里云 OSS 静态资源） */
 const QR_CODE_URL = 'https://jzo2o-pan-oss.oss-cn-hangzhou.aliyuncs.com/images/qrcode.jpg'
@@ -36,7 +36,7 @@ Page({
     trackEvent('share.trigger')
     return {
       title: `意见反馈 - ${APP_NAME}`,
-      path: '/pages/custom/index',
+      path: '/packageAbout/pages/custom/index',
       imageUrl: SHARE_IMAGE_URL,
     }
   },

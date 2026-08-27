@@ -63,7 +63,7 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
   'news.view': {
     name: 'news.detail.view',
     type: TrackEventType.PageView,
-    page: 'pages/news-detail/index',
+    page: 'packageNews/pages/news-detail/index',
     props: {
       id: (ctx) =>
         ctx.params.id !== undefined && ctx.params.id !== null ? String(ctx.params.id) : '',

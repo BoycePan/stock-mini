@@ -1,11 +1,11 @@
-import { newsApi } from '../../api/news'
-import { rootStore } from '../../stores/root.store'
-import { saveNewsDetail } from '../../utils/storage'
-import { stripHtml, truncateRichHtml } from '../../utils/html'
-import type { NewsItem } from '../../types/stock'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { trackEvent } from '../../utils/tracker'
-import { SHARE_IMAGE_URL } from '../../utils/share'
+import { newsApi } from '../../../api/news'
+import { rootStore } from '../../../stores/root.store'
+import { saveNewsDetail } from '../../../utils/storage'
+import { stripHtml, truncateRichHtml } from '../../../utils/html'
+import type { NewsItem } from '../../../types/stock'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
+import { SHARE_IMAGE_URL } from '../../../utils/share'
 
 const FEED_PAGE_SIZE = 20
 /**
@@ -161,7 +161,7 @@ Page({
       time: item.time ?? '',
     })
     wx.navigateTo({
-      url: `/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
+      url: `/packageNews/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
     })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
@@ -170,8 +170,8 @@ Page({
       title: this.data.title || '财经新闻',
       // 个股新闻页透传 code，接收方打开后仍是同一只股票的新闻列表
       path: this.data.code
-        ? `/pages/news/index?code=${encodeURIComponent(this.data.code)}`
-        : '/pages/news/index',
+        ? `/packageNews/pages/news/index?code=${encodeURIComponent(this.data.code)}`
+        : '/packageNews/pages/news/index',
       imageUrl: SHARE_IMAGE_URL,
     }
   },

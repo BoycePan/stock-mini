@@ -193,7 +193,7 @@ export function createMarketPage(opts: MarketPageOptions) {
         `name=${encodeURIComponent(metric?.name ?? '')}`,
       ]
       if (minuteCode !== code) query.push(`mcode=${encodeURIComponent(minuteCode)}`)
-      wx.navigateTo({ url: `/pages/minute/index?${query.join('&')}` })
+      wx.navigateTo({ url: `/packageQuote/pages/minute/index?${query.join('&')}` })
     },
 
     ...shareHandlers,

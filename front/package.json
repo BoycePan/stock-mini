@@ -11,6 +11,7 @@
     "format": "prettier --write --ignore-path ../.gitignore \"{api,components,config,custom-tab-bar,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "type-check": "tsc --noEmit",
     "test": "node --import ./tests/register.mjs --experimental-strip-types --test tests/*.test.ts",
+    "test:subpackage": "node tests/subpackage-audit.mjs",
     "format:check": "prettier --check --ignore-path ../.gitignore \"{api,components,config,custom-tab-bar,mocks,pages,stores,types,utils,tests}/**/*.{ts,js,json,md}\" \"app.ts\" \"app.json\" \"app.wxss\" \"eslint.config.js\" \"prettier.config.js\" \"tsconfig.json\"",
     "upload": "node --experimental-strip-types scripts/upload.ts",
     "upload:preview": "node --experimental-strip-types scripts/upload.ts --preview"

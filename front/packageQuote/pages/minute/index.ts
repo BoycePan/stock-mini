@@ -1,28 +1,28 @@
-import { rootStore } from '../../stores/root.store'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { startAutoRefresh, stopAutoRefresh } from '../../utils/auto-refresh'
-import { fetchEastmoneyUlistQuote } from '../../api/quote'
-import { resolveMinuteSources } from '../../config/minute'
+import { rootStore } from '../../../stores/root.store'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { startAutoRefresh, stopAutoRefresh } from '../../../utils/auto-refresh'
+import { fetchEastmoneyUlistQuote } from '../../../api/quote'
+import { resolveMinuteSources } from '../../../config/minute'
 import {
   fetchMinuteData,
   hasMinuteSources,
   mergeMinuteQuoteInfo,
   sparseVolumeNote,
   type MinuteQuoteInfo,
-} from '../../utils/minute'
-import { resolveMinuteSession, type MinuteSessionKind } from '../../utils/minute-session'
-import type { MinutePoint } from '../../types/stock'
-import { computeChangeView } from '../../utils/market'
-import { formatChange, formatNumber, formatVolume } from '../../utils/formatter'
-import { trackEvent } from '../../utils/tracker'
-import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
+} from '../../../utils/minute'
+import { resolveMinuteSession, type MinuteSessionKind } from '../../../utils/minute-session'
+import type { MinutePoint } from '../../../types/stock'
+import { computeChangeView } from '../../../utils/market'
+import { formatChange, formatNumber, formatVolume } from '../../../utils/formatter'
+import { trackEvent } from '../../../utils/tracker'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
 import {
   APP_NAME,
   formatShareStamp,
   type PosterData,
   type PosterTone,
-} from '../../utils/share-poster'
-import type { MinutePosterChartData } from '../../utils/minute-poster'
+} from '../../../utils/share-poster'
+import type { MinutePosterChartData } from '../../../utils/minute-poster'
 
 interface MinuteQuoteView {
   price: string

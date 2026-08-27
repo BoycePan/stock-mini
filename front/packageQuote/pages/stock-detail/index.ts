@@ -1,20 +1,20 @@
-import { newsApi } from '../../api/news'
-import { rootStore } from '../../stores/root.store'
-import { stockApi } from '../../api/stock'
-import { saveNewsDetail } from '../../utils/storage'
-import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../types/stock'
-import { computeChangeView } from '../../utils/market'
-import { formatNumber, formatWan } from '../../utils/formatter'
-import { truncateRichHtml } from '../../utils/html'
+import { newsApi } from '../../../api/news'
+import { rootStore } from '../../../stores/root.store'
+import { stockApi } from '../../../api/stock'
+import { saveNewsDetail } from '../../../utils/storage'
+import type { AnnouncementItem, KlinePoint, NewsItem, StockQuote } from '../../../types/stock'
+import { computeChangeView } from '../../../utils/market'
+import { formatNumber, formatWan } from '../../../utils/formatter'
+import { truncateRichHtml } from '../../../utils/html'
 import {
   APP_NAME,
   formatShareStamp,
   type PosterData,
   type PosterTone,
-} from '../../utils/share-poster'
-import { bindTheme, unbindTheme } from '../../utils/theme'
-import { trackEvent } from '../../utils/tracker'
-import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
+} from '../../../utils/share-poster'
+import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
 
 const ANNOUNCEMENT_PAGE_SIZE = 20
 /**
@@ -239,7 +239,7 @@ Page({
       time: item.time ?? '',
     })
     wx.navigateTo({
-      url: `/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
+      url: `/packageNews/pages/news-detail/index?title=${encodeURIComponent(item.title)}&url=${encodeURIComponent(item.url)}`,
     })
   },
   onAnnouncementTap(event: WechatMiniprogram.BaseEvent) {

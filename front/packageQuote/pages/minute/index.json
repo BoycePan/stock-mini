@@ -3,9 +3,9 @@
     "app-header": "/components/app-header/index",
     "loading-state": "/components/loading-state/index",
     "empty-state": "/components/empty-state/index",
-    "kline-chart": "/components/kline-chart/index",
-    "share-poster": "/components/share-poster/index",
-    "disclaimer-footer": "/components/disclaimer-footer/index"
+    "minute-chart": "/packageQuote/components/minute-chart/index",
+    "disclaimer-footer": "/components/disclaimer-footer/index",
+    "share-poster": "/components/share-poster/index"
   },
   "enablePullDownRefresh": true
 }
