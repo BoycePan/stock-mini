@@ -15,6 +15,10 @@
         "type": "folder"
       },
       {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
         "value": "c31a093133b62d97cc8f273dff196f19",
         "type": "folder"
       },
@@ -69,7 +73,7 @@
       "outputPath": ""
     },
     "miniprogramNpmDistDir": "./miniprogram_npm",
-    "ignoreUploadUnusedFiles": true
+    "ignoreUploadUnusedFiles": false
   },
   "compileType": "miniprogram",
   "libVersion": "3.17.1",

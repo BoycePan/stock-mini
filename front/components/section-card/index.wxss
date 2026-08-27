@@ -194,6 +194,12 @@
   background: rgba(66, 120, 237, 0.1);
 }
 
+/* 图标图片（本地静态图，如品牌/公司 logo、金条银条、Twemoji PNG） */
+.metric-icon-img {
+  width: 32rpx;
+  height: 32rpx;
+}
+
 .metric-icon {
   font-size: 26rpx;
   line-height: 1;

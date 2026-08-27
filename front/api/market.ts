@@ -25,6 +25,7 @@ import {
   pickGoldShopItem,
 } from '../config/gold-shop'
 import { PHYSICAL_GOLD_CATALOG, type PhysicalGoldItemConfig } from '../config/physical-gold'
+import { GOLD_SHOP_ICON_ASSETS } from '../config/icon-assets'
 import { fetchGoldShopQuotes, fetchPhysicalGoldQuotes } from './gold-shop'
 import { newsApi } from './news'
 import {
@@ -660,6 +661,8 @@ async function fetchGoldShopGroup(): Promise<QuoteGroup | null> {
         price: chosen.price,
         pct: chosen.pct,
         icon: '🏬',
+        // 品牌 logo（icons/brand/<品牌名>.png；官网不可达的品牌为占位图）
+        iconImage: GOLD_SHOP_ICON_ASSETS[shop],
         tags: [goldShopItemLabel(config?.item ?? chosen.item)],
         // 上游每条报价带 time（epoch ms），展示为「HH:mm 更新」（跨天补日期）
         updatedAt: formatItemUpdatedAt(chosen.time),

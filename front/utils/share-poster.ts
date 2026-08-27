@@ -59,8 +59,10 @@ export interface PosterRow {
   value: string
   changeText: string
   tone: PosterTone
-  /** 名称前的展示图标（Emoji，如 🇨🇳 🥇 💱） */
+  /** 名称前的展示图标（Emoji，如 🇨🇳 🥇 💱）；有 iconImage 时忽略 */
   icon?: string
+  /** 名称前的展示图标图片（本地静态图，如 /static/icons/...），优先于 icon 绘制 */
+  iconImage?: string
 }
 
 export interface PosterSection {
@@ -162,6 +164,7 @@ export function buildPosterSections(sections: MarketSection[]): PosterSection[] 
         changeText,
         tone: change > 0 ? 'up' : change < 0 ? 'down' : 'flat',
         icon: sanitizeIcon(metric.icon),
+        iconImage: metric.iconImage,
       })
     }
     if (rows.length) {
@@ -317,18 +320,23 @@ const CHIP_RADIUS = 9 // 徽标圆角
 const CHIP_GAP = 10 // 徽标与名称间距
 
 /**
- * 绘制名称前的图标：普通 emoji 直接绘制；国旗 emoji 转「金色文字徽标」。
+ * 绘制名称前的图标：优先绘制图片（iconImage），其次国旗转「金色文字徽标」，
+ * 普通 emoji 直接绘制。
  * @param useMiddle 为 true 时，将 baseY 视为垂直中心坐标（适配 middle 基线模式）
  */
 function drawRowIcon(
   ctx: CanvasCtx,
   chipText: string | undefined,
   icon: string | undefined,
+  iconImg: WechatMiniprogram.Image | undefined,
   x: number,
   baseY: number,
   useMiddle = false,
 ): void {
-  if (chipText) {
+  if (iconImg) {
+    const iconY = useMiddle ? baseY - CHIP_SIZE / 2 : baseY - CHIP_SIZE + 4
+    ctx.drawImage(iconImg, x, iconY, CHIP_SIZE, CHIP_SIZE)
+  } else if (chipText) {
     const chipY = useMiddle ? baseY - CHIP_SIZE / 2 : baseY - CHIP_SIZE + 4
     // 金色标签：淡金底 + 细描边 + 金色单字（与头部/水印同色系，明确是市场标识）
     roundRect(ctx, x, chipY, CHIP_SIZE, CHIP_SIZE, CHIP_RADIUS)
@@ -358,7 +366,9 @@ function rowIconWidth(
   ctx: CanvasCtx,
   chipText: string | undefined,
   icon: string | undefined,
+  iconImg: WechatMiniprogram.Image | undefined,
 ): number {
+  if (iconImg) return CHIP_SIZE + CHIP_GAP
   if (chipText) return CHIP_SIZE + CHIP_GAP
   if (icon) return ctx.measureText(icon).width + CHIP_GAP
   return 0
@@ -483,6 +493,7 @@ function drawCell(
   w: number,
   h: number,
   row: PosterRow,
+  iconImgs: Record<string, WechatMiniprogram.Image>,
 ): void {
   roundRect(ctx, x, y, w, h, 20)
   ctx.fillStyle = CARD_BG
@@ -498,8 +509,9 @@ function drawCell(
   const padL = 18
   const padR = 18
   const innerW = w - padL - padR
-  // 国旗 emoji 转文字徽标（Canvas 渲染兼容），其余 emoji 直接绘制
-  const chipText = row.icon ? FLAG_CHIP[row.icon] : undefined
+  // 图标图片（品牌/公司 logo、金条银条、Twemoji PNG）优先；其次国旗 emoji 转文字徽标
+  const iconImg = row.iconImage ? iconImgs[row.iconImage] : undefined
+  const chipText = row.icon && !iconImg ? FLAG_CHIP[row.icon] : undefined
   // 涨跌符号（▲/▼，flat 不加符号）
   const arrow = row.tone === 'up' ? '▲' : row.tone === 'down' ? '▼' : ''
   const changeLabel = arrow ? `${arrow} ${row.changeText}` : row.changeText
@@ -511,9 +523,9 @@ function drawCell(
     ctx.fillStyle = TEXT_DIM
     ctx.font = '30px sans-serif'
     ctx.textAlign = 'left'
-    const iconW = rowIconWidth(ctx, chipText, row.icon)
+    const iconW = rowIconWidth(ctx, chipText, row.icon, iconImg)
     ctx.fillText(truncText(ctx, row.name, innerW - iconW), x + padL + iconW, y + 48)
-    drawRowIcon(ctx, chipText, row.icon, x + padL, y + 48)
+    drawRowIcon(ctx, chipText, row.icon, iconImg, x + padL, y + 48)
     // 第二行：数值（左，加粗大字）+ 涨跌幅（右，着色）
     ctx.fillStyle = TEXT_MAIN
     ctx.font = 'bold 38px sans-serif'
@@ -528,9 +540,9 @@ function drawCell(
     ctx.fillStyle = TEXT_DIM
     ctx.font = '30px sans-serif'
     ctx.textAlign = 'left'
-    const iconW = rowIconWidth(ctx, chipText, row.icon)
+    const iconW = rowIconWidth(ctx, chipText, row.icon, iconImg)
     ctx.fillText(truncText(ctx, row.name, innerW - iconW), x + padL + iconW, y + 48)
-    drawRowIcon(ctx, chipText, row.icon, x + padL, y + 48)
+    drawRowIcon(ctx, chipText, row.icon, iconImg, x + padL, y + 48)
     ctx.fillStyle = TEXT_MAIN
     ctx.font = 'bold 38px sans-serif'
     ctx.fillText(truncText(ctx, row.value, innerW), x + padL, y + 100)
@@ -539,11 +551,11 @@ function drawCell(
     ctx.font = 'bold 30px sans-serif'
     const changeW = ctx.measureText(changeLabel).width
     ctx.font = '30px sans-serif'
-    const iconW = rowIconWidth(ctx, chipText, row.icon)
+    const iconW = rowIconWidth(ctx, chipText, row.icon, iconImg)
     // 使用 middle 基线实现真正的垂直居中
     ctx.textBaseline = 'middle'
     const midY = y + h / 2
-    drawRowIcon(ctx, chipText, row.icon, x + padL, midY, true)
+    drawRowIcon(ctx, chipText, row.icon, iconImg, x + padL, midY, true)
     ctx.fillStyle = TEXT_MAIN
     ctx.font = '30px sans-serif'
     ctx.textAlign = 'left'
@@ -563,6 +575,7 @@ export function drawPoster(
   width: number,
   logoImg: WechatMiniprogram.Image | null = null,
   chart?: PosterChart,
+  iconImgs: Record<string, WechatMiniprogram.Image> = {},
 ): void {
   const height = measurePosterHeight(data, chart, ctx)
 
@@ -764,7 +777,7 @@ export function drawPoster(
       const col = i % 2
       const rowIdx = Math.floor(i / 2)
       const x = M + col * (cellW + GRID_GAP)
-      drawCell(ctx, x, y + rowIdx * (cellH + CELL_GAP), cellW, cellH, row)
+      drawCell(ctx, x, y + rowIdx * (cellH + CELL_GAP), cellW, cellH, row, iconImgs)
     })
     y += rowCount * cellH + (rowCount - 1) * CELL_GAP + SECTION_GAP
   }
@@ -868,13 +881,35 @@ export function renderSharePoster(
           canvas.height = Math.floor(height * dpr * scale)
           const ctx = canvas.getContext('2d')
           ctx.scale(dpr * scale, dpr * scale)
-          loadCanvasImage(canvas, LOGO_PATH)
-            .then((logo) => {
-              drawPoster(ctx, data, width, logo, options?.chart)
-            })
-            .catch(() => {
+
+          // 收集需要绘制的行图标（本地静态图片），与头部 logo 一起预加载
+          const iconPaths: string[] = []
+          const seen = new Set<string>()
+          for (const section of data.sections ?? []) {
+            for (const row of section.rows ?? []) {
+              if (row.iconImage && !seen.has(row.iconImage)) {
+                seen.add(row.iconImage)
+                iconPaths.push(row.iconImage)
+              }
+            }
+          }
+          const loadLogo = loadCanvasImage(canvas, LOGO_PATH).catch(() => null)
+          const loadIcons = iconPaths.map((p) =>
+            loadCanvasImage(canvas, p)
+              .then((img) => [p, img] as const)
+              .catch(() => null),
+          )
+          Promise.all([loadLogo, ...loadIcons])
+            .then((results) => {
+              const logo = results[0] as WechatMiniprogram.Image | null
+              const iconImgs: Record<string, WechatMiniprogram.Image> = {}
+              for (const pair of results.slice(1) as Array<
+                readonly [string, WechatMiniprogram.Image] | null
+              >) {
+                if (pair) iconImgs[pair[0]] = pair[1]
+              }
               // logo 加载失败不阻塞：占位绘制后继续导出
-              drawPoster(ctx, data, width, null, options?.chart)
+              drawPoster(ctx, data, width, logo, options?.chart, iconImgs)
             })
             .then(() => exportCanvas(canvas, target))
             .then(resolve, reject)

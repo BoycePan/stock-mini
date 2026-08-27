@@ -19,6 +19,10 @@
 | 工作量 | MVP 约 4~6 人日；完整版（复盘/截图分享/多市场）约 8~10 人日 |
 | 最大风险 | ①小程序 request 域名白名单 ②东财接口无 SLA 与商用授权 ③前端 56 页并发拉全量 A 股的开销 |
 
+> ✅ **实施状态（2026-08-10）**：MVP 已按「方案 A 前端直连」落地为 `packageTreemap` 分包
+> （页面 + treemap-chart Canvas 组件 + 两段式数据层），入口在「设置 → 大盘云图」，
+> 不影响现有业务（仅 app.json 追加分包声明 + 设置页加一行入口）。详见第 8 节。
+
 ---
 
 ## 1. 52etf.site 是什么
@@ -265,5 +269,77 @@ GET https://gateway.jrj.com/quot-dpyt/hq?column=chg
 | 板块成分股 | `https://push2delay.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=b:BK0475+f:!50&fields=f2,f3,f12,f14,f20,f21` |
 | 指数批量 | `https://push2delay.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=1.000001,0.399001,0.399006,1.000688,100.HSI` |
 | 个股价格批量（8s 轮询） | `https://push2delay.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f12&secids=1.600519,0.000001,...` |
+
+---
+
+## 8. 实施记录（2026-08-10 已完成 MVP）
+
+**落地形态**：新增 `packageTreemap` 分包（方案 A 前端直连东财，零后端改动），入口「设置 → 更多 → 大盘云图」。
+
+### 新增文件
+
+| 文件 | 职责 |
+|------|------|
+| `front/packageTreemap/pages/treemap/index.{ts,wxml,wxss,json}` | 热力图页面：顶栏指数 + 层级导航 + 统计条 + 8s 轮询 |
+| `front/packageTreemap/components/treemap-chart/index.{ts,wxml,wxss,json}` | Canvas 2d 热力图组件：布局渲染 + 点击命中 + 双主题 |
+| `front/packageTreemap/utils/treemap-layout.ts` | Squarified treemap 布局算法（纯 TS，无 d3 依赖） |
+| `front/packageTreemap/utils/treemap-data.ts` | 东财 clist/ulist 两段式数据层 + 5 分钟板块缓存 |
+| `front/packageTreemap/types/treemap.ts` | 类型定义 |
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `front/app.json` | 追加 `packageTreemap` 分包声明（1 个页面） |
+| `front/pages/settings/index.{ts,wxml}` | 「更多」分组加「大盘云图」入口行（navigateTo） |
+| `front/tests/subpackage-audit.mjs` | 把 packageTreemap 纳入 usingComponents / 导航 / 跨包引用扫描 |
+
+### 关键设计决策
+
+1. **两段式加载，不做 56 页全量拉取**：行业层拉板块列表（`fs=m:90+t:2`，496 个，5 页并行）；
+   点击板块再拉成分股（`fs=b:BKxxxx`，大板块 6 页并行，实测半导体 524 只全覆盖）。
+2. **8s 轮询只刷当前层**：行业层重拉板块列表（走 5 分钟缓存校验），个股层重拉成分股；
+   页面 onHide 暂停、onShow 恢复；指数随轮询一起刷新。
+3. **面积=市值、颜色=涨跌幅**：板块层面积用板块总市值（f20），个股层面积用流通市值（f21）；
+   红涨绿跌（#eb514d/#20a66a），深浅随 |pct| 10 级渐变，平盘中性底色。
+4. **双主题兼容**：Canvas 内 `isDark` 分支切换底色/文字；页面 wxss 按 AGENTS.md 色板
+   提供 `.page.theme-dark` 覆盖。
+5. **命中检测**：canvas touch 事件 `changedTouches[0]`（相对 canvas 的 x/y）+ 布局矩形反查。
+6. **跳转**：板块层点击 → 钻取成分股层；个股层点击 → `wx.navigateTo` 现有
+   `packageQuote/pages/stock-detail/index?code=xxx`（复用现有个股页，不新建）。
+7. **稳健性**：所有请求失败降级为空数据不抛错（页面显示错误卡 + 重试按钮）；
+   无数据板块跳过；`fetchClistAll` 按 total 分页补齐。
+
+### 验收情况
+
+- ✅ `tsc --noEmit` 通过（strict + noUncheckedIndexedAccess）
+- ✅ eslint 通过
+- ✅ `tests/subpackage-audit.mjs` 通过（分包结构 / 页面齐全 / 组件引用 / 导航目标 / 跨包引用）
+- ✅ prettier check 通过
+- ⚠️ 现有 `tests/*.test.ts` 中 `tracker.test.ts` 失败为**既有环境问题**
+  （Node 24 `--experimental-strip-types` 不支持 TS enum，与本次改动无关，197/198 通过）
+
+### 修复记录（2026-08-10 二轮）
+
+真机反馈「只显示一个板块」，定位到 **treemap-layout.ts 布局算法两处 bug**，用真实东财
+数据（496 板块）Node 脚本回归验证后修复：
+
+| Bug | 现象 | 修复 |
+|-----|------|------|
+| 布局主循环 `for...of` + `continue` 丢节点 | 被放回 remaining 的节点永不重新处理 → `layout` 数组出现 `undefined`，组件只画到第一个有效块 → **看起来只有一个板块** | 改为迭代式 `while + index` 贪心凑行，切行后从当前 index 重新处理，杜绝丢节点 |
+| `worst()` 纵横比公式错误（total² 且长/短边处理颠倒） | 切行判断失效 → 全部节点堆成一行（distinct y=1、overlaps≈12 万） | 改用数学正确公式 `max((max·t)/(total·s), (total·s)/(min·t))` |
+| 行布局按「行+剩余」总权重铺块 + rect 收缩两套比例不一致 | 块尺寸与空间不匹配 → 大量重叠 | 行沿长边铺开、行厚度 = 短边 × rowTotal/total，两处口径统一 |
+| 东财行业列表本身含重复板块（BK1202/BK0739/BK1247 各出现两次） | 同名板块重叠绘制、命中只取第一个 | 数据层按 code 去重 |
+
+**回归结果**（Node 脚本，真实数据）：496 节点全部布局、`missing=0`、`coverage=100%`、
+`overlaps=0`（去重后），ASCII 渲染为标准 squarified treemap 形状。
+
+### 后续可选增强（未实施）
+
+- 方案 B 后端代理聚合（生产建议：域名白名单 + 服务端缓存 + 限流）
+- 复盘模式（52etf 私有历史快照无法复刻，需自建当日快照）
+- 多市场切换（深证/创业板/科创板/港股）
+- 板块详情跳转（现有 sector-detail 可复用）
+- 截图分享海报（复用 share-poster 链路）
 
 字段速查：`f2` 最新价 / `f3` 涨跌幅 / `f5` 成交量 / `f6` 成交额 / `f8` 换手率 / `f12` 代码 / `f14` 名称 / `f20` 总市值 / `f21` 流通市值 / `f100` 行业 / `f103` 概念 / `f104` 板块内上涨家数 / `f105` 板块内下跌家数 / `f128` 领涨股名 / `f140` 领涨股代码。

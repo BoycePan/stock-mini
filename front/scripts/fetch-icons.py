@@ -387,6 +387,47 @@ def download_logo(name: str, candidates: list[str], out_path: Path,
     return 'placeholder', '无可用 logo 源，生成占位图', None
 
 
+def emit_icon_assets_ts(out_root: Path, code_map: dict[str, str]) -> Path:
+    """生成 front/config/icon-assets.ts（行情 code / 金店品牌 → 图片路径映射）。
+
+    供业务代码直接引用：QUOTE_ICON_ASSETS（QUOTE_ICONS 全部 code，含金属/公司覆盖）、
+    GOLD_SHOP_ICON_ASSETS（15 家金店品牌）。路径为小程序根相对路径（/static/icons/...）。
+    """
+    rel_root = out_root.relative_to(REPO_ROOT).as_posix()  # 如 static/icons
+
+    def p(f: str) -> str:
+        return f'/{rel_root}/{f}'
+
+    lines = [
+        '/**',
+        ' * 图标素材路径映射 —— 由 front/scripts/fetch-icons.py 自动生成，请勿手改。',
+        f' * 重新生成：python front/scripts/fetch-icons.py（输出 {rel_root}/）',
+        ' */',
+        '',
+        '/** 静态图标资源根目录（小程序本地路径） */',
+        f"export const ICON_BASE = '/{rel_root}'",
+        '',
+        '/** 行情 code → 图标图片路径（QUOTE_ICONS 全量，含金条/银条/公司 logo 覆盖） */',
+        'export const QUOTE_ICON_ASSETS: Record<string, string> = {',
+    ]
+    for code in sorted(code_map):
+        lines.append(f'  {json.dumps(code, ensure_ascii=False)}: '
+                     f'{json.dumps(p(code_map[code]), ensure_ascii=False)},')
+    lines.append('}')
+    lines.append('')
+    lines.append('/** 金店品牌 → 品牌 logo 图片路径（GOLD_SHOP_BRANDS，含占位图） */')
+    lines.append('export const GOLD_SHOP_ICON_ASSETS: Record<string, string> = {')
+    for brand in BRAND_LOGO_CANDIDATES:
+        lines.append(f'  {json.dumps(brand, ensure_ascii=False)}: '
+                     f'{json.dumps(p(f"brand/{brand}.png"), ensure_ascii=False)},')
+    lines.append('}')
+    lines.append('')
+
+    out = REPO_ROOT / 'config' / 'icon-assets.ts'
+    out.write_text('\n'.join(lines), encoding='utf-8')
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
@@ -524,6 +565,11 @@ def main() -> int:
           f'{summary["placeholder"]} / 失败 {summary["failed"]} / 共 {summary["total"]}')
     print(f'输出目录：{out_root}')
     print(f'清单：{out_root / "manifest.json"}（含 code_map：行情 code → 图片路径）')
+    try:
+        ts_path = emit_icon_assets_ts(out_root, code_map)
+        print(f'TS 映射：{ts_path.relative_to(REPO_ROOT)}（供业务代码引用）')
+    except Exception as e:  # noqa: BLE001
+        print(f'! TS 映射生成失败（不影响图片产出）: {e}')
     for k, r in failed:
         print(f'  失败 - {k}: {r}')
     return 1 if failed else 0

@@ -40,14 +40,15 @@
       <text>{{error}}</text>
       <button class="retry-btn" bindtap="onRetry">重新加载</button>
     </view>
-    <treemap-chart
-      wx:else
-      class="treemap-chart"
-      nodes="{{nodes}}"
-      theme="{{theme}}"
-      emptyText="{{emptyText}}"
-      bind:select="onSelect"
-    ></treemap-chart>
+    <scroll-view wx:else class="chart-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <treemap-chart
+        nodes="{{nodes}}"
+        theme="{{theme}}"
+        height="{{chartHeight}}"
+        emptyText="{{emptyText}}"
+        bind:select="onSelect"
+      ></treemap-chart>
+    </scroll-view>
   </view>
 
   <!-- 底部统计条 -->

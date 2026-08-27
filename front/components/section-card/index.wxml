@@ -36,9 +36,15 @@
         bindtap="onMetricTap"
       >
         <view class="metric-name-row">
-          <view wx:if="{{ item.icon }}" class="metric-icon-chip"
-            ><text class="metric-icon">{{ item.icon }}</text></view
-          >
+          <view wx:if="{{ item.icon || item.iconImage }}" class="metric-icon-chip">
+            <image
+              wx:if="{{ item.iconImage }}"
+              class="metric-icon-img"
+              src="{{ item.iconImage }}"
+              mode="aspectFit"
+            ></image>
+            <text wx:else class="metric-icon">{{ item.icon }}</text>
+          </view>
           <text class="metric-name">{{ item.name }}</text>
           <block wx:for="{{ item.tags }}" wx:for-item="tag" wx:key="*this">
             <view class="metric-tag"

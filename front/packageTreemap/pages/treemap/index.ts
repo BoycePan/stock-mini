@@ -5,6 +5,7 @@
  * - 点击个股 → 跳转现有 stock-detail 页；板块层点击也可返回行业层
  * - 顶栏指数：上证/深证/创业板/科创50/恒指（东财 ulist 一次请求）
  * - 交易时段每 8 秒轮询刷新当前层（与 52etf 同步率），结构不重建
+ * - 画布高度按节点数自适应：内容超出可视区时页面可滚动（scroll-view）
  * - 双主题兼容（bindTheme）
  */
 
@@ -30,6 +31,9 @@ import type {
 /** 轮询间隔（与 52etf 一致：交易时段 8 秒） */
 const POLL_INTERVAL = 8000
 
+/** 画布最小格子边长（CSS px），决定内容超出时的高度，保证可读 */
+const MIN_CELL = 30
+
 interface TreemapPageData {
   theme: string
   loading: boolean
@@ -42,6 +46,10 @@ interface TreemapPageData {
   currentBoard: IndustryBoard | null
   summary: { up: number; flat: number; down: number; amountText: string }
   updatedText: string
+  /** 画布高度（CSS px，供可滚动布局使用） */
+  chartHeight: number
+  /** 图表可视区高度（CSS px，onReady 测量） */
+  chartViewportH: number
 }
 
 Page({
@@ -57,6 +65,8 @@ Page({
     currentBoard: null as IndustryBoard | null,
     summary: { up: 0, flat: 0, down: 0, amountText: '' },
     updatedText: '',
+    chartHeight: 0,
+    chartViewportH: 0,
   },
 
   /** 轮询定时器 */
@@ -67,6 +77,9 @@ Page({
   onLoad() {
     bindTheme(this)
     this.loadInitial()
+  },
+  onReady() {
+    this.measureChartArea()
   },
   onShow() {
     this._visible = true
@@ -90,15 +103,17 @@ Page({
     try {
       const [indices, boards] = await Promise.all([fetchIndexQuotes(), fetchIndustryBoards()])
       if (!boards.length) throw new Error('板块数据为空')
+      const nodes = boardsToNodes(boards)
       this.setData({
         indices: indices.map((item) => this.indexView(item)),
-        nodes: boardsToNodes(boards),
+        nodes,
+        chartHeight: this.chartHeightFor(nodes.length),
         level: 'industry',
         currentBoardName: '',
         currentBoard: null,
         loading: false,
       })
-      this.applySummary(this.data.nodes)
+      this.applySummary(nodes)
       // 成功加载后恢复轮询（onLoad 首次 / 钻取返回 / 重试均走这里，幂等）
       this.startPolling()
     } catch (error) {
@@ -134,14 +149,16 @@ Page({
     try {
       const stocks = await fetchBoardStocks(board.code)
       if (!stocks.length) throw new Error('板块成分股为空')
+      const nodes = stocksToNodes(stocks)
       this.setData({
-        nodes: stocksToNodes(stocks),
+        nodes,
+        chartHeight: this.chartHeightFor(nodes.length),
         level: 'stock',
         currentBoardName: board.name,
         currentBoard: board,
         loading: false,
       })
-      this.applySummary(this.data.nodes)
+      this.applySummary(nodes)
     } catch (error) {
       console.warn(`[treemap] 板块 ${board.code} 成分股加载失败:`, error)
       this.setData({ loading: false, error: '板块成分股加载失败，请重试' })
@@ -187,21 +204,25 @@ Page({
   /** 刷新当前层：行业层重新拉板块列表（带缓存校验），个股层重新拉成分股 */
   async refreshCurrentLevel() {
     try {
+      let nodes: TreemapNode[] | null = null
       if (this.data.level === 'industry') {
         const boards = await fetchIndustryBoards(true)
         if (!boards.length) return
-        this.setData({ nodes: boardsToNodes(boards) })
+        nodes = boardsToNodes(boards)
       } else {
         const board = this.data.currentBoard
         if (!board) return
         const stocks = await fetchBoardStocks(board.code)
         if (!stocks.length) return
-        this.setData({ nodes: stocksToNodes(stocks) })
+        nodes = stocksToNodes(stocks)
+      }
+      if (nodes) {
+        this.setData({ nodes, chartHeight: this.chartHeightFor(nodes.length) })
+        this.applySummary(nodes)
       }
       // 指数也一起刷新（轻量）
       const indices = await fetchIndexQuotes()
       this.setData({ indices: indices.map((item) => this.indexView(item)) })
-      this.applySummary(this.data.nodes)
     } catch (error) {
       console.warn('[treemap] 轮询刷新失败:', error)
     }
@@ -234,6 +255,40 @@ Page({
     const hh = String(now.getHours()).padStart(2, '0')
     const mm = String(now.getMinutes()).padStart(2, '0')
     const ss = String(now.getSeconds()).padStart(2, '0')
-    this.setData({ summary: { up, flat, down, amountText }, updatedText: `${hh}:${mm}:${ss}` })
+    this.setData({ summary: { up, down, flat, amountText }, updatedText: `${hh}:${mm}:${ss}` })
+  },
+
+  // -------------------------------------------------------------------------
+  // 画布高度（内容超出可视区时滚动）
+  // -------------------------------------------------------------------------
+
+  /** 测量图表可视区高度，用于「内容少时填满、内容多时滚动」 */
+  measureChartArea() {
+    wx.createSelectorQuery()
+      .select('.chart-wrap')
+      .boundingClientRect((rect) => {
+        if (rect && rect.height > 0) {
+          this.setData({ chartViewportH: rect.height })
+          this.setData({ chartHeight: this.chartHeightFor(this.data.nodes.length) })
+        }
+      })
+      .exec()
+  },
+
+  /**
+   * 根据节点数计算画布高度（CSS px）：
+   * 内容少时用可视区高度填满正屏；内容多时按「节点数 / 每行格子数 × 格子边长」给出超屏高度，
+   * 使 scroll-view 能滚动到全部内容，且块不会挤成细条。
+   */
+  chartHeightFor(nodeCount: number): number {
+    const info = wx.getWindowInfo()
+    const windowW = info.windowWidth || 375
+    // 图表左右各 24rpx padding
+    const chartW = Math.max(120, windowW - (24 / 750) * windowW * 2)
+    const viewportH = this.data.chartViewportH || Math.round((info.windowHeight || 812) * 0.5)
+    if (nodeCount <= 0) return Math.max(400, viewportH)
+    const cols = Math.max(1, Math.floor(chartW / MIN_CELL))
+    const rows = Math.ceil(nodeCount / cols)
+    return Math.max(Math.round(viewportH), rows * MIN_CELL)
   },
 })

@@ -16,6 +16,11 @@ export interface MarketMetric {
   change: number
   unit?: string
   icon?: string
+  /**
+   * 指标名称旁图标图片路径（本地静态图，如 /static/icons/...）。
+   * 有值时优先于 icon（Emoji）渲染；无值时回退 icon。
+   */
+  iconImage?: string
   /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序展示 */
   tags?: string[]
   updatedAt?: string

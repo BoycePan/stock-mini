@@ -4,6 +4,13 @@
  * 参考 Bruls et al. 2000《Squarified Treemaps》：按权重（市值）将矩形区域递归切分，
  * 使每个块尽量接近正方形——这是 52etf.site / d3.treemap 同款布局效果。
  *
+ * 实现要点（相对旧版的修正，避免「竖条」）：
+ * 1. 行一律沿着容器的「短边」铺开（而不是旧版的长边）：短边决定行的长度，
+ *    厚度 = 行面积 / 短边。竖屏下首行是横向条带（沿宽铺开），块才接近正方形。
+ * 2. 权重先归一化为像素面积（总面积 = 容器面积），使 `worst` 纵横比判定与实际
+ *    落位完全一致，避免因市值量级差异（1e8 ~ 2e12）导致零宽/零高竖条。
+ * 3. 贪心凑行：每次加入下一个节点，若最差纵横比变差则回退，行内块尽量方。
+ *
  * 输入：容器矩形 + 带权重节点；输出：每个节点的最终矩形坐标（像素）。
  */
 
@@ -25,31 +32,39 @@ export interface LayoutRect extends Rect {
   id: string
 }
 
+/** 归一化后的内部节点（weight → 像素面积，单位与容器一致） */
+interface PlacedItem {
+  id: string
+  area: number
+}
+
 /**
- * 计算一行的「最差纵横比」：行沿容器长边方向铺开（每块厚度 = 短边 s、沿长边长度为
- * (v_i/total)·长边 t），单项纵横比 = max(行方向长/厚度, 厚度/行方向长)。
- * 返回所有项中的最大纵横比——越接近 1 说明行内块越接近正方形。
+ * 单行（已归一化）的最差纵横比。
+ * 行沿短边 `short` 铺开：长度 = short，厚度 = s/short（s = 行面积）。
+ * 单项纵横比 = max( short²·v_i / s², s² / (short²·v_i) )，
+ * 最差 = 用 v_max 取第一项、v_min 取第二项。
+ * 越接近 1 说明行内块越接近正方形。
  */
-function worst(row: LayoutItem[], w: number, h: number): number {
-  const total = row.reduce((sum, item) => sum + item.weight, 0)
-  if (total <= 0 || w <= 0 || h <= 0) return Number.POSITIVE_INFINITY
+function worst(row: PlacedItem[], short: number): number {
+  let s = 0
   let max = -Infinity
   let min = Infinity
   for (const item of row) {
-    if (item.weight > max) max = item.weight
-    if (item.weight < min) min = item.weight
+    s += item.area
+    if (item.area > max) max = item.area
+    if (item.area < min) min = item.area
   }
-  const t = Math.max(w, h) // 长边
-  const s = Math.min(w, h) // 短边（厚度）
-  // 单项纵横比 = max( (v_i·t)/(total·s), (total·s)/(v_i·t) )
-  // 最差 = 对 v 取极值：第一项用 v_max，第二项用 v_min
-  return Math.max((max * t) / (total * s), (total * s) / (min * t))
+  if (s <= 0 || short <= 0 || !Number.isFinite(max) || !Number.isFinite(min)) {
+    return Number.POSITIVE_INFINITY
+  }
+  return Math.max((short * short * max) / (s * s), (s * s) / (short * short * min))
 }
 
 /**
  * Squarified treemap 主入口。
  * @param items 待布局节点（内部会按权重降序排列，调用方可传入任意顺序）
  * @param container 容器矩形（CSS 像素，调用方已去除内边距）
+ * @param debug 可选调试回调
  * @returns 与 items 相同顺序（未排序前）对应的布局矩形数组；权重 ≤0 的节点被跳过
  */
 export function squarifyTreemap(
@@ -60,10 +75,15 @@ export function squarifyTreemap(
   const dbg = debug ?? (() => {})
   if (!items.length || container.w <= 0 || container.h <= 0) return []
 
-  // 过滤无效权重并降序
+  // 过滤无效权重并归一化为像素面积（总面积 = 容器面积），再降序
   const valid = items.filter((item) => item.weight > 0)
-  const sorted = [...valid].sort((a, b) => b.weight - a.weight)
-  if (!sorted.length) return []
+  if (!valid.length) return []
+
+  const totalWeight = valid.reduce((sum, item) => sum + item.weight, 0)
+  const area = container.w * container.h
+  const sorted: PlacedItem[] = valid
+    .map((item) => ({ id: item.id, area: (item.weight / totalWeight) * area }))
+    .sort((a, b) => b.area - a.area)
 
   const results: LayoutRect[] = []
   let rect: Rect = { ...container }
@@ -71,52 +91,48 @@ export function squarifyTreemap(
   let index = 0
   while (index < sorted.length) {
     // 1) 贪心凑行：往行里加节点，直到加下一个会明显变差
-    const row: LayoutItem[] = []
-    let rowTotal = 0
+    const short = Math.min(rect.w, rect.h)
+    const row: PlacedItem[] = []
+    let rowArea = 0
     while (index < sorted.length) {
-      const item = sorted[index] as LayoutItem
+      const item = sorted[index] as PlacedItem
       row.push(item)
-      rowTotal += item.weight
+      rowArea += item.area
       if (row.length > 1) {
-        const withItem = worst(row, rect.w, rect.h)
-        const withoutItem = worst(row.slice(0, -1), rect.w, rect.h)
+        const withItem = worst(row, short)
+        const withoutItem = worst(row.slice(0, -1), short)
         if (withItem > withoutItem) {
           row.pop()
-          rowTotal -= item.weight
+          rowArea -= item.area
           break
         }
       }
       index++
     }
 
-    // 2) 行占当前矩形的「短边比例 = rowTotal/(rowTotal+剩余)」，沿长边铺开
-    const remainingTotal = sorted.slice(index).reduce((sum, item) => sum + item.weight, 0)
-    const total = rowTotal + remainingTotal
-    const frac = total > 0 ? rowTotal / total : 1
-
-    if (rect.w >= rect.h) {
-      // 水平行：占满宽，高 = rect.h * frac
-      const rowH = rect.h * frac
+    // 2) 行沿短边铺开：长度 = short，厚度 = 行面积 / short
+    const thickness = rowArea / short
+    if (rect.h >= rect.w) {
+      // 高矩形：沿短边(宽 rect.w)铺一条横向条带（占满宽，厚度向下）
       let x = rect.x
       for (const item of row) {
-        const w = (item.weight / rowTotal) * rect.w
-        results.push({ id: item.id, x, y: rect.y, w, h: rowH })
+        const w = (item.area / rowArea) * rect.w
+        results.push({ id: item.id, x, y: rect.y, w, h: thickness })
         x += w
       }
-      rect = { x: rect.x, y: rect.y + rowH, w: rect.w, h: rect.h - rowH }
+      rect = { x: rect.x, y: rect.y + thickness, w: rect.w, h: rect.h - thickness }
     } else {
-      // 垂直行：占满高，宽 = rect.w * frac
-      const rowW = rect.w * frac
+      // 宽矩形：沿短边(高 rect.h)铺一条纵向条带（占满高，厚度向右）
       let y = rect.y
       for (const item of row) {
-        const h = (item.weight / rowTotal) * rect.h
-        results.push({ id: item.id, x: rect.x, y, w: rowW, h })
+        const h = (item.area / rowArea) * rect.h
+        results.push({ id: item.id, x: rect.x, y, w: thickness, h })
         y += h
       }
-      rect = { x: rect.x + rowW, y: rect.y, w: rect.w - rowW, h: rect.h }
+      rect = { x: rect.x + thickness, y: rect.y, w: rect.w - thickness, h: rect.h }
     }
     dbg(
-      `row[${row.length}] frac=${frac.toFixed(3)} rect=(${rect.x.toFixed(1)},${rect.y.toFixed(1)},${rect.w.toFixed(1)},${rect.h.toFixed(1)})`,
+      `row[${row.length}] thickness=${thickness.toFixed(1)} short=${short.toFixed(1)} rect=(${rect.x.toFixed(1)},${rect.y.toFixed(1)},${rect.w.toFixed(1)},${rect.h.toFixed(1)})`,
     )
   }
 

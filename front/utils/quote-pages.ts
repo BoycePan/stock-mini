@@ -6,6 +6,7 @@
  */
 
 import type { MarketMetric, MarketPageData, MarketSection } from '../types/market'
+import { QUOTE_ICON_ASSETS } from '../config/icon-assets'
 import { formatDateTime, formatNumber } from './formatter'
 import { getRegionStatus, type IndustryPhase, type MarketRegion } from './market-clock'
 
@@ -20,6 +21,11 @@ export interface QuoteItem {
   icon?: string
   /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序随指标展示 */
   tags?: string[]
+  /**
+   * 指标名称旁图标图片路径（本地静态图）。有值时优先于 icon（Emoji）渲染；
+   * 金店品牌 logo 等在此显式指定。
+   */
+  iconImage?: string
   /** 条目更新时间文案（如「09:53 更新」），有值时才在卡片上展示 */
   updatedAt?: string
   /**
@@ -154,6 +160,7 @@ function metricOf(
     hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
+    iconImage: item.iconImage ?? QUOTE_ICON_ASSETS[item.code],
     tags: item.tags,
     updatedAt: item.updatedAt,
   }

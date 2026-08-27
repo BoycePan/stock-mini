@@ -78,8 +78,9 @@
   min-height: 0;
   padding: 0 24rpx;
   position: relative;
+  overflow: hidden;
 }
-.chart-wrap .treemap-chart {
+.chart-scroll {
   width: 100%;
   height: 100%;
 }
