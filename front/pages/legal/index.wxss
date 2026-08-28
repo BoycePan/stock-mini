@@ -8,10 +8,10 @@
 .legal-card {
   margin-top: 20rpx;
   padding: 34rpx 32rpx 38rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 32rpx;
   background: #fff;
-  box-shadow: 0 6rpx 28rpx rgba(64, 86, 116, 0.07);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 /* ============ 标题卡片 ============ */

@@ -24,11 +24,15 @@
   border-radius: 34rpx;
   background: rgba(255, 255, 255, 0.88);
   color: #344257;
-  box-shadow: 0 8rpx 20rpx rgba(62, 83, 111, 0.08);
+  box-shadow: 0 4rpx 14rpx rgba(62, 83, 111, 0.08);
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .back-button-hover {
-  opacity: 0.7;
+  opacity: 0.72;
+  transform: scale(0.95);
 }
 
 .back-arrow {
@@ -40,7 +44,7 @@
 .back-label {
   margin-left: 6rpx;
   font-size: 24rpx;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .brand-mark {
@@ -48,7 +52,7 @@
   height: 68rpx;
   display: block;
   flex-shrink: 0;
-  border-radius: 16rpx;
+  border-radius: 18rpx;
 }
 
 .no-brand .brand-title {
@@ -93,7 +97,10 @@
   border-radius: 32rpx;
   background: rgba(255, 255, 255, 0.88);
   color: #344257;
-  box-shadow: 0 8rpx 20rpx rgba(62, 83, 111, 0.08);
+  box-shadow: 0 4rpx 14rpx rgba(62, 83, 111, 0.08);
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */

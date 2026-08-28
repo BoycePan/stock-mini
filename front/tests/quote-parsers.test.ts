@@ -6,12 +6,15 @@ import {
   isAbnormalPct,
   normalizeEastmoneyQuote,
   parseEastmoneyAveragePrice,
+  parseEastmoneyUlistQuote,
   parseQuoteTime,
+  parseSinaPremarketTime,
   parseSinaQuote,
   parseSinaText,
   parseTencentText,
   priceDivisor,
   quoteTimeToDate,
+  sinaGbPremarketFields,
   sinaGbProxyPct,
   tencentQuoteOf,
   validateQuote,
@@ -53,9 +56,9 @@ function tencentLine(
 test('腾讯：解析 v_<code> 文本并按固定索引取值', () => {
   const text = [
     tencentLine('sh000001', '上证指数', 3421.5, 3400, 0.63, '21.50'),
-    tencentLine('usQQQ', '纳斯达克', 29722.3, 29500, 0.75, '222.30'),
+    tencentLine('usIXIC', '纳斯达克', 29722.3, 29500, 0.75, '222.30'),
   ].join('\n')
-  const map = parseTencentText(text, ['sh000001', 'usQQQ'])
+  const map = parseTencentText(text, ['sh000001', 'usIXIC'])
 
   const quote = tencentQuoteOf('sh000001', map.get('sh000001') ?? [])
   assert.equal(quote.valid, true)
@@ -66,7 +69,7 @@ test('腾讯：解析 v_<code> 文本并按固定索引取值', () => {
   assert.equal(quote.changePercent, 0.63)
   assert.equal(quote.quoteTime, '2026-08-17 15:00:00')
 
-  const us = tencentQuoteOf('usQQQ', map.get('usQQQ') ?? [])
+  const us = tencentQuoteOf('usIXIC', map.get('usIXIC') ?? [])
   assert.equal(us.latestPrice, 29722.3)
   assert.equal(us.valid, true)
 })
@@ -129,14 +132,28 @@ test('新浪 znb_ / int_ 指数：现价 [1]、涨跌额 [2]、涨跌幅 [3]', (
   assert.equal(nikkei.changePercent, 0.75)
 })
 
-test('新浪 DINIW 美元指数：现价 [1]、昨收 [7]（缺失时 [3]）', () => {
-  const fields = ['美元指数', '99.5', 'x', 'x', 'x', 'x', 'x', '99.2']
+test('新浪 DINIW 美元指数：现价 [1]、昨收 [3]（与 fx_ 同布局；[6]=最高、[7]=最低非昨收）', () => {
+  // 实测 2026-08-22 快照：05:10:03, 98.8461, 98.8461, 98.8687, 3514, 98.8733, 98.9129, 98.5615, 98.8461, 美元指数, 2026-08-22
+  // 与东财 100.UDI 对照：最高 [6]=98.9129≈98.91、最低 [7]=98.5615≈98.56、昨收 [3]=98.8687≈98.87
+  const fields = [
+    '05:10:03', // [0] 时间
+    '98.8461', // [1] 现价
+    '98.8461', // [2]
+    '98.8687', // [3] 昨收
+    '3514', // [4] 成交量
+    '98.8733', // [5] 今开
+    '98.9129', // [6] 最高
+    '98.5615', // [7] 最低
+    '98.8461', // [8] 现价
+    '美元指数', // [9] 名称
+    '2026-08-22', // [10] 日期
+  ]
   const quote = parseSinaQuote('DINIW', fields)
-  assert.equal(quote.price, 99.5)
-  assert.equal(quote.previousClose, 99.2)
-
-  const fallback = parseSinaQuote('DINIW', ['美元指数', '99.5', 'x', '99.0'])
-  assert.equal(fallback.previousClose, 99.0)
+  assert.equal(quote.price, 98.8461)
+  assert.equal(quote.previousClose, 98.8687)
+  // 涨跌幅 = (98.8461-98.8687)/98.8687 ≈ -0.023%（东财 100.UDI 同口径 -0.02%，两者一致）
+  assert.ok(Math.abs((quote.changePercent as number) - -0.0229) < 0.001)
+  assert.ok(Math.abs((quote.change as number) - -0.0226) < 0.001)
 })
 
 test('新浪 gb_ 美股（宏观消费方）：现价 [1]、昨收 [2]、涨跌幅 [3]', () => {
@@ -150,6 +167,87 @@ test('新浪 gb_ 美股（宏观消费方）：现价 [1]、昨收 [2]、涨跌�
 test('新浪 gb_ 美股代理（fetchUsProxyChangeMap 消费方）：涨跌幅取 [2]', () => {
   assert.equal(sinaGbProxyPct(['英伟达', '200.5', '1.23', 'x']), 1.23)
   assert.equal(sinaGbProxyPct(['x', 'x', '95.0']), null) // |pct|>=80 丢弃
+})
+
+test('新浪 gb_ 盘前字段（fetchUsProxyPremarketMap 消费方，us-sector-premarket.js 口径）：[21]盘前价 / [22]盘前涨跌幅 / [23]盘前涨跌额 / [24]盘前时间', () => {
+  // 实测 2026-08-26 新浪 gb_nvda 36 字段夹具（字段索引即实测布局）
+  const fields = [
+    '英伟达', // [0] 名称
+    '213.0500', // [1] 现价（上一交易日收盘）
+    '2.19', // [2] 盘中涨跌幅%
+    '2026-08-26 17:29:55', // [3] 行情时间（北京时间）
+    '4.5700', // [4] 涨跌额
+    '211.0250', // [5] 今开
+    '214.7300', // [6] 最高
+    '210.1100', // [7] 最低
+    '236.2900', // [8] 52周最高
+    '163.7900', // [9] 52周最低
+    '122308928', // [10] 成交量
+    '102575805', // [11]
+    '5160956881713', // [12] 总市值
+    '6.57', // [13]
+    '32.430000', // [14]
+    '0.00', // [15]
+    '0.00', // [16]
+    '0.00', // [17]
+    '0.00', // [18]
+    '24224158093', // [19] 流通市值
+    '69', // [20]
+    '213.5300', // [21] 盘前价
+    '0.23', // [22] 盘前涨跌幅%
+    '0.48', // [23] 盘前涨跌额
+    'Aug 26 05:29AM EDT', // [24] 盘前时间
+    'Aug 25 04:00PM EDT', // [25] 上一交易日收盘时间
+    '208.4800', // [26] 昨收
+    '573723', // [27] 盘前成交量
+    '1', // [28]
+    '2026', // [29]
+    '25975156381.4949', // [30]
+    '214.3000', // [31]
+    '213.0500', // [32]
+    '122614306.2317', // [33]
+    '213.8300', // [34]
+    '213.0500', // [35]
+  ]
+  const pre = sinaGbPremarketFields(fields)
+  assert.equal(pre.price, 213.53)
+  assert.equal(pre.pct, 0.23)
+  assert.equal(pre.chg, 0.48)
+  assert.equal(pre.time, 'Aug 26 05:29AM EDT')
+  // 无盘前数据（如空行）→ price/pct null
+  const empty = sinaGbPremarketFields([])
+  assert.equal(empty.price, null)
+  assert.equal(empty.pct, null)
+  assert.equal(empty.time, '')
+})
+
+test('parseSinaPremarketTime：EDT/EST 均识别，isToday 与美东日期比对，垃圾串返回 null', () => {
+  const aug26 = { month: 8, day: 26 }
+  // 夏令时 EDT（参考脚本仅匹配 EDT，此处兼容 EST）
+  assert.deepEqual(parseSinaPremarketTime('Aug 26 05:29AM EDT', aug26), {
+    hour: 5,
+    minute: 29,
+    isToday: true,
+  })
+  // 冬令时 EST
+  assert.deepEqual(parseSinaPremarketTime('Jan 15 08:10AM EST', { month: 1, day: 15 }), {
+    hour: 8,
+    minute: 10,
+    isToday: true,
+  })
+  // 12 小时制下午
+  assert.deepEqual(parseSinaPremarketTime('Aug 26 04:05PM EDT', aug26), {
+    hour: 16,
+    minute: 5,
+    isToday: true,
+  })
+  // 非当天（昨日盘后 / 隔天）→ isToday false
+  assert.equal(parseSinaPremarketTime('Aug 25 04:00PM EDT', aug26)?.isToday, false)
+  assert.equal(parseSinaPremarketTime('Aug 27 04:00AM EDT', aug26)?.isToday, false)
+  // 无法识别 → null
+  assert.equal(parseSinaPremarketTime('', aug26), null)
+  assert.equal(parseSinaPremarketTime('--', aug26), null)
+  assert.equal(parseSinaPremarketTime('Aug 26 05:29', aug26), null)
 })
 
 test('新浪 fx_ 外汇：优先用新浪自带 [10] 涨跌幅 / [11] 涨跌额（实测 fx_ 字段布局）', () => {
@@ -398,6 +496,56 @@ test('东财平均股价：缺 f2 视为无行情返回 null', () => {
   assert.equal(parseEastmoneyAveragePrice('47.800005', null), null)
   assert.equal(parseEastmoneyAveragePrice('47.800005', undefined), null)
   assert.equal(parseEastmoneyAveragePrice('47.800005', { f14: 'A股平均股价', f3: 1.25 }), null)
+})
+
+// ---------------------------------------------------------------------------
+// ④d 东财 ulist 报价（ulist.np/get，分时页「基础信息」取数）
+// ---------------------------------------------------------------------------
+
+test('东财 ulist 报价：今开/最高/最低/昨收/成交量/成交额字段映射', () => {
+  const quote = parseEastmoneyUlistQuote('100.DJIA', {
+    f12: 'DJIA',
+    f13: 100,
+    f14: '道琼斯',
+    f2: 53277.01,
+    f3: 0.98,
+    f5: 424065344,
+    f6: 0.0,
+    f15: 53355.92,
+    f16: 52768.87,
+    f17: 52768.87,
+    f18: 52759.21,
+  })
+  assert.ok(quote)
+  assert.equal(quote.secid, '100.DJIA')
+  assert.equal(quote.code, 'DJIA')
+  assert.equal(quote.market, '100')
+  assert.equal(quote.name, '道琼斯')
+  assert.equal(quote.price, 53277.01)
+  assert.equal(quote.changePercent, 0.98)
+  assert.equal(quote.open, 52768.87, 'f17 今开')
+  assert.equal(quote.high, 53355.92, 'f15 最高')
+  assert.equal(quote.low, 52768.87, 'f16 最低')
+  assert.equal(quote.previousClose, 52759.21, 'f18 昨收')
+  assert.equal(quote.volume, 424065344, 'f5 成交量')
+  assert.equal(quote.amount, 0, 'f6 成交额')
+})
+
+test('东财 ulist 报价：缺 f2 视为无行情返回 null；字符串数字兼容', () => {
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', null), null)
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', undefined), null)
+  assert.equal(parseEastmoneyUlistQuote('100.DJIA', { f14: '道琼斯', f3: 1.25 }), null)
+  // f2/f5 以字符串返回时仍能解析
+  const str = parseEastmoneyUlistQuote('1.000001', {
+    f12: '000001',
+    f13: 1,
+    f14: '上证指数',
+    f2: '3905.20',
+    f5: '446895868',
+  })
+  assert.ok(str)
+  assert.equal(str!.price, 3905.2)
+  assert.equal(str!.volume, 446895868)
 })
 
 // ---------------------------------------------------------------------------

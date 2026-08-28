@@ -27,6 +27,8 @@
     <view wx:elif="{{results.length}}" class="result-list">
       <view
         class="result-row"
+        hover-class="result-row-hover"
+        hover-stay-time="80"
         wx:for="{{results}}"
         wx:key="code"
         data-index="{{index}}"
@@ -48,6 +50,8 @@
         <view class="history-tags">
           <view
             class="history-tag"
+            hover-class="history-tag-hover"
+            hover-stay-time="80"
             wx:for="{{history}}"
             wx:key="*this"
             data-index="{{index}}"

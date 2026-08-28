@@ -10,6 +10,7 @@
     statusTone="{{ statusTone }}"
     updatedLabel="{{ updatedLabel }}"
     sections="{{ sections }}"
+    entrancePath="pages/metals/index"
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
   ></market-page>

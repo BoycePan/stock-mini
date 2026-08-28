@@ -13,8 +13,12 @@
   显示「分时」角标，点击后 `wx.navigateTo` 跳转到 `pages/minute/index?code=<首页code>&name=<展示名>`；
 - 金店金价（`GS-*`）、财经新闻等无分时标的**不显示角标**，点击提示「该指标暂无分时数据」；
 - 分时页：App 头部（返回）+ 免责声明 + **基本信息卡片**（最新价 / 涨跌额 / 涨跌幅，以及今开 / 最高 / 最低 /
-  均价 / 成交量 / 昨收，均由分时数据推算）+ 分时图（新组件 `components/minute-chart`）+ 数据来源标签 +
+  均价 / 成交量 / 昨收）+ 分时图（新组件 `components/minute-chart`）+ 数据来源标签 +
   加载 / 错误 / 空态，支持下拉刷新与深浅主题；
+- **基本信息取数**：今开 / 最高 / 最低 / 昨收 / 成交量并发拉东财 `ulist.np/get` 报价
+  （`secid` 与分时同源，字段 `f17 今开 / f15 最高 / f16 最低 / f18 昨收 / f5 成交量`），
+  缺字段回退分时推算（代理合成 / 交叉汇率 / Yahoo 兜底无单一 secid 时整体回退）；
+  均价不在报价中（f145 实测恒 0），取分时末点均价（trends2 f58）；**成交量统一加「手」单位**；
 - 分时图 canvas：只绘制网格 / 昨收虚线 / 价格线 / 均价线 / 成交量柱 / 时间刻度，
   **不展示「当前价格」「昨收」常驻文字标签**；价格刻度在左侧留白内不遮挡图形；
   点击 / 拖动 canvas 显示同花顺式**十字光标** + 信息框（时间 / 价格 / 涨跌 / 均价 / 成交量）。
@@ -23,7 +27,13 @@
 
 | 源 | URL | 覆盖 | 说明 |
 | --- | --- | --- | --- |
-| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=1&iscr=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.) | **首选源**，覆盖绝大多数卡片；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,…,成交量,成交额,均价`（分钟级） |
+| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14&fields2=f51,f53,f56,f58&ndays=1&iscr=0&iscca=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.) | **首选源**，覆盖绝大多数卡片；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,成交量,均价`（分钟级，现价取 **f53 收盘价**，与真实最新价一致） |
+
+> **为什么只取 f51,f53,f56,f58 四个字段**：全字段版（`fields2=f51..f58`）行结构为
+> `时间,开盘,现价,最高,最低,成交量,成交额,均价`，**现价在 `f[2]`、`f[1]` 是该分钟开盘价**——
+> 若按「现价在 f[1]」解析会把每分钟的开盘价当成现价（开盘价≈上一分钟收盘价，整条曲线滞后 1 分钟，
+> 最新价落后一档；道琼斯实测单分钟开盘/现价可差数百点）。精简版把现价对齐到 `f[1]`，解析无歧义。
+> 成交额（f57）分时侧无消费方，一并省去以减小 8s 自动刷新带宽。
 | 腾讯分时 | `https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=<code>` | A股、港股 | 兜底；`data.<code>.data.data` 每行 `[HHmm,现价,成交量,成交额]`，均价由累计额/累计量推算 |
 | Yahoo 1分钟 | `https://query1.finance.yahoo.com/v8/finance/chart/<symbol>?range=1d&interval=1m` | 东财/腾讯分时均不覆盖的标的：KOSDAQ、VIX | 兜底源（**中国大陆访问被墙，仅作大陆外/兜底**）；`chart.result[0].timestamp` + `indicators.quote[0]`，昨收取 `meta.chartPreviousClose` |
 
@@ -37,7 +47,8 @@
 | `config/minute.ts` **新增** | 首页卡片 code → `{em?, tc?, yahoo?, note?}` 映射表（唯一需要维护的地方）+ `hasMinuteSources` / `resolveMinuteSources` |
 | `api/minute.ts` **新增** | 三个单接口封装（`fetchEastmoneyMinute` / `fetchTencentMinute` / `fetchYahooMinute`），失败降级 null，复用 `api/external.ts` 的 `requestExternal` |
 | `utils/minute-parser.ts` **新增** | 三个源响应的纯解析函数（含均价推算、时间归一 `shortTime`） |
-| `utils/minute.ts` **新增** | `fetchMinuteData(code)` 多源兜底链，返回 `{preClose, points, source, sourceLabel, note}` |
+| `utils/minute.ts` **新增** | `fetchMinuteData(code)` 多源兜底链，返回 `{preClose, points, source, sourceLabel, note}`；`mergeMinuteQuoteInfo` 合并 ulist 报价与分时推算值（基础信息） |
+| `api/quote.ts` **改** | 新增 `fetchEastmoneyUlistQuote(secid)`（ulist.np/get，今开/最高/最低/昨收/成交量，与分时同 secid）；`EM_AVG_PRICE_FIELDS` 更名 `EM_ULIST_FIELDS` 共用 |
 | `components/minute-chart/*` **新增** | 分时图组件（canvas 2d：价格线 + 均价线 + 昨收虚线 + 成交量柱，深浅主题） |
 | `pages/minute/index.*` **新增** | 分时查看页（4 个文件，主题/刷新/加载态齐全） |
 | `types/stock.ts` **改** | 新增 `MinutePoint` / `MinuteResult` 类型 |
@@ -58,7 +69,7 @@
 | --- | --- | --- | --- | --- |
 | 全球·指数 | sh000001 / sz399001 / sz399006 / sh000688 | 1.000001 / 0.399001 / 0.399006 / 1.000688 | sh000001 / sz399001 / sz399006 / sh000688 | — |
 | 全球·指数 | AVG（A股平均股价） | 47.800005（东财官方平均股价指数） | — | — |
-| 全球·指数 | usDJI / usSPY / usQQQ | 100.DJIA / 107.SPY / 105.QQQ | — | — |
+| 全球·指数 | usDJI / usINX / usIXIC | 100.DJIA / 100.SPX / 100.NDX | — | — |
 | 全球·宏观 | BRT / UDI / TLT | 112.B00Y / 100.UDI / 105.TLT | — | — |
 | 全球·宏观 | GC / SI / HG / NG | 101.GC00Y / 101.SI00Y / 101.HG00Y / 102.NG00Y | — | — |
 | 全球·宏观 | SOX | 251.SOX | — | — |
@@ -72,13 +83,13 @@
 | 日韩·个股 | 8035…7974（日8） | 176.8035 … 176.7974 | — | <code>.T（兜底） |
 | 日韩·汇率 | USDKRW / USDJPY | 119.USDKRW / 119.USDJPY | — | KRW=X / JPY=X（兜底） |
 | 日韩·汇率 | CNYKRW / CNYJPY / USDCNY | CNYJPY→133.CNHJPY、USDCNY→133.USDCNH（离岸）；CNYKRW→119.USDKRW ÷ 133.USDCNH（交叉合成） | — | CNYKRW=X / CNYJPY=X / CNY=X（兜底） |
-| 有色·金银 | GOLD / SILVER | 113.aum 沪金主连 / 113.agm 沪银主连 | — | — |
+| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 101.GC00Y COMEX；SILVER | 113.aum / 113.agm | 101.GC00Y（外盘卡） | — |
 | 有色·工业金属 | COPPER / ALUMINUM / ZINC / NICKEL / TIN | 113.cum / 113.alm / 113.znm / 113.nim / 113.snm | — | — |
 | 有色·其他金属 | TUNGSTEN / MOLY / GERMANIUM / INDIUM / ANTIMONY | 1.600549 / 1.603993 / 0.002428 / 1.600961 / 1.601020 | sh600549 / sh603993 / sz002428 / sh600961 / sh601020 | — |
 
 > 说明：
 > - 金属「主连」= 东财 SHFE 连续合约（`<品种>m`），与首页国内价（`nf_*`）同口径，分时含夜盘；钨/钼/锗/铟/锑无现货/期货分时，取对应 A 股上市公司（与首页 tc 兜底同标的）。
-> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**，2026-08-20 起改为主源）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。KOSDAQ/VIX 东财无分时，仍仅 Yahoo。CNYKRW/CNYJPY/USDCNY 也改用东财系主源：USDCNY→133.USDCNH、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
+> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**，2026-08-20 起改为主源）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。KOSDAQ/VIX 东财无分时，仍仅 Yahoo。CNYKRW/CNYJPY/USDCNY 改用东财系主源：USDCNY→133.USDCNH（卡片已同步改为离岸、与分时同 secid，见 tabbar-api.md，无价差）、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
 > - 市场号更正：旧配置 `116.005930`（韩股）/ `151.8035`（日股）在 delay 主机返回 `data:null`，并非「东财不覆盖」，而是**市场号错误**（116=港股、151 非日股）；东财真实市场号为韩股 177、日股 176（`searchapi.eastmoney.com/api/suggest/get` 实测确认）。
 > - TOPIX（东证指数）：东财 / 腾讯 / Yahoo 均无东证指数本身分时（Yahoo `^TPX` 实测为空），用「日本东证指数ETF南方(513800)」（跟踪 TOPIX，同东财/腾讯家族）代理，页面展示说明。
 > - 金店金价（金投网零售价）**无分时**，不做角标、点击提示。
@@ -90,7 +101,9 @@
 
 | 场景 | 卡片展示 | 分时取数（mcode） |
 | --- | --- | --- |
-| 有色页 外盘时段 GOLD/SILVER/COPPER | COMEX 报价（美元/盎司、美元/磅） | `GOLD-US`/`SILVER-US`/`COPPER-US` → 东财 COMEX 分时（`101.GC00Y` 等，与全球页 GC/SI/HG 同一已验证源） |
+| 有色页 黄金·外盘卡（恒展示） | COMEX 黄金（美元/盎司） | `GOLD-US` → 东财 COMEX 分时（`101.GC00Y`，与全球页 GC 同一已验证源） |
+| 有色页 黄金·内盘卡（恒展示） | 沪金主连（元/克） | 既有源 `113.aum`（沪金主连） |
+| 有色页 外盘时段 SILVER/COPPER | COMEX 报价（美元/盎司、美元/磅） | `SILVER-US`/`COPPER-US` → 东财 COMEX 分时（`101.SI00Y`/`101.HG00Y`，与全球页 SI/HG 同一已验证源） |
 | 有色页 国内盘（其余时段） | 沪主连 / A股个股 | 既有源（`113.xm` / `shxxxxxx`） |
 | 有色页 外盘时段 铝/锌/镍/锡/钨 | 外盘报价（`hf_*`） | **无分时源**（`us-ALUMINUM` 等占位），点击给出提示 |
 | 全球页 行业板块 A股时段 | 东财板块涨跌幅 | `90.BKxxxx`（东财板块分时） |

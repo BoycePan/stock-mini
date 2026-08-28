@@ -18,7 +18,7 @@
       src="/static/images/logo.png"
       mode="aspectFit"
     />
-    <text class="brand-title">{{ title }}</text>
+    <text class="brand-title">{{ title || appName }}</text>
   </view>
   <view wx:if="{{ showShare || showSearch }}" class="header-actions">
     <!-- <button wx:if="{{ showSearch }}" class="share-button" bindtap="onSearch">🔍 搜索</button> -->

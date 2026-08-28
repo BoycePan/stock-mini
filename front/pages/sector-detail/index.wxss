@@ -13,10 +13,10 @@
 .panel {
   margin-top: 24rpx;
   padding: 24rpx;
-  border: 1rpx solid #e2eaf3;
+  border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #ffffff;
-  box-shadow: 0 12rpx 28rpx rgba(64, 86, 116, 0.08);
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .panel-title {
@@ -37,6 +37,7 @@
   border-radius: 16rpx;
   color: #344257;
   font-size: 27rpx;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .board-row.selected {
@@ -54,7 +55,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 6rpx;
-  border-bottom: 1rpx solid #f0f4f9;
+  border-bottom: 1rpx solid #edf1f6;
 }
 
 .member-row:last-child {
@@ -94,6 +95,14 @@
   color: #2db653;
 }
 
+.member-quote .flat {
+  color: #8492a5;
+}
+
+.page.theme-dark .member-quote .flat {
+  color: #9cacc0;
+}
+
 .member-note {
   padding-top: 18rpx;
   color: #99a6b7;
@@ -122,8 +131,8 @@
 /* 深色主题 */
 .page.theme-dark .panel {
   border-color: #2a394e;
-  background: #1c2535;
-  box-shadow: none;
+  background: #1a2637;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.18), 0 8rpx 28rpx rgba(0, 0, 0, 0.22);
 }
 
 .page.theme-dark .panel-title {
@@ -135,7 +144,7 @@
 }
 
 .page.theme-dark .board-row.selected {
-  background: #233046;
+  background: #1e3254;
   color: #6fa3ff;
 }
 

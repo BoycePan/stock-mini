@@ -68,5 +68,6 @@
     posterData="{{ posterData }}"
     klines="{{ klines }}"
     chartTitle="K线走势"
+    entrancePath="{{ shareEntrancePath }}"
   ></share-poster>
 </view>

@@ -185,7 +185,7 @@ test('resolveMinuteSession：关键标的分类', () => {
   assert.equal(resolveMinuteSession('TPX'), 'ashare')
   assert.equal(resolveMinuteSession('TUNGSTEN'), 'ashare')
   assert.equal(resolveMinuteSession('usDJI'), 'us')
-  assert.equal(resolveMinuteSession('usSPY'), 'us')
+  assert.equal(resolveMinuteSession('usINX'), 'us')
   assert.equal(resolveMinuteSession('us-BK1134'), 'us')
   assert.equal(resolveMinuteSession('TLT'), 'us')
   assert.equal(resolveMinuteSession('SOX'), 'us')
@@ -218,8 +218,8 @@ test('resolveMinuteSession：MINUTE_SOURCES 全部条目都有合理分类（防
     sh000688: 'ashare',
     AVG: 'ashare',
     usDJI: 'us',
-    usSPY: 'us',
-    usQQQ: 'us',
+    usINX: 'us',
+    usIXIC: 'us',
     // 全球页 · 宏观经济
     BRT: 'continuous',
     VIX: 'continuous',

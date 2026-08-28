@@ -74,7 +74,7 @@ export function resolveMinuteSession(code: string): MinuteSessionKind {
   ) {
     return 'ashare'
   }
-  // 美股/美指/美ETF：usDJI / usSPY / usQQQ / us-BKxxxx / TLT / SOX
+  // 美股/美指/美ETF：usDJI / usINX / usIXIC / us-BKxxxx / TLT / SOX
   if (code.startsWith('us') || code === 'TLT' || code === 'SOX') return 'us'
   if (code === 'KS11' || code === 'KQ11') return 'kr'
   if (code === 'N225') return 'jp-em'

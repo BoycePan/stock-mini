@@ -10,9 +10,13 @@ Page({
   data: {
     theme: rootStore.settings.theme,
     currentOverride: null as EnvOverride | null,
+    /** 实际生效的环境：与「当前接口」展示一致（所有版本无覆盖时默认均为线上） */
+    effectiveEnv: 'local' as 'production' | 'local',
     currentApiBaseUrl: '',
     productionUrl: productionEnv.apiBaseUrl,
     localUrl: developmentEnv.apiBaseUrl,
+    /** 当前构建的默认环境文案：所有版本（含开发 / 体验版）默认均为线上 */
+    defaultEnvLabel: '线上',
   },
 
   onLoad() {
@@ -30,19 +34,19 @@ Page({
 
   refreshState() {
     const override = getEnvOverride()
+    const apiBaseUrl = getEnv().apiBaseUrl
     this.setData({
       currentOverride: override,
-      currentApiBaseUrl: getEnv().apiBaseUrl,
+      currentApiBaseUrl: apiBaseUrl,
+      // 生效环境按实际接口地址推导：无覆盖时 getEnv() 默认返回线上地址
+      effectiveEnv: apiBaseUrl === productionEnv.apiBaseUrl ? 'production' : 'local',
     })
   },
 
   onEnvSelect(event: WechatMiniprogram.BaseEvent) {
     const env = (event.currentTarget as unknown as { dataset: { env: EnvOverride } }).dataset.env
-    const currentOverride = this.data.currentOverride
-    // 已经是当前环境，无需切换
-    if (env === 'production' && (currentOverride === 'production' || currentOverride === null))
-      return
-    if (env === currentOverride) return
+    // 已经是当前生效环境，无需切换
+    if (env === this.data.effectiveEnv) return
 
     const label = env === 'production' ? '线上' : '本地开发'
     wx.showModal({
@@ -60,10 +64,13 @@ Page({
   },
 
   onResetEnv() {
-    if (this.data.currentOverride === null) return
+    if (this.data.currentOverride === null) {
+      wx.showToast({ title: '当前已是默认环境，无需恢复', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '恢复默认',
-      content: '将恢复线上环境并重启小程序，确认？',
+      content: `将清除环境覆盖，恢复「${this.data.defaultEnvLabel}」默认环境并重启小程序，确认？`,
       confirmText: '确认',
       cancelText: '取消',
       success: (res) => {

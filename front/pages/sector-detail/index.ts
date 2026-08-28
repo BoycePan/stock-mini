@@ -2,7 +2,7 @@ import { sectorApi } from '../../api/sector'
 import { rootStore } from '../../stores/root.store'
 import { stockApi } from '../../api/stock'
 import type { KlinePoint, SectorBoard } from '../../types/stock'
-import { formatChange } from '../../utils/formatter'
+import { computeChangeView } from '../../utils/market'
 import {
   APP_NAME,
   formatShareStamp,
@@ -10,6 +10,7 @@ import {
   type PosterTone,
 } from '../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../utils/share'
 
 const MEMBER_QUOTE_LIMIT = 20
@@ -36,13 +37,26 @@ Page({
     memberTotal: 0,
     error: '',
     posterData: null as PosterData | null,
+    /** 分享原图（wx.showShareImageMenu）的小程序入口路径：与卡片分享一致经首页中转（utils/share.ts） */
+    shareEntrancePath: '',
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
+    const code = options.code || ''
+    const cid = Number(options.cid || 0)
+    const name = options.name || '板块详情'
     this.setData({
-      code: options.code || '',
-      cid: Number(options.cid || 0),
-      title: options.name || '板块详情',
+      code,
+      cid,
+      title: name,
+      // 分享原图的小程序入口：与 onShareAppMessage 卡片分享同一路径（经首页中转），
+      // 接收方按 code/cid/name 还原同一板块，避免默认入口落在「当前页且无参数」导致无法加载；
+      // 分享路径统一不带前导斜杠（见 utils/share.ts 的 buildSharePath）
+      shareEntrancePath: buildSharePath('sector-detail', {
+        code,
+        cid: cid ? String(cid) : undefined,
+        name,
+      }),
     })
     await this.loadData()
   },
@@ -84,8 +98,7 @@ Page({
       code: quote.code,
       name: quote.name,
       priceText: String(quote.price),
-      changeText: formatChange(quote.pct_change),
-      changeClass: quote.pct_change >= 0 ? 'up' : 'down',
+      ...computeChangeView(quote.pct_change),
     }))
   },
   async loadKlines(board: SectorBoard) {
@@ -157,6 +170,7 @@ Page({
     wx.navigateTo({ url: `/pages/stock-detail/index?code=${member.code}` })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
       title: this.data.title || '板块详情',
       // 分享统一经首页中转：先进入首页，再自动跳转到本页（见 utils/share.ts）

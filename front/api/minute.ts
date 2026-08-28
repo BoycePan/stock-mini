@@ -24,13 +24,20 @@ const HOSTS = {
 
 // ---------------------------------------------------------------------------
 // 东方财富分时：GET /api/qt/stock/trends2/get（ndays=1 当日分钟线）
-// 出参 data.preClose（昨收）+ data.trends = ["2026-08-19 09:30,现价,...,成交量,成交额,均价", ...]
-// 行字段（fields2=f51..f58）：[0]时间 [1]现价 [5]成交量 [6]成交额 [7]均价
+// 出参 data.preClose（昨收）+ data.trends = ["2026-08-19 09:30,现价,成交量,均价", ...]
+// 期货（SHFE/COMEX 等）另有 data.preSettlement（昨结算，涨跌幅基准），解析为
+// MinuteResult.preSettlement 透传（见 utils/minute.ts mergeMinuteQuoteInfo）。
+// 行字段（fields2=f51,f53,f56,f58）：[0]时间 [1]现价（f53） [2]成交量（f56） [3]均价（f58）
+// 注：只请求 f51,f53,f56,f58 四个字段——全字段版（f51..f58）行结构为
+// [时间,开盘,现价,最高,最低,成交量,成交额,均价]，现价在 f[2] 而非 f[1]；
+// 精简版把现价对齐到 f[1]，避免把「开盘价」误当「现价」取数（道琼斯实测两者单分钟可差数百点）。
 // ---------------------------------------------------------------------------
 
 interface EastmoneyTrendsBody {
   data?: {
     preClose?: number
+    /** 昨结算（期货涨跌幅基准，SHFE/COMEX 等返回；见 utils/minute-parser.ts 解析透传） */
+    preSettlement?: number
     /** 证券名（美股如「英伟达」，供代理股合成标注中文名） */
     name?: string
     trends?: string[]
@@ -43,10 +50,11 @@ export async function fetchEastmoneyMinute(
 ): Promise<MinuteResult | null> {
   const params = [
     `secid=${encodeURIComponent(secid)}`,
-    'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13',
-    'fields2=f51,f52,f53,f54,f55,f56,f57,f58',
+    'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14',
+    'fields2=f51,f53,f56,f58',
     'ndays=1',
     'iscr=0',
+    'iscca=0',
   ].join('&')
   const url = `${HOSTS.emTrends}/api/qt/stock/trends2/get?${params}`
   try {

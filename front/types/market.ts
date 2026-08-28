@@ -32,6 +32,7 @@ export interface MarketSection {
   badge?: string
   /** 有值时标题右侧显示「i」说明图标，点击弹窗展示该提示文案 */
   tip?: string
+  tipTitle?: string
   metrics: MarketMetric[]
   /** 单行布局：无价格条目（如行业板块只有涨跌幅）时，名称与涨跌幅并排一行展示 */
   singleLine?: boolean
@@ -40,9 +41,9 @@ export interface MarketSection {
    * 代替逐卡片内联「分时」标签；仅在该面板内指标支持分时图时置 true。
    */
   minuteCorner?: boolean
-  /** 标题右侧盘面状态文案（如 盘中 / 午休 / 盘前 / 盘后 / 集合竞价 / 休市），仅部分市场板块展示 */
+  /** 标题右侧盘面状态文案（如 盘中 / 午休 / 盘后 / 集合竞价 / 休市），仅部分市场板块展示 */
   marketStatus?: string
-  /** 盘面状态色调：active=盘中 / quiet=盘前盘后午休等 / rest=休市 */
+  /** 盘面状态色调：active=盘中 / quiet=盘后午休集合竞价等 / rest=休市 */
   marketTone?: 'active' | 'quiet' | 'rest'
 }
 

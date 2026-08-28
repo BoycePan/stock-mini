@@ -3,7 +3,9 @@ import { rootStore } from '../../stores/root.store'
 import { addSearchHistory, clearSearchHistory, getSearchHistory } from '../../utils/storage'
 import type { StockInfo } from '../../types/stock'
 import { bindTheme, unbindTheme } from '../../utils/theme'
+import { trackEvent } from '../../utils/tracker'
 import { SHARE_IMAGE_URL } from '../../utils/share'
+import { APP_NAME } from '../../config/app'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -39,6 +41,8 @@ Page({
   },
   onSearch() {
     if (searchTimer) clearTimeout(searchTimer)
+    // 埋点：显式提交搜索（输入防抖的自动搜索不埋，只有用户主动动作才 track）
+    trackEvent('search.submit', this.data.keyword)
     this.doSearch(this.data.keyword, true)
   },
   async doSearch(keyword: string, record = false) {
@@ -66,6 +70,8 @@ Page({
     if (index === undefined) return
     const stock = this.data.results[index]
     if (!stock) return
+    // 埋点：点搜索结果，target = 股票 code
+    trackEvent('search.result_tap', stock.code)
     this.recordHistory(this.data.keyword)
     wx.navigateTo({ url: `/pages/stock-detail/index?code=${stock.code}` })
   },
@@ -78,6 +84,8 @@ Page({
     if (index === undefined) return
     const keyword = this.data.history[index]
     if (!keyword) return
+    // 埋点：点历史记录即一次主动搜索
+    trackEvent('search.submit', keyword)
     this.recordHistory(keyword)
     this.setData({ keyword, searched: false, results: [], error: '' })
     if (searchTimer) clearTimeout(searchTimer)
@@ -88,8 +96,9 @@ Page({
     this.setData({ history: [] })
   },
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
     return {
-      title: '股票搜索 - 市场追踪助手',
+      title: `股票搜索 - ${APP_NAME}`,
       path: '/pages/search/index',
       imageUrl: SHARE_IMAGE_URL,
     }

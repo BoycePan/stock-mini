@@ -1,7 +1,19 @@
 {
   "libVersion": "3.17.1",
   "projectname": "stock-mini",
-  "condition": {},
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "pages/premarket/index",
+          "pathName": "pages/premarket/index",
+          "query": "",
+          "scene": null,
+          "launchMode": "default"
+        }
+      ]
+    }
+  },
   "setting": {
     "urlCheck": false,
     "coverView": false,

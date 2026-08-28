@@ -32,6 +32,14 @@ Component({
     updatedLabel: { type: String, value: '' },
     /** 板块数据列表 */
     sections: { type: Array, value: [] as MarketSection[] },
+    /**
+     * 图片分享的「小程序入口路径」（wx.showShareImageMenu 的 entrancePath，基础库 3.2.0+）：
+     * 接收方在微信中点开分享图片上的「打开小程序」时进入的页面。
+     * 行情页本身无需参数，传当前页路径（如 pages/global/index，分享路径不带前导斜杠）
+     * 保证入口确定，不依赖微信「默认取当前页面路径」的行为（页面不允许分享时可能回落首页）。
+     * 空串时不传 entrancePath（回退微信默认行为）。
+     */
+    entrancePath: { type: String, value: '' },
   },
   data: {
     theme: 'light',
@@ -146,13 +154,18 @@ Component({
       }
       this.setData({ shareModalVisible: false })
       setTimeout(() => {
-        wx.showShareImageMenu({
+        // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面，
+        // 避免依赖微信「默认取当前页面路径」的兜底行为（见属性注释，分享路径不带前导斜杠）。
+        // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
+        const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
           path: this.data.sharePreviewPath,
           fail: () => {
             // 旧版本不支持该接口时引导长按图片分享
             wx.showToast({ title: '请长按图片分享', icon: 'none' })
           },
-        })
+        }
+        if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
+        wx.showShareImageMenu(options)
       }, 150)
     },
   },

@@ -5,8 +5,9 @@
  *   - em    东方财富分时  push2delay.eastmoney.com/api/qt/stock/trends2/get（ndays=1 当日分钟线，覆盖最广）
  *   - tc    腾讯分时     web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股兜底）
  *   - yahoo Yahoo 1分钟   query1.finance.yahoo.com/v8/finance/chart?range=1d&interval=1m
- *                        （东财/腾讯分时均不覆盖的标的：KOSDAQ 等；
- *                          恐慌指数 VIX 仅 Yahoo 有分时且大陆被墙，刻意不配置（见下）；
+ *                        （东财/腾讯分时均不覆盖且无大陆可直连源的标的刻意不配置：
+ *                          KOSDAQ（仅 Yahoo ^KQ11）、TOPIX（无东证指数本身分时）、
+ *                          恐慌指数 VIX（仅 Yahoo ^VIX），卡片不显示「分时」入口；
  *                          韩股/日股/USDKRW/USDJPY 已改由东财 177/176/119 覆盖；
  *                          汇率 CNYKRW/CNYJPY/USDCNY 已改由东财 119/133 或交叉合成覆盖；
  *                          Yahoo 仅作大陆外兜底，大陆访问被墙）
@@ -140,11 +141,12 @@ export const US_PROXY_NAMES: Record<string, string> = {
 /**
  * 首页行情卡片 code → 当日分时数据源。
  * 无条目的卡片（如金店金价 GS-*、财经新闻）不支持分时图。
- * 韩股/日股（东财 177/176）、USDKRW/USDJPY（东财 119）已由东财分时覆盖，
- * Yahoo 1分钟保留兜底；KOSDAQ/CNYKRW/CNYJPY/USDCNY 东财无分时，仍仅配 Yahoo。
- * 恐慌指数 VIX **刻意不配置**：仅 Yahoo 有分时（^VIX），大陆访问 Yahoo 被墙，
- * 且无大陆可直连的真实 VIX 分时源。因此卡片不显示「分时」角标、点击提示暂无数据，
- * 避免大陆用户点进分时页后加载失败（见 utils/market-page-factory.ts onMetricTap）。
+ * 韩股/日股（东财 177/176）、USDKRW/USDJPY（东财 119）、USDCNY/CNYJPY（东财 133 离岸）、
+ * CNYKRW（东财交叉合成）已由东财分时覆盖，Yahoo 1分钟保留兜底。
+ * 恐慌指数 VIX / KOSDAQ / TOPIX **刻意不配置**：VIX 与 KOSDAQ 仅 Yahoo 有分时（^VIX / ^KQ11）
+ * 且大陆被墙、TOPIX 无东证指数本身分时（原 ETF 代理不可用），均无大陆可直连源。
+ * 因此这些卡片不显示「分时」角标、点击提示暂无数据，避免大陆用户点进分时页后加载失败
+ * （见 utils/market-page-factory.ts onMetricTap）。
  */
 export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
@@ -157,8 +159,8 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // A股平均股价：东财官方平均股价指数（市场号 47），与卡片报价同 secid，见 api/market.ts
   AVG: { em: '47.800005' },
   usDJI: { em: '100.DJIA' }, // 道琼斯工业（东财指数）
-  usSPY: { em: '107.SPY' }, // 标普500（SPDR ETF，东财分时 185 点）
-  usQQQ: { em: '105.QQQ' }, // 纳斯达克（Invesco QQQ）
+  usINX: { em: '100.SPX' }, // 标普500（S&P 500 指数，东财分时；与卡片 usINX 同口径）
+  usIXIC: { em: '100.NDX' }, // 纳斯达克（Nasdaq Composite 指数，东财 secid 用 NDX；与卡片 usIXIC 同口径）
 
   // -------------------------------------------------------------------------
   // 全球页 · 宏观经济
@@ -206,15 +208,11 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // 日韩页 · 指数
   // -------------------------------------------------------------------------
   KS11: { em: '100.KS11' }, // KOSPI
-  KQ11: { yahoo: '^KQ11' }, // KOSDAQ：东财无，仅 Yahoo
+  // KOSDAQ / TOPIX **刻意不配置**分时源：
+  // - KOSDAQ：东财/腾讯均无分时，仅 Yahoo ^KQ11 有分时且大陆被墙，无大陆可直连源；
+  // - TOPIX：东财/腾讯/Yahoo 均无东证指数本身分时，原「日本东证指数ETF(513800)」代理不可用。
+  // 两者卡片均不显示「分时」角标、点击提示暂无数据（见 utils/market-page-factory.ts onMetricTap）。
   N225: { em: '100.N225' }, // 日经225
-  // TOPIX：东财/腾讯/Yahoo 均无东证指数本身分时（Yahoo ^TPX 无数据），
-  // 用「日本东证指数ETF南方(513800)」代理（跟踪 TOPIX，同东财/腾讯家族）。
-  TPX: {
-    em: '1.513800',
-    tc: 'sh513800',
-    note: '东证指数暂无直接分时，此图展示跟踪其走势的「日本东证指数ETF(513800)」',
-  },
   VNINDEX: { em: '100.VNINDEX' }, // 越南胡志明
   SENSEX: { em: '100.SENSEX' }, // 孟买SENSEX
 
@@ -242,8 +240,8 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // -------------------------------------------------------------------------
   // 日韩页 · 汇率（东财系为主源，大陆可访问；Yahoo 仅作大陆外兜底）
   // - USDKRW/USDJPY：东财 119 直盘（119.USDKRW / 119.USDJPY，实测覆盖）；
-  // - USDCNY/CNYJPY：东财 119 无此货币对，改用离岸 133.USDCNH / 133.CNHJPY（实测覆盖，
-  //   与卡片在岸价接近、略有价差，note 提示口径）；
+  // - USDCNY：卡片已同步改为离岸（东财 133.USDCNH，见 config/tabbar.ts MACRO_ASSETS），
+  //   分时同源无价差；CNYJPY 卡片仍为在岸口径，改用离岸 133.CNHJPY（实测覆盖，note 提示价差）；
   // - CNYKRW：东财无直盘，按 美元/韩元 ÷ 美元/离岸人民币 交叉合成（口径见 note）。
   // -------------------------------------------------------------------------
   CNYKRW: {
@@ -258,11 +256,7 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   },
   USDKRW: { em: '119.USDKRW', yahoo: 'KRW=X' }, // 美元/韩元
   USDJPY: { em: '119.USDJPY', yahoo: 'JPY=X' }, // 美元/日元
-  USDCNY: {
-    em: '133.USDCNH',
-    yahoo: 'CNY=X',
-    note: '分时取自离岸人民币（USDCNH），与卡片在岸美元/人民币略有价差',
-  },
+  USDCNY: { em: '133.USDCNH', yahoo: 'CNY=X' }, // 美元/离岸人民币（卡片与分时同源东财 133.USDCNH）
 
   // -------------------------------------------------------------------------
   // 有色页 · 金银/工业金属（沪 主连 = 东财 SHFE 连续合约；含夜盘，点较多）

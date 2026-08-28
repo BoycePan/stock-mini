@@ -22,7 +22,7 @@ const index = (code: string, name: string, price: number): QuoteItem => ({
   pct: 1.2,
 })
 
-test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () => {
+test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」且展示阶段化胶囊', () => {
   const page = buildQuoteGlobalPage({
     cnIndices: [index('sh000001', '上证指数', 3421.5)],
     usIndices: [],
@@ -30,20 +30,21 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
     sectors: [sector('BK1134', 'AI算力', 1.5)],
     statusLabel: '全球市场',
     statusTone: 'active',
-    sectorBadge: 'A股时段',
+    sectorPhase: { label: '大A盘中', tone: 'active' },
     sectorTitle: '中国行业板块',
   })
 
   const board = page.sections.find((section) => section.id === 'industry-board')
   assert.ok(board)
   assert.equal(board.title, '中国行业板块')
-  assert.equal(board.badge, 'A股时段')
+  assert.equal(board.marketStatus, '大A盘中', '行业板块应展示阶段化胶囊（A股时段 → 大A盘中）')
+  assert.equal(board.marketTone, 'active')
   assert.equal(board.minuteCorner, true, '行业板块应以面板右上角角标提示分时')
   assert.ok(board.tip && board.tip.length > 0, '行业板块应附带说明文案')
   assert.ok(board.tip.includes('中国行业板块'), '提示应说明中国行业板块的展示时段')
   assert.ok(board.tip.includes('美股行业板块'), '提示应说明美股行业板块的展示时段')
   assert.ok(
-    board.tip.includes('09:30') && board.tip.includes('15:00'),
+    board.tip.includes('09:15') && (board.tip.includes('21:30') || board.tip.includes('22:30')),
     '提示应给出中国/美股展示的切换时间点',
   )
 })
@@ -51,7 +52,7 @@ test('buildQuoteGlobalPage：A股时段标题为「中国行业板块」', () =>
 test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」且透传分时代码', () => {
   const page = buildQuoteGlobalPage({
     cnIndices: [],
-    usIndices: [index('usQQQ', '纳斯达克', 20000)],
+    usIndices: [index('usIXIC', '纳斯达克', 20000)],
     macro: [],
     // 美股时段板块由 api 层标记分时代码（us-BKxxxx → 代理股均值合成分时，见 api/market.ts）
     sectors: [
@@ -62,18 +63,56 @@ test('buildQuoteGlobalPage：美股时段标题切换为「美股行业板块」
     ],
     statusLabel: '全球市场',
     statusTone: 'active',
-    sectorBadge: '美股时段',
+    sectorPhase: { label: '美股盘中', tone: 'active' },
     sectorTitle: '美股行业板块',
   })
 
   const board = page.sections.find((section) => section.id === 'industry-board')
   assert.ok(board)
   assert.equal(board.title, '美股行业板块')
-  assert.equal(board.badge, '美股时段')
+  assert.equal(board.marketStatus, '美股盘中', '行业板块应展示阶段化胶囊（美股时段 → 美股盘中）')
+  assert.equal(board.marketTone, 'active')
   assert.equal(board.minuteCorner, true, '美股时段板块同样支持代理股合成分时，应展示「分时」角标')
   const metric = board.metrics[0]
   assert.ok(metric, '美股时段板块应包含指标')
   assert.equal(metric.minuteCode, 'us-BK1134', '美股时段板块应透传代理股合成分时代码')
+})
+
+test('buildQuoteGlobalPage：美股盘前时段展示盘前参考涨跌幅、无分时角标、点击提示', () => {
+  const page = buildQuoteGlobalPage({
+    cnIndices: [],
+    usIndices: [index('usIXIC', '纳斯达克', 20000)],
+    macro: [],
+    // 盘前板块由 api 层标记无源占位分时代码（us-pre-BKxxxx → hasMinuteSources=false）
+    sectors: [
+      {
+        ...sector('BK1134', 'AI算力', 0.23),
+        minuteCode: 'us-pre-BK1134',
+        minuteUnavailableTip: '盘前仅支持查看参考涨跌幅，暂不支持分时图',
+      },
+    ],
+    statusLabel: '全球市场',
+    statusTone: 'rest',
+    sectorPhase: { label: '美股盘前', tone: 'quiet' },
+    sectorTitle: '美股行业板块',
+    sectorMinuteCorner: false,
+  })
+
+  const board = page.sections.find((section) => section.id === 'industry-board')
+  assert.ok(board)
+  assert.equal(board.title, '美股行业板块')
+  assert.equal(board.marketStatus, '美股盘前', '盘前时段应展示「美股盘前」阶段化胶囊')
+  assert.equal(board.marketTone, 'quiet')
+  assert.equal(board.minuteCorner, false, '盘前仅支持参考涨跌幅，不应展示「分时」角标')
+  const metric = board.metrics[0]
+  assert.ok(metric)
+  assert.equal(metric.minuteCode, 'us-pre-BK1134', '盘前板块应透传无源占位分时代码')
+  assert.equal(
+    metric.minuteUnavailableTip,
+    '盘前仅支持查看参考涨跌幅，暂不支持分时图',
+    '盘前点击卡片应给出不支持分时的提示文案',
+  )
+  assert.ok(board.tip && board.tip.includes('盘前'), 'tip 应说明美股盘前时段的展示口径')
 })
 
 test('buildQuoteGlobalPage：未传 sectorTitle 时默认「中国行业板块」', () => {
@@ -98,7 +137,7 @@ test('buildQuoteGlobalPage：全球指数按市场拆分为「中国指数」「
       index('sz399001', '深证成指', 10850.2),
       { code: 'AVG', name: 'A股平均股价', price: 21.33, pct: 0.5 },
     ],
-    usIndices: [index('usDJI', '道琼斯工业', 44150.6), index('usQQQ', '纳斯达克', 20000)],
+    usIndices: [index('usDJI', '道琼斯工业', 44150.6), index('usIXIC', '纳斯达克', 20000)],
     macro: [],
     sectors: [],
     statusLabel: '全球市场',
@@ -167,7 +206,7 @@ test('buildQuoteGlobalPage：A股指数 / 美股指数 板块附加盘面状态'
   const page = buildQuoteGlobalPage(
     {
       cnIndices: [index('sh000001', '上证指数', 3421.5)],
-      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
       macro: [{ code: 'VIX', name: '恐慌指数', price: 18.5, pct: -2 }],
       sectors: [],
       statusLabel: '全球市场',
@@ -195,7 +234,7 @@ test('buildQuoteGlobalPage：美股盘中时段状态为「盘中」', () => {
   const page = buildQuoteGlobalPage(
     {
       cnIndices: [index('sh000001', '上证指数', 3421.5)],
-      usIndices: [index('usQQQ', '纳斯达克', 20000)],
+      usIndices: [index('usIXIC', '纳斯达克', 20000)],
       macro: [],
       sectors: [],
       statusLabel: '全球市场',
@@ -211,6 +250,55 @@ test('buildQuoteGlobalPage：美股盘中时段状态为「盘中」', () => {
   assert.equal(us.marketStatus, '盘中')
   assert.equal(us.marketTone, 'active')
   assert.equal(cn.marketStatus, '休市')
+})
+
+test('buildQuoteGlobalPage：行业板块按 sectorPhase 展示阶段化胶囊', () => {
+  // A股时段阶段（如大A盘中）
+  const aPage = buildQuoteGlobalPage({
+    cnIndices: [index('sh000001', '上证指数', 3421.5)],
+    usIndices: [index('usIXIC', '纳斯达克', 20000)],
+    macro: [],
+    sectors: [sector('BK1134', 'AI算力', 1.5)],
+    statusLabel: '全球市场',
+    statusTone: 'active',
+    sectorPhase: { label: '大A盘中', tone: 'active' },
+    sectorTitle: '中国行业板块',
+  })
+  const aBoard = aPage.sections.find((section) => section.id === 'industry-board')
+  assert.ok(aBoard)
+  assert.equal(aBoard.marketStatus, '大A盘中')
+  assert.equal(aBoard.marketTone, 'active')
+
+  // 美股时段阶段（如美股盘后）
+  const usPage = buildQuoteGlobalPage({
+    cnIndices: [],
+    usIndices: [index('usIXIC', '纳斯达克', 20000)],
+    macro: [],
+    sectors: [sector('BK1134', 'AI算力', 2.3)],
+    statusLabel: '全球市场',
+    statusTone: 'rest',
+    sectorPhase: { label: '美股盘后', tone: 'quiet' },
+    sectorTitle: '美股行业板块',
+  })
+  const usBoard = usPage.sections.find((section) => section.id === 'industry-board')
+  assert.ok(usBoard)
+  assert.equal(usBoard.marketStatus, '美股盘后')
+  assert.equal(usBoard.marketTone, 'quiet')
+
+  // 未传 sectorPhase：不展示阶段化胶囊（向后兼容）
+  const noPhase = buildQuoteGlobalPage({
+    cnIndices: [],
+    usIndices: [],
+    macro: [],
+    sectors: [sector('BK1134', 'AI算力', 1.5)],
+    statusLabel: '全球市场',
+    statusTone: 'active',
+    sectorTitle: '中国行业板块',
+  })
+  const noPhaseBoard = noPhase.sections.find((section) => section.id === 'industry-board')
+  assert.ok(noPhaseBoard)
+  assert.equal(noPhaseBoard.marketStatus, undefined)
+  assert.equal(noPhaseBoard.badge, undefined, '行业板块不再使用静态「A股时段/美股时段」徽标')
 })
 
 test('buildQuoteAsiaPage：韩国/日本板块附加盘面状态，午休与无午休区分', () => {

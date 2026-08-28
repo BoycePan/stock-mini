@@ -1,24 +1,29 @@
 <view
-  class="section-card {{ section.tone }} {{ first ? 'first' : '' }} {{ compact ? 'compact' : '' }} {{
-    section.minuteCorner ? 'minute-corner' : ''
-  }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
+  class="section-card {{ section.tone }} {{ first ? 'first' : '' }} {{
+    compact ? 'compact' : ''
+  }} {{ section.minuteCorner ? 'minute-corner' : '' }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
 >
   <view wx:if="{{ section.minuteCorner }}" class="minute-corner-badge"><text>分时</text></view>
   <view class="section-title-row">
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
+
     <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
       <view class="market-status-dot"></view>
       <text>{{ section.marketStatus }}</text>
     </view>
+
     <view
       wx:if="{{ section.tip }}"
       class="section-tip"
+      hover-class="section-tip-hover"
+      hover-stay-time="80"
       catchtap="onTipTap"
       aria-role="button"
       aria-label="查看说明"
       ><text>i</text></view
     >
+
     <text wx:if="{{ section.badge }}" class="section-badge">{{ section.badge }}</text>
   </view>
   <view class="metric-grid">
@@ -36,7 +41,9 @@
           >
           <text class="metric-name">{{ item.name }}</text>
           <block wx:for="{{ item.tags }}" wx:for-item="tag" wx:key="*this">
-            <view class="metric-tag"><text>{{ tag }}</text></view>
+            <view class="metric-tag"
+              ><text>{{ tag }}</text></view
+            >
           </block>
           <view
             wx:if="{{ item.minuteAvailable && !section.minuteCorner }}"
@@ -51,11 +58,16 @@
           >
         </view>
         <view wx:if="{{ !section.singleLine }}" class="metric-value-row">
+          <!-- 有值时正常渲染，无值时显示骨架占位条 -->
           <text
             wx:if="{{ item.value }}"
             class="metric-value {{ bumpMap[item.id] ? 'bump' : '' }}"
             >{{ item.value }}</text
           >
+          <view
+            wx:elif="{{ !item.value }}"
+            class="metric-value-skeleton loading-skeleton-inner"
+          ></view>
           <view
             wx:if="{{ !item.hideChange }}"
             class="metric-change {{ item.changeClass }} {{ bumpMap[item.id] ? 'bump' : '' }}"
@@ -70,7 +82,7 @@
 
   <info-dialog
     visible="{{ tipVisible }}"
-    title="{{ section.title || '' }}"
+    title="{{ section.tipTitle || section.title || '' }}"
     content="{{ section.tip || '' }}"
     bind:close="onCloseTip"
   ></info-dialog>

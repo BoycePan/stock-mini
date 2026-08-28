@@ -95,24 +95,9 @@ export function getTheme(): ThemeMode {
   return resolveTheme(getThemePreference())
 }
 
-type ThemeListener = (theme: ThemeMode) => void
-
-const themeListeners = new Set<ThemeListener>()
-
 /**
- * 订阅主题变更：setTheme() 会立即通知所有订阅者（页面 / 自定义组件），
- * 返回取消订阅函数。主题切换必须走 setTheme()，不要直接改 globalData。
- */
-export function onThemeChange(listener: ThemeListener): () => void {
-  themeListeners.add(listener)
-  return () => {
-    themeListeners.delete(listener)
-  }
-}
-
-/**
- * 持久化主题偏好，并把解析后的实际主题写入 globalData / 广播给订阅者。
- * 用户手动选择浅色 / 深色即写入显式偏好，之后不再跟随系统。
+ * 持久化主题偏好，并把解析后的实际主题写入 globalData。
+ * 页面 / 组件的主题同步走 MobX 绑定链路（utils/theme.ts 的 bindTheme），不在此广播。
  */
 export function setTheme(pref: ThemePreference, systemTheme?: ThemeMode): void {
   const resolved = resolveTheme(pref, systemTheme)
@@ -123,8 +108,6 @@ export function setTheme(pref: ThemePreference, systemTheme?: ThemeMode): void {
   if (app) {
     app.globalData.theme = resolved
   }
-  // 广播给所有存活页面 / 组件，保证主题切换即时生效
-  themeListeners.forEach((listener) => listener(resolved))
 }
 
 export function getApiBaseUrl(): string {

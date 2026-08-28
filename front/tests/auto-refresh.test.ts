@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test, { mock } from 'node:test'
 
-import { isPageLoading, startAutoRefresh, stopAutoRefresh } from '../utils/auto-refresh.ts'
+import {
+  isPageLoading,
+  isPageVisible,
+  startAutoRefresh,
+  stopAutoRefresh,
+} from '../utils/auto-refresh.ts'
 
 test('isPageLoading: 优先调用 isLoading，缺省时回退到 data.loading', () => {
   const pageWithFn = {
@@ -85,6 +90,67 @@ test('startAutoRefresh: 同一页面重复调用不叠加轮询定时器（onSho
   assert.equal(tickCount, 1)
   mock.timers.tick(10000)
   assert.equal(tickCount, 2)
+  stopAutoRefresh(page)
+  mock.timers.reset()
+})
+
+test('isPageVisible: 未提供 isCurrentPage 时视为始终可见（既有调用方行为不变）', () => {
+  const page = { loadData: async () => {} }
+  assert.equal(isPageVisible(page), true)
+})
+
+test('isPageVisible: 提供 isCurrentPage 时以其返回值判定页面是否可见', () => {
+  const pageHidden = { isCurrentPage: () => false, loadData: async () => {} }
+  const pageShown = { isCurrentPage: () => true, loadData: async () => {} }
+  assert.equal(isPageVisible(pageHidden), false)
+  assert.equal(isPageVisible(pageShown), true)
+})
+
+test('startAutoRefresh: isCurrentPage 为 false（页面不可见）时不发起 onShow 补刷', () => {
+  let called = false
+  const page = {
+    data: { loading: false },
+    isCurrentPage: () => false,
+    loadData: async () => {
+      called = true
+    },
+  }
+  // 距上次请求已超 10s，但页面不可见（onHide 未触发 / 栈顶已被其他页占用），不应补刷
+  startAutoRefresh(page, Date.now() - 10000)
+  assert.equal(called, false)
+  stopAutoRefresh(page)
+})
+
+test('startAutoRefresh: isCurrentPage 为 false 时轮询 tick 不再发起请求（页面切走的兜底保证）', () => {
+  mock.timers.enable({ apis: ['setInterval'] })
+  let tickCount = 0
+  const page = {
+    data: { loading: false },
+    isCurrentPage: () => false,
+    loadData: async () => {
+      tickCount++
+    },
+  }
+  startAutoRefresh(page, Date.now())
+  mock.timers.tick(20000)
+  assert.equal(tickCount, 0)
+  stopAutoRefresh(page)
+  mock.timers.reset()
+})
+
+test('startAutoRefresh: isCurrentPage 为 true（页面可见）时轮询正常触发', () => {
+  mock.timers.enable({ apis: ['setInterval'] })
+  let tickCount = 0
+  const page = {
+    data: { loading: false },
+    isCurrentPage: () => true,
+    loadData: async () => {
+      tickCount++
+    },
+  }
+  startAutoRefresh(page, Date.now())
+  mock.timers.tick(10000)
+  assert.equal(tickCount, 1)
   stopAutoRefresh(page)
   mock.timers.reset()
 })

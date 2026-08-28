@@ -11,9 +11,12 @@
   align-items: flex-start;
   justify-content: space-around;
   padding-top: 14rpx;
-  border-top: 1rpx solid rgba(219, 227, 237, 0.9);
-  background: rgba(255, 255, 255, 1);
-  box-shadow:0 -4rpx 20rpx  rgba(55, 76, 105, 0.08);
+  border-top: 1rpx solid rgba(210, 220, 232, 0.8);
+  /* 毛玻璃效果：底部内容滚动时 TabBar 有层次感 */
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18rpx);
+  -webkit-backdrop-filter: blur(18rpx);
+  box-shadow: 0 -2rpx 12rpx rgba(40, 60, 95, 0.06), 0 -6rpx 24rpx rgba(40, 60, 95, 0.04);
 }
 
 .safe-bottom {
@@ -27,10 +30,11 @@
   align-items: center;
   gap: 3rpx;
   color: #9aa7b8;
+  transition: color 0.18s ease;
 }
 
 .tab.active {
-  color: #3f7df0;
+  color: #3a72e8;
   font-weight: 600;
 }
 
@@ -44,10 +48,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
+/* 激活态：蓝色渐变背景 */
 .tab.active .tab-icon {
-  background: #e8f1ff;
+  background: linear-gradient(145deg, #ddeaff 0%, #c8dafe 100%);
+  transform: scale(1.06);
 }
 
 .tab-label {
@@ -57,19 +64,22 @@
 
 /* 深色主题（组件样式隔离，必须写在组件自身 wxss 内） */
 .tabbar.dark {
-  border-top-color: rgba(42, 57, 78, 0.9);
-  background: rgba(24, 34, 49, 0.96);
-  box-shadow: 0 -10rpx 30rpx rgba(0, 0, 0, 0.25);
+  border-top-color: rgba(42, 57, 78, 0.7);
+  background: rgba(16, 24, 38, 0.88);
+  backdrop-filter: blur(18rpx);
+  -webkit-backdrop-filter: blur(18rpx);
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.2), 0 -8rpx 28rpx rgba(0, 0, 0, 0.16);
 }
 
 .tabbar.dark .tab {
-  color: #9cacc0;
+  color: #7a8fa8;
 }
 
 .tabbar.dark .tab.active {
-  color: #6eb7ff;
+  color: #6fa3ff;
 }
 
+/* 深色激活态：深蓝渐变背景 */
 .tabbar.dark .tab.active .tab-icon {
-  background: #223248;
+  background: linear-gradient(145deg, #1e3254 0%, #263d63 100%);
 }

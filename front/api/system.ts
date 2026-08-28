@@ -1,5 +1,5 @@
 import type { AppConfig, Notice } from '../types/system'
-import { APP_SOURCE } from '../config/source'
+import { LOGIN_SOURCE } from '../config/app'
 import { request } from './client'
 
 /**
@@ -12,7 +12,7 @@ export const systemApi = {
   configs(cfgType: 'login' | 'display' | 'other' = 'display') {
     return request<AppConfig>({
       path: '/api/v1/configs',
-      query: { source: APP_SOURCE, cfgType },
+      query: { source: LOGIN_SOURCE, cfgType },
       withAuth: true,
       skipLoginWait: true,
     })
@@ -21,7 +21,7 @@ export const systemApi = {
   notices(position?: string) {
     return request<Notice[]>({
       path: '/api/v1/notices',
-      query: { source: APP_SOURCE, position },
+      query: { source: LOGIN_SOURCE, position },
       withAuth: true,
       skipLoginWait: true,
     })

@@ -4,7 +4,7 @@
  * 本模块不发起任何网络请求，只做「文本 / JSON → 结构化数据」，可在 Node 测试中直接复用。
  */
 
-import type { EastmoneyQuote, SinaQuote, TencentQuote } from '../types/quote'
+import type { EastmoneyQuote, EastmoneyUlistQuote, SinaQuote, TencentQuote } from '../types/quote'
 
 // ---------------------------------------------------------------------------
 // 通用工具
@@ -123,10 +123,14 @@ export function parseSinaQuote(key: string, fields: string[]): SinaQuote {
   if (key.startsWith('znb_') || key.startsWith('int_')) {
     return sinaIndex(key, fields)
   }
-  // 美元指数 DINIW：现价 [1]、昨收 [7]（缺失时 [3]）
+  // 美元指数 DINIW：现价 [1]、昨收 [3]（与新浪 fx_ 外汇同布局：今开 [5]、最高 [6]、最低 [7]、
+  // 名称 [9]、日期 [10]；无 fx_ 的 [10] 涨跌幅/[11] 涨跌额，涨跌幅需由 现价-昨收 反推）。
+  // 实测 2026-08-22 快照与东财 100.UDI 对照验证：最高 [6]=98.9129≈东财 98.91、最低 [7]=98.5615≈
+  // 东财 98.56（[7] 是当日最低，不是昨收——早期误把 [7] 当昨收会把涨跌幅虚高到 +0.29%，
+  // 且被 fetchAccurate 共识取中位数混成 +0.13%，与分时页（东财 100.UDI）的 -0.02% 不一致）。
   if (key.toUpperCase() === 'DINIW') {
     const price = numAt(fields, 1)
-    const prev = numAt(fields, 7) !== null ? numAt(fields, 7) : numAt(fields, 3)
+    const prev = numAt(fields, 3)
     return sinaWithPrevCloseValues(key, price, prev)
   }
   // 美股 gb_*（宏观资产消费方，quote.js sina_gb）：现价 [1]、昨收 [2]、涨跌幅 [3]
@@ -216,6 +220,76 @@ export function sinaGbProxyPct(fields: string[]): number | null {
   const pct = toNumber(fields[2])
   if (pct === null || Math.abs(pct) >= 80) return null
   return pct
+}
+
+/**
+ * 新浪 gb_ 美股盘前字段（实测 36 字段布局，见 docs/tabbar-api.md ②）：
+ * [21] 盘前价 / [22] 盘前涨跌幅% / [23] 盘前涨跌额 / [24] 盘前时间（如 "Aug 26 05:29AM EDT"）。
+ * 数据源与取数口径对齐参考脚本 us-sector-premarket.js（新浪 hq.sinajs.cn 实时盘前）。
+ */
+export interface SinaGbPremarket {
+  /** 盘前价 [21] */
+  price: number | null
+  /** 盘前涨跌幅% [22]（板块等权均值消费方） */
+  pct: number | null
+  /** 盘前涨跌额 [23] */
+  chg: number | null
+  /** 盘前时间原始串 [24] */
+  time: string
+}
+
+export function sinaGbPremarketFields(fields: string[]): SinaGbPremarket {
+  return {
+    price: numAt(fields, 21),
+    pct: numAt(fields, 22),
+    chg: numAt(fields, 23),
+    time: fields[24] ?? '',
+  }
+}
+
+const SINA_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
+export interface SinaPremarketTime {
+  hour: number
+  minute: number
+  /** 是否为美东当天（盘前实时性判定，见 utils/quote.ts fetchUsProxyPremarketMap） */
+  isToday: boolean
+}
+
+/**
+ * 解析新浪盘前时间串 "Aug 26 05:29AM EDT" / "Jan 15 08:10AM EST" → 结构化时间。
+ * 与当前美东日期（etNow = { month: 1-12, day }，DST 感知由调用方经 market-clock 换算）比对得 isToday。
+ * 注意：参考脚本 us-sector-premarket.js 仅匹配 EDT（冬令时 EST 会失效），此处兼容 EDT|EST。
+ * 无法识别返回 null（该成分视为无实时盘前数据，剔除出板块均值）。
+ */
+export function parseSinaPremarketTime(
+  time: string,
+  etNow: { month: number; day: number },
+): SinaPremarketTime | null {
+  if (!time) return null
+  const m = time.match(/^(\w{3})\s+(\d{1,2})\s+(\d{1,2}):(\d{2})(AM|PM)\s+(EDT|EST)/i)
+  if (!m) return null
+  const mo = SINA_MONTHS.indexOf(m[1]![0]!.toUpperCase() + m[1]!.slice(1).toLowerCase())
+  if (mo < 0) return null
+  let hour = parseInt(m[3]!, 10)
+  const minute = parseInt(m[4]!, 10)
+  const isPm = m[5]!.toUpperCase() === 'PM'
+  if (isPm && hour < 12) hour += 12
+  if (!isPm && hour === 12) hour = 0
+  return { hour, minute, isToday: mo + 1 === etNow.month && parseInt(m[2]!, 10) === etNow.day }
 }
 
 function lastEightDigitsPct(fields: string[]): number | null {
@@ -462,6 +536,51 @@ export function parseEastmoneyAveragePrice(
     price,
     previousClose: toNumber(raw.f18),
     changePercent: toNumber(raw.f3),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ④d 东财 ulist 报价（ulist.np/get，分时页「基础信息」取数，与分时同 secid）
+// fltt=2 下价格为十进制：f2 最新价 / f3 涨跌幅 / f17 今开 / f15 最高 / f16 最低 /
+// f18 昨收 / f5 成交量 / f6 成交额 / f14 名称 / f12 代码 / f13 市场号。
+// 注：字段清单里的 f145（均价）实测恒为 0，均价仍取分时末点均价（trends2 f58）。
+// ---------------------------------------------------------------------------
+
+export interface EastmoneyUlistQuoteRaw {
+  f12?: string | number
+  f13?: string | number
+  f14?: string
+  f2?: number | string
+  f3?: number | string
+  f5?: number | string
+  f6?: number | string
+  f15?: number | string
+  f16?: number | string
+  f17?: number | string
+  f18?: number | string
+}
+
+/** ulist diff 条目 → 归一化报价；缺 f2（最新价）返回 null */
+export function parseEastmoneyUlistQuote(
+  secid: string,
+  raw: EastmoneyUlistQuoteRaw | null | undefined,
+): EastmoneyUlistQuote | null {
+  if (!raw) return null
+  const price = toNumber(raw.f2)
+  if (price === null) return null
+  return {
+    secid,
+    code: String(raw.f12 ?? ''),
+    market: String(raw.f13 ?? ''),
+    name: typeof raw.f14 === 'string' ? raw.f14 : '',
+    price,
+    changePercent: toNumber(raw.f3),
+    open: toNumber(raw.f17),
+    high: toNumber(raw.f15),
+    low: toNumber(raw.f16),
+    previousClose: toNumber(raw.f18),
+    volume: toNumber(raw.f5),
+    amount: toNumber(raw.f6),
   }
 }
 
