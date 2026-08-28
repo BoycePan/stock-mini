@@ -31,7 +31,7 @@
     {
       "root": "packageTreemap",
       "name": "treemap",
-      "pages": ["pages/treemap/index"]
+      "pages": ["pages/treemap/index", "pages/minute/index"]
     }
   ],
   "preloadRule": {

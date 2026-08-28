@@ -57,6 +57,8 @@ Page({
     sortKey: 'cap' as UsSortKey,
     /** 排序方向：默认总市值降序 */
     sortDir: 'desc' as UsSortDir,
+    /** 排序引导提示：首次点击排序列后隐藏（页面级，每次进入展示） */
+    showSortHint: true,
     updatedLabel: '',
   },
 
@@ -158,6 +160,7 @@ Page({
     this.setData({
       sortKey: key,
       sortDir: nextDir,
+      showSortHint: false,
       items: sortUsStocks(this.data.rawItems, key, nextDir).map(toView),
     })
   },

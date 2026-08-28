@@ -176,8 +176,9 @@ Page({
     const stock = node.raw as BoardStock | undefined
     if (!stock) return
     trackEvent('treemap.stock', stock.code)
+    // 个股详情改为本分包内的当日分时页（不再跳 packageQuote/stock-detail）
     wx.navigateTo({
-      url: `/packageQuote/pages/stock-detail/index?code=${stock.code}`,
+      url: `/packageTreemap/pages/minute/index?code=${stock.code}&name=${encodeURIComponent(stock.name)}`,
       fail: () => {
         wx.showToast({ title: '跳转失败', icon: 'none' })
       },

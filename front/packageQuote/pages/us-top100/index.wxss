@@ -19,19 +19,19 @@
   background: rgba(17, 24, 39, 0.9);
 }
 
+/* 无左右留白：列表全宽展示（内边距由各区块自行控制） */
 .content-scroll {
-  padding: 0 24rpx;
+  padding: 0;
 }
 
-/* 数据延迟免责提示 */
+/* 数据延迟免责提示（全宽提示条） */
 .data-notice {
   display: flex;
   align-items: flex-start;
   gap: 12rpx;
   margin-top: 18rpx;
   padding: 20rpx 24rpx;
-  border: 1rpx solid #f3e6c8;
-  border-radius: 20rpx;
+  border-bottom: 1rpx solid #f3e6c8;
   background: #fffaf0;
 }
 
@@ -57,7 +57,7 @@
 }
 
 .page.theme-dark .data-notice {
-  border-color: #4a4430;
+  border-bottom-color: #4a4430;
   background: #26241a;
 }
 
@@ -70,11 +70,35 @@
   color: #d9c9a3;
 }
 
-/* 更新时间 */
+/* 列表上方信息行：左侧排序引导 + 右侧更新时间 */
+.list-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding: 0 24rpx;
+}
+
+.sort-hint {
+  flex: 1;
+  min-width: 0;
+  color: #718096;
+  font-size: 22rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .list-updated {
-  margin-top: 18rpx;
+  flex-shrink: 0;
+  /* 固定在右侧：引导消失后更新时间位置不变，避免首屏信息行位移 */
+  margin-left: auto;
   color: #99a6b7;
   font-size: 22rpx;
+}
+
+.page.theme-dark .sort-hint {
+  color: #9cacc0;
 }
 
 .page.theme-dark .list-updated {
@@ -85,8 +109,8 @@
 .list-head {
   display: flex;
   align-items: center;
-  margin-top: 22rpx;
-  padding: 0 20rpx 14rpx;
+  margin-top: 12rpx;
+  padding: 0 24rpx 14rpx;
   border-bottom: 1rpx solid #e2eaf3;
 }
 
@@ -108,9 +132,22 @@
   gap: 4rpx;
 }
 
+/* 表头文字字重固定（500），激活仅改颜色，避免点击排序时文字宽度变化导致表头抖动 */
+.list-head .sort-col text {
+  font-weight: 500;
+}
+
+/* 排序图标固定占位宽度：无论激活 / 未激活、方向如何，表头布局恒定不抖 */
+.sort-col .sort-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30rpx;
+  flex-shrink: 0;
+}
+
 .list-head .sort-col.active text {
   color: #4278ed;
-  font-weight: 600;
 }
 
 .sort-hover {
@@ -151,7 +188,7 @@
 .stock-row {
   display: flex;
   align-items: center;
-  padding: 22rpx 20rpx;
+  padding: 22rpx 24rpx;
   border-bottom: 1rpx solid #e2eaf3;
 }
 
@@ -276,19 +313,15 @@
   color: #6fa3ff;
 }
 
-/* 首次加载失败卡：错误提示 + 重试 */
+/* 首次加载失败卡：错误提示 + 重试（全宽） */
 .error-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 18rpx;
   padding: 72rpx 48rpx 64rpx;
-  border: 1rpx solid #d4dfec;
-  border-radius: 28rpx;
+  border-bottom: 1rpx solid #d4dfec;
   background: #fff;
-  box-shadow:
-    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
-    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .error-icon {
@@ -325,7 +358,7 @@
 }
 
 .page.theme-dark .error-card {
-  border-color: #2a394e;
+  border-bottom-color: #2a394e;
   background: #1a2637;
 }
 

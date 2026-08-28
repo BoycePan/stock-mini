@@ -29,7 +29,13 @@
         >
       </view>
 
-      <view class="list-updated" wx:if="{{ updatedLabel }}">{{ updatedLabel }}</view>
+      <!-- 列表上方信息行：左侧排序引导（首次点击排序后消失）+ 右侧更新时间 -->
+      <view class="list-meta">
+        <text wx:if="{{ showSortHint }}" class="sort-hint"
+          >点击「涨跌幅 / 总市值」表头可排序</text
+        >
+        <text wx:if="{{ updatedLabel }}" class="list-updated">{{ updatedLabel }}</text>
+      </view>
 
       <view class="list-head">
         <text class="hd-rank">#</text>
@@ -42,12 +48,13 @@
           hover-class="sort-hover"
         >
           <text>涨跌幅</text>
-          <t-icon
-            wx:if="{{ sortKey === 'pct' }}"
-            name="{{ sortDir === 'desc' ? 'arrow-down' : 'arrow-up' }}"
-            size="26rpx"
-            color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
-          />
+          <view class="sort-icon">
+            <t-icon
+              name="{{ sortKey === 'pct' ? (sortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up') : 'arrow-up-down-1' }}"
+              size="{{ sortKey === 'pct' ? 26 : 24 }}rpx"
+              color="{{ sortKey === 'pct' ? (theme === 'dark' ? '#6fa3ff' : '#4278ed') : (theme === 'dark' ? '#9cacc0' : '#99a6b7') }}"
+            />
+          </view>
         </view>
         <view
           class="hd-cap sort-col {{ sortKey === 'cap' ? 'active' : '' }}"
@@ -56,12 +63,13 @@
           hover-class="sort-hover"
         >
           <text>总市值</text>
-          <t-icon
-            wx:if="{{ sortKey === 'cap' }}"
-            name="{{ sortDir === 'desc' ? 'arrow-down' : 'arrow-up' }}"
-            size="26rpx"
-            color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
-          />
+          <view class="sort-icon">
+            <t-icon
+              name="{{ sortKey === 'cap' ? (sortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up') : 'arrow-up-down-1' }}"
+              size="{{ sortKey === 'cap' ? 26 : 24 }}rpx"
+              color="{{ sortKey === 'cap' ? (theme === 'dark' ? '#6fa3ff' : '#4278ed') : (theme === 'dark' ? '#9cacc0' : '#99a6b7') }}"
+            />
+          </view>
         </view>
       </view>
 
