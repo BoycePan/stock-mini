@@ -5,7 +5,8 @@
  * - 点击个股 → 跳转现有 stock-detail 页；板块层点击也可返回行业层
  * - 顶栏指数：上证/深证/创业板/科创50/恒指（东财 ulist 一次请求）
  * - 交易时段每 8 秒轮询刷新当前层（与 52etf 同步率），结构不重建
- * - 画布高度按节点数自适应：内容超出可视区时页面可滚动（scroll-view）
+ * - 内容高度按节点数自适应（chartHeight）：画布为视口大小，超出部分通过
+ *   「双指捏合缩放 + 单指拖动平移」（treemap-chart 内实现，带惯性）查看
  * - 双主题兼容（bindTheme）
  */
 
@@ -46,7 +47,7 @@ interface TreemapPageData {
   currentBoard: IndustryBoard | null
   summary: { up: number; flat: number; down: number; amountText: string }
   updatedText: string
-  /** 画布高度（CSS px，供可滚动布局使用） */
+  /** 内容高度（CSS px，树图布局区高度，超出视口由图表缩放/拖动查看） */
   chartHeight: number
   /** 图表可视区高度（CSS px，onReady 测量） */
   chartViewportH: number
@@ -259,10 +260,10 @@ Page({
   },
 
   // -------------------------------------------------------------------------
-  // 画布高度（内容超出可视区时滚动）
+  // 内容高度（节点多时超出视口，由 treemap-chart 缩放/拖动查看）
   // -------------------------------------------------------------------------
 
-  /** 测量图表可视区高度，用于「内容少时填满、内容多时滚动」 */
+  /** 测量图表可视区高度，用于「内容少时填满、内容多时给出超屏内容高度」 */
   measureChartArea() {
     wx.createSelectorQuery()
       .select('.chart-wrap')
@@ -276,9 +277,10 @@ Page({
   },
 
   /**
-   * 根据节点数计算画布高度（CSS px）：
-   * 内容少时用可视区高度填满正屏；内容多时按「节点数 / 每行格子数 × 格子边长」给出超屏高度，
-   * 使 scroll-view 能滚动到全部内容，且块不会挤成细条。
+   * 计算内容高度（CSS px）：
+   * 节点少时用可视区高度填满正屏；节点多时按「节点数 / 每行格子数 × 格子边长」给出
+   * 超屏内容高度，树图布局区高 = max(可视区高, rows×MIN_CELL)，超出视口的部分
+   * 由 treemap-chart 的缩放/拖动查看（无需页面滚动），块不会挤成细条。
    */
   chartHeightFor(nodeCount: number): number {
     const info = wx.getWindowInfo()

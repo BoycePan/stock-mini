@@ -1,8 +1,20 @@
-<view class="treemap-chart {{ theme === 'dark' ? 'theme-dark' : '' }}" style="height: {{ height > 0 ? height + 'px' : '100%' }};">
+<view class="treemap-chart {{ theme === 'dark' ? 'theme-dark' : '' }}">
   <canvas
     type="2d"
     id="treemap-canvas"
     class="treemap-canvas"
-    bindtap="onTap"
+    catchtouchstart="onTouchStart"
+    catchtouchmove="onTouchMove"
+    catchtouchend="onTouchEnd"
+    catchtouchcancel="onTouchCancel"
   ></canvas>
+  <!-- 缩放指示：放大后显示当前倍率，点击恢复 1x 回到顶部 -->
+  <view
+    wx:if="{{ zoomLabel }}"
+    class="zoom-pill"
+    hover-class="zoom-pill-hover"
+    catchtap="onResetZoom"
+  >
+    <text>{{ zoomLabel }}</text>
+  </view>
 </view>

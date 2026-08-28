@@ -235,8 +235,28 @@ def parse_quote_icons() -> list[dict]:
 # 渲染 / 下载
 # ---------------------------------------------------------------------------
 
+def center_emoji_glyph(img: Image.Image, threshold: int = 3) -> Image.Image:
+    """Twemoji 部分字形按基线绘制（如 🚗 汽车、💵 钞票、🎮 手柄），
+    在 72×72 画布内偏下，小图标容器中会显得下沉。将字形 bbox 居中
+    （偏移超过 threshold 像素才移动，避免细微抖动）。"""
+    img = img.convert('RGBA')
+    w, h = img.size
+    bbox = img.getbbox()
+    if bbox is None:
+        return img
+    x0, y0, x1, y1 = bbox
+    dx = round((w - (x1 - x0)) / 2 - x0)
+    dy = round((h - (y1 - y0)) / 2 - y0)
+    if abs(dx) <= threshold and abs(dy) <= threshold:
+        return img
+    canvas = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    canvas.paste(img, (dx, dy), img)
+    return canvas
+
+
 def download_twemoji(name: str, out_path: Path) -> dict:
-    """下载 Twemoji PNG（72px 正方形原图，体积小无需放大）。缺失码点用替代表。"""
+    """下载 Twemoji PNG（72px 正方形原图，体积小无需放大），字形重新居中后保存。
+    缺失码点用替代表。"""
     substitutes = {'2713': ['2713', '2713-fe0f', '2714']}  # ✓ → 加粗对勾
     candidates = substitutes.get(name, [name, f'{name}-fe0f'])
     data, used = None, None
@@ -250,7 +270,7 @@ def download_twemoji(name: str, out_path: Path) -> dict:
     if data is None:
         raise RuntimeError(f'Twemoji 无此字形（尝试过: {", ".join(candidates)}）')
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_bytes(data)   # 原图已是 72×72 正方形、体积小，直接保存
+    save_png_small(center_emoji_glyph(Image.open(io.BytesIO(data))), out_path)
     return {'used_source': used}
 
 

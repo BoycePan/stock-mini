@@ -80,6 +80,7 @@
   position: relative;
   overflow: hidden;
 }
+/* 图表容器：画布即视口，内容缩放/平移由 treemap-chart 内部处理 */
 .chart-scroll {
   width: 100%;
   height: 100%;
