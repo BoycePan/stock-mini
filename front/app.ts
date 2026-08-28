@@ -1,10 +1,10 @@
 import { rootStore } from './stores/root.store'
 import { getTheme } from './utils/storage'
 import { syncWindowBackground } from './utils/theme'
-import { setLoginWaiter } from './utils/request'
+import { setReadyWaiter } from './utils/request'
 
-// 所有业务接口发送前都会先等待登录完成（登录接口自身跳过）
-setLoginWaiter(() => rootStore.auth.ensureLogin().then(() => undefined))
+// 所有业务接口发送前都会等待「登录 + 系统配置」就绪（登录 / 系统配置接口自身跳过）
+setReadyWaiter(() => rootStore.bootstrap())
 
 App({
   globalData: {
@@ -30,11 +30,9 @@ App({
         }
       })
     }
-    // 每次打开小程序自动登录
-    rootStore.auth.ensureLogin().then((ok) => {
-      if (!ok) {
-        console.warn('[auth] 自动登录失败:', rootStore.auth.error || '未知错误')
-      }
+    // 每次打开小程序自动完成「登录 + 系统配置」就绪
+    rootStore.bootstrap().catch((error) => {
+      console.warn('[bootstrap] 登录/系统配置就绪失败:', error)
     })
   },
 })

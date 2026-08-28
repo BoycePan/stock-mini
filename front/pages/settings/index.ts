@@ -1,4 +1,5 @@
 import { rootStore } from '../../stores/root.store'
+import type { Notice } from '../../types/system'
 import type { User } from '../../types/user'
 import type { ThemePreference } from '../../utils/storage'
 import {
@@ -22,6 +23,7 @@ Page({
     version: '',
     isDev: !isReleaseBuild(),
     envOverride: null as EnvOverride | null,
+    notices: [] as Notice[],
   },
   onLoad() {
     bindTheme(this)
@@ -34,6 +36,7 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
+    this.syncNotices()
     // 从 env-switch 页返回后刷新 pill 状态
     if (this.data.isDev) {
       this.setData({ envOverride: getEnvOverride() })
@@ -68,6 +71,21 @@ Page({
   },
   onEnvSwitchTap() {
     wx.navigateTo({ url: '/pages/env-switch/index' })
+  },
+  /** 同步设置页公告（系统配置下发，position=settings；未就绪时等待全局门闩完成） */
+  async syncNotices() {
+    try {
+      await rootStore.bootstrap()
+      this.setData({ notices: rootStore.system.settingsNotices })
+    } catch {
+      // 就绪失败时保持空公告，不阻塞设置页
+    }
+  },
+  onNoticeTap(event: WechatMiniprogram.BaseEvent) {
+    const link = (event.currentTarget as unknown as { dataset: { link?: string } }).dataset.link
+    if (!link || !link.startsWith('/')) return
+    // 仅支持站内路径跳转；外链需 web-view 页 + 业务域名，不在本期范围
+    wx.navigateTo({ url: link })
   },
   onUnload() {
     releaseStoreBindings(this)

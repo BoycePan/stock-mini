@@ -1,4 +1,5 @@
 import type { LoginResult, User } from '../types/user'
+import { APP_SOURCE } from '../config/source'
 import { request } from './client'
 
 export const authApi = {
@@ -6,7 +7,7 @@ export const authApi = {
     return request<LoginResult>({
       path: '/api/v1/auth/login',
       method: 'POST',
-      data: { code },
+      data: { code, source: APP_SOURCE },
       skipLoginWait: true,
     })
   },

@@ -8,19 +8,19 @@ export interface RequestOptions {
   data?: Record<string, unknown> | string
   query?: Record<string, string | number | boolean | undefined>
   withAuth?: boolean
-  /** 跳过登录门闩：仅登录接口自身使用（避免死锁）；业务接口一律等待登录完成 */
+  /** 跳过就绪门闩：仅登录 / 系统配置接口使用（它们在门闩内部执行，避免死锁） */
   skipLoginWait?: boolean
 }
 
-type LoginWaiter = () => Promise<void>
-let loginWaiter: LoginWaiter | null = null
+type ReadyWaiter = () => Promise<void>
+let readyWaiter: ReadyWaiter | null = null
 
 /**
- * 注册「登录门闩」：除登录接口外的所有请求发送前都会先 await 它，
- * 保证打开小程序先登录、接口都在登录完成后执行。
+ * 注册「全局就绪门闩」：除登录接口与系统配置接口（它们在门闩内部执行）外，
+ * 所有业务请求发送前都会先 await 它，保证「登录 + 系统配置」就绪后才放行。
  */
-export function setLoginWaiter(waiter: LoginWaiter | null): void {
-  loginWaiter = waiter
+export function setReadyWaiter(waiter: ReadyWaiter | null): void {
+  readyWaiter = waiter
 }
 
 function buildQuery(query?: RequestOptions['query']): string {
@@ -38,9 +38,9 @@ export async function request<T>({
   withAuth = false,
   skipLoginWait = false,
 }: RequestOptions): Promise<T> {
-  // 除登录接口外的所有请求，都等登录完成后才发送
-  if (!skipLoginWait && loginWaiter) {
-    await loginWaiter()
+  // 除登录接口与系统配置接口（门闩内部执行）外，所有业务请求都等全局就绪后发送
+  if (!skipLoginWait && readyWaiter) {
+    await readyWaiter()
   }
   const env = getEnv()
   const url = `${env.apiBaseUrl}${path}${buildQuery(query)}`
