@@ -1,0 +1,1261 @@
+{
+  "generated_at": "2026-08-27T12:32:30",
+  "sources": {
+    "twemoji_base": "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/{name}.png",
+    "wiki_file": "https://commons.wikimedia.org/wiki/Special:FilePath/{name}?width=512",
+    "brand": {
+      "周大福": [
+        "https://www.ctf.com.cn/template/zh-cn/images/logo.png"
+      ],
+      "老凤祥": [
+        "https://www.laofengxiang.com/images/logo.png"
+      ],
+      "周六福": [
+        "https://www.zlf.cn/public/profile/img/2026/01/05/LOGO%EF%BC%88168%C3%9780px%29_20260105005445A028.png",
+        "https://www.zlf.cn/_nuxt/logo.fff90187.png"
+      ],
+      "周生生": [
+        "http://cdn.chowsangsang.com/eshop/hk/newweb/Logo.jpg"
+      ],
+      "六福珠宝": [
+        "https://www.lukfook.com/static/favicon/android-icon-192x192.png?v=20210104",
+        "https://www.lukfook.com/assets/static/images/common/logo.svg"
+      ],
+      "老庙": [
+        "https://www.laomiao.com.cn/images/logo.png?v=1.0.21"
+      ],
+      "中国黄金": [
+        "https://www.chinagoldgroup.com/zghj/lib/home/picture/logo.jpg"
+      ],
+      "周大生": [
+        "https://www.chowtaiseng.com/uploads/head_logo_1637756080.png"
+      ],
+      "明牌珠宝": [
+        "https://www.mingpai.cn/upload/images/2025-05-20/TD77wGq1CI2vLD7pEzEeRQznjmhTcFJyjfb19znP.png"
+      ],
+      "菜百": [],
+      "潮宏基": [],
+      "金至尊": [],
+      "梦金园": [],
+      "亚一金店": [],
+      "水贝黄金": []
+    },
+    "company": {
+      "005930": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Samsung_Logo.svg?width=512",
+        "https://resources.samsung.com/etc.clientlibs/samsung/clientlibs/consumer/global/clientlib-common/resources/images/Favicon.png"
+      ],
+      "000660": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/SK_Hynix.svg?width=512",
+        "https://www.google.com/s2/favicons?domain=skhynix.com&sz=256"
+      ],
+      "373220": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/LG_Energy_Solution_logo_EN.svg?width=512",
+        "https://www.lgensol.com/inc/images/img/img_footer_logo.svg"
+      ],
+      "066570": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/LG_logo_(2015).svg?width=512",
+        "https://media.us.lg.com/m/4f3e261da34f4910/original/lg_logo.svg"
+      ],
+      "035420": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Naver_Logotype.svg?width=512",
+        "https://www.google.com/s2/favicons?domain=naver.com&sz=256"
+      ],
+      "005380": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Hyundai_Motor_Company_logo.svg?width=512",
+        "https://www.hyundai.com/etc/designs/hyundai/ww/en/images/common/logo.png"
+      ],
+      "068270": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Celltrion_logo.png?width=512",
+        "https://www.google.com/s2/favicons?domain=celltrion.com&sz=256"
+      ],
+      "051910": [
+        "https://www.lgchem.com/asset/images/en/default/logo_en.png",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/LG_Chem_logo.svg?width=512"
+      ],
+      "8035": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Tokyo_Electron_logo.svg?width=512",
+        "https://www.tel.com/irta3a00000001ah-img/irta3a00000001an.svg"
+      ],
+      "6954": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Fanuc_logo.svg?width=512",
+        "https://www.fanuc.co.jp/favicon.ico"
+      ],
+      "6861": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Keyence.svg?width=512",
+        "https://www.keyence.com/img/core/logo_header_01.svg"
+      ],
+      "7203": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Toyota_logo.svg?width=512",
+        "https://global.toyota/favicon.ico"
+      ],
+      "6758": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Sony_logo.svg?width=512",
+        "https://www.sony.jp/header-footer/assets/img/GlobalHeader/logo.svg"
+      ],
+      "4063": [
+        "https://www.shinetsu.co.jp/wp-content/themes/shinetsu-renewal/images/common/logo.png",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Shin-Etsu_Chemical_logo.svg?width=512"
+      ],
+      "6981": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Murata_Manufacturing_logo.svg?width=512",
+        "https://www.murata.com/-/media/siterenewal/business/commons/icons/logo.ashx?la=en-us&cvid=20220419093335000000"
+      ],
+      "7974": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo.svg?width=512",
+        "https://www.google.com/s2/favicons?domain=nintendo.co.jp&sz=256"
+      ]
+    }
+  },
+  "icons": [
+    {
+      "category": "emoji",
+      "key": "1f1e8-1f1f3",
+      "emoji": "🇨🇳",
+      "codes": [
+        "sh000001",
+        "sz399001",
+        "sz399006",
+        "sh000688"
+      ],
+      "files": {
+        "png": "emoji/1f1e8-1f1f3.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1e8-1f1f3"
+    },
+    {
+      "category": "emoji",
+      "key": "1f9ee",
+      "emoji": "🧮",
+      "codes": [
+        "AVG"
+      ],
+      "files": {
+        "png": "emoji/1f9ee.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f9ee"
+    },
+    {
+      "category": "emoji",
+      "key": "1f1fa-1f1f8",
+      "emoji": "🇺🇸",
+      "codes": [
+        "usDJI",
+        "usINX",
+        "usIXIC"
+      ],
+      "files": {
+        "png": "emoji/1f1fa-1f1f8.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1fa-1f1f8"
+    },
+    {
+      "category": "emoji",
+      "key": "1f6e2",
+      "emoji": "🛢️",
+      "codes": [
+        "BRT",
+        "BK0464"
+      ],
+      "files": {
+        "png": "emoji/1f6e2.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f6e2"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4c9",
+      "emoji": "📉",
+      "codes": [
+        "VIX"
+      ],
+      "files": {
+        "png": "emoji/1f4c9.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4c9"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4b5",
+      "emoji": "💵",
+      "codes": [
+        "UDI"
+      ],
+      "files": {
+        "png": "emoji/1f4b5.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4b5"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4ca",
+      "emoji": "📊",
+      "codes": [
+        "TLT"
+      ],
+      "files": {
+        "png": "emoji/1f4ca.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4ca"
+    },
+    {
+      "category": "emoji",
+      "key": "1f947",
+      "emoji": "🥇",
+      "codes": [
+        "GC",
+        "BK0547",
+        "GOLD"
+      ],
+      "files": {
+        "png": "emoji/1f947.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f947"
+    },
+    {
+      "category": "emoji",
+      "key": "1f948",
+      "emoji": "🥈",
+      "codes": [
+        "SI",
+        "SILVER"
+      ],
+      "files": {
+        "png": "emoji/1f948.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f948"
+    },
+    {
+      "category": "emoji",
+      "key": "2699",
+      "emoji": "⚙️",
+      "codes": [
+        "HG",
+        "ZINC"
+      ],
+      "files": {
+        "png": "emoji/2699.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/2699"
+    },
+    {
+      "category": "emoji",
+      "key": "1f525",
+      "emoji": "🔥",
+      "codes": [
+        "NG"
+      ],
+      "files": {
+        "png": "emoji/1f525.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f525"
+    },
+    {
+      "category": "emoji",
+      "key": "1f52c",
+      "emoji": "🔬",
+      "codes": [
+        "SOX",
+        "BK0917",
+        "000660",
+        "8035"
+      ],
+      "files": {
+        "png": "emoji/1f52c.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f52c"
+    },
+    {
+      "category": "emoji",
+      "key": "1f9e0",
+      "emoji": "🧠",
+      "codes": [
+        "BK1134"
+      ],
+      "files": {
+        "png": "emoji/1f9e0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f9e0"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4a1",
+      "emoji": "💡",
+      "codes": [
+        "BK1128"
+      ],
+      "files": {
+        "png": "emoji/1f4a1.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4a1"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4be",
+      "emoji": "💾",
+      "codes": [
+        "BK1137",
+        "005930"
+      ],
+      "files": {
+        "png": "emoji/1f4be.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4be"
+    },
+    {
+      "category": "emoji",
+      "key": "1f5c4",
+      "emoji": "🗄️",
+      "codes": [
+        "BK0922"
+      ],
+      "files": {
+        "png": "emoji/1f5c4.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f5c4"
+    },
+    {
+      "category": "emoji",
+      "key": "2601",
+      "emoji": "☁️",
+      "codes": [
+        "BK0579"
+      ],
+      "files": {
+        "png": "emoji/2601.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/2601"
+    },
+    {
+      "category": "emoji",
+      "key": "1f680",
+      "emoji": "🚀",
+      "codes": [
+        "BK0963"
+      ],
+      "files": {
+        "png": "emoji/1f680.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f680"
+    },
+    {
+      "category": "emoji",
+      "key": "1f6f0",
+      "emoji": "🛰️",
+      "codes": [
+        "BK0921"
+      ],
+      "files": {
+        "png": "emoji/1f6f0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f6f0"
+    },
+    {
+      "category": "emoji",
+      "key": "1f916",
+      "emoji": "🤖",
+      "codes": [
+        "BK1090"
+      ],
+      "files": {
+        "png": "emoji/1f916.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f916"
+    },
+    {
+      "category": "emoji",
+      "key": "1f697",
+      "emoji": "🚗",
+      "codes": [
+        "BK0802",
+        "005380",
+        "7203"
+      ],
+      "files": {
+        "png": "emoji/1f697.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f697"
+    },
+    {
+      "category": "emoji",
+      "key": "2622",
+      "emoji": "☢️",
+      "codes": [
+        "BK0577"
+      ],
+      "files": {
+        "png": "emoji/2622.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/2622"
+    },
+    {
+      "category": "emoji",
+      "key": "26a1",
+      "emoji": "⚡",
+      "codes": [
+        "BK1647"
+      ],
+      "files": {
+        "png": "emoji/26a1.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/26a1"
+    },
+    {
+      "category": "emoji",
+      "key": "1f6e1",
+      "emoji": "🛡️",
+      "codes": [
+        "BK0490"
+      ],
+      "files": {
+        "png": "emoji/1f6e1.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f6e1"
+    },
+    {
+      "category": "emoji",
+      "key": "1f331",
+      "emoji": "🌱",
+      "codes": [
+        "BK0493"
+      ],
+      "files": {
+        "png": "emoji/1f331.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f331"
+    },
+    {
+      "category": "emoji",
+      "key": "2600",
+      "emoji": "☀️",
+      "codes": [
+        "BK0588"
+      ],
+      "files": {
+        "png": "emoji/2600.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/2600"
+    },
+    {
+      "category": "emoji",
+      "key": "1f50b",
+      "emoji": "🔋",
+      "codes": [
+        "BK0574",
+        "373220"
+      ],
+      "files": {
+        "png": "emoji/1f50b.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f50b"
+    },
+    {
+      "category": "emoji",
+      "key": "26fd",
+      "emoji": "⛽",
+      "codes": [
+        "BK0843"
+      ],
+      "files": {
+        "png": "emoji/26fd.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/26fd"
+    },
+    {
+      "category": "emoji",
+      "key": "1f9f2",
+      "emoji": "🧲",
+      "codes": [
+        "BK0478"
+      ],
+      "files": {
+        "png": "emoji/1f9f2.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f9f2"
+    },
+    {
+      "category": "emoji",
+      "key": "1f3e6",
+      "emoji": "🏦",
+      "codes": [
+        "BK0475"
+      ],
+      "files": {
+        "png": "emoji/1f3e6.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f3e6"
+    },
+    {
+      "category": "emoji",
+      "key": "1f48a",
+      "emoji": "💊",
+      "codes": [
+        "BK1216",
+        "068270"
+      ],
+      "files": {
+        "png": "emoji/1f48a.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f48a"
+    },
+    {
+      "category": "emoji",
+      "key": "1f6d2",
+      "emoji": "🛒",
+      "codes": [
+        "BK0438"
+      ],
+      "files": {
+        "png": "emoji/1f6d2.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f6d2"
+    },
+    {
+      "category": "emoji",
+      "key": "1f9ea",
+      "emoji": "🧪",
+      "codes": [
+        "BK1016",
+        "051910",
+        "ANTIMONY"
+      ],
+      "files": {
+        "png": "emoji/1f9ea.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f9ea"
+    },
+    {
+      "category": "emoji",
+      "key": "1f1f0-1f1f7",
+      "emoji": "🇰🇷",
+      "codes": [
+        "KS11",
+        "KQ11"
+      ],
+      "files": {
+        "png": "emoji/1f1f0-1f1f7.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1f0-1f1f7"
+    },
+    {
+      "category": "emoji",
+      "key": "1f1ef-1f1f5",
+      "emoji": "🇯🇵",
+      "codes": [
+        "N225",
+        "TPX"
+      ],
+      "files": {
+        "png": "emoji/1f1ef-1f1f5.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1ef-1f1f5"
+    },
+    {
+      "category": "emoji",
+      "key": "1f1fb-1f1f3",
+      "emoji": "🇻🇳",
+      "codes": [
+        "VNINDEX"
+      ],
+      "files": {
+        "png": "emoji/1f1fb-1f1f3.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1fb-1f1f3"
+    },
+    {
+      "category": "emoji",
+      "key": "1f1ee-1f1f3",
+      "emoji": "🇮🇳",
+      "codes": [
+        "SENSEX"
+      ],
+      "files": {
+        "png": "emoji/1f1ee-1f1f3.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f1ee-1f1f3"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4f1",
+      "emoji": "📱",
+      "codes": [
+        "066570",
+        "6758"
+      ],
+      "files": {
+        "png": "emoji/1f4f1.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4f1"
+    },
+    {
+      "category": "emoji",
+      "key": "1f310",
+      "emoji": "🌐",
+      "codes": [
+        "035420"
+      ],
+      "files": {
+        "png": "emoji/1f310.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f310"
+    },
+    {
+      "category": "emoji",
+      "key": "1f3ed",
+      "emoji": "🏭",
+      "codes": [
+        "6954"
+      ],
+      "files": {
+        "png": "emoji/1f3ed.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f3ed"
+    },
+    {
+      "category": "emoji",
+      "key": "1f527",
+      "emoji": "🔧",
+      "codes": [
+        "6861",
+        "COPPER"
+      ],
+      "files": {
+        "png": "emoji/1f527.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f527"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4a0",
+      "emoji": "💠",
+      "codes": [
+        "4063"
+      ],
+      "files": {
+        "png": "emoji/1f4a0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4a0"
+    },
+    {
+      "category": "emoji",
+      "key": "1f50c",
+      "emoji": "🔌",
+      "codes": [
+        "6981"
+      ],
+      "files": {
+        "png": "emoji/1f50c.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f50c"
+    },
+    {
+      "category": "emoji",
+      "key": "1f3ae",
+      "emoji": "🎮",
+      "codes": [
+        "7974"
+      ],
+      "files": {
+        "png": "emoji/1f3ae.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f3ae"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4b1",
+      "emoji": "💱",
+      "codes": [
+        "CNYKRW",
+        "CNYJPY",
+        "USDKRW",
+        "USDJPY",
+        "USDCNY"
+      ],
+      "files": {
+        "png": "emoji/1f4b1.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4b1"
+    },
+    {
+      "category": "emoji",
+      "key": "1fa99",
+      "emoji": "🪙",
+      "codes": [
+        "ALUMINUM"
+      ],
+      "files": {
+        "png": "emoji/1fa99.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1fa99"
+    },
+    {
+      "category": "emoji",
+      "key": "1f6e0",
+      "emoji": "🛠️",
+      "codes": [
+        "NICKEL"
+      ],
+      "files": {
+        "png": "emoji/1f6e0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f6e0"
+    },
+    {
+      "category": "emoji",
+      "key": "1f9f0",
+      "emoji": "🧰",
+      "codes": [
+        "TIN"
+      ],
+      "files": {
+        "png": "emoji/1f9f0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f9f0"
+    },
+    {
+      "category": "emoji",
+      "key": "1f529",
+      "emoji": "🔩",
+      "codes": [
+        "TUNGSTEN"
+      ],
+      "files": {
+        "png": "emoji/1f529.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f529"
+    },
+    {
+      "category": "emoji",
+      "key": "2692",
+      "emoji": "⚒️",
+      "codes": [
+        "MOLY"
+      ],
+      "files": {
+        "png": "emoji/2692.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/2692"
+    },
+    {
+      "category": "emoji",
+      "key": "1f48e",
+      "emoji": "💎",
+      "codes": [
+        "GERMANIUM"
+      ],
+      "files": {
+        "png": "emoji/1f48e.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f48e"
+    },
+    {
+      "category": "emoji",
+      "key": "1f4c0",
+      "emoji": "📀",
+      "codes": [
+        "INDIUM"
+      ],
+      "files": {
+        "png": "emoji/1f4c0.png"
+      },
+      "status": "ok",
+      "source": "Twemoji/1f4c0"
+    },
+    {
+      "category": "metal",
+      "key": "gold-bar",
+      "emoji": "🥇",
+      "codes": [
+        "GOLD",
+        "GC",
+        "BK0547"
+      ],
+      "files": {
+        "png": "metal/gold-bar.png"
+      },
+      "status": "generated",
+      "note": "脚本生成金条/银条直观图"
+    },
+    {
+      "category": "metal",
+      "key": "silver-bar",
+      "emoji": "🥈",
+      "codes": [
+        "SILVER",
+        "SI"
+      ],
+      "files": {
+        "png": "metal/silver-bar.png"
+      },
+      "status": "generated",
+      "note": "脚本生成金条/银条直观图"
+    },
+    {
+      "category": "brand",
+      "key": "周大福",
+      "files": {
+        "png": "brand/周大福.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.ctf.com.cn/template/zh-cn/images/logo.png"
+    },
+    {
+      "category": "brand",
+      "key": "老凤祥",
+      "files": {
+        "png": "brand/老凤祥.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.laofengxiang.com/images/logo.png"
+    },
+    {
+      "category": "brand",
+      "key": "周六福",
+      "files": {
+        "png": "brand/周六福.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.zlf.cn/public/profile/img/2026/01/05/LOGO%EF%BC%88168%C3%9780px%29_20260105005445A028.png"
+    },
+    {
+      "category": "brand",
+      "key": "周生生",
+      "files": {
+        "png": "brand/周生生.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "http://cdn.chowsangsang.com/eshop/hk/newweb/Logo.jpg"
+    },
+    {
+      "category": "brand",
+      "key": "六福珠宝",
+      "files": {
+        "png": "brand/六福珠宝.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.lukfook.com/static/favicon/android-icon-192x192.png?v=20210104"
+    },
+    {
+      "category": "brand",
+      "key": "老庙",
+      "files": {
+        "png": "brand/老庙.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.laomiao.com.cn/images/logo.png?v=1.0.21"
+    },
+    {
+      "category": "brand",
+      "key": "中国黄金",
+      "files": {
+        "png": "brand/中国黄金.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.chinagoldgroup.com/zghj/lib/home/picture/logo.jpg"
+    },
+    {
+      "category": "brand",
+      "key": "周大生",
+      "files": {
+        "png": "brand/周大生.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.chowtaiseng.com/uploads/head_logo_1637756080.png"
+    },
+    {
+      "category": "brand",
+      "key": "明牌珠宝",
+      "files": {
+        "png": "brand/明牌珠宝.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.mingpai.cn/upload/images/2025-05-20/TD77wGq1CI2vLD7pEzEeRQznjmhTcFJyjfb19znP.png"
+    },
+    {
+      "category": "brand",
+      "key": "菜百",
+      "files": {
+        "png": "brand/菜百.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "brand",
+      "key": "潮宏基",
+      "files": {
+        "png": "brand/潮宏基.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "brand",
+      "key": "金至尊",
+      "files": {
+        "png": "brand/金至尊.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "brand",
+      "key": "梦金园",
+      "files": {
+        "png": "brand/梦金园.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "brand",
+      "key": "亚一金店",
+      "files": {
+        "png": "brand/亚一金店.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "brand",
+      "key": "水贝黄金",
+      "files": {
+        "png": "brand/水贝黄金.png"
+      },
+      "status": "placeholder",
+      "note": "无可用 logo 源，生成占位图",
+      "source": "placeholder"
+    },
+    {
+      "category": "company",
+      "key": "005930",
+      "name": "三星电子",
+      "files": {
+        "png": "company/三星电子.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Samsung_Logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "000660",
+      "name": "SK海力士",
+      "files": {
+        "png": "company/SK海力士.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/SK_Hynix.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "373220",
+      "name": "LG新能源",
+      "files": {
+        "png": "company/LG新能源.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/LG_Energy_Solution_logo_EN.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "066570",
+      "name": "LG电子",
+      "files": {
+        "png": "company/LG电子.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/LG_logo_(2015).svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "035420",
+      "name": "NAVER",
+      "files": {
+        "png": "company/NAVER.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Naver_Logotype.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "005380",
+      "name": "现代汽车",
+      "files": {
+        "png": "company/现代汽车.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Hyundai_Motor_Company_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "068270",
+      "name": "赛尔群",
+      "files": {
+        "png": "company/赛尔群.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Celltrion_logo.png?width=512"
+    },
+    {
+      "category": "company",
+      "key": "051910",
+      "name": "LG化学",
+      "files": {
+        "png": "company/LG化学.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.lgchem.com/asset/images/en/default/logo_en.png"
+    },
+    {
+      "category": "company",
+      "key": "8035",
+      "name": "东京电子",
+      "files": {
+        "png": "company/东京电子.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Tokyo_Electron_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "6954",
+      "name": "发那科",
+      "files": {
+        "png": "company/发那科.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Fanuc_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "6861",
+      "name": "基恩士",
+      "files": {
+        "png": "company/基恩士.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Keyence.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "7203",
+      "name": "丰田汽车",
+      "files": {
+        "png": "company/丰田汽车.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Toyota_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "6758",
+      "name": "索尼",
+      "files": {
+        "png": "company/索尼.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Sony_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "4063",
+      "name": "信越化学",
+      "files": {
+        "png": "company/信越化学.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://www.shinetsu.co.jp/wp-content/themes/shinetsu-renewal/images/common/logo.png"
+    },
+    {
+      "category": "company",
+      "key": "6981",
+      "name": "村田制作所",
+      "files": {
+        "png": "company/村田制作所.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Murata_Manufacturing_logo.svg?width=512"
+    },
+    {
+      "category": "company",
+      "key": "7974",
+      "name": "任天堂",
+      "files": {
+        "png": "company/任天堂.png"
+      },
+      "status": "ok",
+      "note": "官网 logo",
+      "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo.svg?width=512"
+    }
+  ],
+  "code_map": {
+    "sh000001": "emoji/1f1e8-1f1f3.png",
+    "sz399001": "emoji/1f1e8-1f1f3.png",
+    "sz399006": "emoji/1f1e8-1f1f3.png",
+    "sh000688": "emoji/1f1e8-1f1f3.png",
+    "AVG": "emoji/1f9ee.png",
+    "usDJI": "emoji/1f1fa-1f1f8.png",
+    "usINX": "emoji/1f1fa-1f1f8.png",
+    "usIXIC": "emoji/1f1fa-1f1f8.png",
+    "BRT": "emoji/1f6e2.png",
+    "BK0464": "emoji/1f6e2.png",
+    "VIX": "emoji/1f4c9.png",
+    "UDI": "emoji/1f4b5.png",
+    "TLT": "emoji/1f4ca.png",
+    "GC": "metal/gold-bar.png",
+    "BK0547": "metal/gold-bar.png",
+    "GOLD": "metal/gold-bar.png",
+    "SI": "metal/silver-bar.png",
+    "SILVER": "metal/silver-bar.png",
+    "HG": "emoji/2699.png",
+    "ZINC": "emoji/2699.png",
+    "NG": "emoji/1f525.png",
+    "SOX": "emoji/1f52c.png",
+    "BK0917": "emoji/1f52c.png",
+    "000660": "company/SK海力士.png",
+    "8035": "company/东京电子.png",
+    "BK1134": "emoji/1f9e0.png",
+    "BK1128": "emoji/1f4a1.png",
+    "BK1137": "emoji/1f4be.png",
+    "005930": "company/三星电子.png",
+    "BK0922": "emoji/1f5c4.png",
+    "BK0579": "emoji/2601.png",
+    "BK0963": "emoji/1f680.png",
+    "BK0921": "emoji/1f6f0.png",
+    "BK1090": "emoji/1f916.png",
+    "BK0802": "emoji/1f697.png",
+    "005380": "company/现代汽车.png",
+    "7203": "company/丰田汽车.png",
+    "BK0577": "emoji/2622.png",
+    "BK1647": "emoji/26a1.png",
+    "BK0490": "emoji/1f6e1.png",
+    "BK0493": "emoji/1f331.png",
+    "BK0588": "emoji/2600.png",
+    "BK0574": "emoji/1f50b.png",
+    "373220": "company/LG新能源.png",
+    "BK0843": "emoji/26fd.png",
+    "BK0478": "emoji/1f9f2.png",
+    "BK0475": "emoji/1f3e6.png",
+    "BK1216": "emoji/1f48a.png",
+    "068270": "company/赛尔群.png",
+    "BK0438": "emoji/1f6d2.png",
+    "BK1016": "emoji/1f9ea.png",
+    "051910": "company/LG化学.png",
+    "ANTIMONY": "emoji/1f9ea.png",
+    "KS11": "emoji/1f1f0-1f1f7.png",
+    "KQ11": "emoji/1f1f0-1f1f7.png",
+    "N225": "emoji/1f1ef-1f1f5.png",
+    "TPX": "emoji/1f1ef-1f1f5.png",
+    "VNINDEX": "emoji/1f1fb-1f1f3.png",
+    "SENSEX": "emoji/1f1ee-1f1f3.png",
+    "066570": "company/LG电子.png",
+    "6758": "company/索尼.png",
+    "035420": "company/NAVER.png",
+    "6954": "company/发那科.png",
+    "6861": "company/基恩士.png",
+    "COPPER": "emoji/1f527.png",
+    "4063": "company/信越化学.png",
+    "6981": "company/村田制作所.png",
+    "7974": "company/任天堂.png",
+    "CNYKRW": "emoji/1f4b1.png",
+    "CNYJPY": "emoji/1f4b1.png",
+    "USDKRW": "emoji/1f4b1.png",
+    "USDJPY": "emoji/1f4b1.png",
+    "USDCNY": "emoji/1f4b1.png",
+    "ALUMINUM": "emoji/1fa99.png",
+    "NICKEL": "emoji/1f6e0.png",
+    "TIN": "emoji/1f9f0.png",
+    "TUNGSTEN": "emoji/1f529.png",
+    "MOLY": "emoji/2692.png",
+    "GERMANIUM": "emoji/1f48e.png",
+    "INDIUM": "emoji/1f4c0.png"
+  },
+  "summary": {
+    "total": 85,
+    "ok": 77,
+    "generated": 2,
+    "placeholder": 6,
+    "failed": 0
+  },
+  "failed": []
+}

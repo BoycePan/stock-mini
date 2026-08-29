@@ -253,10 +253,10 @@ function targetFromQuery(path: string, query?: Record<string, string>): string {
   if (typeof code !== 'string' || !code) return ''
   // 精确匹配目标页：news-detail 的 query 是 title/url/id，无 code，不在此列
   const isTargetedPage =
-    path.startsWith('pages/stock-detail') ||
-    path.startsWith('pages/sector-detail') ||
-    path.startsWith('pages/minute') ||
-    path === 'pages/news/index'
+    path.startsWith('packageQuote/pages/stock-detail') ||
+    path.startsWith('packageQuote/pages/sector-detail') ||
+    path.startsWith('packageQuote/pages/minute') ||
+    path === 'packageNews/pages/news/index'
   return isTargetedPage ? clip(code, TRACKING_CONFIG.maxStringLen) : ''
 }
 

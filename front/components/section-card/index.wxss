@@ -158,6 +158,65 @@
   gap: 12rpx;
 }
 
+/* 特殊入口卡（如 美股指数区「市值TOP100」）：整行浅色入口行，比普通卡片突出但保持克制 */
+.featured-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  min-height: 120rpx;
+  padding: 22rpx 26rpx;
+  border-radius: 24rpx;
+
+  border: 1rpx solid #e2f0ff;
+  background: #ebf1f9;
+  /* 亮色主题：底色略深于白色外卡以分层（呼应页面背景 #eef3f8），
+     极淡蓝边收边 + 贴近背景色的淡阴影，区分但不突兀 */
+  box-shadow:
+    0 2rpx 6rpx rgba(30, 60, 110, 0.04),
+    0 8rpx 20rpx rgba(30, 60, 110, 0.05);
+}
+
+.featured-hover {
+  background: #eaf2ff;
+}
+
+.featured-icon {
+  flex-shrink: 0;
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.featured-icon-img {
+  display: block;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 6rpx;
+}
+
+.featured-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.featured-title {
+  color: #152338;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.featured-desc {
+  margin-top: 6rpx;
+  color: #718096;
+  font-size: 22rpx;
+}
+
+.featured-arrow {
+  flex-shrink: 0;
+}
+
 .metric-card {
   position: relative;
   min-height: 140rpx;
@@ -192,6 +251,20 @@
   margin-right: 12rpx;
   border-radius: 14rpx;
   background: rgba(66, 120, 237, 0.1);
+}
+
+/* 图标图片（本地静态图，如品牌/公司 logo、金条银条、Twemoji PNG）：
+   图片撑满整个图标容器（不留内边距），圆角由容器 overflow 裁剪 */
+.metric-icon-chip-img {
+  overflow: hidden;
+  background: transparent;
+  border-radius: 8rpx;
+}
+
+.metric-icon-img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .metric-icon {
@@ -436,6 +509,29 @@
 
 .section-card.theme-dark .metric-icon-chip {
   background: rgba(111, 163, 255, 0.16);
+}
+
+/* 图片撑满的图标容器：深色下同样去掉底色，图片即容器 */
+.section-card.theme-dark .metric-icon-chip-img {
+  background: transparent;
+}
+
+.section-card.theme-dark .featured-card {
+  border-color: #2f4260;
+  background: #1f3148;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.section-card.theme-dark .featured-hover {
+  background: #22314a;
+}
+
+.section-card.theme-dark .featured-title {
+  color: #f5f7fb;
+}
+
+.section-card.theme-dark .featured-desc {
+  color: #9cacc0;
 }
 
 .section-card.theme-dark .metric-card {

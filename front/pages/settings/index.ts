@@ -67,13 +67,13 @@ Page({
   onServiceTap(event: WechatMiniprogram.BaseEvent) {
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
     if (!key) return
-    wx.navigateTo({ url: `/pages/legal/index?type=${key}` })
+    wx.navigateTo({ url: `/packageAbout/pages/legal/index?type=${key}` })
   },
   onFeedbackTap() {
-    wx.navigateTo({ url: '/pages/custom/index' })
+    wx.navigateTo({ url: '/packageAbout/pages/custom/index' })
   },
   onEnvSwitchTap() {
-    wx.navigateTo({ url: '/pages/env-switch/index' })
+    wx.navigateTo({ url: '/packageAbout/pages/env-switch/index' })
   },
   onUnload() {
     releaseStoreBindings(this)

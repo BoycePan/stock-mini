@@ -208,22 +208,22 @@ test('wx.onAppRoute：路由切换自动 page.view / page.hide，详情页 targe
   installWx({ onAppRoute: (l) => (listener = l) })
   initTracker()
 
-  listener({ path: 'pages/stock-detail/index', query: { code: '600519' } })
-  listener({ path: 'pages/minute/index', query: { code: 'GOLD' } })
+  listener({ path: 'packageQuote/pages/stock-detail/index', query: { code: '600519' } })
+  listener({ path: 'packageQuote/pages/minute/index', query: { code: 'GOLD' } })
   await flush()
   const events = captured[0]!.data.events
   assert.equal(events.length, 3)
   // 第一跳 page.view（个股详情 target=code）
   assert.equal(events[0]!.eventName, 'page.view')
-  assert.equal(events[0]!.page, 'pages/stock-detail/index')
+  assert.equal(events[0]!.page, 'packageQuote/pages/stock-detail/index')
   assert.equal(events[0]!.target, '600519')
   assert.equal(events[0]!.eventType, 'page_view')
   // 第二跳：先补上一页 page.hide（durationMs），再 page.view（分时 target=code）
   assert.equal(events[1]!.eventName, 'page.hide')
-  assert.equal(events[1]!.page, 'pages/stock-detail/index')
+  assert.equal(events[1]!.page, 'packageQuote/pages/stock-detail/index')
   assert.ok((events[1]!.durationMs as number) >= 0)
   assert.equal(events[2]!.eventName, 'page.view')
-  assert.equal(events[2]!.page, 'pages/minute/index')
+  assert.equal(events[2]!.page, 'packageQuote/pages/minute/index')
   assert.equal(events[2]!.target, 'GOLD')
 })
 
@@ -257,14 +257,14 @@ test('onAppHide：结算当前页停留（page.hide + durationMs）并上报', a
   let listener: (res: AppRouteEvent) => void = () => {}
   installWx({ onAppRoute: (l) => (listener = l) })
   initTracker()
-  listener({ path: 'pages/news/index' })
+  listener({ path: 'packageNews/pages/news/index' })
   onAppHide()
   await flush()
   const events = captured[0]!.data.events
   assert.equal(events.length, 2)
   assert.equal(events[0]!.eventName, 'page.view')
   assert.equal(events[1]!.eventName, 'page.hide')
-  assert.equal(events[1]!.page, 'pages/news/index')
+  assert.equal(events[1]!.page, 'packageNews/pages/news/index')
   assert.ok((events[1]!.durationMs as number) >= 0)
 })
 
@@ -360,7 +360,7 @@ test('trackEvent：news.view 查看新闻详情，props 带 id + 标题（标题
   assert.equal(events.length, 2)
   assert.equal(events[0]!.eventName, 'news.detail.view')
   assert.equal(events[0]!.eventType, 'page_view')
-  assert.equal(events[0]!.page, 'pages/news-detail/index')
+  assert.equal(events[0]!.page, 'packageNews/pages/news-detail/index')
   assert.deepEqual(events[0]!.props, { id: '77415', title: '美联储纪要：降息预期升温' })
   // 空标题兜底文案，id 缺失时 props 不带 id
   assert.deepEqual(events[1]!.props, { title: '未知新闻' })

@@ -25,6 +25,7 @@ import {
   pickGoldShopItem,
 } from '../config/gold-shop'
 import { PHYSICAL_GOLD_CATALOG, type PhysicalGoldItemConfig } from '../config/physical-gold'
+import { GOLD_SHOP_ICON_ASSETS } from '../config/icon-assets'
 import { fetchGoldShopQuotes, fetchPhysicalGoldQuotes } from './gold-shop'
 import { newsApi } from './news'
 import {
@@ -118,6 +119,20 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   // 全球指数按市场归属拆分展示：A股指数（A股四大指数）+ 美股指数（三大指数）
   const cnIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'cn').map(indexItem)
   const usIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'us').map(indexItem)
+  // 美股指数区末尾的入口卡：点击进入「美股市值TOP100」列表（纯前端直连东财 clist/get，
+  // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）
+  usIndices.push({
+    code: 'us-top100',
+    name: '美股市值TOP100',
+    price: null,
+    pct: null,
+    valueText: '查看',
+    hideChange: true,
+    hideFromPoster: true,
+    featured: true,
+    featuredDesc: '美股三大市场 · 市值前100个股',
+    iconImage: '/static/icons/emoji/1f1fa-1f1f8.png', // 美国国旗（Twemoji，与美指卡同款）
+  })
   // A股平均股价插在A股指数末尾（属于 A 股口径，不放入美股指数）；
   // 分时源与卡片报价同 secid（47.800005，东财官方平均股价指数，见 config/minute.ts AVG）
   const avgPrice = await resolveAShareAveragePrice(indexQuotes)
@@ -660,6 +675,8 @@ async function fetchGoldShopGroup(): Promise<QuoteGroup | null> {
         price: chosen.price,
         pct: chosen.pct,
         icon: '🏬',
+        // 品牌 logo（icons/brand/<品牌名>.png；官网不可达的品牌为占位图）
+        iconImage: GOLD_SHOP_ICON_ASSETS[shop],
         tags: [goldShopItemLabel(config?.item ?? chosen.item)],
         // 上游每条报价带 time（epoch ms），展示为「HH:mm 更新」（跨天补日期）
         updatedAt: formatItemUpdatedAt(chosen.time),
