@@ -215,8 +215,81 @@
 
 .name-col {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 14rpx;
   min-width: 0;
+}
+
+.name-texts {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 公司 logo 底片（圆角方形）：白图固定深色底 / 深图固定浅色底 / 其余随主题 */
+.stock-logo-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 14rpx;
+  background: #ffffff;
+  border: 1rpx solid #e2eaf3;
+  overflow: hidden;
+}
+
+.stock-logo {
+  display: block;
+  width: 48rpx;
+  height: 48rpx;
+}
+
+/* logo 加载失败兜底：公司名首字（浅色底用强调蓝） */
+.logo-fallback {
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: #4278ed;
+}
+
+/* 深色系 logo（如 C/GS/INTC/NFLX/SPCX）：固定浅色底，两种主题一致 */
+.stock-logo-chip.chip-light {
+  background: #ffffff;
+  border-color: #dce5f0;
+}
+
+/* 白色系 logo（如 AAPL/IBM/V/UNH）：固定深色底，两种主题一致 */
+.stock-logo-chip.chip-dark {
+  background: #152338;
+  border-color: #2a394e;
+}
+
+.stock-logo-chip.chip-dark .logo-fallback {
+  color: #6fa3ff;
+}
+
+/* 深色主题：auto 底片随主题变暗（固定浅/深底片的特例不受影响） */
+.page.theme-dark .stock-logo-chip {
+  background: #223248;
+  border-color: #2a394e;
+}
+
+.page.theme-dark .stock-logo-chip.chip-light {
+  background: #ffffff;
+  border-color: #dce5f0;
+}
+
+.page.theme-dark .stock-logo-chip.chip-dark {
+  background: #152338;
+  border-color: #34465e;
+}
+
+.page.theme-dark .logo-fallback {
+  color: #6fa3ff;
 }
 
 .stock-name {

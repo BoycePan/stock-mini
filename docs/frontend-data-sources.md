@@ -307,3 +307,24 @@ DX-Y.NYB: 99.529   ^KS11: 6258.77   ^N225: 65606.71   005930.KS: 231000 KRW
 ```
 quotebridge_v4_line_bk_885552_01_last({"start":"20140513",...,"name":"小金属概念",...})
 ```
+
+---
+
+## 7. 美股公司 logo（美股市值TOP100 列表，2026-08-29 新增）
+
+- **用途**：`packageQuote/pages/us-top100/index` 列表行展示公司 logo。
+- **主源：Financial Modeling Prep 公开图片 CDN**（免费、无需 API Key）：
+  `GET https://financialmodelingprep.com/image-stock/{SYMBOL}.png`（透明底 PNG，100-250px，1-11KB）
+- **实测结果（2026-08-29，100 个代码逐条验证）**：✅ 98/100 直接命中；仅 `BRK_A`/`BRK_B`
+  与 FMP 图片符号不一致，别名映射 `BRK_A→BRK.A`、`BRK_B→BRK-B` 后 100/100 覆盖。
+- **实现位置**：`front/utils/us-stocks.ts`（`usLogoUrl` / `usLogoChipTone`）；列表行加载失败时
+  兜底显示公司名首字，不影响整表。
+- **⚠️ 上线注意**：
+  1. 小程序后台需将 `financialmodelingprep.com` 加入「downloadFile 合法域名」，否则线上 `<image>`
+     无法加载（开发工具勾选「不校验合法域名」可临时绕过）。
+  2. logo 图片本身有黑白两系（如 AAPL 为白图、INTC 为深图），已按当前图片逐张核验并分档
+     （白图→深色底片、深图→浅色底片），若上游换图需复核 `US_WHITE_LOGO_CODES` /
+     `US_DARK_LOGO_CODES` 两个清单。
+  3. FMP 为境外公开 CDN，大陆访问可能较慢或被限流；本页数据为延迟行情 + 外链图片，
+     图片失败走首字兜底，不影响功能。
+

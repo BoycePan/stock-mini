@@ -96,3 +96,85 @@ export function formatUsMarketCap(value: number | null): string {
   if (value >= 1e4) return `$${formatNumber(value / 1e4, 0)}万`
   return `$${formatNumber(value, 0)}`
 }
+
+// ---------------------------------------------------------------------------
+// 公司 logo（纯前端外链图片，docs/frontend-data-sources.md §7）
+// ---------------------------------------------------------------------------
+
+/**
+ * 公司 logo 外链源：financialmodelingprep.com 的公开图片 CDN（免费、无需 Key），
+ * 按裸代码取图，URL 形如 .../image-stock/{SYMBOL}.png（透明底 PNG）。
+ * 2026-08-29 实测：覆盖东财美股 TOP100 全部裸代码（含 SPCX/SKHY 等新条目），
+ * 仅 BRK_A/BRK_B 与 FMP 符号不一致，走别名映射。
+ * 注意：该域名需加入小程序后台「downloadFile 合法域名」才能在生产环境加载。
+ */
+export const US_LOGO_BASE_URL = 'https://financialmodelingprep.com/image-stock'
+
+/** 个别代码与 FMP 图片符号不一致的别名映射（逐条实测验证） */
+const US_LOGO_SYMBOL_ALIASES: Record<string, string> = {
+  BRK_A: 'BRK.A',
+  BRK_B: 'BRK-B',
+}
+
+/** 构建公司 logo 图片地址；无别名时原样使用裸代码 */
+export function usLogoUrl(code: string): string {
+  const symbol = US_LOGO_SYMBOL_ALIASES[code] ?? code
+  return `${US_LOGO_BASE_URL}/${encodeURIComponent(symbol)}.png`
+}
+
+/** logo 底片色调：auto=随主题 / light=固定浅色底 / dark=固定深色底 */
+export type UsLogoChipTone = 'auto' | 'light' | 'dark'
+
+/**
+ * 白色系 logo（透明底白图，浅色底片上不可见）→ 需固定深色底片。
+ * 该清单按 2026-08-29 financialmodelingprep.com 实际图片逐张校验
+ * （近白像素占比 >50% 判定），若上游换图需重新核对。
+ */
+const US_WHITE_LOGO_CODES: ReadonlySet<string> = new Set([
+  'AAPL',
+  'ABBV',
+  'ADI',
+  'AMZN',
+  'ANET',
+  'ASML',
+  'BLK',
+  'BRK_A',
+  'CAT',
+  'DIS',
+  'GEV',
+  'GILD',
+  'IBM',
+  'IFED',
+  'KOF',
+  'LRCX',
+  'MLPR',
+  'MRVL',
+  'UNH',
+  'V',
+  'WELL',
+])
+
+/** 深色系 logo（深色底片上不可见）→ 需固定浅色底片（判定同上） */
+const US_DARK_LOGO_CODES: ReadonlySet<string> = new Set([
+  'C',
+  'GS',
+  'INTC',
+  'LIN',
+  'MRK',
+  'NFLX',
+  'NVO',
+  'PLTR',
+  'SAN',
+  'SCCO',
+  'SNDK',
+  'SPCX',
+  'TXN',
+  'VZ',
+])
+
+/** 返回该股票 logo 的底片色调：白图→dark、深图→light、其余→auto（随主题） */
+export function usLogoChipTone(code: string): UsLogoChipTone {
+  if (US_WHITE_LOGO_CODES.has(code)) return 'dark'
+  if (US_DARK_LOGO_CODES.has(code)) return 'light'
+  return 'auto'
+}

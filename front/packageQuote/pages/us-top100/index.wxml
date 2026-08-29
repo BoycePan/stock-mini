@@ -83,8 +83,25 @@
       >
         <text class="hd-rank rank-no">{{ index + 1 }}</text>
         <view class="hd-name name-col">
-          <text class="stock-name">{{ item.name }}</text>
-          <text class="stock-code">{{ item.code }}</text>
+          <!-- 公司 logo：白图固定深色底 / 深图固定浅色底 / 其余随主题；加载失败换公司名首字 -->
+          <view
+            class="stock-logo-chip {{ item.logoTone === 'light' ? 'chip-light' : item.logoTone === 'dark' ? 'chip-dark' : '' }}"
+          >
+            <image
+              wx:if="{{ !item.logoFailed }}"
+              class="stock-logo"
+              src="{{ item.logoUrl }}"
+              mode="aspectFit"
+              lazy-load
+              binderror="onLogoError"
+              data-index="{{ index }}"
+            ></image>
+            <text wx:else class="logo-fallback">{{ item.logoChar }}</text>
+          </view>
+          <view class="name-texts">
+            <text class="stock-name">{{ item.name }}</text>
+            <text class="stock-code">{{ item.code }}</text>
+          </view>
         </view>
         <text class="hd-price price-text">{{ item.priceText }}</text>
         <text class="hd-pct pct-text {{ item.pctClass }}">{{ item.pctText }}</text>

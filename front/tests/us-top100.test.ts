@@ -3,7 +3,13 @@ import test from 'node:test'
 
 import { EM_US_SECID_RE, hasMinuteSources, resolveMinuteSources } from '../config/minute.ts'
 import { resolveMinuteSession } from '../utils/minute-session.ts'
-import { formatUsMarketCap, parseUsTop100, sortUsStocks } from '../utils/us-stocks.ts'
+import {
+  formatUsMarketCap,
+  parseUsTop100,
+  sortUsStocks,
+  usLogoChipTone,
+  usLogoUrl,
+} from '../utils/us-stocks.ts'
 
 // ---------------------------------------------------------------------------
 // parseUsTop100：clist/get 响应 → 归一化列表
@@ -258,4 +264,28 @@ test('resolveMinuteSession：美股 secid 识别为美股时段', () => {
   assert.equal(resolveMinuteSession('107.AAPL'), 'us')
   assert.equal(resolveMinuteSession('NVDA'), 'continuous')
   assert.equal(resolveMinuteSession('1.000001'), 'continuous')
+})
+
+// ---------------------------------------------------------------------------
+// 公司 logo（utils/us-stocks.ts：usLogoUrl / usLogoChipTone）
+// ---------------------------------------------------------------------------
+
+test('usLogoUrl：按裸代码拼 FMP 图片地址，特殊代码走别名', () => {
+  assert.equal(usLogoUrl('NVDA'), 'https://financialmodelingprep.com/image-stock/NVDA.png')
+  assert.equal(usLogoUrl('AAPL'), 'https://financialmodelingprep.com/image-stock/AAPL.png')
+  assert.equal(usLogoUrl('BRK_A'), 'https://financialmodelingprep.com/image-stock/BRK.A.png')
+  assert.equal(usLogoUrl('BRK_B'), 'https://financialmodelingprep.com/image-stock/BRK-B.png')
+})
+
+test('usLogoChipTone：白色系 logo 固定深色底，深色系固定浅色底，其余随主题', () => {
+  assert.equal(usLogoChipTone('AAPL'), 'dark')
+  assert.equal(usLogoChipTone('IBM'), 'dark')
+  assert.equal(usLogoChipTone('UNH'), 'dark')
+  assert.equal(usLogoChipTone('INTC'), 'light')
+  assert.equal(usLogoChipTone('NFLX'), 'light')
+  assert.equal(usLogoChipTone('SPCX'), 'light')
+  assert.equal(usLogoChipTone('NVDA'), 'auto')
+  assert.equal(usLogoChipTone('TSLA'), 'auto')
+  assert.equal(usLogoChipTone('BRK_A'), 'dark')
+  assert.equal(usLogoChipTone('BRK_B'), 'auto')
 })

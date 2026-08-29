@@ -9,6 +9,9 @@ import { trackEvent } from '../../../utils/tracker'
 import {
   formatUsMarketCap,
   sortUsStocks,
+  usLogoChipTone,
+  usLogoUrl,
+  type UsLogoChipTone,
   type UsSortDir,
   type UsSortKey,
 } from '../../../utils/us-stocks'
@@ -18,12 +21,26 @@ const LIST_REFRESH_INTERVAL = 30000
 /** 模块级共享（跨页面实例），用于 onShow 立即刷新门闩：距上次请求不足 5s 不补刷 */
 let lastListRequestAt = 0
 
-/** 列表行展示模型（价格 / 涨跌 / 市值格式化） */
+/** logo 加载失败时的兜底字符：优先公司名首字（中文名如「英伟达」→「英」） */
+function logoCharOf(item: UsTopStock): string {
+  const first = (item.name.trim() || item.code).charAt(0)
+  return first || '?'
+}
+
+/** 列表行展示模型（价格 / 涨跌 / 市值格式化 + logo 展示字段） */
 interface UsTopStockView extends UsTopStock {
   priceText: string
   pctText: string
   pctClass: 'up' | 'down' | 'flat'
   capText: string
+  /** 公司 logo 外链地址（financialmodelingprep.com，透明底 PNG） */
+  logoUrl: string
+  /** logo 底片色调：白图→dark / 深图→light / 其余 auto 随主题 */
+  logoTone: UsLogoChipTone
+  /** logo 是否加载失败（失败后换公司名首字兜底，不再重试该次渲染） */
+  logoFailed: boolean
+  /** logo 加载失败兜底字符 */
+  logoChar: string
 }
 
 function toView(item: UsTopStock): UsTopStockView {
@@ -34,6 +51,10 @@ function toView(item: UsTopStock): UsTopStockView {
     pctText: pct.changeText,
     pctClass: pct.changeClass,
     capText: formatUsMarketCap(item.marketCap),
+    logoUrl: usLogoUrl(item.code),
+    logoTone: usLogoChipTone(item.code),
+    logoFailed: false,
+    logoChar: logoCharOf(item),
   }
 }
 
@@ -183,6 +204,13 @@ Page({
         `&name=${encodeURIComponent(item.name)}` +
         `&mcode=${encodeURIComponent(item.secid)}`,
     })
+  },
+
+  /** logo 加载失败（外链不可达 / 上游无图）：本行换公司名首字兜底，不影响其他行 */
+  onLogoError(event: WechatMiniprogram.TouchEvent) {
+    const index = event.currentTarget.dataset.index as number | undefined
+    if (index === undefined) return
+    this.setData({ [`items[${index}].logoFailed`]: true })
   },
 
   onUnload() {
