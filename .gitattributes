@@ -17,3 +17,4 @@
 *.ttf binary
 *.key binary
 *.pem binary
+*.xdb binary

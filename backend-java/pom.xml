@@ -113,6 +113,13 @@
             <artifactId>rome</artifactId>
             <version>2.1.0</version>
         </dependency>
+
+        <!-- IP 归属地解析：打点接口 region 兜底（离线 ip2region v4 xdb 查询） -->
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+            <version>3.3.7</version>
+        </dependency>
     </dependencies>
 
     <build>

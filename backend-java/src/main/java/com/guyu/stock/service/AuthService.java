@@ -15,6 +15,7 @@ import java.util.Map;
 /**
  * 微信登录编排（对齐 Go service.NewAuthService）。
  * 吸收原 AuthController 的登录逻辑：code2Session → 用户 find-or-create → 签发 JWT → 组装响应。
+ * source 标识来源小程序（如 shiChang-tracker / hangQing-tracker），未携带时用配置的 default-source。
  */
 @Slf4j
 @Service
@@ -24,31 +25,38 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final AppProperties appProperties;
+    private final AppConfigService appConfigService;
 
     public AuthService(WechatService wechatService, UserRepository userRepository,
-                       JwtService jwtService, AppProperties appProperties) {
+                       JwtService jwtService, AppProperties appProperties,
+                       AppConfigService appConfigService) {
         this.wechatService = wechatService;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.appProperties = appProperties;
+        this.appConfigService = appConfigService;
     }
 
-    public Map<String, Object> login(HttpServletRequest request, String code) {
+    public Map<String, Object> login(HttpServletRequest request, String source, String code) {
         if (code == null || code.isBlank()) {
             throw new BizException(ErrCode.INVALID_PARAM, "code 不能为空");
         }
+        // 未携带 source 时走默认来源（兼容已发布旧小程序，无需发版）
+        String resolvedSource = (source == null || source.isBlank())
+                ? appProperties.getWechat().getDefaultSource()
+                : source;
         try {
-            Map<String, Object> session = wechatService.code2Session(code);
+            Map<String, Object> session = wechatService.code2Session(resolvedSource, code);
             String openid = (String) session.get("openid");
             String sessionKey = (String) session.get("session_key");
             String unionid = session.get("unionid") == null ? null : (String) session.get("unionid");
 
-            User user = userRepository.findByOpenId(openid);
+            User user = userRepository.findBySourceAndOpenId(resolvedSource, openid);
             if (user == null) {
-                user = userRepository.create(new User(0, openid, unionid, sessionKey, null, null, null, 1, null, null, null));
+                user = userRepository.create(new User(0, resolvedSource, openid, unionid, sessionKey, null, null, null, 1, null, null, null));
             } else {
                 user = new User(
-                        user.id(), user.openid(),
+                        user.id(), user.source(), user.openid(),
                         unionid != null ? unionid : user.unionid(),
                         sessionKey,
                         user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(),
@@ -64,6 +72,8 @@ public class AuthService {
             result.put("token", token);
             result.put("expires_in", (long) expireHours * 3600);
             result.put("user", user);
+            // 跟随登录下发 cfg_type='login' 的配置（按端全局，同来源所有用户同份）
+            result.put("config", appConfigService.deliveryMap(resolvedSource, "login"));
 
             // id 存入上下文，方便后续打日志
             request.setAttribute("user_id", user.id());

@@ -2,7 +2,7 @@ import { rootStore } from '../../../stores/root.store'
 import { developmentEnv } from '../../../config/env.development'
 import { productionEnv } from '../../../config/env.production'
 import { getEnvOverride, setEnvOverride } from '../../../utils/storage'
-import { getEnv, isReleaseBuild } from '../../../config/env'
+import { getEnv } from '../../../config/env'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import type { EnvOverride } from '../../../utils/storage'
 
@@ -10,13 +10,13 @@ Page({
   data: {
     theme: rootStore.settings.theme,
     currentOverride: null as EnvOverride | null,
-    /** 实际生效的环境：与「当前接口」展示一致（非线上版本无覆盖时默认即本地开发） */
+    /** 实际生效的环境：与「当前接口」展示一致（所有版本无覆盖时默认均为线上） */
     effectiveEnv: 'local' as 'production' | 'local',
     currentApiBaseUrl: '',
     productionUrl: productionEnv.apiBaseUrl,
     localUrl: developmentEnv.apiBaseUrl,
-    /** 当前构建的默认环境文案：非线上版本默认本地开发，线上版本默认线上 */
-    defaultEnvLabel: isReleaseBuild() ? '线上' : '本地开发',
+    /** 当前构建的默认环境文案：所有版本（含开发 / 体验版）默认均为线上 */
+    defaultEnvLabel: '线上',
   },
 
   onLoad() {
@@ -38,8 +38,7 @@ Page({
     this.setData({
       currentOverride: override,
       currentApiBaseUrl: apiBaseUrl,
-      // 生效环境按实际接口地址推导，避免把「无覆盖（默认）」误判为线上：
-      // 非线上版本无覆盖时 getEnv() 返回的是本地开发地址
+      // 生效环境按实际接口地址推导：无覆盖时 getEnv() 默认返回线上地址
       effectiveEnv: apiBaseUrl === productionEnv.apiBaseUrl ? 'production' : 'local',
     })
   },

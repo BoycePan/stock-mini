@@ -2,7 +2,7 @@
 
 > 服务地址：`http://localhost:18487/api/v1`
 > 数据源：**雅虎 Finance（全球市场）** / 新浪财经 / 同花顺 / 巨潮资讯
-> 更新时间：2026-08-12
+> 更新时间：2026-08-27
 
 ---
 
@@ -826,8 +826,13 @@ Content-Type: application/json
 **请求体（Request Body）：**
 
 ```json
-{"code": "微信小程序 wx.login() 返回的 code"}
+{"code": "微信小程序 wx.login() 返回的 code", "source": "shiChang-tracker"}
 ```
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| code | string | 是 | 微信小程序 `wx.login()` 返回的 code |
+| source | string | 否 | 来源小程序标识（如 `shiChang-tracker` / `hangQing-tracker`）；不传或空白时使用配置的 `app.wechat.default-source`（默认 `shiChang-tracker`，兼容已发布旧小程序）。未配置的 source 返回 `400` |
 
 **响应（Response）：**
 
@@ -838,10 +843,15 @@ Content-Type: application/json
   "data": {
     "token": "eyJhbG...",
     "expires_in": 86400,
-    "user": {"id": 1, "nickname": null}
+    "user": {"id": 1, "source": "shiChang-tracker", "nickname": null},
+    "config": {"tabbar": {"showGold": true}, "home.bannerText": "今日金价"}
   }
 }
 ```
+
+> 说明：多个小程序共用同一张 `users` 表，`openid` 仅在 `(source, openid)` 维度内唯一；token 由共享 `JWT_SECRET` 签发，各小程序登录 token 全接口通用。
+>
+> `config`：跟随登录下发的**配置**（`cfg_type='login'`，按端全局，同来源所有用户同份），树形摊平后的 JSON 对象（见「八、前端配置与公告」8.0）。客户端登录后无需再单独请求，即可拿到启动配置/功能开关。
 
 ### 6.2 用户信息（需认证）
 
@@ -932,7 +942,179 @@ Authorization: Bearer {token}     // 可选：登录后携带以解析 user_id�
 
 ---
 
-## 八、定时任务
+## 八、前端配置与公告
+
+> 本组接口服务「前端展示配置」与「前端公告」两类数据：管理端（`/api/mgr/**`，需管理员 Bearer token）维护，小程序端按分端（`source`）读取。后端运行参数（限流 / DB / JWT 等）不在此体系，仍在环境变量 / `application.yml`。
+>
+> 认证：`/api/v1/configs`、`/api/v1/notices` 走用户鉴权（`Authorization: Bearer {token}`）；管理端接口走管理员鉴权（见 8.4）。
+
+### 8.0 数据模型
+
+**配置表 `app_config` —— 两个正交维度：**
+
+| 维度 | 字段 | 取值 |
+|------|------|------|
+| 结构轴 | `nodeType` + `parentId` | `group`=分组（可挂子项）/ `item`=配置项（有值）；`parentId` 为父分组 id，`null`=顶层（单独项或顶级分组） |
+| 交付轴 | `cfgType` | `login`=跟随登录接口下发 / `display`=前端渲染读取 / `other`=其他（枚举可扩展，加值不改表） |
+| 分端 | `target` | `all`=全部端兜底 / 具体 source（如 `hangQing-tracker`）；读取时先应用 `all`、具体端覆盖 |
+
+读取/下发时**树形摊平**：分组→嵌套对象（容器键=分组 `cfgKey`，递归装子项），单独项→顶层键；值为解析后的 JSON（布尔 / 数字 / 字符串 / 对象）。
+
+```json
+// 示例：group "home" {showGold, bannerText} + 单独项 home.marqueeText
+{
+  "home": {"showGold": true, "bannerText": "今日金价"},
+  "home.marqueeText": "欢迎使用行情追踪"
+}
+```
+
+**公告表 `notice`：**
+
+| 字段 | 说明 |
+|------|------|
+| `type` | `notice` / `banner` / `marquee`（枚举可扩展） |
+| `target` | 分端：`all` / 具体 source |
+| `position` | 展示位置：`settings` / `home` / `stock-detail` … |
+| `pinned` / `sort` | 置顶优先于 sort；排序规则 `pinned DESC, sort ASC` |
+| `validFrom` / `validTo` | 有效期（ISO 时间，东8区；空=立即/长期）。仅“当前有效”的公告会下发 |
+| `config` | `type` 特有内容的 JSON 对象（`content` / `icon` / `cover` / `link` / `subtitle` …） |
+
+### 8.1 前端展示配置读取
+
+```
+GET /api/v1/configs?source=shiChang-tracker&cfgType=display
+Authorization: Bearer {token}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| source | string | 否 | 来源小程序；缺省用默认来源（`app.wechat.default-source`） |
+| cfgType | string | 否 | 交付类型，默认 `display`；也可传 `login` / `other` |
+
+**响应（Response）：** `data` 为摊平后的 JSON 对象（格式见 8.0）。只包含「启用 + 命中分端」的配置项。
+
+### 8.2 前端公告列表
+
+```
+GET /api/v1/notices?source=shiChang-tracker&position=settings
+Authorization: Bearer {token}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| source | string | 否 | 来源小程序；缺省用默认来源 |
+| position | string | 否 | 展示位置；缺省返回该端全部位置的公告 |
+
+**响应（Response）：**
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": [
+    {
+      "id": 3,
+      "type": "banner",
+      "title": "小程序全新上线",
+      "position": "settings",
+      "sort": 0,
+      "pinned": true,
+      "config": {"icon": "🚀", "content": "更多模块持续更新中", "link": "/pages/settings/index"}
+    }
+  ]
+}
+```
+
+只返回「启用 + 命中分端 + 当前在有效期内」的公告，按置顶/排序排列；`config` 已解析为对象，不暴露 `enabled` / 有效期等内部字段。
+
+### 8.3 登录下发 login 类配置
+
+`POST /api/v1/auth/login`（见 6.1）响应新增 `config` 字段：`cfg_type='login'` 的配置（按端全局），客户端登录后直接使用，无需再单独请求。
+
+### 8.4 管理端：配置管理
+
+管理端接口统一需要 `Authorization: Bearer {admin-token}`（`POST /api/mgr/login` 用管理员口令换取，口令见部署配置 `app.mgr`）。
+
+```
+GET    /api/mgr/configs        # 全量平铺列表（含 id/parentId，管理后台自建树）
+POST   /api/mgr/configs        # 新增分组或配置项
+PUT    /api/mgr/configs/{id}   # 更新（部分字段；parentId=0 表示移动到顶层）
+DELETE /api/mgr/configs/{id}   # 删除（分组下还有子项时返回 400）
+```
+
+**POST 请求体：**
+
+```json
+{
+  "nodeType": "item",
+  "cfgType": "display",
+  "cfgKey": "home.bannerText",
+  "cfgValue": "\"今日金价\"",
+  "remark": "首页横幅文案",
+  "target": "all",
+  "sort": 0,
+  "enabled": true,
+  "parentId": null
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| nodeType | string | 是 | `group` / `item` |
+| cfgType | string | 是 | `login` / `display` / `other` |
+| cfgKey | string | 是 | 配置键；同父级 + 同端下唯一 |
+| cfgValue | string(JSON) | item 必填 | 值的 JSON 文本，如 `"true"`、`"\"文案\""`、`"{\"a\":1}"`；group 不传 |
+| parentId | long/null | 否 | 父分组 id；`null`=顶层（单独项/顶级分组）。PUT 时 `0` 表示移动到顶层 |
+| remark | string | 否 | 说明 |
+| target | string | 否 | 默认 `all` |
+| sort | int | 否 | 默认 0，小值在前 |
+| enabled | bool | 否 | 默认 `true` |
+
+**PUT 为部分更新**：只传要改的字段；`cfgValue` 传了即整体覆盖。
+
+### 8.5 管理端：公告管理
+
+```
+GET    /api/mgr/notices        # 全量列表（config 返回 JSON 原文，便于编辑）
+POST   /api/mgr/notices        # 新增
+PUT    /api/mgr/notices/{id}   # 更新（部分字段）
+DELETE /api/mgr/notices/{id}   # 删除
+```
+
+**POST 请求体：**
+
+```json
+{
+  "type": "banner",
+  "title": "小程序全新上线",
+  "target": "all",
+  "position": "settings",
+  "sort": 0,
+  "pinned": true,
+  "enabled": true,
+  "validFrom": "2026-01-01T00:00:00Z",
+  "validTo": null,
+  "config": "{\"icon\":\"🚀\",\"content\":\"更多模块持续更新中\"}"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| type | string | 是 | `notice` / `banner` / `marquee` |
+| title | string | 否 | 标题/管理端列表标签 |
+| target | string | 否 | 默认 `all` |
+| position | string | 否 | 默认 `settings` |
+| sort | int | 否 | 默认 0 |
+| pinned | bool | 否 | 默认 `false`，置顶优先于 sort |
+| enabled | bool | 否 | 默认 `true` |
+| validFrom / validTo | string(ISO) | 否 | 有效期（东8区）；`validFrom` 不能晚于 `validTo`。PUT 时传 `""`（空字符串）表示清除该边界（立即生效/长期有效） |
+| config | string(JSON对象) | 否 | type 特有内容，必须为合法 JSON 对象 |
+
+**管理端通用校验（返回 400）：** 枚举非法（`nodeType`/`cfgType`/`type`）、JSON 非法、`cfgKey` 重复、子项 `cfgType` 与父分组不一致、有效期倒置、删除尚有子项的分组。
+
+---
+
+## 九、定时任务
 
 | 时间 | 任务 | 耗时 |
 |------|------|------|
@@ -944,7 +1126,7 @@ Authorization: Bearer {token}     // 可选：登录后携带以解析 user_id�
 
 ---
 
-## 九、数据库表
+## 十、数据库表
 
 | 表 | 说明 | 数据量 |
 |----|------|--------|
@@ -956,3 +1138,5 @@ Authorization: Bearer {token}     // 可选：登录后携带以解析 user_id�
 | news_feed | 新闻 / 公告 | 按需积累 |
 | click_event | 用户点击/行为打点（前端埋点批量上报） | 按需积累 |
 | users | 微信用户 | — |
+| app_config | 前端展示配置（结构轴 node_type+parent_id × 交付轴 cfg_type，按 target 分端；见「八、前端配置与公告」） | 少量 |
+| notice | 前端公告内容（分端 + 展示位置 + 有效期 + 置顶/排序；见「八、前端配置与公告」） | 少量 |

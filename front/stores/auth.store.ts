@@ -1,11 +1,11 @@
 import { makeAutoObservable, runInAction } from 'mobx-miniprogram'
 import { authApi } from '../api/auth'
-import type { User } from '../types/user'
+import type { LoginResult, User } from '../types/user'
 import { clearToken, clearUser, getToken, getUser, setToken, setUser } from '../utils/storage'
 import { trackEvent } from '../utils/tracker'
 
 // 本次会话的登录 Promise：成功后会复用，失败则清空允许下次重试（模块级，避免被 mobx 观测）
-let loginPromise: Promise<boolean> | null = null
+let loginPromise: Promise<LoginResult | null> | null = null
 
 export class AuthStore {
   token = getToken()
@@ -22,17 +22,17 @@ export class AuthStore {
   }
 
   /**
-   * 确保本次会话只并发执行一次登录；始终返回是否登录成功。
-   * 请求层会在每个接口发送前 await 该 Promise，登录失败时返回 false
-   * 并清空缓存，允许后续请求重试登录。
+   * 确保本次会话只并发执行一次登录；始终返回登录结果（失败时返回 null）。
+   * 请求层经 rootStore.bootstrap 在每个接口发送前 await 该 Promise；
+   * 登录失败时返回 null 并清空缓存，允许后续请求重试登录。
    */
-  ensureLogin(): Promise<boolean> {
+  ensureLogin(): Promise<LoginResult | null> {
     if (!loginPromise) {
       loginPromise = this.login()
-        .then(() => true)
+        .then((result) => result)
         .catch(() => {
           loginPromise = null
-          return false
+          return null
         })
     }
     return loginPromise

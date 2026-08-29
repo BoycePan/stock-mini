@@ -11,7 +11,7 @@ const APP_BRANDS: Record<string, string> = {
 
 /** AppID → 登录接口 source 参数值（与后端约定的来源标识，新增小程序在这里登记） */
 const APP_LOGIN_SOURCES: Record<string, string> = {
-  [AppId.MarketTracker]: '',
+  [AppId.MarketTracker]: 'shiChang-tracker',
   [AppId.HangQingTracker]: 'hangQing-tracker',
 }
 

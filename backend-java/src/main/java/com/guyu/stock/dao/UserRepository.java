@@ -26,6 +26,7 @@ public class UserRepository {
         Timestamp updated = rs.getTimestamp("updated_at");
         return new User(
                 rs.getLong("id"),
+                rs.getString("source"),
                 rs.getString("openid"),
                 rs.getString("unionid"),
                 rs.getString("session_key"),
@@ -39,8 +40,9 @@ public class UserRepository {
         );
     };
 
-    public User findByOpenId(String openid) {
-        var users = jdbcTemplate.query("SELECT * FROM users WHERE openid = ?", MAPPER, openid);
+    /** openid 仅在同 source（小程序）内唯一，查询必须带 source */
+    public User findBySourceAndOpenId(String source, String openid) {
+        var users = jdbcTemplate.query("SELECT * FROM users WHERE source = ? AND openid = ?", MAPPER, source, openid);
         return users.isEmpty() ? null : users.get(0);
     }
 
@@ -49,17 +51,18 @@ public class UserRepository {
         KeyHolder kh = new GeneratedKeyHolder();
         jdbcTemplate.update(con -> {
             PreparedStatement ps = con.prepareStatement(
-                    "INSERT INTO users (openid, unionid, session_key, status, created_at, updated_at) VALUES (?,?,?,?,?,?) RETURNING id",
+                    "INSERT INTO users (source, openid, unionid, session_key, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?) RETURNING id",
                     new String[]{"id"});
-            ps.setString(1, user.openid());
-            ps.setString(2, user.unionid());
-            ps.setString(3, user.sessionKey());
-            ps.setInt(4, 1);
-            ps.setTimestamp(5, Timestamp.valueOf(now));
+            ps.setString(1, user.source());
+            ps.setString(2, user.openid());
+            ps.setString(3, user.unionid());
+            ps.setString(4, user.sessionKey());
+            ps.setInt(5, 1);
             ps.setTimestamp(6, Timestamp.valueOf(now));
+            ps.setTimestamp(7, Timestamp.valueOf(now));
             return ps;
         }, kh);
-        return new User(kh.getKey().longValue(), user.openid(), user.unionid(), user.sessionKey(), user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(), user.lastLoginAt(), now, now);
+        return new User(kh.getKey().longValue(), user.source(), user.openid(), user.unionid(), user.sessionKey(), user.nickname(), user.avatarUrl(), user.phoneEnc(), user.status(), user.lastLoginAt(), now, now);
     }
 
     public void updateLogin(User user) {

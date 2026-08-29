@@ -9,16 +9,18 @@
  * 用 const 对象 + as const（而非 TS enum 关键字）：测试运行器走 Node
  * `--experimental-strip-types`，只剥类型不支持 enum 语法，该写法等价且全兼容。
  */
-export enum TrackEventType {
+export const TrackEventType = {
   /** 进入页面（自动 page.view） */
-  PageView = 'page_view',
+  PageView: 'page_view',
   /** 离开页面（自动 page.hide） */
-  PageHide = 'page_hide',
+  PageHide: 'page_hide',
   /** 点击 */
-  Tap = 'tap',
+  Tap: 'tap',
   /** 主动动作（分享 / 搜索 / 切 Tab / 切主题 / 登录等） */
-  Action = 'action',
-}
+  Action: 'action',
+} as const
+
+export type TrackEventType = (typeof TrackEventType)[keyof typeof TrackEventType]
 
 /** 单条打点事件（POST /api/v1/track/events 的 events 元素） */
 export interface TrackEvent {

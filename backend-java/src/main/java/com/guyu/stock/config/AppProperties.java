@@ -4,6 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Data
 @Component
 @ConfigurationProperties(prefix = "app")
@@ -25,10 +28,22 @@ public class AppProperties {
         private int expireHours;
     }
 
+    /**
+     * 微信小程序配置：按来源（source）区分各小程序的 appid/secret。
+     * login 请求未携带 source 时走 {@link #defaultSource}（兼容已发布旧小程序）。
+     */
     @Data
     public static class Wechat {
-        private String appId;
-        private String appSecret;
+        /** 登录请求未携带 source 时默认使用的小程序来源 */
+        private String defaultSource = "shiChang-tracker";
+        /** 来源 → 小程序 appid/secret 映射 */
+        private Map<String, App> apps = new HashMap<>();
+
+        @Data
+        public static class App {
+            private String appId;
+            private String appSecret;
+        }
     }
 
     /** 数据源公共配置段，字段对齐 Go 版 config.yaml 的 stock.<source>.rate_limit / max_retries / timeout */

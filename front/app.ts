@@ -1,7 +1,7 @@
 import { rootStore } from './stores/root.store'
 import { getTheme } from './utils/storage'
 import { syncWindowBackground } from './utils/theme'
-import { setLoginWaiter } from './utils/request'
+import { setReadyWaiter } from './utils/request'
 import {
   flush,
   initTracker,
@@ -11,10 +11,10 @@ import {
   startFlushTimer,
 } from './utils/tracker'
 
-// 所有业务接口发送前都会先等待登录完成（登录接口自身跳过）
-setLoginWaiter(() => rootStore.auth.ensureLogin().then(() => undefined))
+// 所有业务接口发送前都会等待「登录 + 系统配置」就绪（登录 / 系统配置接口自身跳过）
+setReadyWaiter(() => rootStore.bootstrap())
 // 打点只在登录成功后才上报：flush 前 await 登录成功，失败则事件留队等下次重试（绝不匿名上报）
-setTrackingLoginWaiter(() => rootStore.auth.ensureLogin())
+setTrackingLoginWaiter(() => rootStore.auth.ensureLogin().then((result) => Boolean(result)))
 
 App({
   globalData: {
@@ -42,14 +42,15 @@ App({
         }
       })
     }
-    // 每次打开小程序自动登录
-    rootStore.auth.ensureLogin().then((ok) => {
-      if (ok) {
-        startFlushTimer()
-      } else {
-        console.warn('[auth] 自动登录失败:', rootStore.auth.error || '未知错误')
-      }
-    })
+    // 每次打开小程序自动完成「登录 + 系统配置」就绪；登录成功后启动打点定时上报
+    rootStore
+      .bootstrap()
+      .then(() => {
+        if (rootStore.auth.isLoggedIn) startFlushTimer()
+      })
+      .catch((error) => {
+        console.warn('[bootstrap] 登录/系统配置就绪失败:', error)
+      })
   },
   onShow() {
     // 打点：冷启动兜底补发首个 page.view（路由事件可能晚于 onShow）；后台返回时补发新一次 page.view

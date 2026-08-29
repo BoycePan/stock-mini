@@ -30,14 +30,20 @@
       </view>
     </view>
 
-    <!-- 上线公告横幅 -->
-    <view class="banner">
-      <view class="banner-icon">🚀</view>
+    <!-- 上线公告横幅（系统配置下发，position=settings） -->
+    <view
+      wx:for="{{ notices }}"
+      wx:key="id"
+      class="banner"
+      bindtap="onNoticeTap"
+      data-link="{{ item.config.link }}"
+    >
+      <view class="banner-icon">{{ item.config.icon || '📢' }}</view>
       <view class="banner-copy">
-        <text class="banner-title">小程序全新上线</text>
-        <text class="banner-subtitle">更多模块持续更新中</text>
+        <text class="banner-title">{{ item.title || item.config.content }}</text>
+        <text class="banner-subtitle">{{ item.config.content }}</text>
       </view>
-      <view class="banner-badge">NEW</view>
+      <view wx:if="{{ item.pinned }}" class="banner-badge">NEW</view>
     </view>
 
     <!-- 通用设置 -->

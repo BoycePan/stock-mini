@@ -14,6 +14,7 @@ import {
 } from '../utils/tracker.ts'
 import { TrackEventType } from '../types/tracking.ts'
 import type { AppRouteEvent } from '../types/tracking.ts'
+import { productionEnv } from '../config/env.production'
 
 // ---------------------------------------------------------------------------
 // 测试环境：wx mock（request / storage / 设备信息 / onAppRoute）+ getCurrentPages
@@ -133,7 +134,7 @@ test('flush：POST 到打点接口，请求体为批量 events', async () => {
   track('test.payload', { page: 'pages/x/index', eventType: TrackEventType.Action })
   await flush()
   assert.equal(captured.length, 1)
-  assert.equal(captured[0]!.url, 'https://dev-wx-stock-interface.guyu.org.cn/api/v1/track/events')
+  assert.equal(captured[0]!.url, `${productionEnv.apiBaseUrl}/api/v1/track/events`)
   assert.equal(captured[0]!.method, 'POST')
   assert.ok(Array.isArray(captured[0]!.data.events))
   assert.equal(captured[0]!.data.events.length, 1)

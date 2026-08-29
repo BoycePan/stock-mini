@@ -35,8 +35,17 @@ app:
     secret: ${JWT_SECRET}
     expire-hours: ${JWT_EXPIRE_HOURS:24}
   wechat:
-    app-id: ${WECHAT_APP_ID}
-    app-secret: ${WECHAT_APP_SECRET}
+    # 登录请求未携带 source 时默认使用的小程序来源（兼容已发布的旧小程序）
+    default-source: shiChang-tracker
+    # 各小程序来源的 appid/secret（appid 非敏感可直接写死；secret 一律走环境变量）
+    apps:
+      shiChang-tracker:
+        app-id: ${WECHAT_APP_ID}
+        app-secret: ${WECHAT_APP_SECRET}
+      # 行情追踪（新小程序）；secret 未配置时该 source 登录返回 400，不影响其余小程序
+      hangQing-tracker:
+        app-id: wx0ecd2049e54fbca8
+        app-secret: ${HANGQING_TRACKER_WECHAT_APP_SECRET:}
   sina:
     # 值来自 .env（spring-dotenv）或环境变量；未设置时用默认值兜底
     rate-limit-seconds: ${SINA_RATE_LIMIT:1.0}
