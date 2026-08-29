@@ -18,7 +18,7 @@
  * A股为固定时段（09:30-11:30 + 13:00-15:00，无夏令时），直接用绝对时间。
  */
 
-import { MINUTE_SOURCES } from '../config/minute'
+import { EM_US_SECID_RE, MINUTE_SOURCES } from '../config/minute'
 
 /**
  * 交易时段类型：
@@ -76,6 +76,9 @@ export function resolveMinuteSession(code: string): MinuteSessionKind {
   }
   // 美股/美指/美ETF：usDJI / usINX / usIXIC / us-BKxxxx / TLT / SOX
   if (code.startsWith('us') || code === 'TLT' || code === 'SOX') return 'us'
+  // 美股个股/ADR 直连东财 secid（105.NVDA / 106.BRK_B，见 config/minute.ts EM_US_SECID_RE）：
+  // 东财返回北京时间，锚定首点自动适配夏令时，与美指 100.DJIA 同一机制
+  if (EM_US_SECID_RE.test(code)) return 'us'
   if (code === 'KS11' || code === 'KQ11') return 'kr'
   if (code === 'N225') return 'jp-em'
   if (code === 'SENSEX') return 'in'

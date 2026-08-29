@@ -6,6 +6,7 @@
  */
 
 import type { MarketMetric, MarketPageData, MarketSection } from '../types/market'
+import { QUOTE_ICON_ASSETS } from '../config/icon-assets'
 import { formatDateTime, formatNumber } from './formatter'
 import { getRegionStatus, type IndustryPhase, type MarketRegion } from './market-clock'
 
@@ -20,6 +21,11 @@ export interface QuoteItem {
   icon?: string
   /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序随指标展示 */
   tags?: string[]
+  /**
+   * 指标名称旁图标图片路径（本地静态图）。有值时优先于 icon（Emoji）渲染；
+   * 金店品牌 logo 等在此显式指定。
+   */
+  iconImage?: string
   /** 条目更新时间文案（如「09:53 更新」），有值时才在卡片上展示 */
   updatedAt?: string
   /**
@@ -29,6 +35,19 @@ export interface QuoteItem {
   minuteCode?: string
   /** 无分时源时点击卡片的提示文案（覆盖默认「该指标暂无分时数据」） */
   minuteUnavailableTip?: string
+  /**
+   * 展示值文本：覆盖默认「价格」渲染（如入口卡「查看」）。
+   * 有值时即使 price 为 null 也不显示骨架占位。
+   */
+  valueText?: string
+  /** 始终隐藏涨跌徽标（入口卡等无行情涨跌语义的条目） */
+  hideChange?: boolean
+  /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
+  hideFromPoster?: boolean
+  /** 特殊入口卡：以整行渐变横幅渲染（区别于普通行情卡片，见 section-card） */
+  featured?: boolean
+  /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
+  featuredDesc?: string
 }
 
 export interface QuoteGroup {
@@ -57,6 +76,7 @@ export const QUOTE_ICONS: Record<string, string> = {
   usDJI: '🇺🇸', // 道琼斯工业
   usINX: '🇺🇸',
   usIXIC: '🇺🇸',
+  'us-top100': '🇺🇸', // 美股TOP100 入口卡
   // 宏观经济
   BRT: '🛢️',
   VIX: '📉',
@@ -148,12 +168,19 @@ function metricOf(
     minuteCode: item.minuteCode,
     minuteUnavailableTip: item.minuteUnavailableTip,
     name: item.name,
-    value: item.price === null ? '' : formatNumber(item.price),
+    value: item.valueText ?? (item.price === null ? '' : formatNumber(item.price)),
     change: item.pct ?? 0,
-    // 汇率等场景：涨跌幅缺失或恰好为 0 时隐藏涨跌徽标，避免展示无意义的 "— —"
-    hideChange: opts?.hideFlatChange === true && (item.pct === null || item.pct === 0),
+    // 汇率等场景：涨跌幅缺失或恰好为 0 时隐藏涨跌徽标，避免展示无意义的 "— —"；
+    // 入口卡等条目显式 hideChange 时始终隐藏
+    hideChange:
+      item.hideChange === true ||
+      (opts?.hideFlatChange === true && (item.pct === null || item.pct === 0)),
+    hideFromPoster: item.hideFromPoster === true,
+    featured: item.featured === true,
+    featuredDesc: item.featuredDesc,
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
+    iconImage: item.iconImage ?? QUOTE_ICON_ASSETS[item.code],
     tags: item.tags,
     updatedAt: item.updatedAt,
   }

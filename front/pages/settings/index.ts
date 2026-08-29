@@ -70,13 +70,13 @@ Page({
   onServiceTap(event: WechatMiniprogram.BaseEvent) {
     const key = (event.currentTarget as unknown as { dataset: { key?: string } }).dataset.key
     if (!key) return
-    wx.navigateTo({ url: `/pages/legal/index?type=${key}` })
+    wx.navigateTo({ url: `/packageAbout/pages/legal/index?type=${key}` })
   },
   onFeedbackTap() {
-    wx.navigateTo({ url: '/pages/custom/index' })
+    wx.navigateTo({ url: '/packageAbout/pages/custom/index' })
   },
   onEnvSwitchTap() {
-    wx.navigateTo({ url: '/pages/env-switch/index' })
+    wx.navigateTo({ url: '/packageAbout/pages/env-switch/index' })
   },
   /** 同步设置页公告（系统配置下发，position=settings；未就绪时等待全局门闩完成） */
   async syncNotices() {

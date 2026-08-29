@@ -147,3 +147,30 @@ export interface QuoteSource {
   min?: number
   max?: number
 }
+
+// ---------------------------------------------------------------------------
+// 东财美股排行榜（clist/get，docs/us-top100-api.md）
+// ---------------------------------------------------------------------------
+
+/** 美股三大市场号：105=纳斯达克 / 106=纽交所 / 107=美交所 */
+export type UsMarketNumber = 105 | 106 | 107
+
+/** 美股市值TOP100 单条（东财 clist/get，fid=f20 总市值降序） */
+export interface UsTopStock {
+  /** 裸代码（如 NVDA / BRK_B） */
+  code: string
+  /** 东财市场号（用于拼 secid，105=纳斯达克 / 106=纽交所 / 107=美交所） */
+  market: UsMarketNumber
+  /** 个股 secid（如 105.NVDA / 106.BRK_B），分时与报价同源 */
+  secid: string
+  /** 中文名（东财返回，如 英伟达；缺失时回退裸代码） */
+  name: string
+  /** 最新价（停牌/无数据为 null） */
+  price: number | null
+  /** 涨跌幅 %（无数据为 null） */
+  pct: number | null
+  /** 涨跌额（无数据为 null） */
+  change: number | null
+  /** 总市值（美元，东财 f20；无数据为 null） */
+  marketCap: number | null
+}

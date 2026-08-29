@@ -16,11 +16,22 @@ export interface MarketMetric {
   change: number
   unit?: string
   icon?: string
+  /**
+   * 指标名称旁图标图片路径（本地静态图，如 /static/icons/...）。
+   * 有值时优先于 icon（Emoji）渲染；无值时回退 icon。
+   */
+  iconImage?: string
   /** 指标名称旁的小徽标（如「个股」、代表金属「钼」），按序展示 */
   tags?: string[]
   updatedAt?: string
   /** 无涨跌幅（缺失或恰好为 0）时隐藏涨跌徽标，避免展示无意义的「— —」 */
   hideChange?: boolean
+  /** 不出现在分享海报中（如「市值TOP100」入口卡，海报里无行情语义） */
+  hideFromPoster?: boolean
+  /** 特殊入口卡：以整行渐变横幅渲染（区别于普通行情卡片，见 section-card） */
+  featured?: boolean
+  /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
+  featuredDesc?: string
   /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
   detail?: Record<string, string | undefined>
 }

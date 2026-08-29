@@ -1,6 +1,10 @@
 import { createStoreBindings } from 'mobx-miniprogram-bindings'
 import { rootStore } from '../stores/root.store'
 
+// 分包页面禁止直接 import npm 包（npm 构建产物只存在于主包 miniprogram_npm，
+// 分包内无法解析），统一经本主包模块转发，见 packageNews/pages/news-detail。
+export { createStoreBindings } from 'mobx-miniprogram-bindings'
+
 export type StoreBindingsHandle = {
   updateStoreBindings: () => void
   destroyStoreBindings: () => void

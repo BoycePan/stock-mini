@@ -1,7 +1,7 @@
-export const AppId = {
-  MarketTracker: 'wx2cfd1556edf21a24',
-  HangQingTracker: 'wx0ecd2049e54fbca8',
-} as const
+export enum AppId {
+  MarketTracker = 'wx2cfd1556edf21a24',
+  HangQingTracker = 'wx0ecd2049e54fbca8',
+}
 
 /** AppID → 小程序展示名称 映射表（新增小程序在这里登记） */
 const APP_BRANDS: Record<string, string> = {
@@ -35,7 +35,7 @@ export function resolveAppName(appId: string): string {
 
 /** 按 AppID 解析登录 source 参数值；未登记时回退默认值（纯函数，便于单测） */
 export function resolveLoginSource(appId: string): string {
-  return APP_LOGIN_SOURCES[appId] || 'shiChang-tracker'
+  return APP_LOGIN_SOURCES[appId] || ''
 }
 
 const currentAppId = getCurrentAppId()
