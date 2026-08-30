@@ -42,6 +42,14 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- SQL 日志：p6spy 拦截 JDBC，输出「耗时在前 + 参数内联」的单行 SQL（格式见 spy.properties） -->
+        <dependency>
+            <groupId>p6spy</groupId>
+            <artifactId>p6spy</artifactId>
+            <version>3.9.1</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

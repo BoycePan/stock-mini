@@ -9,13 +9,17 @@ logging:
   file:
     path: ${LOG_DIR:/Users/lilaiyun/Downloads/logs}
   level:
-    org.springframework.jdbc.core: TRACE
+    # SQL 日志走 p6spy（拦截 JDBC，输出「耗时在前 + 参数内联」的单行 SQL，格式见 spy.properties）。
+    # 原 org.springframework.jdbc.core TRACE 已移除：它打的是 ? 占位 + 参数另打两行，与 p6spy 重复。
+    p6spy: INFO
 
 spring:
   application:
     name: stock-backend
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+    # p6spy 驱动代理：url 加 jdbc:p6spy: 前缀，真实驱动/连接参数由 p6spy 透传，SQL 日志格式见 spy.properties
+    url: jdbc:p6spy:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+    driver-class-name: com.p6spy.engine.spy.P6SpyDriver
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     hikari:
