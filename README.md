@@ -2,6 +2,13 @@
 
 股票行情微信小程序，前端位于 `front/`，仓库使用 pnpm workspace 管理。
 
+仓库包含两个 workspace 包：
+
+| 目录 | 包名 | 说明 |
+| --- | --- | --- |
+| `front/` | `market-tracker-mini` | 微信原生小程序（市场追踪助手 / 行情追踪助手） |
+| `portal/` | `market-tracker-portal` | 引流门户网站（Astro SSG 多页 SEO），详见 `portal/README.md` |
+
 ## 安装依赖
 
 在仓库根目录执行：
@@ -18,6 +25,14 @@ pnpm type-check
 pnpm lint
 pnpm format:check
 pnpm check
+```
+
+门户站点命令（详见 `portal/README.md`）：
+
+```bash
+pnpm portal:dev          # 本地开发
+pnpm portal:build        # 构建静态产物 dist/
+pnpm portal:check        # astro check 类型检查
 ```
 
 也可以通过 workspace filter 直接运行前端 package：

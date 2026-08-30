@@ -1,0 +1,31 @@
+---
+/**
+ * 小程序码 CTA：扫码打开小程序 + 「微信搜索名称」备选路径。
+ * miniprogram-code.png 为占位图，上线前替换为微信公众平台生成的真实小程序码
+ * （见 docs/门户网站.md「小程序码替换」）。
+ */
+import { MINIPROGRAM_CODE_IMAGE, WECHAT_SEARCH_NAME } from '../config/site'
+
+interface Props {
+  /** 当前页标题（用于 CTA 文案） */
+  title?: string
+}
+
+const { title } = Astro.props
+---
+
+<section class="qr-cta">
+  <div>
+    <h2>{title ? `${title}，打开小程序免费看` : '打开小程序，免费看全球行情'}</h2>
+    <p>扫码立即打开「{WECHAT_SEARCH_NAME}」，无需下载 App。</p>
+    <ul class="steps">
+      <li>① 微信扫一扫右侧小程序码</li>
+      <li>② 或微信内搜索「{WECHAT_SEARCH_NAME}」（以微信内实际可搜索到的名称为准）</li>
+      <li>③ 免费使用，无广告，支持深浅双主题</li>
+    </ul>
+  </div>
+  <div class="qr-box">
+    <img src={MINIPROGRAM_CODE_IMAGE} alt="市场追踪助手小程序码" width="168" height="168" />
+    <div class="qr-tip">微信扫一扫 · 打开小程序</div>
+  </div>
+</section>

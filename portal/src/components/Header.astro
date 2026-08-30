@@ -1,0 +1,63 @@
+---
+/**
+ * 全站页头：品牌 + 导航 + 主题切换。
+ * 导航链接为各 SEO 落地页；当前页高亮（aria-current）。
+ */
+import { APP_NAME, LOGO_IMAGE } from '../config/site'
+import ThemeToggle from './ThemeToggle.astro'
+
+const NAV_LINKS = [
+  { href: '/', label: '首页' },
+  { href: '/global/', label: '全球行情' },
+  { href: '/gold/', label: '金价' },
+  { href: '/asia/', label: '日韩行情' },
+  { href: '/metals/', label: '有色金属' },
+  { href: '/news/', label: '财经资讯' },
+  { href: '/features/', label: '全部功能' },
+  { href: '/faq/', label: '常见问题' },
+]
+
+const currentPath = Astro.url.pathname
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label={`${APP_NAME} 首页`}>
+      <img class="brand-logo" src={LOGO_IMAGE} alt={APP_NAME} width="32" height="32" />
+      <span>{APP_NAME}</span>
+    </a>
+
+    <nav class="nav" aria-label="主导航">
+      <div class="nav-links" id="nav-links">
+        {
+          NAV_LINKS.map((link) => (
+            <a href={link.href} aria-current={currentPath === link.href ? 'page' : undefined}>
+              {link.label}
+            </a>
+          ))
+        }
+      </div>
+      <ThemeToggle />
+      <button
+        class="nav-toggle"
+        type="button"
+        aria-label="展开菜单"
+        aria-expanded="false"
+        aria-controls="nav-links"
+        data-nav-toggle
+      >
+        ☰
+      </button>
+    </nav>
+  </div>
+</header>
+
+<script>
+  // 移动端菜单开合
+  const toggle = document.querySelector('[data-nav-toggle]')
+  const links = document.getElementById('nav-links')
+  toggle?.addEventListener('click', () => {
+    const open = links?.classList.toggle('open') ?? false
+    toggle.setAttribute('aria-expanded', String(open))
+  })
+</script>

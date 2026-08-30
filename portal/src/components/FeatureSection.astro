@@ -1,0 +1,27 @@
+---
+/**
+ * 功能亮点卡片（首页 / 功能总览页复用）。
+ */
+import type { FeatureItem } from '../data/features'
+
+interface Props {
+  feature: FeatureItem
+}
+
+const { feature } = Astro.props
+---
+
+<article class="card feature-card">
+  <div class="feature-icon" aria-hidden="true">{feature.icon}</div>
+  <h3>{feature.title}</h3>
+  <p>{feature.desc}</p>
+  {
+    feature.points && (
+      <ul class="feature-list">
+        {feature.points.slice(0, 3).map((point) => (
+          <li class="chip">{point}</li>
+        ))}
+      </ul>
+    )
+  }
+</article>

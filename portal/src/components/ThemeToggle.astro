@@ -1,0 +1,35 @@
+---
+/**
+ * 主题切换按钮：浅色 / 深色手动切换，持久化到 localStorage('portal-theme')。
+ * 默认跟随系统（由 Base 布局首帧脚本决定初始 data-theme）。
+ */
+---
+
+<button class="theme-toggle" type="button" aria-label="切换主题" data-theme-toggle>
+  <span data-theme-icon aria-hidden="true">🌙</span>
+</button>
+
+<script>
+  const btn = document.querySelector('[data-theme-toggle]')
+  const icon = btn?.querySelector('[data-theme-icon]')
+  if (btn && icon) {
+    const apply = (theme: 'light' | 'dark') => {
+      document.documentElement.setAttribute('data-theme', theme)
+      icon.textContent = theme === 'dark' ? '☀️' : '🌙'
+      try {
+        localStorage.setItem('portal-theme', theme)
+      } catch (e) {
+        /* localStorage 不可用时静默降级为仅本次会话生效 */
+      }
+    }
+    btn.addEventListener('click', () => {
+      const current =
+        document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+      apply(current === 'dark' ? 'light' : 'dark')
+    })
+    // 同步图标与当前主题
+    const initial =
+      document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+    icon.textContent = initial === 'dark' ? '☀️' : '🌙'
+  }
+</script>

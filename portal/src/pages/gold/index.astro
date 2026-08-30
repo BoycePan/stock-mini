@@ -1,0 +1,147 @@
+---
+/**
+ * 金价落地页（SEO：金价、黄金、金店金价、上金所）。
+ * 事实来源：front/config/gold-shop.ts（42 家金店目录，页面展示 15 家）、
+ * front/config/physical-gold.ts（上金所实物金 8 项）、front/api/market.ts。
+ */
+import Base from '../../layouts/Base.astro'
+import Seo from '../../components/Seo.astro'
+import QrCta from '../../components/QrCta.astro'
+
+const displayBrands = [
+  '周大福',
+  '老凤祥',
+  '周六福',
+  '周生生',
+  '六福珠宝',
+  '老庙',
+  '菜百',
+  '中国黄金',
+  '周大生',
+  '潮宏基',
+  '金至尊',
+  '明牌珠宝',
+  '梦金园',
+  '亚一金店',
+  '水贝黄金',
+]
+
+const physicalGold = [
+  { name: '黄金9999', unit: '元/克' },
+  { name: '黄金9995', unit: '元/克' },
+  { name: '金条100g', unit: '元/克' },
+  { name: '金条50g', unit: '元/克' },
+  { name: '黄金T+D', unit: '元/克' },
+  { name: 'm黄金T+D', unit: '元/克' },
+  { name: '铂金9995', unit: '元/克' },
+  { name: '白银T+D', unit: '元/千克' },
+]
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: '在哪里可以实时对比金店金价？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '微信小程序「市场追踪助手」的有色页提供 42 家金店品牌的实时金价对比（页面精选展示周大福、老凤祥、周六福、周生生等 15 家主流品牌），数据来自网络公开数据，以门店实际挂牌价为准。',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '上金所实物金价格在哪里看？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '小程序「有色」页提供上海黄金交易所实物金价格：黄金9999、黄金9995、金条100g/50g、黄金T+D、m黄金T+D、铂金9995、白银T+D。',
+      },
+    },
+  ],
+}
+---
+
+<Base>
+  <Seo
+    slot="head"
+    title="金价查询：42家金店实时金价 + 上金所实物金价格对比"
+    description="微信小程序免费看金价：周大福、老凤祥、周六福、周生生等42家金店品牌实时零售价对比，加上金交所黄金9999、金条、黄金T+D、铂金、白银T+D等实物金价格，买金饰前先比价。"
+    path="/gold/"
+    keywords="金价,黄金价格,金店金价,周大福,老凤祥,上金所,实物黄金,黄金T+D"
+    jsonLd={[faqJsonLd]}
+  />
+
+  <section class="landing-hero">
+    <div class="container">
+      <h1>买金饰前，先比金价</h1>
+      <p class="lead">
+        金店足金零售价、上金所实物金基准价，一个微信小程序全部看齐，买金前心里有数。
+      </p>
+      <div class="tag-row">
+        <span class="chip chip-up">黄金9999</span>
+        <span class="chip chip-down">周大福</span>
+        <span class="chip chip-up">老凤祥</span>
+        <span class="chip chip-down">黄金T+D</span>
+        <span class="chip chip-up">铂金</span>
+        <span class="chip chip-down">白银T+D</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top: 0">🏬 金店金价对比</h3>
+          <p class="prose">
+            覆盖 <strong>42 家金店品牌</strong
+            >的金价数据（金投网公开数据），页面精选展示以下主流品牌 的足金 / 铂金 / 金条实时零售价：
+          </p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
+            {displayBrands.map((brand) => <span class="chip">{brand}</span>)}
+          </div>
+          <p class="prose" style="margin-top: 16px">
+            <span class="badge">提示</span> 金店价格为网络公开数据，仅供参考，以门店实际挂牌价为准。
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top: 0">🥇 上金所实物金</h3>
+          <p class="prose">上海黄金交易所现货基准价（黄金9999 为实物黄金定价基础）：</p>
+          <table class="data-table" style="margin-top: 12px">
+            <thead>
+              <tr>
+                <th>品种</th>
+                <th>单位</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                physicalGold.map((item) => (
+                  <tr>
+                    <td>{item.name}</td>
+                    <td class="num">{item.unit}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mt-32">
+        <h3 style="margin-top: 0">💰 金银内外盘同屏</h3>
+        <p class="prose">
+          黄金、白银同时展示内盘（沪金主连 元/克、沪银主连 元/千克）与外盘（COMEX 美元/盎司）
+          两路报价，交易时段自动切换口径，不再需要在多个软件间来回切换。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <QrCta title="金价对比，一屏看齐" />
+    </div>
+  </section>
+</Base>

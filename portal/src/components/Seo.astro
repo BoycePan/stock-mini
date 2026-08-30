@@ -1,0 +1,62 @@
+---
+/**
+ * SEO 元信息组件：统一的 title / description / canonical / OG / JSON-LD 输出。
+ * 每个页面必须提供唯一 title 与 description；canonical 默认取当前路径。
+ * 用法：<Seo slot="head" title="..." description="..." />（放在 Base 布局内）。
+ */
+import { SITE_URL, SITE_LANG } from '../config/site'
+
+interface Props {
+  title: string
+  description: string
+  /** 页面路径（以 / 开头），用于 canonical 与 OG url；默认取当前路径 */
+  path?: string
+  /** 结构化数据（JSON-LD 对象数组） */
+  jsonLd?: object[]
+  /** 分享配图（public/ 下路径） */
+  image?: string
+  keywords?: string
+}
+
+const {
+  title,
+  description,
+  path = Astro.url.pathname,
+  jsonLd = [],
+  image = '/logo.png',
+  keywords,
+} = Astro.props
+
+const canonical = new URL(path, SITE_URL).toString().replace(/\/$/, '')
+const ogUrl = canonical
+const ogImage = new URL(image, SITE_URL).toString()
+
+const htmlTitle = title.includes('市场追踪助手') ? title : `${title} - 市场追踪助手`
+---
+
+<title>{htmlTitle}</title>
+<meta name="description" content={description} />
+<meta name="generator" content={Astro.generator} />
+{keywords && <meta name="keywords" content={keywords} />}
+<link rel="canonical" href={canonical} />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="市场追踪助手" />
+<meta property="og:title" content={htmlTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={ogUrl} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:locale" content={SITE_LANG} />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content={htmlTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+{
+  jsonLd.map((obj) => (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(obj)} />
+  ))
+}
