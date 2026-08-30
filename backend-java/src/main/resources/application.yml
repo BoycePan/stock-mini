@@ -128,4 +128,8 @@ app:
     enabled: ${TRACKING_ENABLED:true}
     # 单批最多接受的事件条数（超出按 400 拒绝）
     max-batch-size: ${TRACKING_MAX_BATCH_SIZE:100}
+    # click_event 过期清理任务（每天 03:30）：false 关闭清理
+    cleanup-enabled: ${TRACKING_CLEANUP_ENABLED:true}
+    # click_event 保留天数：清理 server_ts 早于 now()-N 天的记录
+    cleanup-days: ${TRACKING_CLEANUP_DAYS:5}
 

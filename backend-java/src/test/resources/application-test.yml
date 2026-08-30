@@ -55,6 +55,9 @@ app:
     # 测试关闭 RSS 定时拉取：@SpringBootTest 启动时 RssNewsScheduler 会种子+首轮拉取，
     # 避免测试上下文触发真实网络请求。
     enabled: false
+  tracking:
+    # 测试关闭 click_event 清理：避免 @SpringBootTest 定时任务误删测试数据
+    cleanup-enabled: false
   fetch:
     # 测试关闭雅虎 sidecar 拉起：避免 @SpringBootTest 启动时 spawn Python 进程/占端口
     enabled: false

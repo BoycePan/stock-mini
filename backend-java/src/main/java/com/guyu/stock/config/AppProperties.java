@@ -145,5 +145,11 @@ public class AppProperties {
 
         /** 单批最多接受的事件条数，默认 100（超出按 400 拒绝，防止恶意 / 超大 payload） */
         private int maxBatchSize = 100;
+
+        /** 是否启用 click_event 过期数据清理任务，默认 true（ClickEventCleanupScheduler 使用） */
+        private boolean cleanupEnabled = true;
+
+        /** click_event 保留天数：清理 server_ts 早于 now()-N 天的记录，默认 5 */
+        private int cleanupDays = 5;
     }
 }

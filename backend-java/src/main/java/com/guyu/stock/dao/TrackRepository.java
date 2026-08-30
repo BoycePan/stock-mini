@@ -4,6 +4,8 @@ import com.guyu.stock.model.ClickEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -43,4 +45,28 @@ public class TrackRepository {
         }
         return inserted;
     }
+
+    /**
+     * 删除 {@code server_ts} 早于 {@code cutoff} 的过期记录（按服务端接收时间清理）。
+     *
+     * <p>分批删除（每批 {@link #DELETE_BATCH_SIZE} 行）防止大表一次 DELETE 锁表过久 /
+     * 事务日志膨胀；返回实际删除总行数。数据库时区由应用启动时钉死东8区（见 StockApplication）。
+     */
+    public int deleteBefore(LocalDateTime cutoff) {
+        if (cutoff == null) return 0;
+        Timestamp bound = Timestamp.valueOf(cutoff);
+        int total = 0;
+        while (true) {
+            int n = jdbcTemplate.update("""
+                    DELETE FROM click_event
+                    WHERE id IN (SELECT id FROM click_event WHERE server_ts < ? ORDER BY id LIMIT ?)
+                    """, bound, DELETE_BATCH_SIZE);
+            total += n;
+            if (n < DELETE_BATCH_SIZE) break;
+        }
+        return total;
+    }
+
+    /** 单批删除上限：防止单条 DELETE 扫太多行、锁表时间过长（与批量落库上限独立） */
+    private static final int DELETE_BATCH_SIZE = 5000;
 }
