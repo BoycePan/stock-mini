@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -127,22 +128,15 @@ public class AppConfigService {
         String ct = normalizeCfgType(cfgType);
         List<AppConfig> rows = repository.findEnabledByTypeAndTarget(ct, tgt);
 
-        List<AppConfig> allRows = new ArrayList<>();
-        List<AppConfig> targetRows = new ArrayList<>();
-        for (AppConfig row : rows) {
-            if ("all".equals(row.target())) {
-                allRows.add(row);
-            } else {
-                targetRows.add(row);
-            }
-        }
-        Map<String, Object> base = buildTree(allRows);
-        Map<String, Object> override = buildTree(targetRows);
-        deepMerge(base, override);
-        return base;
+        // all 行在前、指定端行在后（稳定排序，同端内保持 sort/id 顺序）：
+        // 建树时同名 cfgKey 后写覆盖先写，天然实现「all 兜底、具体端覆盖」；
+        // 同时全量行共享 childrenByParent 索引，跨端父子边（父=all 子=target 等）不再断裂。
+        List<AppConfig> ordered = new ArrayList<>(rows);
+        ordered.sort(Comparator.comparingInt(r -> "all".equals(r.target()) ? 0 : 1));
+        return buildTree(ordered);
     }
 
-    /** 平铺行 → 树形 Map：分组为嵌套对象，item 为解析后的值 */
+    /** 平铺行 → 树形 Map：分组为嵌套对象（同名分组深合并），item 为解析后的值 */
     private Map<String, Object> buildTree(List<AppConfig> rows) {
         Map<Long, List<AppConfig>> childrenByParent = new HashMap<>();
         for (AppConfig r : rows) {
@@ -162,7 +156,15 @@ public class AppConfigService {
             for (AppConfig child : childrenByParent.getOrDefault(node.id(), List.of())) {
                 mergeNode(sub, child, childrenByParent);
             }
-            map.put(node.cfgKey(), sub);
+            Object prev = map.get(node.cfgKey());
+            if (prev instanceof Map<?, ?> prevMap) {
+                // 同名分组（all 与具体端各一份，或跨端复用的分组）：深合并，target 子项覆盖/追加
+                @SuppressWarnings("unchecked")
+                Map<String, Object> t = (Map<String, Object>) prevMap;
+                deepMerge(t, sub);
+            } else {
+                map.put(node.cfgKey(), sub);
+            }
         } else {
             map.put(node.cfgKey(), parseValue(node.cfgValue()));
         }

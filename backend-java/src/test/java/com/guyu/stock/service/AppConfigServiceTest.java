@@ -99,6 +99,74 @@ class AppConfigServiceTest {
         assertTrue(map.isEmpty());
     }
 
+    // ---------------- 跨端父子边（父=all 子=target / 父=target 子=all）不丢子项 ----------------
+
+    @Test
+    void deliveryMapKeepsTargetChildUnderAllGroup() {
+        // 父=all 子=target：target 子项挂在 all 分组下，应保留并覆盖
+        when(repository.findEnabledByTypeAndTarget("display", "shiChang-tracker"))
+                .thenReturn(List.of(
+                        item(10, null, "group", "display", "home", null, "all", true),
+                        item(11, 10L, "item", "display", "show_gold", "true", "all", true),
+                        item(21, 10L, "item", "display", "banner_text", "\"hi\"", "shiChang-tracker", true)));
+
+        Map<String, Object> map = service.deliveryMap("shiChang-tracker", "display");
+
+        Map<?, ?> home = (Map<?, ?>) map.get("home");
+        assertEquals(Boolean.TRUE, home.get("show_gold"));
+        assertEquals("hi", home.get("banner_text"));
+    }
+
+    @Test
+    void deliveryMapKeepsAllChildUnderTargetGroup() {
+        // 父=target 子=all：all 子项挂在 target 分组下，应保留
+        when(repository.findEnabledByTypeAndTarget("display", "shiChang-tracker"))
+                .thenReturn(List.of(
+                        item(20, null, "group", "display", "home", null, "shiChang-tracker", true),
+                        item(11, 20L, "item", "display", "show_gold", "true", "all", true)));
+
+        Map<String, Object> map = service.deliveryMap("shiChang-tracker", "display");
+
+        Map<?, ?> home = (Map<?, ?>) map.get("home");
+        assertEquals(Boolean.TRUE, home.get("show_gold"));
+    }
+
+    @Test
+    void deliveryMapKeepsTargetChildWhenBothSidesHaveSameGroupKey() {
+        // 混合：target 复制整链分组，且另有子项挂在 all 分组 id 上 → 全部保留
+        when(repository.findEnabledByTypeAndTarget("display", "hangQing-tracker"))
+                .thenReturn(List.of(
+                        item(10, null, "group", "display", "home", null, "all", true),
+                        item(11, 10L, "item", "display", "show_gold", "true", "all", true),
+                        item(20, null, "group", "display", "home", null, "hangQing-tracker", true),
+                        item(21, 20L, "item", "display", "banner_text", "\"hi\"", "hangQing-tracker", true),
+                        item(22, 10L, "item", "display", "xyz", "1", "hangQing-tracker", true)));
+
+        Map<String, Object> map = service.deliveryMap("hangQing-tracker", "display");
+
+        Map<?, ?> home = (Map<?, ?>) map.get("home");
+        assertEquals(Boolean.TRUE, home.get("show_gold"));
+        assertEquals("hi", home.get("banner_text"));
+        assertEquals(1, home.get("xyz"));
+    }
+
+    @Test
+    void deliveryMapKeepsAllChildHangingUnderTargetGroupWithSameKeyGroups() {
+        // 混合：all/target 各有同名分组，all 子项挂在 target 分组下 → 保留
+        when(repository.findEnabledByTypeAndTarget("display", "hangQing-tracker"))
+                .thenReturn(List.of(
+                        item(10, null, "group", "display", "home", null, "all", true),
+                        item(11, 10L, "item", "display", "show_gold", "true", "all", true),
+                        item(20, null, "group", "display", "home", null, "hangQing-tracker", true),
+                        item(21, 20L, "item", "display", "banner_text", "\"hi\"", "all", true)));
+
+        Map<String, Object> map = service.deliveryMap("hangQing-tracker", "display");
+
+        Map<?, ?> home = (Map<?, ?>) map.get("home");
+        assertEquals(Boolean.TRUE, home.get("show_gold"));
+        assertEquals("hi", home.get("banner_text"));
+    }
+
     // ---------------- create 校验 ----------------
 
     @Test
