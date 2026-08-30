@@ -1,0 +1,41 @@
+<!-- 通用弹窗公告组件（utils/popup-notice.ts）：基于 tdesign popup（居中弹层
+     placement="center"，自带遮罩与过渡动画）。卡片内标题 / rich-text 正文 /
+     圆角主按钮 / 关闭按钮全部自定义渲染；根节点挂 dark 类适配深色主题。
+     title / buttonText 由公告 config 下发（服务端 notices position='home'），
+     t-popup 内部缩放渐变动画：name="dialog"（300ms） -->
+<view class="popup-notice {{ theme === 'dark' ? 'dark' : '' }}">
+  <t-popup
+    visible="{{ visible }}"
+    placement="center"
+    name="dialog"
+    showOverlay="{{ true }}"
+    closeOnOverlayClick="{{ true }}"
+    preventScrollThrough="{{ true }}"
+    t-class="popup-panel"
+    bind:visible-change="onVisibleChange"
+  >
+    <view class="popup-card" catchtap="noop">
+      <view
+        class="popup-close"
+        hover-class="popup-close-hover"
+        bindtap="onClose"
+        aria-role="button"
+        aria-label="关闭"
+      >
+        <text class="popup-close-icon">×</text>
+      </view>
+
+      <view wx:if="{{ title }}" class="popup-title">{{ title }}</view>
+
+      <scroll-view scroll-y class="popup-scroll">
+        <rich-text class="popup-content" nodes="{{ content }}"></rich-text>
+      </scroll-view>
+
+      <view class="popup-footer">
+        <button class="popup-btn" hover-class="popup-btn-hover" bindtap="onConfirm">
+          {{ buttonText }}
+        </button>
+      </view>
+    </view>
+  </t-popup>
+</view>

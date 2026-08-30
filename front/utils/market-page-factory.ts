@@ -11,9 +11,11 @@ import { createStoreBindings } from 'mobx-miniprogram-bindings'
 import { rootStore } from '../stores/root.store'
 import { startAutoRefresh, stopAutoRefresh } from './auto-refresh'
 import type { MarketMetric, MarketSection } from '../types/market'
+import type { PopupNotice } from '../types/system'
 import { metricViewModel } from './market'
 import { hasMinuteSources } from '../config/minute'
 import { registerStoreBinding, releaseStoreBindings } from './store-bindings'
+import { isMinuteEnabled } from './system-config'
 import { bindTheme, unbindTheme } from './theme'
 import { trackEvent } from './tracker'
 import { redirectFromShare, SHARE_IMAGE_URL } from './share'
@@ -27,6 +29,23 @@ export interface MarketPageOptions {
   loadingText: string
   /** 加载中副文本 */
   loadingDesc: string
+  /**
+   * 首页是否展示「美股市值TOP100」入口卡（仅全局页配置，见 pages/global/index.ts）：
+   * 页面层按后端 display 配置 + 运行环境判读（utils/system-config.ts resolveTop100Enabled），
+   * 是纯视图过滤——不参与数据加载，不影响其他数据加载速度；
+   * 函数体读取 rootStore.system.configs，MobX 绑定自动追踪，配置到达时卡片即时出现。
+   */
+  showTop100?: () => boolean
+  /**
+   * 弹窗公告（服务端 notices 接口 position='home' 驱动，见 stores/system.store.ts
+   * homePopupNotice / utils/popup-notice.ts resolveHomePopupNotice）：响应式 getter，
+   * 返回 PopupNotice | null，作为 store 绑定 computed 字段——公告拉取到达时即时出现，
+   * wxml 传给通用弹窗组件 components/popup-notice 渲染（组件内部自管理 minVersion +
+   * count 天每日一次规则）。不配置则页面无弹窗（asia / metals 页不受影响）。
+   */
+  popupNotice?: () => PopupNotice | null
+  /** 弹窗展示状态缓存键（按公告 id 区分，组件 storageKey）；缺省走组件默认 */
+  popupStorageKey?: () => string
 }
 
 /** 各行情页分享卡片标题 */
@@ -67,6 +86,10 @@ export function createMarketPage(opts: MarketPageOptions) {
       statusTone: 'rest' as string,
       updatedLabel: '',
       error: '',
+      /** 首页弹窗公告（服务端 notices 接口 position='home' 驱动；wxml 传给 popup-notice 组件） */
+      popupNotice: null as PopupNotice | null,
+      /** 弹窗展示状态缓存键（按公告 id；无公告时走组件默认，不影响） */
+      popupStorageKey: 'popup_notice_state',
     },
 
     isLoading() {
@@ -97,16 +120,33 @@ export function createMarketPage(opts: MarketPageOptions) {
             statusLabel: () => rootStore.market.pages[pageKey]?.statusLabel ?? '',
             statusTone: () => rootStore.market.pages[pageKey]?.statusTone ?? 'rest',
             updatedLabel: () => rootStore.market.pages[pageKey]?.updatedLabel ?? '',
-            sections: () =>
-              (rootStore.market.pages[pageKey]?.sections ?? []).map((section) => ({
+            /** 首页弹窗公告（仅配置了 popupNotice getter 的页面有值，如首页）：
+             *  纯读 store（rootStore.system.notices），公告拉取到达时即时出现 */
+            popupNotice: () => opts.popupNotice?.() ?? null,
+            popupStorageKey: () => opts.popupStorageKey?.() ?? 'popup_notice_state',
+            sections: () => {
+              // 全局页「市值TOP100」入口卡的视图层判读（showTop100 由 pages/global/index.ts
+              // 提供，纯读 store 不触发任何请求）：配置未就绪缺省隐藏、配置到达即时出现，
+              // 绝不进入数据加载路径，不影响其他数据加载速度；非全局页恒展示（无此入口卡）。
+              const showTop100 = opts.showTop100?.() ?? true
+              // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
+              // utils/system-config.ts）：关闭时隐藏「分时」角标，
+              // 避免展示一个点进去会被拦截的入口；纯读 store，配置到达即时生效。
+              const minuteEnabled = isMinuteEnabled()
+              return (rootStore.market.pages[pageKey]?.sections ?? []).map((section) => ({
                 ...section,
-                metrics: section.metrics.map((metric) => ({
-                  ...metricViewModel(metric),
-                  // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
-                  // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code。
-                  minuteAvailable: hasMinuteSources(metric.minuteCode ?? metric.code ?? ''),
-                })),
-              })),
+                metrics: section.metrics
+                  .filter((metric) => metric.code !== 'us-top100' || showTop100)
+                  .map((metric) => ({
+                    ...metricViewModel(metric),
+                    // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
+                    // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code；
+                    // 分时入口开关关闭时整体置 false（角标隐藏）。
+                    minuteAvailable:
+                      hasMinuteSources(metric.minuteCode ?? metric.code ?? '') && minuteEnabled,
+                  })),
+              }))
+            },
           },
           actions: [],
         }),
@@ -184,6 +224,12 @@ export function createMarketPage(opts: MarketPageOptions) {
       if (code === 'us-top100') {
         trackEvent('us.top100.enter')
         wx.navigateTo({ url: '/packageQuote/pages/us-top100/index' })
+        return
+      }
+      // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
+      // utils/system-config.ts）：关闭时禁止跳转分时页。
+      if (!isMinuteEnabled()) {
+        wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
         return
       }
       // 埋点：点击行情卡片（查看分时），上报点的是哪个卡片（code / 名称 / 取数代码）

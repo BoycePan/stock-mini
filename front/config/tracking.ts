@@ -115,6 +115,18 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
     props: { code: 'code', name: 'name', secid: 'secid' },
   },
 
+  /** 通用弹窗公告展示（components/popup-notice，服务端 notices position='home' 公告）：trackEvent('popup.notice.show') */
+  'popup.notice.show': {
+    name: 'popup.notice.show',
+    type: TrackEventType.Action,
+  },
+
+  /** 点通用弹窗公告「立即查看」跳转：trackEvent('popup.notice.tap') */
+  'popup.notice.tap': {
+    name: 'popup.notice.tap',
+    type: TrackEventType.Tap,
+  },
+
   /** 切主题：trackEvent('theme.switch', 'dark') → props.theme（system/light/dark） */
   'theme.switch': {
     name: 'theme.switch',

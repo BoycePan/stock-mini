@@ -1027,6 +1027,42 @@ Authorization: Bearer {token}
 
 只返回「启用 + 命中分端 + 当前在有效期内」的公告，按置顶/排序排列；`config` 已解析为对象，不暴露 `enabled` / 有效期等内部字段。
 
+**position='home' 弹窗公告（config 结构）：**
+
+`type='notice'` 且 `position='home'` 的公告由首页弹窗组件（`components/popup-notice`）
+消费，`config` 字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 否 | 弹窗标题（缺省「公告」） |
+| content | string | 是 | 弹窗正文，支持 HTML（rich-text 渲染）；缺失则前端不弹 |
+| path | string | 否 | 点主按钮跳转的小程序页面路径；空串不跳转（按钮文案「知道了」） |
+| buttonText | string | 否 | 主按钮文案（缺省：有 path「立即查看」，否则「知道了」） |
+| minVersion | string | 否 | 版本门槛：当前小程序版本 >= minVersion 才展示；缺省不设门槛 |
+| count | number | 否 | 展示天数：自首次展示当天起连续展示 count 天，每天最多一次；缺省 1 |
+
+展示频率由客户端本地缓存控制（按公告 id 的 `popup_notice_state_{id}` 键），
+前端不做修改时管理端调整 / 新建公告即时生效（无需发版）。示例：
+
+```json
+{
+  "id": 6,
+  "type": "notice",
+  "title": "全新系统升级",
+  "position": "home",
+  "sort": 0,
+  "pinned": false,
+  "config": {
+    "title": "美股市值TOP100 全新上线",
+    "content": "<p>…HTML…</p>",
+    "path": "/packageQuote/pages/us-top100/index",
+    "buttonText": "立即查看",
+    "minVersion": "1.1.2",
+    "count": 3
+  }
+}
+```
+
 ### 8.3 登录下发 login 类配置
 
 `POST /api/v1/auth/login`（见 6.1）响应新增 `config` 字段：`cfg_type='login'` 的配置（按端全局），客户端登录后直接使用，无需再单独请求。

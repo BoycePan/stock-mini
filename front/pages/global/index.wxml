@@ -14,5 +14,10 @@
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
   ></market-page>
-</view>
 
+  <!-- 首页弹窗公告（通用组件 components/popup-notice）：notice 由服务端 notices 接口
+       position='home' 的公告 config 驱动（stores/system.store.ts homePopupNotice，
+       行情页工厂 popupNotice 响应式注入），组件自管理 minVersion 版本门槛 +
+       count 天每日一次，命中自动弹出；storageKey 按公告 id 区分（换公告 = 重新计天） -->
+  <popup-notice notice="{{ popupNotice }}" storage-key="{{ popupStorageKey }}"></popup-notice>
+</view>

@@ -7,6 +7,7 @@
  * 因此所有分享入口统一把 path 指向首页，并携带 target 标识与目标页参数；
  * 首页 onLoad 识别到 target 后自动 redirectTo 目标页，保证分享一定先经过首页。
  */
+import { isMinuteEnabled } from './system-config'
 
 /** 分享入口统一指向的首页路径（app.json 首个页面，即小程序冷启动页） */
 export const SHARE_HOME_PATH = 'pages/global/index'
@@ -72,6 +73,12 @@ export function redirectFromShare(options: Record<string, string | undefined>): 
   const target = safeDecode(options.target)
   const route = SHARE_TARGET_ROUTES[target]
   if (!route) return false
+  // 分时页分享直达：入口开关（后台 display 配置 canShowMinute / canShowMinuteDev）关闭时
+  // 不中转（返回 false，首页正常渲染，避免绕过开关直达分时页）。
+  if (target === 'minute' && !isMinuteEnabled()) {
+    wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
+    return false
+  }
   const query: string[] = []
   for (const [key, value] of Object.entries(options)) {
     if (key === 'target' || value === undefined || value === '') continue
