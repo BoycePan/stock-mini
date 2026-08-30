@@ -40,6 +40,13 @@ Component({
      * 空串时不传 entrancePath（回退微信默认行为）。
      */
     entrancePath: { type: String, value: '' },
+    /**
+     * 广告位 location（对应后端 adConfig.bannerAd[].location，如 homeTop / asiaTop / matalsTop）。
+     * 空串不展示广告；非空时在 adAfterSection 指定分区卡片之后渲染 <ad-banner>。
+     */
+    adLocation: { type: String, value: '' },
+    /** 广告插入位置：渲染在 id 等于该值的分区卡片之后（如 cn-index / asia-kr-index / metal-precious） */
+    adAfterSection: { type: String, value: '' },
   },
   data: {
     theme: 'light',

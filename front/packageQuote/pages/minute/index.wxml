@@ -34,6 +34,9 @@
     </view>
 
     <block wx:else>
+      <!-- 广告位：分时页放在内容顶部（location=minute-detail） -->
+      <ad-banner location="minute-detail" placement="top"></ad-banner>
+
       <view class="data-notice">
         <view class="notice-icon">!</view>
         <text class="notice-text"

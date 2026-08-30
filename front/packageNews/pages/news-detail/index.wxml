@@ -1,30 +1,42 @@
-<view class="page theme-{{theme}}">
-  <app-header title="新闻详情" showShare="{{true}}" posterShare="{{true}}" showBack="{{true}}" showBrand="{{false}}" bind:share="onSharePoster"></app-header>
+<view class="page theme-{{ theme }}">
+  <app-header
+    title="新闻详情"
+    showShare="{{ true }}"
+    posterShare="{{ true }}"
+    showBack="{{ true }}"
+    showBrand="{{ false }}"
+    bind:share="onSharePoster"
+  ></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <loading-state wx:if="{{loading}}" text="正在加载新闻详情" desc="正在为您获取完整内容，请稍候…"></loading-state>
-    <view wx:elif="{{error && !news.title}}" class="empty-wrap">
+    <!-- 广告位：财经详情页放在内容顶部（location=finance-detail） -->
+    <ad-banner location="finance-detail" placement="top"></ad-banner>
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载新闻详情"
+      desc="正在为您获取完整内容，请稍候…"
+    ></loading-state>
+    <view wx:elif="{{ error && !news.title }}" class="empty-wrap">
       <empty-state title="新闻详情缺失"></empty-state>
     </view>
     <block wx:else>
-
       <!-- 正文卡片 -->
-      <view class="detail-card" wx:if="{{news}}">
+      <view class="detail-card" wx:if="{{ news }}">
         <!-- 顶部强调色条 -->
         <view class="detail-accent-bar"></view>
 
         <!-- 来源徽标 + 时间 -->
-        <view class="detail-meta" wx:if="{{news.source || news.time}}">
-          <view wx:if="{{news.source}}" class="detail-source-badge">
+        <view class="detail-meta" wx:if="{{ news.source || news.time }}">
+          <view wx:if="{{ news.source }}" class="detail-source-badge">
             <view class="detail-source-dot"></view>
-            <text class="detail-source-text">{{news.source}}</text>
+            <text class="detail-source-text">{{ news.source }}</text>
           </view>
-          <text wx:if="{{news.time}}" class="detail-time">{{news.time}}</text>
+          <text wx:if="{{ news.time }}" class="detail-time">{{ news.time }}</text>
         </view>
 
         <!-- 标题（左侧强调条） -->
         <view class="detail-title-row">
           <view class="detail-title-bar"></view>
-          <text class="detail-title">{{news.title}}</text>
+          <text class="detail-title">{{ news.title }}</text>
         </view>
 
         <!-- 装饰分割线 -->
@@ -35,13 +47,13 @@
         </view>
 
         <!-- 正文富文本 / 纯文本 -->
-        <rich-text wx:if="{{richHtml}}" class="detail-rich" nodes="{{richHtml}}"></rich-text>
-        <view wx:elif="{{news.summary}}" class="detail-summary">
-          <block wx:if="{{summaryLead}}">
-            <text class="detail-summary-lead">{{summaryLead}}</text>
-            <text class="detail-summary-rest">{{summaryRest}}</text>
+        <rich-text wx:if="{{ richHtml }}" class="detail-rich" nodes="{{ richHtml }}"></rich-text>
+        <view wx:elif="{{ news.summary }}" class="detail-summary">
+          <block wx:if="{{ summaryLead }}">
+            <text class="detail-summary-lead">{{ summaryLead }}</text>
+            <text class="detail-summary-rest">{{ summaryRest }}</text>
           </block>
-          <text wx:else>{{news.summary}}</text>
+          <text wx:else>{{ news.summary }}</text>
         </view>
         <view wx:else class="detail-empty">
           <view class="detail-empty-icon-wrap">
@@ -52,22 +64,29 @@
       </view>
 
       <!-- 原文链接卡片 -->
-      <view class="link-card" wx:if="{{news.url}}">
+      <view class="link-card" wx:if="{{ news.url }}">
         <view class="link-head">
           <view class="link-head-left">
             <text class="link-icon">🔗</text>
             <text class="link-label">原文链接</text>
           </view>
-          <view wx:if="{{copied}}" class="link-copied-badge">
+          <view wx:if="{{ copied }}" class="link-copied-badge">
             <text class="link-copied-text">已复制 ✓</text>
           </view>
         </view>
         <view class="link-url" bindtap="onCopyLink" hover-class="link-url-hover">
-          <text class="link-url-text">{{news.url}}</text>
+          <text class="link-url-text">{{ news.url }}</text>
           <text class="link-copy-icon">⧉</text>
         </view>
-        <button class="detail-link {{copied ? 'detail-link-copied' : ''}}" hover-class="detail-link-hover" hover-stay-time="120" bindtap="onCopyLink">
-          <text class="detail-link-text">{{copied ? '✓ 已复制，去浏览器打开' : '复制原文链接'}}</text>
+        <button
+          class="detail-link {{ copied ? 'detail-link-copied' : '' }}"
+          hover-class="detail-link-hover"
+          hover-stay-time="120"
+          bindtap="onCopyLink"
+        >
+          <text class="detail-link-text">{{
+            copied ? '✓ 已复制，去浏览器打开' : '复制原文链接'
+          }}</text>
         </button>
       </view>
 
@@ -93,7 +112,6 @@
           <text class="guide-note">小程序无法直接打开外部网页，请复制链接后在浏览器中访问。</text>
         </view>
       </view>
-
     </block>
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
@@ -103,7 +121,7 @@
   <share-poster
     id="sharePoster"
     posterData="{{ posterData }}"
-    forwardAsCard="{{true}}"
+    forwardAsCard="{{ true }}"
     entrancePath="{{ shareEntrancePath }}"
   ></share-poster>
 </view>

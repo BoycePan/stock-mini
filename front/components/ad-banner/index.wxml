@@ -1,0 +1,14 @@
+<!-- 广告位组件：unit-id 由后端 adConfig 按 location 解析（utils/ad-config.ts），
+     未配置 / 未启用 / 配置未就绪时 unitId 为空串，整块不渲染。
+     根节点自带圆角 + overflow:hidden，对广告内容进行圆角裁剪；外侧 margin 由 placement 控制。 -->
+<view
+  wx:if="{{ unitId && showSuccess }}"
+  class="ad-wrap {{ placement }} {{ theme === 'dark' ? 'theme-dark' : '' }}"
+>
+  <ad-custom
+    unit-id="{{ unitId }}"
+    bindload="onAdLoad"
+    binderror="onAdError"
+    bindclose="onAdClose"
+  ></ad-custom>
+</view>

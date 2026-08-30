@@ -4,7 +4,8 @@
     "loading-state": "/components/loading-state/index",
     "empty-state": "/components/empty-state/index",
     "disclaimer-footer": "/components/disclaimer-footer/index",
-    "share-poster": "/components/share-poster/index"
+    "share-poster": "/components/share-poster/index",
+    "ad-banner": "/components/ad-banner/index"
   },
   "enablePullDownRefresh": false
 }

@@ -32,29 +32,35 @@
     </view>
     <block wx:else>
       <view wx:if="{{ news.length }}" class="news-list">
-        <view
-          wx:for="{{ news }}"
-          wx:key="key"
-          class="news-item {{ item.flash ? 'news-item-flash' : '' }}"
-          hover-class="news-item-hover"
-          data-index="{{ index }}"
-          bindtap="onItemTap"
-        >
-          <view class="news-head">
-            <text class="news-title">{{ item.title }}</text>
-            <text wx:if="{{ item.flash }}" class="flash-badge">快讯</text>
-          </view>
-          <text wx:if="{{ item.summary }}" class="news-intro">{{ item.summary }}</text>
-          <view class="news-meta">
-            <view class="meta-source">
-              <text class="meta-dot {{ item.flash ? 'meta-dot-flash' : '' }}"></text>
-              <text wx:if="{{ item.source }}" class="news-source">{{ item.source }}</text>
+        <block wx:for="{{ news }}" wx:key="key">
+          <view
+            class="news-item {{ item.flash ? 'news-item-flash' : '' }}"
+            hover-class="news-item-hover"
+            data-index="{{ index }}"
+            bindtap="onItemTap"
+          >
+            <view class="news-head">
+              <text class="news-title">{{ item.title }}</text>
+              <text wx:if="{{ item.flash }}" class="flash-badge">快讯</text>
             </view>
-            <text wx:if="{{ item.timeText || item.time }}" class="news-time">{{
-              item.timeText || item.time
-            }}</text>
+            <text wx:if="{{ item.summary }}" class="news-intro">{{ item.summary }}</text>
+            <view class="news-meta">
+              <view class="meta-source">
+                <text class="meta-dot {{ item.flash ? 'meta-dot-flash' : '' }}"></text>
+                <text wx:if="{{ item.source }}" class="news-source">{{ item.source }}</text>
+              </view>
+              <text wx:if="{{ item.timeText || item.time }}" class="news-time">{{
+                item.timeText || item.time
+              }}</text>
+            </view>
           </view>
-        </view>
+          <!-- 广告位：财经页插在第二条新闻之后（location=finance，上下留白） -->
+          <ad-banner
+            wx:if="{{ index === 1 }}"
+            location="finance"
+            placement="inline"
+          ></ad-banner>
+        </block>
         <!-- 滚动加载 footer：触底自动加载，也可点击手动加载 -->
         <view class="load-more {{ hasMore ? '' : 'end' }}" bindtap="onLoadMore">
           {{ loadingMore ? '加载中…' : hasMore ? '加载更多' : '没有更多了' }}

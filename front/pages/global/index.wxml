@@ -11,6 +11,8 @@
     updatedLabel="{{ updatedLabel }}"
     sections="{{ sections }}"
     entrancePath="pages/global/index"
+    adLocation="homeTop"
+    adAfterSection="cn-index"
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
   ></market-page>
