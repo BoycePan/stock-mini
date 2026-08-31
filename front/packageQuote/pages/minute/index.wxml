@@ -34,9 +34,6 @@
     </view>
 
     <block wx:else>
-      <!-- 广告位：分时页放在内容顶部（location=minute-detail） -->
-      <ad-banner location="minute-detail" placement="top"></ad-banner>
-
       <view class="data-notice">
         <view class="notice-icon">!</view>
         <text class="notice-text"
@@ -98,6 +95,9 @@
         ></minute-chart>
         <empty-state wx:else title="暂无分时数据"></empty-state>
       </view>
+
+      <!-- 广告位：分时页放在分时图下方（location=minute-detail） -->
+      <ad-banner location="minute-detail" placement="top"></ad-banner>
     </block>
 
     <disclaimer-footer></disclaimer-footer>
