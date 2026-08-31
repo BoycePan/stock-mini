@@ -61,6 +61,11 @@ vendor/
 /front/.cache/
 /front/*.tsbuildinfo
 
+# Portal (Astro) build output & cache
+/portal/dist/
+/portal/.astro/
+/portal/node_modules/
+
 # Runtime data
 /front/pids
 /front/*.pid

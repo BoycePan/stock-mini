@@ -1,0 +1,102 @@
+---
+/**
+ * 首页：hero + 行情墙（签名组件）+ 功能亮点 + 小程序码 CTA + FAQ 摘要。
+ */
+import Base from '../layouts/Base.astro'
+import Seo from '../components/Seo.astro'
+import MarketWall from '../components/MarketWall.astro'
+import QrCta from '../components/QrCta.astro'
+import FeatureSection from '../components/FeatureSection.astro'
+import FaqItem from '../components/FaqItem.astro'
+import { HIGHLIGHTS } from '../data/features'
+import { FAQS } from '../data/faq'
+import { APP_NAME, SITE_DESCRIPTION, SITE_URL } from '../config/site'
+
+const webSiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: APP_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  inLanguage: 'zh-CN',
+}
+---
+
+<Base>
+  <Seo
+    slot="head"
+    title={`${APP_NAME} - 免费看全球行情、金价、日韩与财经资讯`}
+    description={SITE_DESCRIPTION}
+    path="/"
+    keywords="行情,金价,黄金,美股,A股,日经,KOSPI,财经资讯,微信小程序"
+    jsonLd={[webSiteJsonLd]}
+  />
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1>
+        一屏看<span class="accent">全球行情</span>
+        <br />
+        免费 · 无广告 · 微信小程序
+      </h1>
+      <p class="lead">
+        A股美股指数、宏观资产、行业板块、日韩行情、有色金属、金店金价、财经资讯，
+        全部聚合在一个微信小程序里，支持深浅双主题。
+      </p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#open">扫码打开小程序</a>
+        <a class="btn btn-ghost" href="/features/">查看全部功能</a>
+      </div>
+
+      <!-- 签名组件：真实标的名行情墙 -->
+      <div class="hero-markets">
+        <div class="section-head">
+          <span class="eyebrow">Markets We Cover</span>
+          <h2 class="section-title">行情覆盖范围</h2>
+        </div>
+        <MarketWall />
+      </div>
+    </div>
+  </section>
+
+  <!-- 功能亮点 -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Features</span>
+        <h2 class="section-title">核心功能</h2>
+        <p class="section-desc">六大板块，覆盖从全球宏观到金店零售价的完整行情链路。</p>
+      </div>
+      <div class="feature-grid">
+        {HIGHLIGHTS.map((feature) => <FeatureSection feature={feature} />)}
+      </div>
+      <p class="text-center mt-32">
+        <a class="btn btn-ghost" href="/features/">查看全部功能与细节 →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- 小程序码 CTA -->
+  <section class="section" id="open">
+    <div class="container">
+      <QrCta title="全球行情、金价、日韩一屏看齐" />
+    </div>
+  </section>
+
+  <!-- FAQ 摘要 -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">FAQ</span>
+        <h2 class="section-title">常见问题</h2>
+      </div>
+      <div class="faq-list">
+        {FAQS.slice(0, 4).map((item, index) => <FaqItem item={item} index={index} />)}
+      </div>
+      <p class="text-center mt-32">
+        <a class="btn btn-ghost" href="/faq/">查看更多问题 →</a>
+      </p>
+    </div>
+  </section>
+</Base>

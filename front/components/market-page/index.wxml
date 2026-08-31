@@ -22,13 +22,19 @@
       ><button bindtap="onRetry">重新加载</button></view
     >
     <block wx:else>
-      <section-card
-        wx:for="{{ sections }}"
-        wx:key="id"
-        section="{{ item }}"
-        first="{{ index === 0 }}"
-        bind:metrictap="onMetricTap"
-      ></section-card>
+      <block wx:for="{{ sections }}" wx:key="id">
+        <section-card
+          section="{{ item }}"
+          first="{{ index === 0 }}"
+          bind:metrictap="onMetricTap"
+        ></section-card>
+        <!-- 广告位：渲染在指定分区卡片之后（adAfterSection），location 由页面传入 -->
+        <ad-banner
+          wx:if="{{ adLocation && item.id === adAfterSection }}"
+          location="{{ adLocation }}"
+          placement="card"
+        ></ad-banner>
+      </block>
     </block>
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>

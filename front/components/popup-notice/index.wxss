@@ -1,0 +1,143 @@
+/* 通用弹窗公告组件：基于 tdesign popup（居中弹层 placement="center"）。
+   卡片外观（背景 / 圆角 / 阴影）与内容（标题 / rich-text 正文 / 圆角主按钮 /
+   关闭按钮）全部自定义；深色主题通过 tdesign CSS 变量 + 组件自身 dark 样式适配
+   （组件样式隔离，不依赖全局深色规则）。 */
+
+/* 浅色：卡片容器（t-popup 本体）与遮罩的 tdesign 变量 */
+.popup-notice {
+  /* 遮罩：与全站弹层一致（info-dialog / share-poster 同款） */
+  --td-overlay-bg-color: rgba(15, 23, 35, 0.55);
+  /* 卡片容器：白底 + 圆角（t-popup--center 自带 border-radius 变量） */
+  --td-popup-bg-color: #ffffff;
+  --td-popup-border-radius: 28rpx;
+  /* 正文强调样式变量（rich-text 内联 style 引用，由公告 config 的 content 自带）：
+     强调色 / 功能点卡片底 / 卡片描边 / 免责声明文字 */
+  --popup-accent: #4278ed;
+  --popup-soft-bg: #f2f6fa;
+  --popup-soft-border: #d9e2ec;
+  --popup-note-color: #718096;
+}
+
+/* 卡片阴影（t-class 外部样式类，作用于 t-popup 容器） */
+.popup-panel {
+  box-shadow: 0 24rpx 64rpx rgba(8, 16, 30, 0.18);
+}
+
+/* 卡片内容 */
+.popup-card {
+  position: relative;
+  width: 640rpx;
+  box-sizing: border-box;
+  padding: 52rpx 40rpx 40rpx;
+}
+
+/* 关闭按钮（右上角） */
+.popup-close {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+}
+
+.popup-close-icon {
+  font-size: 44rpx;
+  line-height: 1;
+  color: #99a6b7;
+}
+
+.popup-close-hover {
+  background: #f0f3f8;
+}
+
+/* 标题：居中加粗，留出右侧关闭按钮空间 */
+.popup-title {
+  padding: 0 56rpx 20rpx;
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #152338;
+}
+
+/* 正文：左对齐可读性更好，超高限高滚动 */
+.popup-scroll {
+  max-height: 40vh;
+}
+
+.popup-content {
+  display: block;
+  text-align: left;
+  font-size: 27rpx;
+  line-height: 1.7;
+  color: #6b7a90;
+}
+
+/* 底部：圆角主按钮（全宽胶囊） */
+.popup-footer {
+  padding-top: 36rpx;
+}
+
+.popup-btn {
+  display: block;
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0;
+  border: none;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #66a6ff 0%, #4c7ff5 100%);
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.popup-btn::after {
+  border: none;
+}
+
+.popup-btn-hover {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+/* ================= 深色主题 ================= */
+.popup-notice.dark {
+  --td-overlay-bg-color: rgba(0, 0, 0, 0.62);
+  --td-popup-bg-color: #1a2637;
+  --popup-accent: #6fa3ff;
+  --popup-soft-bg: #223248;
+  --popup-soft-border: #34465e;
+  --popup-note-color: #9cacc0;
+}
+
+.popup-notice.dark .popup-panel {
+  box-shadow: 0 24rpx 64rpx rgba(0, 0, 0, 0.4);
+}
+
+.popup-notice.dark .popup-close-hover {
+  background: #223248;
+}
+
+.popup-notice.dark .popup-close-icon {
+  color: #9cacc0;
+}
+
+.popup-notice.dark .popup-title {
+  color: #f5f7fb;
+}
+
+.popup-notice.dark .popup-content {
+  color: #9cacc0;
+}
+
+.popup-notice.dark .popup-btn {
+  background: linear-gradient(135deg, #6fa3ff, #5b8cf0);
+  color: #0d1524;
+}

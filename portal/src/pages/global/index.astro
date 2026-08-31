@@ -1,0 +1,128 @@
+---
+/**
+ * 全球行情落地页（SEO：A股、美股、VIX、标普500、纳斯达克）。
+ */
+import Base from '../../layouts/Base.astro'
+import Seo from '../../components/Seo.astro'
+import QrCta from '../../components/QrCta.astro'
+
+const cnIndices = ['上证指数', '深证成指', '创业板指', '科创50', 'A股平均股价']
+const usIndices = ['道琼斯', '标普500', '纳斯达克']
+const macroAssets = [
+  'VIX恐慌指数',
+  '费城半导体指数（SOX）',
+  '布伦特原油',
+  '美元强弱',
+  '美元/离岸人民币',
+  '美债长债（TLT）',
+  'COMEX黄金',
+  'COMEX白银',
+  'COMEX铜',
+  '天然气',
+]
+const boards = [
+  'AI算力',
+  'CPO',
+  '半导体',
+  '存储',
+  '数据中心',
+  '云计算',
+  '商业航天',
+  '卫星',
+  '机器人',
+  '自动驾驶',
+  '核电',
+  '电网',
+  '军工',
+  '新能源',
+  '光伏',
+  '锂电池',
+  '石油',
+  '天然气',
+  '铜/有色',
+  '黄金',
+  '银行金融',
+  '生物医药',
+  '消费',
+  '稀土',
+]
+---
+
+<Base>
+  <Seo
+    slot="head"
+    title="全球行情：A股美股指数、宏观资产、行业板块一屏看齐"
+    description="看A股指数（上证/深成/创业板/科创50）、美股指数（道指/标普500/纳斯达克）、VIX恐慌指数、原油、黄金白银、汇率等宏观资产，以及AI算力、半导体等24个行业板块，打开微信小程序免费看。"
+    path="/global/"
+    keywords="A股,美股,标普500,纳斯达克,道琼斯,VIX,恐慌指数,行业板块,全球行情"
+    jsonLd={[
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: '市场追踪助手',
+        applicationCategory: 'FinanceApplication',
+        operatingSystem: 'WeChat Mini Program',
+        description:
+          '免费看A股美股指数、宏观资产与行业板块的微信小程序，数据来自公开接口聚合，仅供参考。',
+        inLanguage: 'zh-CN',
+      },
+    ]}
+  />
+
+  <section class="landing-hero">
+    <div class="container">
+      <h1>全球行情，一屏看齐</h1>
+      <p class="lead">
+        A股与美股指数、宏观资产、行业板块聚合在一个微信小程序里，跨市场建立宏观视野。
+      </p>
+      <div class="tag-row">
+        <span class="chip chip-up">上证指数</span>
+        <span class="chip chip-down">标普500</span>
+        <span class="chip chip-up">纳斯达克</span>
+        <span class="chip chip-down">VIX恐慌指数</span>
+        <span class="chip chip-up">COMEX黄金</span>
+        <span class="chip chip-down">AI算力</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top: 0">📈 A股指数</h3>
+          <ul class="prose">
+            {cnIndices.map((item) => <li>{item}</li>)}
+          </ul>
+          <h3>🇺🇸 美股指数</h3>
+          <ul class="prose">
+            {usIndices.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-top: 0">🌐 宏观资产（10 项）</h3>
+          <ul class="prose">
+            {macroAssets.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mt-32">
+        <h3 style="margin-top: 0">🧩 行业板块（24 项，含美股代理股参考）</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
+          {boards.map((item) => <span class="chip">{item}</span>)}
+        </div>
+        <p class="prose" style="margin-top: 16px">
+          每个板块配对应美股代理股做参考（如 AI算力 对应 NVDA、AMD、AVGO 等）， 便于在
+          A股开盘前观察美股产业链动向。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <QrCta title="A股美股、宏观资产一屏看齐" />
+    </div>
+  </section>
+</Base>

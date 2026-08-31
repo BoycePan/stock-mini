@@ -1,0 +1,60 @@
+import { isReleaseBuild } from '../config/env'
+import { rootStore } from '../stores/root.store'
+import type { AppConfig } from '../types/system'
+
+/** 开发版 / 体验版配置键后缀：线上正式版键 + 'Dev' */
+const DEV_KEY_SUFFIX = 'Dev'
+
+type FeatureToggleKey = keyof NonNullable<AppConfig['config']>
+
+/**
+ * createFeatureToggle — 「双环境布尔开关」解析器工厂（配置驱动，见 docs/API.md 八「前端配置与公告」）。
+ *
+ * 后台 app_config（cfg_type='display'）为每个开关维护一对键：
+ * - `<releaseKey>`：线上正式版（release）读取；
+ * - `<releaseKey>Dev`：开发版 / 体验版（develop / trial）读取（自动推导）；
+ * - 配置未就绪（首屏配置接口尚未返回，如冷启动竞态）或键缺省 → false（缺省关闭），
+ *   绝不等配置接口、不影响行情首屏加载；配置到达后下一次刷新即生效。
+ *
+ * 返回**纯函数**（环境判定由调用方传入 config/env.ts isReleaseBuild），便于单测；
+ * 便捷读取当前环境用 `bindToggle`（自动读全局配置 store + 运行环境）。
+ *
+ * 新增一个开关三步：
+ * 1. `front/types/system.ts` 的 `AppConfig.config` 增加一对键 `<key>` / `<key>Dev`；
+ * 2. 本文件 `export const resolveXxxEnabled = createFeatureToggle('<key>')`（纯函数）；
+ * 3. 调用方需当前环境判定时 `export const isXxxEnabled = bindToggle(resolveXxxEnabled)`。
+ *
+ * @param releaseKey 线上正式版配置键
+ */
+export function createFeatureToggle(
+  releaseKey: FeatureToggleKey,
+): (config: AppConfig['config'], release: boolean) => boolean {
+  const devKey = `${releaseKey}${DEV_KEY_SUFFIX}` as FeatureToggleKey
+  return (config, release) => {
+    if (!config) return false
+    return release ? (config[releaseKey] ?? false) : (config[devKey] ?? false)
+  }
+}
+
+/**
+ * bindToggle — 便捷绑定：把纯解析器绑定到「当前运行环境 + 全局配置 store」。
+ * 调用点不再需要自己传 `rootStore.system.configs.config` 与 `isReleaseBuild()`，
+ * 直接 `isXxxEnabled()` 即可；读取配置是响应式的（MobX 绑定自动追踪，配置到达即时生效）。
+ */
+export function bindToggle(
+  resolve: (config: AppConfig['config'], release: boolean) => boolean,
+): () => boolean {
+  return () => resolve(rootStore.system.configs.config, isReleaseBuild())
+}
+
+/** 美股「市值TOP100」入口卡是否展示（线上正式版读 homeShowTop100，开发/体验版读 homeShowTop100Dev） */
+export const resolveTop100Enabled = createFeatureToggle('homeShowTop100')
+
+/** 分时行情页（packageQuote/pages/minute）入口开关（线上正式版读 canShowMinute，开发/体验版读 canShowMinuteDev） */
+export const resolveMinuteEnabled = createFeatureToggle('canShowMinute')
+
+/** 便捷版：当前环境是否展示「市值TOP100」入口卡 */
+export const isTop100Enabled = bindToggle(resolveTop100Enabled)
+
+/** 便捷版：当前环境是否开放分时行情页（关闭时「分时」角标隐藏 + 各入口跳转拦截，见调用方） */
+export const isMinuteEnabled = bindToggle(resolveMinuteEnabled)

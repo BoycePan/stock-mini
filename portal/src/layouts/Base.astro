@@ -1,0 +1,48 @@
+---
+/**
+ * 基础布局：全站页头（导航 + 主题切换）、页脚（免责声明固定块）、
+ * 主题防闪烁脚本（首帧前根据 localStorage / prefers-color-scheme 设置 data-theme）。
+ * 页面通过 <Seo slot="head" /> 提供 title / description / OG / JSON-LD。
+ */
+import '../styles/global.css'
+import { LOGO_IMAGE, SITE_URL } from '../config/site'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+---
+
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#eef3f8" />
+    <link rel="icon" type="image/png" href={LOGO_IMAGE} />
+    <link rel="sitemap" href={`${SITE_URL}/sitemap-index.xml`} />
+    <slot name="head" />
+    <script is:inline>
+      // 主题防闪烁：首帧前根据持久化偏好或系统偏好设置 data-theme
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('portal-theme')
+          var theme = stored === 'dark' || stored === 'light' ? stored : null
+          if (!theme) {
+            theme =
+              window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          }
+          document.documentElement.setAttribute('data-theme', theme)
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light')
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

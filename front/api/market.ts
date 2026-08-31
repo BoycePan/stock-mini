@@ -120,7 +120,10 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   const cnIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'cn').map(indexItem)
   const usIndices = GLOBAL_INDICES.filter((cfg) => cfg.market === 'us').map(indexItem)
   // 美股指数区末尾的入口卡：点击进入「美股市值TOP100」列表（纯前端直连东财 clist/get，
-  // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）
+  // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）。
+  // 数据层恒构建该入口卡；是否展示由全局首页视图层按后端 display 配置判读
+  // （pages/global/index.ts showTop100 → market-page-factory 过滤），判读不进入数据加载路径，
+  // 不影响其他数据加载速度。
   usIndices.push({
     code: 'us-top100',
     name: '美股市值TOP100',

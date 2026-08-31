@@ -1,0 +1,26 @@
+---
+/**
+ * FAQ 折叠项（原生 <details>/<summary>，无 JS 依赖，键盘可达）。
+ */
+import type { FaqItem } from '../data/faq'
+
+interface Props {
+  item: FaqItem
+  index: number
+}
+
+const { item, index } = Astro.props
+---
+
+<details class="faq-item" name="faq">
+  <summary class="faq-question">
+    <span>
+      <span class="num" style="color: var(--accent); margin-right: 8px"
+        >{String(index + 1).padStart(2, '0')}</span
+      >
+      {item.question}
+    </span>
+    <span class="faq-arrow" aria-hidden="true">+</span>
+  </summary>
+  <div class="faq-answer">{item.answer}</div>
+</details>

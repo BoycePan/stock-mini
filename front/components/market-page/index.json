@@ -4,6 +4,7 @@
     "app-header": "/components/app-header/index",
     "section-card": "/components/section-card/index",
     "loading-state": "/components/loading-state/index",
-    "disclaimer-footer": "/components/disclaimer-footer/index"
+    "disclaimer-footer": "/components/disclaimer-footer/index",
+    "ad-banner": "/components/ad-banner/index"
   }
 }
