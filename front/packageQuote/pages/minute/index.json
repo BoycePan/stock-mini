@@ -5,7 +5,8 @@
     "empty-state": "/components/empty-state/index",
     "minute-chart": "/components/minute-chart/index",
     "disclaimer-footer": "/components/disclaimer-footer/index",
-    "share-poster": "/components/share-poster/index"
+    "share-poster": "/components/share-poster/index",
+    "ad-banner": "/components/ad-banner/index"
   },
   "enablePullDownRefresh": true
 }

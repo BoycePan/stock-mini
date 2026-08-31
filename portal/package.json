@@ -1,0 +1,25 @@
+{
+  "name": "market-tracker-portal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "「市场追踪助手」小程序引流门户网站（Astro SSG 多页 SEO）",
+  "license": "MIT",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.2.9"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "prettier-plugin-astro": "^0.14.1",
+    "typescript": "^5.8.0"
+  }
+}

@@ -1,0 +1,65 @@
+name: Portal Deploy
+
+on:
+  push:
+    branches: [main]
+    # 只有门户站点相关文件变更才触发（front/ 小程序与 backend-java/ 不触发）
+    paths:
+      - 'portal/**'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/portal-deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (astro check)
+        run: pnpm --filter market-tracker-portal check
+
+      - name: Build static site
+        run: pnpm --filter market-tracker-portal build
+
+      # ── 上传 dist/ 到服务器（复用后端部署的 SSH secrets）──
+      # 目标路径由仓库 Variable PORTAL_DEPLOY_PATH 控制，默认 /apps/stock/portal
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: 'portal/dist/*'
+          target: ${{ vars.PORTAL_DEPLOY_PATH || '/apps/stock/portal' }}
+          strip_components: 2
+
+      # 可选：上传完成后重载 nginx（Variable PORTAL_RELOAD_NGINX=true 时启用）
+      - name: Reload nginx (optional)
+        if: vars.PORTAL_RELOAD_NGINX == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            # 确保部署目录存在且 nginx 站点已配置（见 docs/门户网站.md）
+            nginx -t && nginx -s reload

@@ -1,7 +1,14 @@
-export enum AppId {
-  MarketTracker = 'wx2cfd1556edf21a24',
-  HangQingTracker = 'wx0ecd2049e54fbca8',
-}
+/**
+ * 小程序 AppID 集合（const 对象而非 enum：Node strip-types 测试环境不支持 TS enum，
+ * 且本仓库无外部代码把 AppId 当类型用；值语义与 enum 完全一致）
+ */
+export const AppId = {
+  MarketTracker: 'wx2cfd1556edf21a24',
+  HangQingTracker: 'wx0ecd2049e54fbca8',
+} as const
+
+/** AppId 值类型（如后续需要把 AppId 当类型用） */
+export type AppId = (typeof AppId)[keyof typeof AppId]
 
 /** AppID → 小程序展示名称 映射表（新增小程序在这里登记） */
 const APP_BRANDS: Record<string, string> = {
@@ -18,6 +25,9 @@ const APP_LOGIN_SOURCES: Record<string, string> = {
 /** 未登记 AppID 时的兜底名称（本仓库默认小程序） */
 const FALLBACK_APP_NAME = '市场追踪助手'
 
+/** 未登记 AppID 时的兜底登录 source（与兜底名称对应的默认小程序） */
+const FALLBACK_LOGIN_SOURCE: string = APP_LOGIN_SOURCES[AppId.MarketTracker] ?? 'shiChang-tracker'
+
 /** 当前小程序 AppID；wx 不可用（如单测环境）或读取失败时返回空串 */
 function getCurrentAppId(): string {
   try {
@@ -33,9 +43,9 @@ export function resolveAppName(appId: string): string {
   return APP_BRANDS[appId] || FALLBACK_APP_NAME
 }
 
-/** 按 AppID 解析登录 source 参数值；未登记时回退默认值（纯函数，便于单测） */
+/** 按 AppID 解析登录 source 参数值；未登记时回退默认 source（纯函数，便于单测） */
 export function resolveLoginSource(appId: string): string {
-  return APP_LOGIN_SOURCES[appId] || ''
+  return APP_LOGIN_SOURCES[appId] || FALLBACK_LOGIN_SOURCE
 }
 
 const currentAppId = getCurrentAppId()

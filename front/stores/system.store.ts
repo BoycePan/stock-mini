@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx-miniprogram'
 import { systemApi } from '../api/system'
-import type { AppConfig, Notice } from '../types/system'
+import type { AppConfig, Notice, PopupNotice } from '../types/system'
+import { resolveHomePopupNotice } from '../utils/popup-notice'
 
 /**
  * 系统配置与公告全局 store（docs/API.md 八）。
@@ -35,6 +36,20 @@ export class SystemStore {
     return this.notices.filter((n) => n.position === 'settings')
   }
 
+  /**
+   * 首页弹窗公告（position='home' 的 notice 映射为 PopupNotice，
+   * 见 utils/popup-notice.ts resolveHomePopupNotice）；无合法 home 公告时 null（不弹）。
+   * 首页通过行情页工厂的 popupNotice 响应式 getter 读取，公告拉取到达时即时出现。
+   */
+  get homePopupNotice(): PopupNotice | null {
+    return resolveHomePopupNotice(this.notices)?.popup ?? null
+  }
+
+  /** 首页弹窗展示状态缓存键（按公告 id 区分，组件 storageKey）；无 home 公告时回退组件默认键 */
+  get homePopupStorageKey(): string {
+    return resolveHomePopupNotice(this.notices)?.storageKey ?? 'popup_notice_state'
+  }
+
   /** 拉取 display 配置 + 公告（在 rootStore.bootstrap 内、登录成功后调用） */
   async fetchAll(): Promise<void> {
     this.loading = true
@@ -43,6 +58,7 @@ export class SystemStore {
         systemApi.configs('display'),
         systemApi.notices(),
       ])
+
       runInAction(() => {
         this.configs = configs ?? {}
         this.notices = notices ?? []

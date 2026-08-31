@@ -1,1 +1,2 @@
 /* 行情页公共样式已移入 components/market-page/index.wxss，无需额外引入 */
+/* 首页弹窗公告样式在通用组件 components/popup-notice/index.wxss 内（样式隔离） */

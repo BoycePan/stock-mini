@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "market-page": "/components/market-page/index"
+    "market-page": "/components/market-page/index",
+    "popup-notice": "/components/popup-notice/index"
   },
   "enablePullDownRefresh": true
 }

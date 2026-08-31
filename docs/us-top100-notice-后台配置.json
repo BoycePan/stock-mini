@@ -1,0 +1,29 @@
+本文件由 front/config/us-top100-notice.ts 导出，供后台（管理端）配置使用。
+「一、纯配置 JSON」：与前端 PopupNotice 字段一一对应；
+「二、管理端 POST /api/mgr/notices 请求体」：按 docs/API.md 8.5 公告管理契约组装（config 为 JSON 字符串）。
+
+一、纯配置 JSON
+=================
+{
+  "title": "美股市值TOP100 全新上线",
+  "content": "<p style=\"margin:0 0 20rpx;\">实时展示美股<span style=\"color:var(--popup-accent,#4278ed);font-weight:700;\">三大市场</span>（<span style=\"color:var(--popup-accent,#4278ed);font-weight:700;\">NYSE · NASDAQ · AMEX</span>）市值前<span style=\"color:var(--popup-accent,#4278ed);font-weight:700;\">100</span>只个股榜单。</p><div style=\"margin:0 0 16rpx;padding:18rpx 22rpx;border-left:6rpx solid var(--popup-accent,#4278ed);border-radius:12rpx;background:var(--popup-soft-bg,#f2f6fa);\"><p style=\"margin:0;\">📊 支持按「<span style=\"color:var(--popup-accent,#4278ed);font-weight:700;\">涨跌幅 / 总市值</span>」排序</p></div><div style=\"margin:0 0 20rpx;padding:18rpx 22rpx;border-left:6rpx solid var(--popup-accent,#4278ed);border-radius:12rpx;background:var(--popup-soft-bg,#f2f6fa);\"><p style=\"margin:0;\">📈 点击任意个股，查看<span style=\"color:var(--popup-accent,#4278ed);font-weight:700;\">当日分时走势</span></p></div><p style=\"margin:0;padding:14rpx 18rpx;border:1rpx dashed var(--popup-soft-border,#d9e2ec);border-radius:12rpx;font-size:22rpx;line-height:1.6;color:var(--popup-note-color,#718096);\">数据来自东方财富公开接口（延迟行情），仅供参考，不构成任何投资建议，据此操作风险自担。</p>",
+  "path": "/packageQuote/pages/us-top100/index",
+  "buttonText": "立即查看",
+  "minVersion": "1.1.1",
+  "count": 3
+}
+
+二、管理端 POST /api/mgr/notices 请求体
+=========================================
+{
+  "type": "notice",
+  "title": "美股市值TOP100 全新上线",
+  "target": "all",
+  "position": "home",
+  "sort": 0,
+  "pinned": true,
+  "enabled": true,
+  "validFrom": null,
+  "validTo": null,
+  "config": "{\"content\":\"<p style=\\\"margin:0 0 20rpx;\\\">实时展示美股<span style=\\\"color:var(--popup-accent,#4278ed);font-weight:700;\\\">三大市场</span>（<span style=\\\"color:var(--popup-accent,#4278ed);font-weight:700;\\\">NYSE · NASDAQ · AMEX</span>）市值前<span style=\\\"color:var(--popup-accent,#4278ed);font-weight:700;\\\">100</span>只个股榜单。</p><div style=\\\"margin:0 0 16rpx;padding:18rpx 22rpx;border-left:6rpx solid var(--popup-accent,#4278ed);border-radius:12rpx;background:var(--popup-soft-bg,#f2f6fa);\\\"><p style=\\\"margin:0;\\\">📊 支持按「<span style=\\\"color:var(--popup-accent,#4278ed);font-weight:700;\\\">涨跌幅 / 总市值</span>」排序</p></div><div style=\\\"margin:0 0 20rpx;padding:18rpx 22rpx;border-left:6rpx solid var(--popup-accent,#4278ed);border-radius:12rpx;background:var(--popup-soft-bg,#f2f6fa);\\\"><p style=\\\"margin:0;\\\">📈 点击任意个股，查看<span style=\\\"color:var(--popup-accent,#4278ed);font-weight:700;\\\">当日分时走势</span></p></div><p style=\\\"margin:0;padding:14rpx 18rpx;border:1rpx dashed var(--popup-soft-border,#d9e2ec);border-radius:12rpx;font-size:22rpx;line-height:1.6;color:var(--popup-note-color,#718096);\\\">数据来自东方财富公开接口（延迟行情），仅供参考，不构成任何投资建议，据此操作风险自担。</p>\",\"path\":\"/packageQuote/pages/us-top100/index\",\"buttonText\":\"立即查看\",\"minVersion\":\"1.1.1\",\"count\":3}"
+}

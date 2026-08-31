@@ -1,0 +1,47 @@
+---
+/**
+ * 签名组件「行情墙」：用真实标的名称组成的涨跌色芯片墙 + 缓慢滚动。
+ * - 只展示名称与类别，不展示数字（数值以小程序实时展示为准）；
+ * - 分区间用「涨/跌」交替着色，保持克制、诚实呈现覆盖范围；
+ * - 鼠标悬停暂停滚动，prefers-reduced-motion 下不滚动（全局 CSS 已降级）。
+ */
+import { WALL_GROUPS } from '../data/features'
+
+// 每两个分区交替使用涨跌色，视觉上模拟行情节奏，但不表示任何涨跌方向
+const rendered = WALL_GROUPS.map((group, index) => ({
+  ...group,
+  tone: index % 2 === 0 ? ('up' as const) : ('down' as const),
+}))
+---
+
+<div class="market-wall" aria-label="小程序行情覆盖范围">
+  <div class="wall-viewport">
+    <div class="wall-track">
+      <!-- 第一组：全部真实分组 -->
+      {
+        rendered.map((group) => (
+          <div class="wall-group">
+            <span class="wall-group-label">{group.label}</span>
+            {group.items.map((item) => (
+              <span class={`wall-chip chip-${group.tone}`}>{item}</span>
+            ))}
+          </div>
+        ))
+      }
+      <!-- 第二组：复制一份实现无缝循环滚动 -->
+      {
+        rendered.map((group) => (
+          <div class="wall-group" aria-hidden="true">
+            <span class="wall-group-label">{group.label}</span>
+            {group.items.map((item) => (
+              <span class={`wall-chip chip-${group.tone}`}>{item}</span>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+  <div class="wall-note">
+    以上为小程序行情覆盖范围（不含数值）；实时价格以小程序内展示为准，数据来自公开接口聚合，可能有延迟，仅供参考。
+  </div>
+</div>

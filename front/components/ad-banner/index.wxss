@@ -1,0 +1,34 @@
+/**
+ * ad-banner 组件样式（组件样式隔离，深色样式写在本文件内）。
+ *
+ * 圆角裁剪：根节点 border-radius + overflow:hidden，广告内容（ad-custom）按圆角裁切；
+ * 外侧 margin 由 placement 控制（card / inline / top），背景与边框跟随卡片风格（见色板）。
+ */
+
+.ad-wrap {
+  margin: 16rpx 20rpx 0;
+  border: 1rpx solid #d4dfec;
+  border-radius: 28rpx;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.04),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.06);
+}
+
+/* 内容卡片内部（如财经页新闻列表第二条之后）：上下留白，左右随父容器内边距 */
+.ad-wrap.inline {
+  margin: 24rpx 0;
+}
+
+/* 页面内容顶部（分时页 / 财经详情页）：仅底部留白 */
+.ad-wrap.top {
+  margin: 20rpx 0 24rpx;
+}
+
+/* 深色主题：卡片表面 #1a2637，边框 #2a394e */
+.ad-wrap.theme-dark {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.18), 0 12rpx 32rpx rgba(0, 0, 0, 0.16);
+}

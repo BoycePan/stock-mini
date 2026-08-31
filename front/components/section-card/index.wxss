@@ -175,6 +175,10 @@
   box-shadow:
     0 2rpx 6rpx rgba(30, 60, 110, 0.04),
     0 8rpx 20rpx rgba(30, 60, 110, 0.05);
+  /* 入口卡出现时的柔和过渡（如后端配置到达后首次插入页面）：
+     淡入 + 轻微上浮，避免「直接蹦出来」的生硬感；节点按 wx:key 复用，
+     仅节点首次创建时播放一次，8s 轮询 / 下拉刷新 / 切主题不会重复播放 */
+  animation: featured-enter 0.4s ease-out;
 }
 
 .featured-hover {
@@ -215,6 +219,19 @@
 
 .featured-arrow {
   flex-shrink: 0;
+}
+
+/* 入口卡入场动画（见 .featured-card 的 animation 引用）：淡入 + 轻微上浮 */
+@keyframes featured-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .metric-card {

@@ -11,6 +11,8 @@
     updatedLabel="{{ updatedLabel }}"
     sections="{{ sections }}"
     entrancePath="pages/metals/index"
+    adLocation="matalsTop"
+    adAfterSection="metal-precious"
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
   ></market-page>

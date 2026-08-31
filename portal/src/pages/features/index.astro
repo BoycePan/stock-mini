@@ -1,0 +1,69 @@
+---
+/**
+ * 功能总览页：全功能地图 + 「实际没有的功能」如实说明。
+ */
+import Base from '../../layouts/Base.astro'
+import Seo from '../../components/Seo.astro'
+import QrCta from '../../components/QrCta.astro'
+import { FEATURES, NOT_AVAILABLE } from '../../data/features'
+---
+
+<Base>
+  <Seo
+    slot="head"
+    title="全部功能：全球行情、金价、日韩、财经资讯与个股详情"
+    description="市场追踪助手小程序全部功能一览：全球行情、日韩行情、有色金属与金价、财经资讯、搜索与个股详情、深浅双主题，免费无广告。"
+    path="/features/"
+    keywords="行情小程序,功能,全球行情,金价,日韩行情,财经资讯,个股详情,K线,分时"
+    jsonLd={[
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: '市场追踪助手',
+        applicationCategory: 'FinanceApplication',
+        operatingSystem: 'WeChat Mini Program',
+        description:
+          '免费看全球行情、金价、日韩行情与财经资讯的微信小程序，支持深浅双主题，数据来自公开接口聚合，仅供参考。',
+        inLanguage: 'zh-CN',
+      },
+    ]}
+  />
+
+  <section class="landing-hero">
+    <div class="container">
+      <h1>全部功能一览</h1>
+      <p class="lead">六大板块完整覆盖：从全球宏观到金店零售价，从指数行情到个股K线。</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="feature-grid">
+        {
+          FEATURES.map((feature) => (
+            <article class="card feature-card">
+              <div class="feature-icon" aria-hidden="true">
+                {feature.icon}
+              </div>
+              <h3>{feature.title}</h3>
+              <p>{feature.desc}</p>
+              {feature.points && (
+                <ul class="prose" style="margin-top: 12px">
+                  {feature.points.map((point) => (
+                    <li>{point}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <QrCta title="全部功能，免费使用" />
+    </div>
+  </section>
+</Base>
