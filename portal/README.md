@@ -10,6 +10,8 @@
 - **@astrojs/sitemap**：自动生成 `sitemap-index.xml` / `sitemap-0.xml`
 - **TypeScript 5.8** + `astro check` 类型检查；**Prettier** + `prettier-plugin-astro` 格式化
 - 无框架、无 Tailwind：纯 CSS 变量实现**浅色 / 深色双主题**（默认跟随系统，可手动切换并持久化）
+- **视觉 v2**：玻璃拟态卡片 + 渐变光斑（aurora）背景 + 数据霓虹文字，配合等宽数字与精细排版；
+  **SEO v2**：全站自动注入 `Organization` 与 `BreadcrumbList` JSON-LD，分享配图使用 1200×630 `og.png`
 
 ## 目录结构
 
@@ -19,13 +21,14 @@ portal/
 ├── public/
 │   ├── logo.png            # 品牌 logo（从 front/static/images/logo.png 复制）
 │   ├── miniprogram-code.png# ⚠️ 占位图，上线前替换为真实小程序码
+│   ├── og.png              # 分享配图（1200×630，OG / Twitter 大图）
 │   └── robots.txt          # Allow all + sitemap 指向
 └── src/
-    ├── config/site.ts      # 全站唯一配置：品牌名 / SITE_URL / 免责声明等
-    ├── layouts/Base.astro  # 页头导航 + 页脚免责 + 主题防闪烁脚本
-    ├── components/         # Seo / Header / Footer / ThemeToggle / MarketWall / QrCta ...
+    ├── config/site.ts      # 全站唯一配置：品牌名 / SITE_URL / 免责声明 / 运营主体等
+    ├── layouts/Base.astro  # 页头导航 + 页脚免责 + 渐变光斑背景 + 主题防闪烁 + 滚动浮现/返回顶部脚本
+    ├── components/         # Seo / Header / Footer / ThemeToggle / MarketWall / PhoneMock / QrCta ...
     ├── data/               # features.ts / faq.ts（功能事实清单，对照 front/ 代码核实）
-    ├── styles/global.css   # 双主题令牌表（色板与 AGENTS.md 一致）
+    ├── styles/global.css   # 双主题令牌表 + 玻璃拟态 / aurora / 数据霓虹设计系统
     └── pages/              # 首页 + 6 个 SEO 落地页 + features/faq/legal/404
 ```
 
@@ -35,12 +38,16 @@ portal/
 
 ```bash
 pnpm install
-pnpm portal:dev            # http://localhost:4321
+pnpm portal:dev            # http://localhost:4321（绑定 127.0.0.1，浏览器可直接打开）
 pnpm portal:check          # astro check（类型检查）
 pnpm portal:build          # 构建 dist/
-pnpm portal:preview        # 预览构建产物
+pnpm portal:preview        # 预览构建产物（绑定 127.0.0.1）
 pnpm portal:format:check   # prettier 格式检查
 ```
+
+> 说明：`dev` / `preview` 已固定绑定 `127.0.0.1`，避免个别环境下 Astro 默认只监听 IPv6
+> 导致浏览器 `localhost` 打不开。如需在局域网内用手机访问，可临时加 `--host 0.0.0.0`：
+> `pnpm --filter market-tracker-portal dev --host 0.0.0.0`。
 
 ## 上线前必做（用户操作）
 

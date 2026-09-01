@@ -15,6 +15,10 @@ import { FEATURES, NOT_AVAILABLE } from '../../data/features'
     description="市场追踪助手小程序全部功能一览：全球行情、日韩行情、有色金属与金价、财经资讯、搜索与个股详情、深浅双主题，免费无广告。"
     path="/features/"
     keywords="行情小程序,功能,全球行情,金价,日韩行情,财经资讯,个股详情,K线,分时"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '全部功能', path: '/features/' },
+    ]}
     jsonLd={[
       {
         '@context': 'https://schema.org',
@@ -31,6 +35,7 @@ import { FEATURES, NOT_AVAILABLE } from '../../data/features'
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">All Features</span>
       <h1>全部功能一览</h1>
       <p class="lead">六大板块完整覆盖：从全球宏观到金店零售价，从指数行情到个股K线。</p>
     </div>
@@ -40,21 +45,23 @@ import { FEATURES, NOT_AVAILABLE } from '../../data/features'
     <div class="container">
       <div class="feature-grid">
         {
-          FEATURES.map((feature) => (
-            <article class="card feature-card">
-              <div class="feature-icon" aria-hidden="true">
-                {feature.icon}
-              </div>
-              <h3>{feature.title}</h3>
-              <p>{feature.desc}</p>
-              {feature.points && (
-                <ul class="prose" style="margin-top: 12px">
-                  {feature.points.map((point) => (
-                    <li>{point}</li>
-                  ))}
-                </ul>
-              )}
-            </article>
+          FEATURES.map((feature, i) => (
+            <div class="reveal" data-delay={String((i % 3) + 1)}>
+              <article class="card feature-card">
+                <div class="feature-icon" aria-hidden="true">
+                  {feature.icon}
+                </div>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
+                {feature.points && (
+                  <ul class="prose" style="margin-top: 12px">
+                    {feature.points.map((point) => (
+                      <li>{point}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </div>
           ))
         }
       </div>
@@ -63,7 +70,25 @@ import { FEATURES, NOT_AVAILABLE } from '../../data/features'
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="全部功能，免费使用" />
+      <article class="card reveal">
+        <h3 style="margin-top: 0">🙅 目前没有的功能（如实说明）</h3>
+        <p class="prose">
+          我们只描述真实存在的功能。以下功能 <strong>目前没有</strong
+          >，也不会在文案中包装成「即将推出」：
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
+          {NOT_AVAILABLE.map((item) => <span class="chip chip-down">✕ {item}</span>)}
+        </div>
+        <p class="prose" style="margin-top: 16px">
+          如后续版本补齐，会在小程序「设置 → 问题反馈」与官方说明中同步更新。
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="reveal"><QrCta title="全部功能，免费使用" /></div>
     </div>
   </section>
 </Base>

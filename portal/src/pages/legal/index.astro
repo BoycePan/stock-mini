@@ -15,10 +15,15 @@ import Seo from '../../components/Seo.astro'
     description="市场追踪助手小程序与门户网站的数据说明、免责声明、用户协议与隐私政策：数据来自公开接口聚合、可能有延迟、仅供参考、不构成投资建议。"
     path="/legal/"
     keywords="免责声明,数据说明,用户协议,隐私政策"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '数据说明与免责声明', path: '/legal/' },
+    ]}
   />
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">Legal</span>
       <h1>数据说明与免责声明</h1>
       <p class="lead">使用本网站及「市场追踪助手」小程序前，请阅读以下说明。</p>
     </div>

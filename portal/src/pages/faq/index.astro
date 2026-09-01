@@ -28,12 +28,17 @@ const faqJsonLd = {
     title="常见问题：如何打开、是否收费、数据来源与免责声明"
     description="关于市场追踪助手小程序的常见问题：如何打开小程序、是否收费、数据来源、数据时效、深浅主题、K线与分时图，以及数据仅作参考的免责说明。"
     path="/faq/"
-    keywords="常见问题,FAQ,免费,数据来源,免责声明,主题模式"
+    keywords="常见问题,FAQ,免费,数据来源,免责声明,主题模式,使用帮助"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '常见问题', path: '/faq/' },
+    ]}
     jsonLd={[faqJsonLd]}
   />
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">FAQ</span>
       <h1>常见问题</h1>
       <p class="lead">关于小程序的使用、数据与合规问题，这里都有答案。</p>
     </div>
@@ -42,14 +47,20 @@ const faqJsonLd = {
   <section class="section" style="padding-top: 0">
     <div class="container">
       <div class="faq-list">
-        {FAQS.map((item, index) => <FaqItem item={item} index={index} />)}
+        {
+          FAQS.map((item, index) => (
+            <div class="reveal">
+              <FaqItem item={item} index={index} />
+            </div>
+          ))
+        }
       </div>
     </div>
   </section>
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="还有疑问？打开小程序试试" />
+      <div class="reveal"><QrCta title="还有疑问？打开小程序试试" /></div>
     </div>
   </section>
 </Base>

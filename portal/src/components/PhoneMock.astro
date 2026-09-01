@@ -1,0 +1,99 @@
+---
+/**
+ * 首页 hero 手机模型示意：以「真实标的名称 + 类别标签」示意小程序首页形态。
+ * 仅做界面示意，不含任何实时价格数字（数值以小程序内展示为准），避免编造数据。
+ */
+const indexRows = [
+  { name: '上证指数', tag: 'A股', tagClass: 'red', sparkClass: '' },
+  { name: '标普500', tag: '美股', tagClass: '', sparkClass: 'up' },
+  { name: '日经225', tag: '日本', tagClass: 'green', sparkClass: '' },
+  { name: 'KOSPI', tag: '韩国', tagClass: '', sparkClass: 'up' },
+  { name: 'COMEX黄金', tag: '贵金属', tagClass: 'red', sparkClass: 'up' },
+]
+
+const goldRows = [
+  { name: '周大福', tag: '足金', tagClass: 'red', sparkClass: '' },
+  { name: '老凤祥', tag: '足金', tagClass: '', sparkClass: 'up' },
+  { name: '黄金9999', tag: '上金所', tagClass: 'green', sparkClass: '' },
+]
+---
+
+<div class="phone-mock">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="phone-notch" aria-hidden="true"></div>
+      <div class="pm-head">
+        <span class="pm-logo" aria-hidden="true"></span>
+        市场追踪助手
+        <span>免费 · 无广告</span>
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-label">全球指数 · 一屏看齐</div>
+        {
+          indexRows.map((row) => (
+            <div class="pm-row">
+              <span class="pm-name">
+                {row.name}
+                <span class={`pm-tag ${row.tagClass}`}>{row.tag}</span>
+              </span>
+              <svg
+                class={`pm-spark ${row.sparkClass}`}
+                viewBox="0 0 40 14"
+                height="14"
+                width="40"
+                aria-hidden="true"
+              >
+                <polyline
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  points="1,10 6,8 11,9 16,5 21,7 26,4 31,6 36,3 39,5"
+                />
+              </svg>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-label">金店金价 · 买金先比价</div>
+        {
+          goldRows.map((row) => (
+            <div class="pm-row">
+              <span class="pm-name">
+                {row.name}
+                <span class={`pm-tag ${row.tagClass}`}>{row.tag}</span>
+              </span>
+              <svg
+                class={`pm-spark ${row.sparkClass}`}
+                viewBox="0 0 40 14"
+                height="14"
+                width="40"
+                aria-hidden="true"
+              >
+                <polyline
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  points="1,9 6,7 11,8 16,6 21,8 26,5 31,7 36,4 39,6"
+                />
+              </svg>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+
+  <span class="float-tag float-tag--tl">
+    <span class="mini">深浅双主题</span>跟随系统 · 手动切换
+  </span>
+  <span class="float-tag float-tag--br">
+    <span class="mini">数据覆盖</span>全球宏观 + 24 行业板块
+  </span>
+</div>

@@ -37,7 +37,11 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
     title="日韩行情：日经225、KOSPI、日韩个股与汇率一页看齐"
     description="看韩国KOSPI/KOSDAQ、日本日经225/TOPIX，以及三星电子、SK海力士、东京电子、丰田、任天堂等日韩龙头个股和人民币韩元/日元汇率，微信小程序免费看，支持深浅主题。"
     path="/asia/"
-    keywords="日经225,KOSPI,韩国股市,日本股市,三星电子,SK海力士,汇率,韩元,日元"
+    keywords="日经225,KOSPI,韩国股市,日本股市,三星电子,SK海力士,汇率,韩元,日元,日韩行情"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '日韩行情', path: '/asia/' },
+    ]}
     jsonLd={[
       {
         '@context': 'https://schema.org',
@@ -53,6 +57,7 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">Asia Markets</span>
       <h1>日韩行情，一页看齐</h1>
       <p class="lead">韩国与日本指数、龙头个股、汇率集中在一个页面，亚洲市场动态尽收眼底。</p>
       <div class="tag-row">
@@ -69,7 +74,7 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
   <section class="section" style="padding-top: 0">
     <div class="container">
       <div class="grid-2">
-        <div class="card">
+        <div class="card reveal">
           <h3 style="margin-top: 0">📊 亚洲指数</h3>
           <table class="data-table">
             <tbody>
@@ -85,7 +90,7 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
           </table>
         </div>
 
-        <div class="card">
+        <div class="card reveal" data-delay="1">
           <h3 style="margin-top: 0">🇰🇷 韩国个股</h3>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
             {krStocks.map((name) => <span class="chip">{name}</span>)}
@@ -97,7 +102,7 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
         </div>
       </div>
 
-      <div class="card mt-32">
+      <div class="card mt-32 reveal">
         <h3 style="margin-top: 0">💱 汇率</h3>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
           {rates.map((name) => <span class="chip">{name}</span>)}
@@ -111,7 +116,7 @@ const rates = ['人民币/韩元', '人民币/日元', '美元/韩元', '美元/
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="日韩指数、个股、汇率一页看齐" />
+      <div class="reveal"><QrCta title="日韩指数、个股、汇率一页看齐" /></div>
     </div>
   </section>
 </Base>

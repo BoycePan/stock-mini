@@ -6,9 +6,9 @@
   "description": "「市场追踪助手」小程序引流门户网站（Astro SSG 多页 SEO）",
   "license": "MIT",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --host 127.0.0.1",
     "build": "astro build",
-    "preview": "astro preview",
+    "preview": "astro preview --host 127.0.0.1",
     "check": "astro check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

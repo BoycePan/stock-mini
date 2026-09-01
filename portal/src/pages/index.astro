@@ -1,25 +1,58 @@
 ---
 /**
- * 首页：hero + 行情墙（签名组件）+ 功能亮点 + 小程序码 CTA + FAQ 摘要。
+ * 首页：hero（文案 + 手机示意）+ 数据统计 + 行情墙 + 功能亮点 + 核心价值 + 小程序码 CTA + FAQ 摘要。
+ * 结构化：WebSite + SoftwareApplication + FAQPage。
  */
 import Base from '../layouts/Base.astro'
 import Seo from '../components/Seo.astro'
 import MarketWall from '../components/MarketWall.astro'
+import PhoneMock from '../components/PhoneMock.astro'
 import QrCta from '../components/QrCta.astro'
 import FeatureSection from '../components/FeatureSection.astro'
 import FaqItem from '../components/FaqItem.astro'
-import { HIGHLIGHTS } from '../data/features'
+import { FEATURES, WALL_GROUPS } from '../data/features'
 import { FAQS } from '../data/faq'
-import { APP_NAME, SITE_DESCRIPTION, SITE_URL } from '../config/site'
+import { APP_NAME, APP_TAGLINE, ORG, SITE_DESCRIPTION, SITE_URL } from '../config/site'
 
-const webSiteJsonLd = {
+const brandJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: APP_NAME,
   url: SITE_URL,
   description: SITE_DESCRIPTION,
   inLanguage: 'zh-CN',
+  publisher: { '@type': 'Organization', name: ORG.name, url: SITE_URL },
 }
+
+const appJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: APP_NAME,
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'WeChat Mini Program',
+  description:
+    '免费看全球行情（A股美股指数、宏观资产、行业板块、日韩行情、有色金属、金店金价与财经资讯）的微信小程序，支持深浅双主题，数据来自公开接口聚合，仅供参考。',
+  inLanguage: 'zh-CN',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
+  publisher: { '@type': 'Organization', name: ORG.name, url: SITE_URL },
+}
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+}
+
+const stats = [
+  { num: '24', label: '行业板块' },
+  { num: '42', label: '金店品牌' },
+  { num: '6', label: '大功能板块' },
+  { num: String(WALL_GROUPS.length), label: '大行情品类' },
+]
 ---
 
 <Base>
@@ -28,32 +61,62 @@ const webSiteJsonLd = {
     title={`${APP_NAME} - 免费看全球行情、金价、日韩与财经资讯`}
     description={SITE_DESCRIPTION}
     path="/"
-    keywords="行情,金价,黄金,美股,A股,日经,KOSPI,财经资讯,微信小程序"
-    jsonLd={[webSiteJsonLd]}
+    keywords="行情,金价,黄金价格,美股,A股,日经225,KOSPI,财经资讯,A股指数,全球行情,微信小程序,免费看盘"
+    jsonLd={[brandJsonLd, appJsonLd, faqJsonLd]}
   />
 
   <!-- Hero -->
   <section class="hero">
     <div class="container">
-      <h1>
-        一屏看<span class="accent">全球行情</span>
-        <br />
-        免费 · 无广告 · 微信小程序
-      </h1>
-      <p class="lead">
-        A股美股指数、宏观资产、行业板块、日韩行情、有色金属、金店金价、财经资讯，
-        全部聚合在一个微信小程序里，支持深浅双主题。
-      </p>
-      <div class="hero-ctas">
-        <a class="btn btn-primary" href="#open">扫码打开小程序</a>
-        <a class="btn btn-ghost" href="/features/">查看全部功能</a>
+      <div class="hero-grid">
+        <div class="reveal">
+          <span class="eyebrow">{APP_TAGLINE}</span>
+          <h1>
+            一屏看<span class="accent">全球行情</span>
+            <br />
+            免费 · 无广告
+          </h1>
+          <p class="lead">
+            A股美股指数、宏观资产、行业板块、日韩行情、金银与小金属、42 家金店金价、财经资讯，
+            聚合在一个微信小程序里，支持深浅双主题。
+          </p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="#open">扫码打开小程序</a>
+            <a class="btn btn-ghost" href="/features/">查看全部功能</a>
+          </div>
+          <div class="hero-meta">
+            <span><span class="dot"></span>行情来自公开接口聚合，可能有延迟</span>
+            <span>✓ 深浅双主题 · 晚上看盘不刺眼</span>
+          </div>
+        </div>
+
+        <div class="reveal" data-delay="1">
+          <PhoneMock />
+        </div>
       </div>
 
-      <!-- 签名组件：真实标的名行情墙 -->
-      <div class="hero-markets">
+      <!-- 数据统计（真实覆盖范围） -->
+      <div class="stats-row">
+        {
+          stats.map((s, i) => (
+            <div class="card stat-card reveal" data-delay={String(i + 1)}>
+              <div class="stat-num">{s.num}</div>
+              <div class="stat-label">{s.label}</div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 行情墙 -->
+  <section class="section" style="padding-top: 12px">
+    <div class="container">
+      <div class="hero-markets reveal">
         <div class="section-head">
           <span class="eyebrow">Markets We Cover</span>
           <h2 class="section-title">行情覆盖范围</h2>
+          <p class="section-desc">真实标的名称（不含数值）；实时价格以小程序内展示为准。</p>
         </div>
         <MarketWall />
       </div>
@@ -63,38 +126,90 @@ const webSiteJsonLd = {
   <!-- 功能亮点 -->
   <section class="section">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Features</span>
+      <div class="section-head center reveal">
+        <span class="eyebrow">Core Features</span>
         <h2 class="section-title">核心功能</h2>
         <p class="section-desc">六大板块，覆盖从全球宏观到金店零售价的完整行情链路。</p>
       </div>
       <div class="feature-grid">
-        {HIGHLIGHTS.map((feature) => <FeatureSection feature={feature} />)}
+        {
+          FEATURES.map((feature, i) => (
+            <div class="reveal" data-delay={String((i % 3) + 1)}>
+              <FeatureSection feature={feature} />
+            </div>
+          ))
+        }
       </div>
-      <p class="text-center mt-32">
+      <p class="text-center mt-32 reveal">
         <a class="btn btn-ghost" href="/features/">查看全部功能与细节 →</a>
       </p>
     </div>
   </section>
 
-  <!-- 小程序码 CTA -->
-  <section class="section" id="open">
+  <!-- 核心价值 -->
+  <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="全球行情、金价、日韩一屏看齐" />
+      <div class="section-head center reveal">
+        <span class="eyebrow">Why Us</span>
+        <h2 class="section-title">为什么用「{APP_NAME}」</h2>
+      </div>
+      <div class="grid-2">
+        <article class="card reveal">
+          <h3 style="margin-top: 0">✅ 免费 · 无广告</h3>
+          <p class="prose">
+            当前无付费、无广告、无登录门槛，打开即可看全部行情与资讯。行情来自公开接口聚合，
+            不向用户收费。
+          </p>
+        </article>
+        <article class="card reveal" data-delay="1">
+          <h3 style="margin-top: 0">🖥️ 一屏看全</h3>
+          <p class="prose">
+            从全球宏观（美股、VIX、原油、汇率）到产业板块（AI、半导体、机器人），再到金店金价、
+            上金所实物金，跨市场在一个页面建立视野。
+          </p>
+        </article>
+        <article class="card reveal" data-delay="2">
+          <h3 style="margin-top: 0">🌙 深浅双主题</h3>
+          <p class="prose">
+            跟随系统或手动切换浅色 / 深色，页面、卡片、K 线、下拉刷新背景全局同步， 晚上看盘不刺眼。
+          </p>
+        </article>
+        <article class="card reveal" data-delay="3">
+          <h3 style="margin-top: 0">🔍 搜索与个股详情</h3>
+          <p class="prose">
+            按代码或名称搜股票，K 线（日 / 周线）、当日分时、相关新闻与公告一站式查看。
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 小程序码 CTA -->
+  <section class="section" id="open" style="padding-top: 0">
+    <div class="container">
+      <div class="reveal">
+        <QrCta title="全球行情、金价、日韩一屏看齐" />
+      </div>
     </div>
   </section>
 
   <!-- FAQ 摘要 -->
   <section class="section">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head center reveal">
         <span class="eyebrow">FAQ</span>
         <h2 class="section-title">常见问题</h2>
       </div>
-      <div class="faq-list">
-        {FAQS.slice(0, 4).map((item, index) => <FaqItem item={item} index={index} />)}
+      <div class="faq-list" style="max-width: 820px; margin: 0 auto">
+        {
+          FAQS.slice(0, 4).map((item, index) => (
+            <div class="reveal">
+              <FaqItem item={item} index={index} />
+            </div>
+          ))
+        }
       </div>
-      <p class="text-center mt-32">
+      <p class="text-center mt-32 reveal">
         <a class="btn btn-ghost" href="/faq/">查看更多问题 →</a>
       </p>
     </div>

@@ -14,7 +14,11 @@ import QrCta from '../../components/QrCta.astro'
     title="财经资讯：快讯流 + 新闻详情，免费看市场动态"
     description="微信小程序免费看财经快讯与新闻详情：快讯带「快讯」徽标，触底自动分页加载，新闻详情富文本展示，随时跟进A股、美股、全球市场动态。"
     path="/news/"
-    keywords="财经新闻,股市资讯,财经快讯,市场动态,金融资讯"
+    keywords="财经新闻,股市资讯,财经快讯,市场动态,金融资讯,7x24快讯"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '财经资讯', path: '/news/' },
+    ]}
     jsonLd={[
       {
         '@context': 'https://schema.org',
@@ -30,6 +34,7 @@ import QrCta from '../../components/QrCta.astro'
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">News & Flow</span>
       <h1>财经资讯，随手刷</h1>
       <p class="lead">快讯流 + 新闻详情，随时跟进市场动态，快讯一眼识别，长文慢慢读。</p>
       <div class="tag-row">
@@ -44,13 +49,13 @@ import QrCta from '../../components/QrCta.astro'
   <section class="section" style="padding-top: 0">
     <div class="container">
       <div class="grid-2">
-        <div class="card">
+        <div class="card reveal">
           <h3 style="margin-top: 0">⚡ 快讯流</h3>
           <p class="prose">
             财经新闻以信息流形式呈现，时效性内容带「快讯」徽标，一眼识别值得先读的信息。
           </p>
         </div>
-        <div class="card">
+        <div class="card reveal" data-delay="1">
           <h3 style="margin-top: 0">📄 新闻详情</h3>
           <p class="prose">
             点击进入新闻详情，富文本排版阅读体验更舒适；列表触底自动分页加载，浏览不中断。
@@ -58,7 +63,7 @@ import QrCta from '../../components/QrCta.astro'
         </div>
       </div>
 
-      <div class="card mt-32">
+      <div class="card mt-32 reveal">
         <h3 style="margin-top: 0">🔎 资讯与行情联动</h3>
         <p class="prose">
           在个股详情页还能查看该股的相关新闻与相关公告，行情与资讯对照着看，信息更完整。
@@ -69,7 +74,7 @@ import QrCta from '../../components/QrCta.astro'
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="财经资讯、行情联动，一屏看齐" />
+      <div class="reveal"><QrCta title="财经资讯、行情联动，一屏看齐" /></div>
     </div>
   </section>
 </Base>
