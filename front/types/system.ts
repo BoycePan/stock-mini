@@ -11,7 +11,7 @@
 interface AdBannerConfig {
   /** 广告位 unit-id（<ad-custom unit-id>，流量主后台创建） */
   'unit-id': string
-  /** 展示位置：homeTop / asiaTop / matalsTop / finance / minute-detail / finance-detail */
+  /** 展示位置：homeTop / asiaTop / matalsTop / finance / minute-detail / finance-detail / us-top100 */
   location: string
   /** 是否启用（status=false 时前端不展示该广告位） */
   status: boolean
