@@ -228,6 +228,12 @@ public class WxAdService {
         if (node.hasNonNull("errcode")) {
             int code = node.path("errcode").asInt(0);
             if (code != 0) {
+                // 61503 = 微信侧数据还在计算中（通常上午 11 点前更新完），属于可预期的延迟，
+                // 不算失败：返回 0（跳过），由定时任务下一轮再补。
+                if (code == 61503) {
+                    log.info("[wx-ad] {} 访问趋势 {} 微信侧尚未更新完毕（61503），跳过", source, day);
+                    return 0;
+                }
                 throw new IllegalStateException("getweanalysisappiddailyvisittrend 返回 errcode="
                         + code + ", errmsg=" + node.path("errmsg").asText());
             }
