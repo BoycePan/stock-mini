@@ -38,11 +38,24 @@ public class AppProperties {
         private String defaultSource = "shiChang-tracker";
         /** 来源 → 小程序 appid/secret 映射 */
         private Map<String, App> apps = new HashMap<>();
+        /** 广告数据拉取配置（PullWxAdDataTask / RefreshWxAccessTokenTask） */
+        private Ad ad = new Ad();
 
         @Data
         public static class App {
             private String appId;
             private String appSecret;
+        }
+
+        /** 微信广告数据（流量主）拉取配置 */
+        @Data
+        public static class Ad {
+            /** 是否启用广告数据拉取任务（PullWxAdDataTask），默认 true */
+            private boolean pullEnabled = true;
+            /** 是否启用 token 刷新任务（RefreshWxAccessTokenTask），默认 true */
+            private boolean tokenRefreshEnabled = true;
+            /** 每日拉取窗口：往前回看天数（含当天），默认 3（拉 [T-2, T] 覆盖近期数据修正） */
+            private int lookbackDays = 3;
         }
     }
 
