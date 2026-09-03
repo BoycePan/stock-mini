@@ -50,6 +50,14 @@ app:
       hangQing-tracker:
         app-id: wx0ecd2049e54fbca8
         app-secret: ${HANGQING_TRACKER_WECHAT_APP_SECRET:}
+    # 微信广告数据（流量主）拉取：PullWxAdDataTask / RefreshWxAccessTokenTask
+    ad:
+      # 广告数据拉取任务总开关（每天 9~17 点每 20 分钟）
+      pull-enabled: ${WX_AD_PULL_ENABLED:true}
+      # token 刷新任务总开关（每 20 分钟）
+      token-refresh-enabled: ${WX_AD_TOKEN_REFRESH_ENABLED:true}
+      # 每日拉取回看天数（含当天），默认 3 = 近 3 天滚动覆盖
+      lookback-days: ${WX_AD_LOOKBACK_DAYS:3}
   sina:
     # 值来自 .env（spring-dotenv）或环境变量；未设置时用默认值兜底
     rate-limit-seconds: ${SINA_RATE_LIMIT:1.0}
