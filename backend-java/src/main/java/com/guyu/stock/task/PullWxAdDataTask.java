@@ -64,7 +64,8 @@ public class PullWxAdDataTask {
                 String source = e.getKey();
                 AppProperties.Wechat.App app = e.getValue();
                 if (app == null || app.getAppSecret() == null || app.getAppSecret().isBlank()) {
-                    continue; // 未配置 secret 的端跳过（如 hangQing-tracker）
+                    continue; // 未配置 secret 的端跳过；已配置 secret 但未开通流量主的端（如 hangQing-tracker）
+                              // 由 WxAdService 识别 base_resp.ret=-1/2009/1807 后内部跳过并记 INFO，不再报错
                 }
                 try {
                     wxAdService.pullDailyStat(source, from, to);
