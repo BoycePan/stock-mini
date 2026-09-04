@@ -12,6 +12,7 @@ import com.guyu.stock.model.WxAccessToken;
 import com.guyu.stock.model.WxDailyVisitStat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -26,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 微信广告数据（流量主）服务：token 刷新/读取 + 广告汇总数据拉取。
@@ -41,27 +43,44 @@ public class WxAdService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    private static final String WX_API_BASE = "https://api.weixin.qq.com";
+
+    /** publisher/stat 的 base_resp 中表示「该端不是有效流量主」的错误码（官方文档口径：无效流量主） */
+    private static final Set<Integer> NOT_PUBLISHER_RET_CODES = Set.of(1807, 2009);
+
     private final AppProperties appProperties;
     private final WxAccessTokenRepository wxAccessTokenRepository;
     private final WxAdDailyStatRepository wxAdDailyStatRepository;
     private final WxDailyVisitStatRepository wxDailyVisitStatRepository;
     private final RestClient restClient;
 
+    @Autowired
     public WxAdService(AppProperties appProperties,
                        WxAccessTokenRepository wxAccessTokenRepository,
                        WxAdDailyStatRepository wxAdDailyStatRepository,
                        WxDailyVisitStatRepository wxDailyVisitStatRepository) {
+        this(appProperties, wxAccessTokenRepository, wxAdDailyStatRepository, wxDailyVisitStatRepository,
+                RestClient.builder().requestFactory(defaultRequestFactory()));
+    }
+
+    /** 测试注入点：传入已绑定 {@code MockRestServiceServer} 的 RestClient.Builder（baseUrl 在构造内补齐） */
+    WxAdService(AppProperties appProperties,
+                WxAccessTokenRepository wxAccessTokenRepository,
+                WxAdDailyStatRepository wxAdDailyStatRepository,
+                WxDailyVisitStatRepository wxDailyVisitStatRepository,
+                RestClient.Builder restClientBuilder) {
         this.appProperties = appProperties;
         this.wxAccessTokenRepository = wxAccessTokenRepository;
         this.wxAdDailyStatRepository = wxAdDailyStatRepository;
         this.wxDailyVisitStatRepository = wxDailyVisitStatRepository;
+        this.restClient = restClientBuilder.baseUrl(WX_API_BASE).build();
+    }
+
+    private static SimpleClientHttpRequestFactory defaultRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(10_000);
-        this.restClient = RestClient.builder()
-                .requestFactory(factory)
-                .baseUrl("https://api.weixin.qq.com")
-                .build();
+        return factory;
     }
 
     // ---------- token ----------
@@ -106,14 +125,26 @@ public class WxAdService {
 
     /**
      * 拉取某端 [from, to]（含端点）区间的广告汇总数据并 upsert 落库。
-     * 返回写入行数。分页取全（page_size=90，按 total_num 判断是否还有下一页）。
+     * 返回写入行数；该端未开通流量主（无广告数据权限）时跳过并返回 0，不抛异常。
      */
     public int pullDailyStat(String source, LocalDate from, LocalDate to) {
+        return pullDailyStatDetailed(source, from, to).rows();
+    }
+
+    /** 广告拉取结果：{@code rows} 实际写入行数；{@code skipReason} 非空 = 该端被跳过（非失败） */
+    public record AdPullResult(int rows, String skipReason) {}
+
+    /**
+     * 拉取某端广告汇总的详细结果（供手动拉取区分「跳过」与「真实失败」），
+     * 语义同 {@link #pullDailyStat}，额外返回跳过原因。
+     * 分页取全（page_size=90，按 total_num 判断是否还有下一页）。
+     */
+    public AdPullResult pullDailyStatDetailed(String source, LocalDate from, LocalDate to) {
         AppProperties.Wechat.App app = app(source);
         Optional<WxAccessToken> tokenOpt = findToken(source);
         if (tokenOpt.isEmpty()) {
             log.warn("[wx-ad] {} 无可用 access_token，跳过拉取", source);
-            return 0;
+            return new AdPullResult(0, null);
         }
         String token = tokenOpt.get().accessToken();
 
@@ -122,6 +153,11 @@ public class WxAdService {
         int pageSize = 90;
         while (true) {
             JsonNode node = fetchAdposGeneral(token, page, pageSize, from, to);
+            if (isNotPublisherDenial(node)) {
+                log.info("[wx-ad] {} 未开通流量主/无广告数据权限（base_resp.ret=-1, err_msg 空），"
+                        + "跳过广告拉取；如需该端广告数据，请先在对应小程序后台开通流量主并完成签约", source);
+                return new AdPullResult(0, "该端未开通流量主/无广告数据权限，跳过广告拉取");
+            }
             int ret = node.path("base_resp").path("ret").asInt(-1);
             if (ret != 0) {
                 String errMsg = node.path("base_resp").path("err_msg").asText();
@@ -137,7 +173,26 @@ public class WxAdService {
             page++;
         }
         log.info("[wx-ad] {} 拉取广告汇总 {}~{} 共写入 {} 行", source, from, to, total);
-        return total;
+        return new AdPullResult(total, null);
+    }
+
+    /**
+     * 判断 publisher/stat 响应是否表示「该端未开通流量主（无广告数据权限）」，命中时应<b>跳过</b>该端广告拉取。
+     *
+     * <p>实测（2026-09-04，hangQing-tracker）：未开通流量主的小程序调用返回
+     * {@code base_resp.ret=-1} 且 {@code err_msg} 为空串——这是账号侧权限拒绝（持续复现，非系统繁忙）；
+     * 另兼容官方文档「无效流量主」错误码 2009 / 1807（老接口 publisher/stat 错误码表见 w3cschool 存档）。</p>
+     */
+    private static boolean isNotPublisherDenial(JsonNode node) {
+        JsonNode base = node.path("base_resp");
+        if (base.isMissingNode() || !base.isObject()) {
+            return false;
+        }
+        int ret = base.path("ret").asInt(-1);
+        if (NOT_PUBLISHER_RET_CODES.contains(ret)) {
+            return true;
+        }
+        return ret == -1 && base.path("err_msg").asText("").isBlank();
     }
 
     private JsonNode fetchAdposGeneral(String token, int page, int pageSize, LocalDate from, LocalDate to) {
@@ -304,8 +359,20 @@ public class WxAdService {
     }
 
     /**
-     * 手动触发：遍历所有端，先刷新 token 再拉广告数据（from/to 为空时用默认窗口近 lookbackDays 天），
-     * 同时拉昨日访问趋势（日活/日新增）。逐端独立 try/catch，返回每端结果与汇总。
+     * 手动触发：遍历所有端，先刷新 token，再<b>各自独立</b>拉广告汇总与昨日访问趋势
+     * （from/to 为空时用默认窗口近 lookbackDays 天）。
+     *
+     * <p>广告与趋势逐项独立 try/catch：某端未开通流量主（广告被跳过）或其他广告失败，
+     * 都不影响同端访问趋势拉取。返回每端细粒度结果：</p>
+     * <ul>
+     *   <li>{@code adRows}：广告写入行数（成功拉取时存在）</li>
+     *   <li>{@code adSkipped}：广告被跳过原因（如未开通流量主，<b>不算失败</b>）</li>
+     *   <li>{@code adError}：广告真实失败原因</li>
+     *   <li>{@code visitRows}：访问趋势写入行数（尝试过即存在，61503/无数据为 0）</li>
+     *   <li>{@code visitError}：访问趋势真实失败原因</li>
+     *   <li>{@code error}：任一指标真实失败时的整体提示（兼容旧字段；未开通流量主不产生）</li>
+     * </ul>
+     * 顶层 {@code failed} 只统计出现 {@code adError} / {@code visitError} 的端数。
      */
     public Map<String, Object> manualPullAll(LocalDate from, LocalDate to) {
         AppProperties.Wechat.Ad cfg = appProperties.getWechat().getAd();
@@ -326,16 +393,48 @@ public class WxAdService {
                 sources.add(d);
                 continue;
             }
+            // ① 刷新 token（失败多为账号配置问题，记为广告侧失败，但仍尝试用库中旧 token 拉趋势）
+            boolean tokenOk;
             try {
                 refreshToken(source);
-                int rows = pullDailyStat(source, effFrom, effTo);
-                d.put("adRows", rows);
-                totalRows += rows;
+                tokenOk = true;
+            } catch (Exception e) {
+                tokenOk = false;
+                d.put("adError", "刷新 token 失败: " + e.getMessage());
+            }
+            // ② 广告汇总（独立 try）：未开通流量主 → adSkipped（非失败）；其余异常 → adError
+            if (tokenOk) {
+                try {
+                    AdPullResult r = pullDailyStatDetailed(source, effFrom, effTo);
+                    if (r.skipReason() != null) {
+                        d.put("adSkipped", r.skipReason());
+                    } else {
+                        d.put("adRows", r.rows());
+                        totalRows += r.rows();
+                    }
+                } catch (Exception e) {
+                    d.put("adError", e.getMessage());
+                }
+            }
+            // ③ 访问趋势（独立 try）：61503/微信侧无数据按 0 行处理，只有真实异常才算 visitError
+            String visitError = null;
+            try {
                 int visitRows = pullDailyVisit(source, yesterday);
                 d.put("visitRows", visitRows);
                 totalRows += visitRows;
             } catch (Exception e) {
-                d.put("error", e.getMessage());
+                visitError = e.getMessage();
+                d.put("visitError", visitError);
+            }
+            if (d.containsKey("adError") || visitError != null) {
+                List<String> errs = new ArrayList<>();
+                if (d.containsKey("adError")) {
+                    errs.add("广告: " + d.get("adError"));
+                }
+                if (visitError != null) {
+                    errs.add("趋势: " + visitError);
+                }
+                d.put("error", String.join("；", errs));
                 failed++;
             }
             sources.add(d);
