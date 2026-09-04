@@ -63,6 +63,8 @@ export const GOLD_SHOP_CATALOG: Record<string, GoldShopItemConfig[]> = {
     { item: '基础银价', code: 'JO_95014' },
   ],
   中国黄金: [
+    // 「黄金价格」档 = 上游足金饰品（JO_348900，见专页 swhj_zghj.html 第四档）
+    { item: '黄金价格', code: 'JO_348900' },
     { item: '基础金价', code: 'JO_52683' },
     { item: '零售价', code: 'JO_52684' },
     { item: '回收价', code: 'JO_52685' },
@@ -231,7 +233,7 @@ export function goldShopAllCodes(): string[] {
 
 /**
  * 品类展示优先级（选中「足金/零售」口径展示，避免落到铂金/回收价）。
- * 中国黄金无「黄金价格」，取「零售价」；高赛尔无足金，取「投资金条」。
+ * 中国黄金「黄金价格」档即上游足金饰品（JO_348900，专页 swhj_zghj.html 第四档）；高赛尔无足金，取「投资金条」。
  */
 const ITEM_PRIORITY = [
   '黄金价格',
