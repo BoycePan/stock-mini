@@ -38,7 +38,7 @@ export const SITE_LANG = 'zh-CN'
  * - bing：`msvalidate.01` content
  */
 export const SEO_VERIFICATION: { google?: string; baidu?: string; bing?: string } = {
-  google: '',
+  google: '7eCgPXA5vtlMCHYaCp908NnH5MMRViKB3svxt-KbpTY',
   baidu: 'codeva-x2qvLaNqE0',
   bing: '',
 }
