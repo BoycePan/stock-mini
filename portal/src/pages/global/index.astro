@@ -1,6 +1,7 @@
 ---
 /**
- * 全球行情落地页（SEO：A股、美股、VIX、标普500、纳斯达克）。
+ * 全球行情落地页（SEO：A股、美股、VIX、标普500、纳斯达克、全球行情）。
+ * 事实来源：front/config/tabbar.ts、front/api/market.ts。
  */
 import Base from '../../layouts/Base.astro'
 import Seo from '../../components/Seo.astro'
@@ -52,9 +53,13 @@ const boards = [
   <Seo
     slot="head"
     title="全球行情：A股美股指数、宏观资产、行业板块一屏看齐"
-    description="看A股指数（上证/深成/创业板/科创50）、美股指数（道指/标普500/纳斯达克）、VIX恐慌指数、原油、黄金白银、汇率等宏观资产，以及AI算力、半导体等24个行业板块，打开微信小程序免费看。"
+    description="看 A股指数（上证/深成/创业板/科创50）、美股指数（道指/标普500/纳斯达克）、VIX恐慌指数、原油、黄金白银、汇率等宏观资产，以及 AI算力、半导体等 24 个行业板块，打开微信小程序免费看。"
     path="/global/"
-    keywords="A股,美股,标普500,纳斯达克,道琼斯,VIX,恐慌指数,行业板块,全球行情"
+    keywords="A股,美股,标普500,纳斯达克,道琼斯,VIX,恐慌指数,全球行情,行业板块,上证指数"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '全球行情', path: '/global/' },
+    ]}
     jsonLd={[
       {
         '@context': 'https://schema.org',
@@ -71,9 +76,10 @@ const boards = [
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">Global Markets</span>
       <h1>全球行情，一屏看齐</h1>
       <p class="lead">
-        A股与美股指数、宏观资产、行业板块聚合在一个微信小程序里，跨市场建立宏观视野。
+        A股与美股指数、宏观资产、行业板块聚合在一个微信小程序里，建立跨市场的宏观视野。
       </p>
       <div class="tag-row">
         <span class="chip chip-up">上证指数</span>
@@ -89,26 +95,26 @@ const boards = [
   <section class="section" style="padding-top: 0">
     <div class="container">
       <div class="grid-2">
-        <div class="card">
-          <h3 style="margin-top: 0">📈 A股指数</h3>
+        <div class="card reveal">
+          <h2 class="card-title">📈 A股指数</h2>
           <ul class="prose">
             {cnIndices.map((item) => <li>{item}</li>)}
           </ul>
-          <h3>🇺🇸 美股指数</h3>
+          <h2 class="card-title" style="margin-top: 18px">🇺🇸 美股指数</h2>
           <ul class="prose">
             {usIndices.map((item) => <li>{item}</li>)}
           </ul>
         </div>
-        <div class="card">
-          <h3 style="margin-top: 0">🌐 宏观资产（10 项）</h3>
+        <div class="card reveal" data-delay="1">
+          <h2 class="card-title">🌐 宏观资产（10 项）</h2>
           <ul class="prose">
             {macroAssets.map((item) => <li>{item}</li>)}
           </ul>
         </div>
       </div>
 
-      <div class="card mt-32">
-        <h3 style="margin-top: 0">🧩 行业板块（24 项，含美股代理股参考）</h3>
+      <div class="card mt-32 reveal">
+        <h2 class="card-title">🧩 行业板块（24 项，含美股代理股参考）</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
           {boards.map((item) => <span class="chip">{item}</span>)}
         </div>
@@ -122,7 +128,34 @@ const boards = [
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="A股美股、宏观资产一屏看齐" />
+      <div class="grid-2">
+        <article class="card reveal">
+          <h2 class="card-title">🧭 为什么这么做？</h2>
+          <p class="prose">
+            A股与美股交易时段错开，先看美股与宏观资产（VIX、美元、原油、美债）判断隔夜情绪， 再看
+            A股指数与行业板块是否联动，帮你更早建立当天的市场预期。
+          </p>
+          <p class="prose" style="margin-top: 12px">
+            更细分的贵金属内外盘与工业金属行情见
+            <a href="/metals/">有色金属行情页</a>；黄金珠宝零售比价与上金所实物金见
+            <a href="/gold/">金价页</a>。
+          </p>
+        </article>
+        <article class="card reveal" data-delay="1">
+          <h2 class="card-title">📱 免下载 · 随身看</h2>
+          <p class="prose">
+            微信小程序无需下载 App，碎片时间打开就能看到最新指数与板块动向，支持深浅双主题。
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="reveal">
+        <QrCta title="A股美股、宏观资产一屏看齐" />
+      </div>
     </div>
   </section>
 </Base>

@@ -1,7 +1,7 @@
 ---
 /**
  * 全站页头：品牌 + 导航 + 主题切换。
- * 导航链接为各 SEO 落地页；当前页高亮（aria-current）。
+ * 移动端为右侧抽屉导航（含遮罩），当前页高亮（aria-current）。
  */
 import { APP_NAME, LOGO_IMAGE } from '../config/site'
 import ThemeToggle from './ThemeToggle.astro'
@@ -23,7 +23,7 @@ const currentPath = Astro.url.pathname
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label={`${APP_NAME} 首页`}>
-      <img class="brand-logo" src={LOGO_IMAGE} alt={APP_NAME} width="32" height="32" />
+      <img class="brand-logo" src={LOGO_IMAGE} alt={APP_NAME} width="34" height="34" />
       <span>{APP_NAME}</span>
     </a>
 
@@ -50,14 +50,26 @@ const currentPath = Astro.url.pathname
       </button>
     </nav>
   </div>
+  <button class="nav-scrim" type="button" aria-label="关闭菜单" data-nav-scrim></button>
 </header>
 
 <script>
-  // 移动端菜单开合
+  // 移动端抽屉菜单开合
   const toggle = document.querySelector('[data-nav-toggle]')
+  const scrim = document.querySelector('[data-nav-scrim]')
   const links = document.getElementById('nav-links')
+  const close = () => {
+    links?.classList.remove('open')
+    scrim?.classList.remove('open')
+    toggle?.setAttribute('aria-expanded', 'false')
+    document.body.style.overflow = ''
+  }
   toggle?.addEventListener('click', () => {
     const open = links?.classList.toggle('open') ?? false
+    scrim?.classList.toggle('open', open)
     toggle.setAttribute('aria-expanded', String(open))
+    document.body.style.overflow = open ? 'hidden' : ''
   })
+  scrim?.addEventListener('click', close)
+  links?.querySelectorAll('a').forEach((a) => a.addEventListener('click', close))
 </script>

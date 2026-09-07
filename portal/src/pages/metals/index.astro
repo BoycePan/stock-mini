@@ -18,7 +18,11 @@ const minor = ['钨', '钼', '锗', '铟', '锑']
     title="有色金属行情：金银内外盘、铜铝锌镍锡、小金属一屏看齐"
     description="看黄金、白银内外盘（沪金/沪银 + COMEX），铜铝锌镍锡等工业金属，以及钨钼锗铟锑小金属（对应A股公司股价），微信小程序免费看，数据来自公开接口聚合。"
     path="/metals/"
-    keywords="有色金属,黄金,白银,铜价,稀土,钨,钼,COMEX,期货"
+    keywords="有色金属,黄金,白银,铜价,稀土,钨,钼,COMEX,期货,小金属"
+    breadcrumb={[
+      { name: '首页', path: '/' },
+      { name: '有色金属', path: '/metals/' },
+    ]}
     jsonLd={[
       {
         '@context': 'https://schema.org',
@@ -35,6 +39,7 @@ const minor = ['钨', '钼', '锗', '铟', '锑']
 
   <section class="landing-hero">
     <div class="container">
+      <span class="eyebrow">Metals & Mining</span>
       <h1>有色金属行情，一屏看齐</h1>
       <p class="lead">金银内外盘同屏、工业金属、小金属全覆盖，还附带金店金价与上金所实物金。</p>
       <div class="tag-row">
@@ -51,8 +56,8 @@ const minor = ['钨', '钼', '锗', '铟', '锑']
   <section class="section" style="padding-top: 0">
     <div class="container">
       <div class="grid-2">
-        <div class="card">
-          <h3 style="margin-top: 0">🥇 金银 · 内外盘同屏</h3>
+        <div class="card reveal">
+          <h2 class="card-title">🥇 金银 · 内外盘同屏</h2>
           <p class="prose">
             黄金、白银同时展示内盘（沪金主连 元/克、沪银主连 元/千克）与外盘（COMEX 美元/盎司），
             无需在不同软件间切换。
@@ -62,29 +67,34 @@ const minor = ['钨', '钼', '锗', '铟', '锑']
           </div>
         </div>
 
-        <div class="card">
-          <h3 style="margin-top: 0">🏭 工业金属</h3>
+        <div class="card reveal" data-delay="1">
+          <h2 class="card-title">🏭 工业金属</h2>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
             {industrial.map((name) => <span class="chip">{name}</span>)}
           </div>
         </div>
       </div>
 
-      <div class="card mt-32">
-        <h3 style="margin-top: 0">⛏️ 小金属（钨钼锗铟锑）</h3>
+      <div class="card mt-32 reveal">
+        <h2 class="card-title">⛏️ 小金属（钨钼锗铟锑）</h2>
         <p class="prose">
           钨、钼、锗、铟、锑暂无统一现货报价，小程序展示对应 A 股上市公司股价作为参考：
         </p>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
           {minor.map((name) => <span class="chip chip-down">{name}</span>)}
         </div>
+        <p class="prose" style="margin-top: 16px">
+          金饰零售比价与上金所实物金（黄金9999、金条等）汇总在
+          <a href="/gold/">金价页</a>；原油、美元、美债等宏观资产见
+          <a href="/global/">全球行情页</a>。
+        </p>
       </div>
     </div>
   </section>
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <QrCta title="金银、工业金属、小金属一屏看齐" />
+      <div class="reveal"><QrCta title="金银、工业金属、小金属一屏看齐" /></div>
     </div>
   </section>
 </Base>

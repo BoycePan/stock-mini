@@ -8,6 +8,8 @@
     ></app-header>
   </view>
   <view class="content-scroll">
+    <!-- 广告位：美股TOP100 放在列表下方（location=us-top100，需后端 adConfig 配置对应 unit-id） -->
+    <ad-banner location="us-top100" placement="card"></ad-banner>
     <loading-state
       wx:if="{{ loading }}"
       text="正在加载美股TOP100"
@@ -31,9 +33,7 @@
 
       <!-- 列表上方信息行：左侧排序引导（首次点击排序后消失）+ 右侧更新时间 -->
       <view class="list-meta">
-        <text wx:if="{{ showSortHint }}" class="sort-hint"
-          >点击「涨跌幅 / 总市值」表头可排序</text
-        >
+        <text wx:if="{{ showSortHint }}" class="sort-hint">点击「涨跌幅 / 总市值」表头可排序</text>
         <text wx:if="{{ updatedLabel }}" class="list-updated">{{ updatedLabel }}</text>
       </view>
 
@@ -50,9 +50,23 @@
           <text>涨跌幅</text>
           <view class="sort-icon">
             <t-icon
-              name="{{ sortKey === 'pct' ? (sortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up') : 'arrow-up-down-1' }}"
+              name="{{
+                sortKey === 'pct'
+                  ? sortDir === 'desc'
+                    ? 'arrow-triangle-down'
+                    : 'arrow-triangle-up'
+                  : 'arrow-up-down-1'
+              }}"
               size="{{ sortKey === 'pct' ? 26 : 24 }}rpx"
-              color="{{ sortKey === 'pct' ? (theme === 'dark' ? '#6fa3ff' : '#4278ed') : (theme === 'dark' ? '#9cacc0' : '#99a6b7') }}"
+              color="{{
+                sortKey === 'pct'
+                  ? theme === 'dark'
+                    ? '#6fa3ff'
+                    : '#4278ed'
+                  : theme === 'dark'
+                    ? '#9cacc0'
+                    : '#99a6b7'
+              }}"
             />
           </view>
         </view>
@@ -65,9 +79,23 @@
           <text>总市值</text>
           <view class="sort-icon">
             <t-icon
-              name="{{ sortKey === 'cap' ? (sortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up') : 'arrow-up-down-1' }}"
+              name="{{
+                sortKey === 'cap'
+                  ? sortDir === 'desc'
+                    ? 'arrow-triangle-down'
+                    : 'arrow-triangle-up'
+                  : 'arrow-up-down-1'
+              }}"
               size="{{ sortKey === 'cap' ? 26 : 24 }}rpx"
-              color="{{ sortKey === 'cap' ? (theme === 'dark' ? '#6fa3ff' : '#4278ed') : (theme === 'dark' ? '#9cacc0' : '#99a6b7') }}"
+              color="{{
+                sortKey === 'cap'
+                  ? theme === 'dark'
+                    ? '#6fa3ff'
+                    : '#4278ed'
+                  : theme === 'dark'
+                    ? '#9cacc0'
+                    : '#99a6b7'
+              }}"
             />
           </view>
         </view>
@@ -85,7 +113,9 @@
         <view class="hd-name name-col">
           <!-- 公司 logo：白图固定深色底 / 深图固定浅色底 / 其余随主题；加载失败换公司名首字 -->
           <view
-            class="stock-logo-chip {{ item.logoTone === 'light' ? 'chip-light' : item.logoTone === 'dark' ? 'chip-dark' : '' }}"
+            class="stock-logo-chip {{
+              item.logoTone === 'light' ? 'chip-light' : item.logoTone === 'dark' ? 'chip-dark' : ''
+            }}"
           >
             <image
               wx:if="{{ !item.logoFailed }}"

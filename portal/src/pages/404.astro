@@ -11,13 +11,17 @@ import Seo from '../components/Seo.astro'
     slot="head"
     title="页面不存在"
     description="您访问的页面不存在，返回首页继续浏览市场追踪助手小程序介绍。"
-    path="/404"
+    noindex
   />
   <div class="notfound">
+    <span class="eyebrow">404 · Not Found</span>
     <h1>404</h1>
     <p class="lead" style="margin: 0; color: var(--text-secondary)">
       您访问的页面不存在或已被移除。
     </p>
-    <a class="btn btn-primary" href="/">返回首页</a>
+    <div class="hero-ctas" style="margin-top: 8px">
+      <a class="btn btn-primary" href="/">返回首页</a>
+      <a class="btn btn-ghost" href="/features/">查看全部功能</a>
+    </div>
   </div>
 </Base>

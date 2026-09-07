@@ -2,7 +2,7 @@
 /**
  * 全站页脚：品牌简介 + 导航 + 免责声明固定块（合规要求，全站可见）。
  */
-import { APP_NAME, APP_TAGLINE, DISCLAIMER, LOGO_IMAGE } from '../config/site'
+import { APP_NAME, APP_TAGLINE, DISCLAIMER, LOGO_IMAGE, NOTICE, ORG } from '../config/site'
 ---
 
 <footer class="site-footer">
@@ -10,15 +10,19 @@ import { APP_NAME, APP_TAGLINE, DISCLAIMER, LOGO_IMAGE } from '../config/site'
     <div class="footer-grid">
       <div class="footer-col">
         <a class="brand" href="/" aria-label={`${APP_NAME} 首页`}>
-          <img class="brand-logo" src={LOGO_IMAGE} alt={APP_NAME} width="32" height="32" />
+          <img class="brand-logo" src={LOGO_IMAGE} alt={APP_NAME} width="34" height="34" />
           <span>{APP_NAME}</span>
         </a>
         <p style="font-size: 14px; color: var(--text-secondary); margin-top: 12px">
           {APP_TAGLINE}
         </p>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px; max-width: 300px">
+          覆盖 A股美股指数、宏观资产、行业板块、日韩行情、金银与小金属、金店金价与财经资讯，
+          一个微信小程序看齐。
+        </p>
       </div>
       <div class="footer-col">
-        <h4>功能</h4>
+        <h4>行情</h4>
         <ul>
           <li><a href="/global/">全球行情</a></li>
           <li><a href="/gold/">金店金价</a></li>
@@ -28,11 +32,21 @@ import { APP_NAME, APP_TAGLINE, DISCLAIMER, LOGO_IMAGE } from '../config/site'
         </ul>
       </div>
       <div class="footer-col">
-        <h4>其他</h4>
+        <h4>功能</h4>
         <ul>
           <li><a href="/features/">全部功能</a></li>
+          <li><a href="/features/">搜索与个股详情</a></li>
+          <li><a href="/features/">深浅双主题</a></li>
           <li><a href="/faq/">常见问题</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>合规</h4>
+        <ul>
           <li><a href="/legal/">数据说明与免责声明</a></li>
+          <li><a href="/legal/">用户协议</a></li>
+          <li><a href="/legal/">隐私政策</a></li>
+          <li><a href="/legal/">联系我们</a></li>
         </ul>
       </div>
     </div>
@@ -41,20 +55,13 @@ import { APP_NAME, APP_TAGLINE, DISCLAIMER, LOGO_IMAGE } from '../config/site'
       {DISCLAIMER}
     </div>
     <div class="footer-copy">
-      <div>浙江杭州</div>
-      <div>© 2026 谷雨信息工作室 · Guyu Information Studio</div>
+      <div>{ORG.city} · {ORG.name}（{ORG.nameEn}） · © 2026</div>
       <div class="footer-icp">
-        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-          >浙ICP备2026046536号</a
-        >
+        <a href={ORG.icpUrl} target="_blank" rel="noopener noreferrer">{ORG.icp}</a>
         <span>·</span>
-        <a
-          href="https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33010802014589"
-          target="_blank"
-          rel="noopener noreferrer">浙公网安备33010802014589号</a
-        >
+        <a href={ORG.policeUrl} target="_blank" rel="noopener noreferrer">{ORG.police}</a>
       </div>
-      <div class="footer-note">本网站仅作信息展示，不提供任何形式的投资建议或交易服务</div>
+      <div class="footer-note">{NOTICE}</div>
     </div>
   </div>
 </footer>
