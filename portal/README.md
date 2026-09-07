@@ -11,7 +11,11 @@
 - **TypeScript 5.8** + `astro check` 类型检查；**Prettier** + `prettier-plugin-astro` 格式化
 - 无框架、无 Tailwind：纯 CSS 变量实现**浅色 / 深色双主题**（默认跟随系统，可手动切换并持久化）
 - **视觉 v2**：玻璃拟态卡片 + 渐变光斑（aurora）背景 + 数据霓虹文字，配合等宽数字与精细排版；
-  **SEO v2**：全站自动注入 `Organization` 与 `BreadcrumbList` JSON-LD，分享配图使用 1200×630 `og.png`
+  **SEO v2**：全站自动注入 `Organization` / `BreadcrumbList` JSON-LD，分享配图使用 1200×630 `og.png`；
+  **SEO v3（本期）**：`robots.txt` / `canonical` / `sitemap` 全部由 `SITE_URL` 推导（替换真实域名
+  一处生效）、`robots` meta 显式声明 + 404 页 `noindex`、`og:locale=zh_CN` + 图片 alt、百度 /
+  Google / Bing 站点验证 token 配置入口（`site.ts` 的 `SEO_VERIFICATION`，留空不输出）、
+  FAQPage 结构化数据与页面可见问答严格一致、落地页标题语义化（h1→h2→h3）与正文互链
 
 ## 目录结构
 
@@ -21,15 +25,14 @@ portal/
 ├── public/
 │   ├── logo.png            # 品牌 logo（从 front/static/images/logo.png 复制）
 │   ├── miniprogram-code.png# ⚠️ 占位图，上线前替换为真实小程序码
-│   ├── og.png              # 分享配图（1200×630，OG / Twitter 大图）
-│   └── robots.txt          # Allow all + sitemap 指向
+│   └── og.png              # 分享配图（1200×630，OG / Twitter 大图）
 └── src/
-    ├── config/site.ts      # 全站唯一配置：品牌名 / SITE_URL / 免责声明 / 运营主体等
+    ├── config/site.ts      # 全站唯一配置：品牌名 / SITE_URL / 验证 token / 免责声明 / 运营主体等
     ├── layouts/Base.astro  # 页头导航 + 页脚免责 + 渐变光斑背景 + 主题防闪烁 + 滚动浮现/返回顶部脚本
     ├── components/         # Seo / Header / Footer / ThemeToggle / MarketWall / PhoneMock / QrCta ...
     ├── data/               # features.ts / faq.ts（功能事实清单，对照 front/ 代码核实）
     ├── styles/global.css   # 双主题令牌表 + 玻璃拟态 / aurora / 数据霓虹设计系统
-    └── pages/              # 首页 + 6 个 SEO 落地页 + features/faq/legal/404
+    └── pages/              # 首页 + 6 个 SEO 落地页 + features/faq/legal/404 + robots.txt（动态生成）
 ```
 
 ## 本地开发
@@ -51,11 +54,16 @@ pnpm portal:format:check   # prettier 格式检查
 
 ## 上线前必做（用户操作）
 
-1. **替换真实域名**：编辑 `portal/src/config/site.ts` 的 `SITE_URL`（同时同步 `astro.config.mjs` 的 `site`）。
-2. **替换小程序码**：在微信公众平台生成「市场追踪助手」小程序码，覆盖
+1. **域名（已配置）**：`portal/src/config/site.ts` 的 `SITE_URL` 已设为线上正式域名
+   `https://stock-offical.guyu.org.cn`（`astro.config.mjs` 的 site 复用同一配置）。
+   `robots.txt` / `canonical` / OG url / sitemap 均由 `SITE_URL` 推导；若更换域名只改这一处即可。
+2. **绑定搜索引擎站长平台**：在百度搜索资源平台 / Google Search Console / Bing Webmaster 添加站点后，
+   把验证 token 填入 `site.ts` 的 `SEO_VERIFICATION`（google / baidu / bing，留空不输出），
+   并分别在平台提交 `SITE_URL/sitemap-index.xml`、核对索引。
+3. **替换小程序码**：在微信公众平台生成「市场追踪助手」小程序码，覆盖
    `portal/public/miniprogram-code.png`（当前为占位图）。
-3. **确认微信内搜索名称**：`src/config/site.ts` 的 `WECHAT_SEARCH_NAME`，以微信内实际可搜索到的名称为准。
-4. **确认文案事实**：站点功能文案对照 `front/` 代码核实（事实清单见 `src/data/features.ts`、
+4. **确认微信内搜索名称**：`src/config/site.ts` 的 `WECHAT_SEARCH_NAME`，以微信内实际可搜索到的名称为准。
+5. **确认文案事实**：站点功能文案对照 `front/` 代码核实（事实清单见 `src/data/features.ts`、
    `docs/小红书文案规范.md`）；金店数量等数字以代码为准。
 
 ## 部署（自有服务器 nginx）

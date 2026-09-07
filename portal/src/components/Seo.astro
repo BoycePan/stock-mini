@@ -6,7 +6,7 @@
  * - 分享配图默认取 public/og.png（1200×630 大图）。
  * 用法：<Seo slot="head" title="..." description="..." />（放在 Base 布局内）。
  */
-import { APP_NAME, ORG, SITE_DESCRIPTION, SITE_LANG, SITE_URL } from '../config/site'
+import { APP_NAME, APP_SLOGAN, ORG, SITE_DESCRIPTION, SITE_URL } from '../config/site'
 
 interface Props {
   title: string
@@ -17,9 +17,16 @@ interface Props {
   jsonLd?: object[]
   /** 分享配图（public/ 下路径，默认 /og.png） */
   image?: string
+  /** 分享配图 alt（默认品牌名 + slogan） */
+  imageAlt?: string
   keywords?: string
   /** 面包屑：[{ name: '首页', path: '/' }, { name: '全球行情', path: '/global/' }] */
   breadcrumb?: { name: string; path: string }[]
+  /**
+   * 禁止索引（如 404 / 中转页）。为 true 时输出 robots: noindex，
+   * 且不输出 canonical / OG url（避免指向无效地址）。
+   */
+  noindex?: boolean
 }
 
 const {
@@ -28,12 +35,15 @@ const {
   path = Astro.url.pathname,
   jsonLd = [],
   image = '/og.png',
+  imageAlt = `${APP_NAME}：${APP_SLOGAN}`,
   keywords,
   breadcrumb,
+  noindex = false,
 } = Astro.props
 
-// canonical 保留尾斜杠，与站点真实 URL 一致
-const canonical = new URL(path, SITE_URL).toString()
+// canonical 补全尾斜杠，与站点真实 URL（trailingSlash: 'always'）保持一致
+const canonicalPath = path !== '/' && !path.endsWith('/') ? `${path}/` : path
+const canonical = new URL(canonicalPath, SITE_URL).toString()
 const ogUrl = canonical
 const ogImage = new URL(image, SITE_URL).toString()
 
@@ -76,27 +86,33 @@ const allJsonLd = [...(breadcrumbJsonLd ? [breadcrumbJsonLd] : []), orgJsonLd, .
 <title>{htmlTitle}</title>
 <meta name="description" content={description} />
 <meta name="generator" content={Astro.generator} />
+<meta
+  name="robots"
+  content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'}
+/>
 <meta name="applicable-device" content="pc,mobile" />
 {keywords && <meta name="keywords" content={keywords} />}
-<link rel="canonical" href={canonical} />
+{!noindex && <link rel="canonical" href={canonical} />}
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content={APP_NAME} />
 <meta property="og:title" content={htmlTitle} />
 <meta property="og:description" content={description} />
-<meta property="og:url" content={ogUrl} />
+{!noindex && <meta property="og:url" content={ogUrl} />}
 <meta property="og:image" content={ogImage} />
+<meta property="og:image:alt" content={imageAlt} />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:type" content="image/png" />
-<meta property="og:locale" content={SITE_LANG} />
+<meta property="og:locale" content="zh_CN" />
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={htmlTitle} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={imageAlt} />
 
 {
   allJsonLd.map((obj) => (

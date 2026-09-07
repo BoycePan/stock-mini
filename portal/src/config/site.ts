@@ -20,14 +20,28 @@ export const SITE_DESCRIPTION =
   '市场追踪助手是免费的微信小程序，一屏看齐 A股美股指数、宏观资产、行业板块、日韩行情、有色金属、42家金店金价与财经资讯，支持深浅双主题。数据来自公开接口聚合，可能有延迟，仅供参考，不构成投资建议。'
 
 /**
- * 站点 URL（无尾斜杠）。
- * ⚠️ 上线前替换为真实域名，并同步 astro.config.mjs 的 site。
- * 部署变量说明见 docs/门户网站.md。
+ * 站点 URL（无尾斜杠）——线上正式域名。
+ * robots.txt / canonical / OG url / sitemap 全部由本值推导（astro.config.mjs 的 site
+ * 亦复用本配置），如需更换域名只改这一处即可。
  */
-export const SITE_URL = 'https://portal.example.com'
+export const SITE_URL = 'https://stock-offical.guyu.org.cn'
 
 /** 站点语言 */
 export const SITE_LANG = 'zh-CN'
+
+/**
+ * 搜索引擎站长平台验证令牌（可选）。
+ * 在百度搜索资源平台 / Google Search Console / Bing Webmaster 添加站点后，把对应 token
+ * 填到这里，站点每个页面的 <head> 会输出验证 meta；留空则完全不输出。
+ * - google：`google-site-verification` content
+ * - baidu：`baidu-site-verification` content
+ * - bing：`msvalidate.01` content
+ */
+export const SEO_VERIFICATION: { google?: string; baidu?: string; bing?: string } = {
+  google: '',
+  baidu: 'codeva-x2qvLaNqE0',
+  bing: '',
+}
 
 /** 小程序码图片（public/ 下），上线前替换为微信公众平台生成的真实小程序码 */
 export const MINIPROGRAM_CODE_IMAGE = '/miniprogram-code.png'

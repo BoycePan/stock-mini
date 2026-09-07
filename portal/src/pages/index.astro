@@ -40,7 +40,8 @@ const appJsonLd = {
 const faqJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: FAQS.map((item) => ({
+  // 与页面可见 FAQ（FAQS.slice(0, 4)）保持一致：FAQ 富结果要求问答在页面上可见
+  mainEntity: FAQS.slice(0, 4).map((item) => ({
     '@type': 'Question',
     name: item.question,
     acceptedAnswer: { '@type': 'Answer', text: item.answer },

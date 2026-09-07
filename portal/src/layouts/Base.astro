@@ -6,9 +6,16 @@
  * 页面通过 <Seo slot="head" /> 提供 title / description / OG / canonical / JSON-LD。
  */
 import '../styles/global.css'
-import { LOGO_IMAGE, SITE_URL } from '../config/site'
+import { LOGO_IMAGE, SEO_VERIFICATION, SITE_URL } from '../config/site'
 import Header from '../components/Header.astro'
 import Footer from '../components/Footer.astro'
+
+// 站长平台验证 meta（仅当 site.ts 填了 token 才输出，留空不产生任何额外标签）
+const verificationMetas = [
+  SEO_VERIFICATION.google && { name: 'google-site-verification', content: SEO_VERIFICATION.google },
+  SEO_VERIFICATION.baidu && { name: 'baidu-site-verification', content: SEO_VERIFICATION.baidu },
+  SEO_VERIFICATION.bing && { name: 'msvalidate.01', content: SEO_VERIFICATION.bing },
+].filter(Boolean) as { name: string; content: string }[]
 ---
 
 <!doctype html>
@@ -19,6 +26,7 @@ import Footer from '../components/Footer.astro'
     <meta name="theme-color" content="#eef3f8" />
     <link rel="icon" type="image/png" href={LOGO_IMAGE} />
     <link rel="sitemap" href={`${SITE_URL}/sitemap-index.xml`} />
+    {verificationMetas.map((meta) => <meta name={meta.name} content={meta.content} />)}
     <slot name="head" />
     <script is:inline>
       // 主题防闪烁：首帧前根据持久化偏好或系统偏好设置 data-theme；并标记 JS 可用

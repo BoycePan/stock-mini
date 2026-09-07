@@ -833,6 +833,14 @@ a:hover {
   letter-spacing: -0.01em;
 }
 
+/* 语义化标题：落地页卡片主标题从 h3 提升为 h2 后，保持与 feature-card h3 一致的视觉层级 */
+.card-title {
+  font-size: 18px;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+
 .feature-card p {
   font-size: 14.5px;
   color: var(--text-secondary);

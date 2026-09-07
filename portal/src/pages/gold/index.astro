@@ -3,10 +3,12 @@
  * 金价落地页（SEO：金价、黄金、金店金价、上金所）。
  * 事实来源：front/config/gold-shop.ts（42 家金店目录，页面展示 15 家）、
  * front/config/physical-gold.ts（上金所实物金 8 项）、front/api/market.ts。
+ * FAQ：页面上可见的问答与 FAQPage 结构化数据严格一致（富结果要求问答可见）。
  */
 import Base from '../../layouts/Base.astro'
 import Seo from '../../components/Seo.astro'
 import QrCta from '../../components/QrCta.astro'
+import FaqItem from '../../components/FaqItem.astro'
 
 const displayBrands = [
   '周大福',
@@ -37,27 +39,31 @@ const physicalGold = [
   { name: '白银T+D', unit: '元/千克' },
 ]
 
+/** 金价常见问题（可见内容 = JSON-LD 内容） */
+const goldFaq = [
+  {
+    question: '在哪里可以实时对比金店金价？',
+    answer:
+      '微信小程序「市场追踪助手」的有色页提供 42 家金店品牌的实时金价对比（页面精选展示周大福、老凤祥、周六福、周生生等 15 家主流品牌），数据来自网络公开数据，以门店实际挂牌价为准。',
+  },
+  {
+    question: '上金所实物金价格在哪里看？',
+    answer:
+      '小程序「有色」页提供上海黄金交易所实物金价格：黄金9999、黄金9995、金条100g/50g、黄金T+D、m黄金T+D、铂金9995、白银T+D。',
+  },
+]
+
 const faqJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: '在哪里可以实时对比金店金价？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '微信小程序「市场追踪助手」的有色页提供 42 家金店品牌的实时金价对比（页面精选展示周大福、老凤祥、周六福、周生生等 15 家主流品牌），数据来自网络公开数据，以门店实际挂牌价为准。',
-      },
+  mainEntity: goldFaq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
     },
-    {
-      '@type': 'Question',
-      name: '上金所实物金价格在哪里看？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '小程序「有色」页提供上海黄金交易所实物金价格：黄金9999、黄金9995、金条100g/50g、黄金T+D、m黄金T+D、铂金9995、白银T+D。',
-      },
-    },
-  ],
+  })),
 }
 ---
 
@@ -97,7 +103,7 @@ const faqJsonLd = {
     <div class="container">
       <div class="grid-2">
         <div class="card reveal">
-          <h3 style="margin-top: 0">🏬 金店金价对比</h3>
+          <h2 class="card-title">🏬 金店金价对比</h2>
           <p class="prose">
             覆盖 <strong>42 家金店品牌</strong
             >的金价数据（金投网公开数据），页面精选展示以下主流品牌 的足金 / 铂金 / 金条实时零售价：
@@ -111,7 +117,7 @@ const faqJsonLd = {
         </div>
 
         <div class="card reveal" data-delay="1">
-          <h3 style="margin-top: 0">🥇 上金所实物金</h3>
+          <h2 class="card-title">🥇 上金所实物金</h2>
           <p class="prose">上海黄金交易所现货基准价（黄金9999 为实物黄金定价基础）：</p>
           <table class="data-table" style="margin-top: 12px">
             <thead>
@@ -135,11 +141,35 @@ const faqJsonLd = {
       </div>
 
       <div class="card mt-32 reveal">
-        <h3 style="margin-top: 0">💰 金银内外盘同屏</h3>
+        <h2 class="card-title">💰 金银内外盘同屏</h2>
         <p class="prose">
           黄金、白银同时展示内盘（沪金主连 元/克、沪银主连 元/千克）与外盘（COMEX 美元/盎司）
           两路报价，交易时段自动切换口径，不再需要在多个软件间来回切换。
         </p>
+        <p class="prose" style="margin-top: 12px">
+          想继续看铜、铝、锌、镍等工业金属与钨钼锗等小金属，可前往
+          <a href="/metals/">有色金属行情页</a>；宏观资产（原油、美元、美债）在
+          <a href="/global/">全球行情页</a>一并展示。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 金价 FAQ：内容与 FAQPage 结构化数据一致 -->
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow">Gold FAQ</span>
+        <h2 class="section-title">金价常见问题</h2>
+      </div>
+      <div class="faq-list" style="max-width: 820px; margin: 0 auto">
+        {
+          goldFaq.map((item, index) => (
+            <div class="reveal">
+              <FaqItem item={item} index={index} />
+            </div>
+          ))
+        }
       </div>
     </div>
   </section>
