@@ -40,7 +40,7 @@ export const SITE_LANG = 'zh-CN'
 export const SEO_VERIFICATION: { google?: string; baidu?: string; bing?: string } = {
   google: '7eCgPXA5vtlMCHYaCp908NnH5MMRViKB3svxt-KbpTY',
   baidu: 'codeva-x2qvLaNqE0',
-  bing: '',
+  bing: '5608715B325A63C4858946453FEE241C',
 }
 
 /** 小程序码图片（public/ 下），上线前替换为微信公众平台生成的真实小程序码 */
