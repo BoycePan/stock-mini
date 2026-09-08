@@ -399,3 +399,64 @@
   background: #233046;
   color: #6fa3ff;
 }
+
+/* 概念板块 / 行业板块 切换 tab（常驻粘性头部，加载中也可切换） */
+.board-tabs {
+  display: flex;
+  padding: 0 24rpx;
+  border-bottom: 1rpx solid #d4dfec;
+}
+
+.page.theme-dark .board-tabs {
+  border-bottom-color: #2a394e;
+}
+
+.board-tab {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  color: #718096;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.board-tab-text {
+  line-height: 1;
+}
+
+/* 当前 tab：主题色文字 + 底部短指示条 */
+.board-tab-active {
+  color: #4278ed;
+  font-weight: 700;
+}
+
+.board-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 6rpx;
+  border-radius: 6rpx;
+  background: #4278ed;
+}
+
+.board-tab-hover {
+  opacity: 0.7;
+}
+
+.page.theme-dark .board-tab {
+  color: #9cacc0;
+}
+
+.page.theme-dark .board-tab-active {
+  color: #6fa3ff;
+}
+
+.page.theme-dark .board-tab-active::after {
+  background: #6fa3ff;
+}

@@ -1,18 +1,35 @@
 <view class="page theme-{{ theme }}">
-  <!-- 粘性头部：导航 + 搜索框（加载完成前不显示搜索） -->
+  <!-- 粘性头部：导航 + 概念/行业 tab + 搜索框（加载完成前不显示搜索） -->
   <view class="page-header">
     <app-header
-      title="A股全部行业"
+      title="{{ headerTitle }}"
       showShare="{{ false }}"
       showBack="{{ true }}"
       showBrand="{{ false }}"
     ></app-header>
+
+    <!-- 概念板块 / 行业板块 切换 tab（常驻：加载中 / 失败也可切到另一类） -->
+    <view class="board-tabs">
+      <view
+        wx:for="{{ tabs }}"
+        wx:key="key"
+        class="board-tab {{ activeTab === item.key ? 'board-tab-active' : '' }}"
+        data-kind="{{ item.key }}"
+        hover-class="board-tab-hover"
+        bindtap="onTabTap"
+        aria-role="button"
+        aria-label="切换到{{ item.label }}"
+      >
+        <text class="board-tab-text">{{ item.label }}</text>
+      </view>
+    </view>
+
     <view wx:if="{{ !loading && !error }}" class="header-search">
       <view class="search-box">
         <t-icon name="search" size="28rpx" color="{{ theme === 'dark' ? '#9cacc0' : '#99a6b7' }}" />
         <input
           class="search-input"
-          placeholder="搜索行业，如 煤炭 / 影视院线"
+          placeholder="{{ searchPlaceholder }}"
           placeholder-class="search-placeholder"
           value="{{ query }}"
           confirm-type="search"
@@ -34,8 +51,8 @@
   <view class="content-scroll">
     <loading-state
       wx:if="{{ loading }}"
-      text="正在加载全部行业"
-      desc="正在为您同步 A 股全部行业板块涨跌幅，请稍候…"
+      text="{{ loadingText }}"
+      desc="{{ loadingDesc }}"
     ></loading-state>
 
     <!-- 首次加载失败 / 空数据：错误提示 + 重试 -->
@@ -53,9 +70,9 @@
         >
       </view>
 
-      <!-- 列表上方信息行：行业总数 + 排序按钮 + 更新时间 -->
+      <!-- 列表上方信息行：当前板块总数 + 排序按钮 + 更新时间 -->
       <view class="list-meta">
-        <text class="total-text">共 {{ totalCount }} 个行业</text>
+        <text class="total-text">共 {{ totalCount }} 个{{ countUnit }}</text>
         <view
           class="sort-btn"
           hover-class="sort-btn-hover"
@@ -77,12 +94,12 @@
       <!-- 表头 -->
       <view class="list-head">
         <text class="hd-rank">#</text>
-        <text class="hd-name">行业</text>
+        <text class="hd-name">板块名称</text>
         <text class="hd-pct">涨跌幅</text>
       </view>
 
       <view wx:if="{{ !items.length }}" class="empty-row">
-        <text>未找到匹配的行业，换个关键词试试</text>
+        <text>{{ emptyText }}</text>
       </view>
 
       <view
