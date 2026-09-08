@@ -137,14 +137,9 @@ export const US_PROXY_NAMES: Record<string, string> = {
   MP: 'MP材料', // MP Materials
   REMX: '稀土ETF',
   UUUU: '能源燃料', // Energy Fuels
-  // 2026-09-07 扩充板块代理股中文名（东财名实测：106.MS=摩根士丹利 等，均一致）
+  // 2026-09-07 扩充板块代理股中文名（09-08 收敛后仅保留使用中代理；东财名实测一致）
   MS: '摩根士丹利',
   SCHW: '嘉信理财',
-  KIE: '保险ETF', // SPDR S&P Insurance ETF
-  MDT: '美敦力',
-  ABT: '雅培',
-  SYK: '史赛克',
-  BSX: '波士顿科学',
   IQV: '艾昆纬',
   CRL: '查尔斯河',
   ICLR: 'ICON医药', // ICON plc（东财返回英文名，补中文）
@@ -152,25 +147,14 @@ export const US_PROXY_NAMES: Record<string, string> = {
   LRCX: '拉姆研究',
   KLAC: '科磊',
   ASML: '阿斯麦',
-  IGV: '软件ETF', // iShares Expanded Tech-Software Sector ETF
-  NTES: '网易',
-  TTWO: 'Take-Two互动', // Take-Two Interactive（东财英文名，补中文）
   AAPL: '苹果',
   DELL: '戴尔科技',
   HPQ: '惠普',
-  CSCO: '思科',
-  ERIC: '爱立信',
-  NOK: '诺基亚',
   TSLA: '特斯拉',
   GM: '通用汽车',
   F: '福特汽车',
-  CAT: '卡特彼勒',
-  DE: '迪尔',
-  SLX: '钢铁ETF', // VanEck Steel ETF
-  FDX: '联邦快递',
-  UPS: '联合包裹',
-  JETS: '航空ETF', // U.S. Global Jets ETF
-  XHB: '房屋建筑ETF', // SPDR S&P Homebuilders ETF
+  NTES: '网易',
+  TTWO: 'Take-Two互动', // Take-Two Interactive（东财英文名，补中文）
 }
 
 /**
@@ -238,22 +222,13 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   BK1216: { em: '90.BK1216' },
   BK0438: { em: '90.BK0438' },
   BK1626: { em: '90.BK1626' }, // 稀土（原 BK1016 已被东财改指「汽车服务」，改用现行 BK1626）
-  // 2026-09-07 扩充板块（与 INDUSTRY_BOARDS 顺序一致，东财行业板块分时）
+  // 2026-09-07 扩充板块（09-08 收敛保留 6 项，与 INDUSTRY_BOARDS 顺序一致，东财行业板块分时）
   BK0473: { em: '90.BK0473' }, // 证券
-  BK0474: { em: '90.BK0474' }, // 保险
-  BK1605: { em: '90.BK1605' }, // 医疗设备
   BK1600: { em: '90.BK1600' }, // 医药外包
   BK1326: { em: '90.BK1326' }, // 半导体设备
-  BK0737: { em: '90.BK0737' }, // 软件
-  BK1301: { em: '90.BK1301' }, // 游戏
   BK1037: { em: '90.BK1037' }, // 消费电子
-  BK0448: { em: '90.BK0448' }, // 通信设备
   BK1262: { em: '90.BK1262' }, // 汽车
-  BK0739: { em: '90.BK0739' }, // 工程机械
-  BK0479: { em: '90.BK0479' }, // 钢铁
-  BK0422: { em: '90.BK0422' }, // 物流
-  BK1479: { em: '90.BK1479' }, // 航空
-  BK0451: { em: '90.BK0451' }, // 房地产
+  BK1301: { em: '90.BK1301' }, // 游戏
 
   // -------------------------------------------------------------------------
   // 日韩页 · 指数

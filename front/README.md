@@ -47,7 +47,7 @@ http://100.90.180.33:18487
   - `utils/quote.ts`：多源聚合 `fetchAccurate`（共识取中位数）、板块涨跌幅
     `fetchAShareBoardChangeMap` / `fetchUsProxyChangeMap`；
   - `utils/market-session.ts` + `utils/market-clock.ts`：A股/美股会话判定（30s 缓存）；
-  - `config/tabbar.ts`：三个页面（A股指数/美股指数/宏观资产/行业板块 39 项、日韩指数/个股/汇率、
+  - `config/tabbar.ts`：三个页面（A股指数/美股指数/宏观资产/行业板块 30 项、日韩指数/个股/汇率、
     有色金属）的标的与数据源配置；
   - `utils/quote-parser.ts` / `utils/quote-consensus.ts`：纯解析 / 共识纯函数（可单测）。
 - **财经（新闻）、搜索、个股/板块详情、新闻列表**等仍走后端接口
