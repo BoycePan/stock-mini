@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   getRegionStatus,
+  getUsPhase,
   isMarketHoliday,
   isMarketTradingDay,
   resolveIndustryPhase,
@@ -122,6 +123,34 @@ test('美股：法定节假日休市（含 7/3、6/18、12/24 调休），半日
   assert.equal(getRegionStatus('us', at('2027-11-26T17:00:00Z')).label, '盘中') // 感恩节次日半日市 12:00 仍交易
   assert.equal(getRegionStatus('us', at('2027-11-26T18:00:00Z')).label, '休市') // 感恩节次日半日市 13:00 收盘
   assert.equal(getRegionStatus('us', at('2027-12-24T15:00:00Z')).label, '休市') // 圣诞节调休
+})
+
+test('getUsPhase：普通交易日 盘前/盘中/盘后（EDT/EST 边界）', () => {
+  assert.equal(getUsPhase(at('2026-08-20T09:00:00Z')), 'pre') // ET 05:00（夏令时）
+  assert.equal(getUsPhase(at('2026-08-20T14:30:00Z')), 'regular') // ET 10:30
+  assert.equal(getUsPhase(at('2026-08-20T21:00:00Z')), 'post') // ET 17:00
+  assert.equal(getUsPhase(at('2026-11-02T15:00:00Z')), 'regular') // EST 10:00（冬令时）
+})
+
+test('getUsPhase：法定节假日休市按 off 处理，不再误判盘前/盘中/盘后', () => {
+  // 2026-09-07（劳动节，周一 EDT）：原盘前 05:00 / 盘中 11:18 / 盘后 17:30 均判休市
+  assert.equal(getUsPhase(at('2026-09-07T09:00:00Z')), 'off')
+  assert.equal(getUsPhase(at('2026-09-07T15:18:00Z')), 'off')
+  assert.equal(getUsPhase(at('2026-09-07T21:30:00Z')), 'off')
+  // 圣诞盘中时段 / 独立日调休（2026-07-03）
+  assert.equal(getUsPhase(at('2026-12-25T17:00:00Z')), 'off') // ET 12:00
+  assert.equal(getUsPhase(at('2026-07-03T14:00:00Z')), 'off') // ET 10:00
+})
+
+test('getUsPhase：半日市 13:00 收盘（13:00 后与盘后时段均按休市）', () => {
+  // 2026-11-27（感恩节次日半日市，冬令时 EST）
+  assert.equal(getUsPhase(at('2026-11-27T14:00:00Z')), 'pre') // ET 09:00 盘前仍有效
+  assert.equal(getUsPhase(at('2026-11-27T17:00:00Z')), 'regular') // ET 12:00 仍在盘中
+  assert.equal(getUsPhase(at('2026-11-27T18:30:00Z')), 'off') // ET 13:30 早收
+  assert.equal(getUsPhase(at('2026-11-27T21:00:00Z')), 'off') // ET 16:00（半日市不展示盘后）
+  // 2026-12-24（平安夜半日市）
+  assert.equal(getUsPhase(at('2026-12-24T16:00:00Z')), 'regular') // ET 11:00
+  assert.equal(getUsPhase(at('2026-12-24T18:30:00Z')), 'off') // ET 13:30 早收
 })
 
 // ---------------------------------------------------------------------------
@@ -352,4 +381,40 @@ test('resolveIndustrySource：盘前（EDT/EST 边界）/ A股时段 / 待盘前
     resolveIndustrySource(session({ useA: true, useUs: false }), at('2026-08-20T09:00:00Z')),
     'us-pre',
   )
+})
+
+test('行业板块：美股休市日（劳动节 2026-09-07）状态与美股指数同步为「休市」，不再出现盘前/盘中', () => {
+  // 美东 05:00（原盘前窗口）：不切盘前源；北京仍处工作日 09:15–21:30 → A 股板块（收盘数据），阶段「休市」
+  assert.equal(resolveIndustrySource(null, at('2026-09-07T09:00:00Z')), 'a')
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-09-07T09:00:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  })
+  // 美东 11:18（原盘中窗口）：北京 23:18 已过 21:30 → 美股代理股（上一交易日数据），阶段「休市」
+  assert.equal(resolveIndustryUseA(null, at('2026-09-07T15:18:00Z')), false)
+  assert.equal(resolveIndustrySource(null, at('2026-09-07T15:18:00Z')), 'us')
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-09-07T15:18:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  })
+  // 会话快照即使带着 usMode=regular（30s 缓存滞后）也不得把休市日标成「美股盘中」
+  assert.deepEqual(
+    resolveIndustryPhase(
+      session({ useA: false, useUs: true, usMode: 'regular' }),
+      at('2026-09-07T15:18:00Z'),
+    ),
+    { label: '休市', tone: 'rest' },
+  )
+  // 美东 17:30（原盘后窗口）→ 休市
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-09-07T21:30:00Z')), {
+    label: '休市',
+    tone: 'rest',
+  })
+  // 节假日次日北京早盘（美东仍为劳动节当日 22:00）：A股盘中实时数据照常展示「大A盘中」
+  assert.equal(resolveIndustryUseA(null, at('2026-09-08T02:00:00Z')), true)
+  assert.equal(resolveIndustrySource(null, at('2026-09-08T02:00:00Z')), 'a')
+  assert.deepEqual(resolveIndustryPhase(null, at('2026-09-08T02:00:00Z')), {
+    label: '大A盘中',
+    tone: 'active',
+  })
 })

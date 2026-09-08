@@ -73,7 +73,7 @@ test('pickGoldShopItem 按优先级选品（黄金价 → 零售价 → 兜底�
   assert.equal(zdf?.item, '黄金价格')
   assert.equal(zdf?.price, 1318)
 
-  // 中国黄金 无「黄金价格」→ 应选「零售价」；目录第一项是基础金价，零售价在第二位但 fixture 无零售价 → 兜底基础金价
+  // 中国黄金「黄金价格」档=足金饰品（JO_348900），fixture 无该档报价；零售价（JO_52684）也无 → 兜底基础金价
   const zghjConfigs = GOLD_SHOP_CATALOG['中国黄金'] ?? []
   const zghj = pickGoldShopItem(zghjConfigs, byCode)
   assert.equal(zghj?.item, '基础金价')

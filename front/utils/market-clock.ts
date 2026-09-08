@@ -78,27 +78,28 @@ export function isUsDst(date: Date): boolean {
   return day >= start && day < end
 }
 
-/** 美东时间（ET）的日期部件 */
-function etParts(date: Date): { hour: number; minute: number; weekday: number } {
-  const offset = isUsDst(date) ? -4 : -5
-  const et = new Date(date.getTime() + offset * 3600 * 1000)
-  return {
-    hour: et.getUTCHours(),
-    minute: et.getUTCMinutes(),
-    weekday: et.getUTCDay(),
-  }
-}
-
 export type UsPhase = 'pre' | 'regular' | 'post' | 'off'
 
-/** 美股阶段（美东时间）：盘前 04:00-09:30 / 盘中 09:30-16:00 / 盘后 16:00-20:00 */
+/**
+ * 美股阶段（美东时间）：盘前 04:00-09:30 / 盘中 09:30-16:00（半日市 13:00 收盘）/
+ * 盘后 16:00-20:00（半日市不展示盘后，与 getRegionStatus 一致）。
+ *
+ * 周末与法定节假日休市（config/holidays.ts us 日历，与 getRegionStatus 同源）恒为 'off'：
+ * 让「行业板块」等消费方在美股休市日不再误判为盘前/盘中/盘后 —— 例如劳动节（2026-09-07）
+ * 美东盘中时段若按纯时钟判定会显示「美股盘中」，与美股指数分区的「休市」不一致。
+ */
 export function getUsPhase(now: Date = new Date()): UsPhase {
-  const { weekday, hour, minute } = etParts(now)
-  if (weekday === 0 || weekday === 6) return 'off'
-  const minutes = hour * 60 + minute
+  const parts = offsetParts(now, regionOffset('us', now))
+  if (parts.weekday === 0 || parts.weekday === 6) return 'off'
+  if (isMarketHoliday('us', now)) return 'off'
+  const minutes = parts.hour * 60 + parts.minute
+  const key = localDateKey(parts)
+  const earlyClose = US_EARLY_CLOSE[parts.year]?.includes(key) ?? false
+  const regularEnd = earlyClose ? 13 * 60 : 16 * 60
   if (minutes >= 4 * 60 && minutes < 9 * 60 + 30) return 'pre'
-  if (minutes >= 9 * 60 + 30 && minutes < 16 * 60) return 'regular'
-  if (minutes >= 16 * 60 && minutes < 20 * 60) return 'post'
+  if (minutes >= 9 * 60 + 30 && minutes < regularEnd) return 'regular'
+  // 常规交易日盘后 16:00-20:00；半日市 13:00 早收后不再判定盘后（与 getRegionStatus 一致）
+  if (!earlyClose && minutes >= 16 * 60 && minutes < 20 * 60) return 'post'
   return 'off'
 }
 
@@ -193,10 +194,12 @@ export type IndustrySource = 'a' | 'us' | 'us-pre'
 
 /**
  * 行业板块数据源（唯一判定入口，供 api/market.ts 取数与 resolveIndustryPhase 阶段胶囊共用）：
- * - 'us-pre'：美股盘前（美东 04:00–09:30，周一至周五；夏令时/冬令时经 getUsPhase 自动换算，
- *   对应北京时间 16:00–21:30 / 17:00–22:30）→ 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径）；
+ * - 'us-pre'：美股盘前（美东 04:00–09:30，且当天为美股交易日——节假日休市经 getUsPhase 判为
+ *   'off'，不会切盘前源；夏令时/冬令时自动换算，对应北京时间 16:00–21:30 / 17:00–22:30）
+ *   → 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径）；
  * - 'a'：A 股时段（工作日 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 东财 A 股板块；
- * - 'us'：其余（美股盘中 ≥09:30 美东、盘后、周末、夜间空档）→ 美股代理股涨跌幅均值（既有逻辑）。
+ * - 'us'：其余（美股盘中 ≥09:30 美东、盘后、周末、美股节假日、夜间空档）→
+ *   美股代理股涨跌幅均值（休市时段展示上一交易日数据，既有逻辑）。
  */
 export function resolveIndustrySource(
   session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
@@ -219,6 +222,8 @@ export function usEtParts(now: Date = new Date()): { month: number; day: number 
 /**
  * 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段；
  * 美股盘前 → 「美股盘前」，docs/美股盘前板块展示分析与改造方案.md 改动 5）。
+ * 美股休市日（周末 / 节假日，getUsPhase 恒为 'off'）展示「休市」（rest 灰），
+ * 不再误判为「美股盘前 / 盘中 / 盘后」。
  * source 缺省时按 resolveIndustrySource 推导（盘前时段自动落为 'us-pre'）。
  */
 export function resolveIndustryPhase(
