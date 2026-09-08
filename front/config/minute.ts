@@ -18,8 +18,9 @@
  * 每个 secid / 代码均已实测可拿到当日分时数据（验证矩阵见 docs/minute-api.md「验证结果」）。
  *
  * 会话随卡片口径切换（见 api/market.ts）：
- *   - 有色页 GOLD/SILVER/COPPER 在「外盘」时段卡片展示 COMEX 报价，分时对应
- *     GOLD-US / SILVER-US / COPPER-US（东财 COMEX 分时，与全球页 GC/SI/HG 同一已验证源）；
+ *   - 有色页 GOLD/SILVER 在「外盘」时段卡片展示现货 XAUUSD/XAGUSD，分时对应
+ *     GOLD-US / SILVER-US（东财 122.XAU/122.XAG，与全球页 GC/SI 同一已验证源）；
+ *     COPPER 仍为 COMEX 报价，分时 COPPER-US（101.HG00Y）；
  *   - 美股时段行业板块（us-BKxxxx）为代理股分时均值合成，标注各代理股中文名；
  *   - 外盘无分时源的金属（us-ALUMINUM 等）**刻意不配置**：卡片展示外盘报价但没有
  *     已验证的外盘分时源，点击给出提示而非展示错误市场（沪主连/A股）的数据。
@@ -204,8 +205,8 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // 卡片不显示「分时」角标，点击给出「该指标暂无分时数据」提示。
   UDI: { em: '100.UDI' }, // 美元指数（24h 行情，点较多）
   TLT: { em: '105.TLT' }, // 美债长债
-  GC: { em: '101.GC00Y' }, // 黄金盎司（COMEX）
-  SI: { em: '101.SI00Y' }, // 白银盎司（COMEX）
+  GC: { em: '122.XAU' }, // 伦敦金 XAUUSD（现货黄金/美元，东财市场 122；与卡片同源）
+  SI: { em: '122.XAG' }, // 伦敦银 XAGUSD（现货白银/美元，东财市场 122；与卡片同源）
   HG: { em: '101.HG00Y' }, // 铜（COMEX）
   NG: { em: '102.NG00Y' }, // 天然气（NYMEX）
   SOX: { em: '251.SOX' }, // 费城半导体指数
@@ -320,15 +321,16 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   TIN: { em: '113.snm' }, // 锡 → 沪锡主连
 
   // -------------------------------------------------------------------------
-  // 有色页 · 外盘时段（卡片展示 COMEX 报价时的分时对应，与全球页 GC/SI/HG 同一已验证源）
+  // 有色页 · 外盘时段（金银卡片展示现货 XAUUSD/XAGUSD，与全球页宏观 GC/SI 同一已验证源；
+  // 铜仍为 COMEX 101.HG00Y）
   // -------------------------------------------------------------------------
   'GOLD-US': {
-    em: '101.GC00Y',
-    note: '外盘时段：分时为 COMEX 黄金（美元/盎司），与卡片口径一致',
+    em: '122.XAU',
+    note: '外盘时段：分时为伦敦金 XAUUSD（美元/盎司），与卡片口径一致',
   },
   'SILVER-US': {
-    em: '101.SI00Y',
-    note: '外盘时段：分时为 COMEX 白银（美元/盎司），与卡片口径一致',
+    em: '122.XAG',
+    note: '外盘时段：分时为伦敦银 XAGUSD（美元/盎司），与卡片口径一致',
   },
   'COPPER-US': {
     em: '101.HG00Y',

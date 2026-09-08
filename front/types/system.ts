@@ -52,6 +52,8 @@ export interface NoticeConfig {
   buttonText?: string
   minVersion?: string
   count?: number
+  /** 运行环境白名单：仅当当前小程序环境（develop / trial / release）在列表内才展示；缺省 / 空数组不限 */
+  envWhitelist?: string[]
   [key: string]: unknown
 }
 
@@ -87,4 +89,7 @@ export interface PopupNotice {
   minVersion: string
   /** 展示天数：自首次展示当天起连续展示 count 天，每天最多展示一次 */
   count: number
+  /** 运行环境白名单：仅当当前小程序环境（develop / trial / release，见 utils/version.ts
+   *  getAppEnvVersion）在列表内才展示；缺省 / 空数组不限 */
+  envWhitelist?: string[]
 }

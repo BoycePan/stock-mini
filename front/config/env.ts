@@ -1,6 +1,7 @@
 import { developmentEnv } from './env.development'
 import { productionEnv } from './env.production'
 import { getEnvOverride } from '../utils/storage'
+import { getAccountInfo } from '../utils/account-info'
 
 export interface AppEnv {
   apiBaseUrl: string
@@ -8,11 +9,7 @@ export interface AppEnv {
 }
 
 export function isReleaseBuild(): boolean {
-  try {
-    return wx.getAccountInfoSync().miniProgram.envVersion === 'release'
-  } catch {
-    return false
-  }
+  return getAccountInfo()?.miniProgram?.envVersion === 'release'
 }
 
 /**

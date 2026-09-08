@@ -1,5 +1,5 @@
 import type { Notice, NoticeConfig, PopupNotice } from '../types/system'
-import { isVersionGte, getAppVersion } from './version'
+import { isVersionGte, getAppVersion, getAppEnvVersion } from './version'
 
 /**
  * 弹窗公告展示状态（wx 本地缓存）：首次展示日期 + 最近一次展示日期（YYYY-MM-DD）。
@@ -92,7 +92,16 @@ export function shouldShowPopupNotice(
 }
 
 /**
- * 弹窗公告通用调度：一次调用完成「minVersion 校验 + count 天每日一次」判断，
+ * envWhitelist 是否放行当前运行环境：缺省 / 空数组 / 非法值 = 不限；
+ * 非空数组时当前环境（getAppEnvVersion，develop / trial / release）必须在列表内。
+ */
+function envAllowed(envWhitelist: unknown): boolean {
+  if (!Array.isArray(envWhitelist) || envWhitelist.length === 0) return true
+  return envWhitelist.some((env) => env === getAppEnvVersion())
+}
+
+/**
+ * 弹窗公告通用调度：一次调用完成「minVersion 校验 + envWhitelist 环境白名单 + count 天每日一次」判断，
  * 命中时记录展示状态并返回展示内容，未命中返回 null。
  *
  * 调用方（页面 / 组件）拿到非空结果后直接渲染即可，无需关心版本与频率规则：
@@ -114,6 +123,13 @@ export function tryShowPopupNotice(
     // 回退 FALLBACK_VERSION（utils/version.ts），若后台 minVersion 高于它则永远不弹。
     console.warn(
       `[popup-notice] 版本门槛拦截：当前 ${getAppVersion()} < 公告要求 ${notice.minVersion}，不展示`,
+    )
+    return null
+  }
+  if (!envAllowed(notice.envWhitelist)) {
+    // 环境白名单拦截：公告只面向指定环境（如仅体验版 / 正式版，开发版不弹）。
+    console.warn(
+      `[popup-notice] 环境白名单拦截：当前 ${getAppEnvVersion()} 不在 ${JSON.stringify(notice.envWhitelist)}，不展示`,
     )
     return null
   }
@@ -164,7 +180,11 @@ function popupConfigOf(notice: Notice): (NoticeConfig & { content: string }) | n
  * 无 home 公告 / 正文缺失时返回 null（不弹）。
  *
  * 缺省兜底：title / buttonText 缺省为空串（组件兜底文案）；path 缺省空串（不跳转）；
- * minVersion 缺省 '0.0.0'（不设版本门槛）；count 缺省 1（只展示一天）。
+ * minVersion 缺省 '0.0.0'（不设版本门槛）；count 缺省 1（只展示一天）；
+ * envWhitelist 缺省不限（空数组 = 不限）。
+ *
+ * envWhitelist 在「取第一条」之前过滤：不命中当前环境的 home 公告直接跳过，
+ * 继续看下一条，保证多条公告按环境分流时能选中正确的第一条。
  */
 export function resolveHomePopupNotice(
   notices: Notice[],
@@ -180,6 +200,12 @@ export function resolveHomePopupNotice(
       )
       continue
     }
+    if (!envAllowed(cfg.envWhitelist)) {
+      console.warn(
+        `[popup-notice] home 公告被环境白名单拦截（当前 ${getAppEnvVersion()}，白名单 ${JSON.stringify(cfg.envWhitelist)}）：id=${notice.id}，跳过`,
+      )
+      continue
+    }
     return {
       popup: {
         title: typeof cfg.title === 'string' ? cfg.title : undefined,
@@ -188,6 +214,9 @@ export function resolveHomePopupNotice(
         buttonText: typeof cfg.buttonText === 'string' ? cfg.buttonText : undefined,
         minVersion: typeof cfg.minVersion === 'string' && cfg.minVersion ? cfg.minVersion : '0.0.0',
         count: typeof cfg.count === 'number' && cfg.count > 0 ? cfg.count : 1,
+        envWhitelist: Array.isArray(cfg.envWhitelist)
+          ? cfg.envWhitelist.filter((env): env is string => typeof env === 'string')
+          : undefined,
       },
       storageKey: `popup_notice_state_${notice.id}`,
     }

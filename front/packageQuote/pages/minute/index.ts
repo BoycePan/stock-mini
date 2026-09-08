@@ -48,7 +48,7 @@ let lastMinuteRequestAt = 0
 /**
  * 首页卡片当日分时图查看页（纯前端直连外部接口，见 docs/minute-api.md）。
  * 入参：code=首页卡片行情code（如 sh000001 / KS11 / GOLD）、name=展示名；
- * mcode=分时取数专用代码（随会话切换口径，如外盘 GOLD → GOLD-US 取 COMEX），缺省等于 code。
+ * mcode=分时取数专用代码（随会话切换口径，如外盘 GOLD → GOLD-US 取现货 XAUUSD 分时），缺省等于 code。
  * 数据源按 东财 → 腾讯 → Yahoo 兜底；页面可见期间每 8s 静默刷新一次。
  */
 Page({

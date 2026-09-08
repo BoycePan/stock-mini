@@ -29,7 +29,7 @@ export interface QuoteItem {
   /** 条目更新时间文案（如「09:53 更新」），有值时才在卡片上展示 */
   updatedAt?: string
   /**
-   * 分时取数专用代码：随会话切换取数口径（如 外盘 GOLD → GOLD-US 取 COMEX 分时）。
+   * 分时取数专用代码：随会话切换取数口径（如 外盘 GOLD → GOLD-US 取现货 XAUUSD 分时）。
    * 缺省时用 code 取分时；该 code 无分时源时卡片不显示「分时」入口。
    */
   minuteCode?: string

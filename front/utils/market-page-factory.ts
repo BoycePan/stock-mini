@@ -211,7 +211,7 @@ export function createMarketPage(opts: MarketPageOptions) {
 
     /**
      * 点击行情卡片 → 查看当日分时图（纯前端，直连外部接口）。
-     * 取数代码 = minuteCode ?? code（随会话切换口径，如外盘 GOLD → GOLD-US 取 COMEX）；
+     * 取数代码 = minuteCode ?? code（随会话切换口径，如外盘 GOLD → GOLD-US 取现货 XAUUSD 分时）；
      * 无分时源的卡片（美股时段板块 / 外盘无分时金属 / 金店金价 / 财经新闻）提示后忽略，
      * 绝不跳转到与卡片展示口径不一致的行情。
      */
@@ -235,7 +235,7 @@ export function createMarketPage(opts: MarketPageOptions) {
       // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
       // utils/system-config.ts）：关闭时禁止跳转分时页。
       if (!isMinuteEnabled()) {
-        wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
+        // wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
         return
       }
       // 埋点：点击行情卡片（查看分时），上报点的是哪个卡片（code / 名称 / 取数代码）

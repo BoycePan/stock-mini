@@ -5,7 +5,7 @@ export interface MarketMetric {
   /** 行情代码（如 sh000001 / KS11 / GOLD），用于卡片点击查看日K时定位数据源；新闻等无行情条目缺省 */
   code?: string
   /**
-   * 分时取数专用代码：与展示 code 不同（随会话切换口径，如 外盘 GOLD → GOLD-US 取 COMEX）。
+   * 分时取数专用代码：与展示 code 不同（随会话切换口径，如 外盘 GOLD → GOLD-US 取现货 XAUUSD 分时）。
    * 缺省时直接用 code 取分时；无对应源时该卡片不显示「分时」入口。
    */
   minuteCode?: string

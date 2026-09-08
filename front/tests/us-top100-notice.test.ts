@@ -11,6 +11,7 @@ import {
   type PopupNoticeStorage,
 } from '../utils/popup-notice.ts'
 import { compareVersion, isVersionGte } from '../utils/version.ts'
+import { clearAccountInfoCache } from '../utils/account-info.ts'
 
 // ---------------------------------------------------------------------------
 // compareVersion / isVersionGte：点分版本号比较
@@ -55,15 +56,26 @@ function homeNotice(overrides: Partial<Notice> = {}, config: Record<string, unkn
       content: '<p>公告正文</p>',
       path: '/packageQuote/pages/us-top100/index',
       buttonText: '立即查看',
-      minVersion: '1.1.2',
-      count: 3,
+      minVersion: '1.1.1',
+      count: 2,
+      envWhitelist: ['trial', 'release'],
       ...config,
     },
     ...overrides,
   }
 }
 
+/** 注入 wx 运行环境（envVersion：develop / trial / release；undefined = 清除，回退空串） */
+function setWxEnv(envVersion: string | undefined): void {
+  // getAccountInfo 是惰性缓存：换 wx mock 前必须清缓存
+  clearAccountInfoCache()
+  ;(globalThis as Record<string, unknown>).wx = envVersion
+    ? { getAccountInfoSync: () => ({ miniProgram: { envVersion } }) }
+    : undefined
+}
+
 test('resolveHomePopupNotice：home 公告映射为 PopupNotice + 按 id 缓存键', () => {
+  setWxEnv('release') // fixture 带 envWhitelist，需命中当前环境
   const res = resolveHomePopupNotice([homeNotice()])
   assert.deepEqual(res, {
     popup: {
@@ -71,11 +83,52 @@ test('resolveHomePopupNotice：home 公告映射为 PopupNotice + 按 id 缓存�
       content: '<p>公告正文</p>',
       path: '/packageQuote/pages/us-top100/index',
       buttonText: '立即查看',
-      minVersion: '1.1.2',
-      count: 3,
+      minVersion: '1.1.1',
+      count: 2,
+      envWhitelist: ['trial', 'release'],
     },
     storageKey: 'popup_notice_state_6',
   })
+  setWxEnv(undefined)
+})
+
+test('resolveHomePopupNotice：envWhitelist 命中当前环境（trial / release）→ 正常返回', () => {
+  for (const env of ['trial', 'release']) {
+    setWxEnv(env)
+    const res = resolveHomePopupNotice([homeNotice()])
+    assert.deepEqual(res?.popup.envWhitelist, ['trial', 'release'])
+    assert.equal(res?.storageKey, 'popup_notice_state_6')
+  }
+  setWxEnv(undefined)
+})
+
+test('resolveHomePopupNotice：envWhitelist 不命中当前环境 → 跳过该公告（全被拦截返回 null）', () => {
+  setWxEnv('develop') // 开发版不在 ['trial', 'release'] 白名单内
+  assert.equal(resolveHomePopupNotice([homeNotice()]), null)
+  setWxEnv(undefined)
+})
+
+test('resolveHomePopupNotice：envWhitelist 拦截第一条时继续取下一条放行的公告', () => {
+  setWxEnv('develop')
+  const gated = homeNotice({ id: 1 }) // ['trial','release']，不命中 develop
+  const allowed = homeNotice({ id: 2 }, { envWhitelist: ['develop'] })
+  const res = resolveHomePopupNotice([gated, allowed])
+  assert.equal(res?.popup.content, '<p>公告正文</p>')
+  assert.equal(res?.storageKey, 'popup_notice_state_2')
+  setWxEnv(undefined)
+})
+
+test('resolveHomePopupNotice：envWhitelist 为空数组 / 非数组 → 不限（照常返回）', () => {
+  setWxEnv('develop')
+  // 空数组：不限，原样透传为 []
+  const empty = resolveHomePopupNotice([homeNotice({}, { envWhitelist: [] })])
+  assert.deepEqual(empty?.popup.envWhitelist, [])
+  // 非数组非法值：按缺省处理（不限，映射为 undefined）
+  for (const bad of ['garbage', 0, null]) {
+    const res = resolveHomePopupNotice([homeNotice({}, { envWhitelist: bad })])
+    assert.equal(res?.popup.envWhitelist, undefined)
+  }
+  setWxEnv(undefined)
 })
 
 test('resolveHomePopupNotice：无 home 公告 / content 缺失 → null（不弹）', () => {
@@ -86,14 +139,17 @@ test('resolveHomePopupNotice：无 home 公告 / content 缺失 → null（不�
 })
 
 test('resolveHomePopupNotice：取第一条合法的 home 公告（保持列表顺序）', () => {
+  setWxEnv('release') // fixture 带 envWhitelist，需命中当前环境
   const first = homeNotice({ id: 1 }, { content: '第一条' })
   const second = homeNotice({ id: 2 }, { content: '第二条' })
   const res = resolveHomePopupNotice([second, first])
   assert.equal(res?.popup.content, '第二条')
   assert.equal(res?.storageKey, 'popup_notice_state_2')
+  setWxEnv(undefined)
 })
 
 test('resolveHomePopupNotice：可选字段缺失走兜底（版本 / 天数 / 标题 / 按钮 / 路径）', () => {
+  setWxEnv('release')
   const res = resolveHomePopupNotice([
     homeNotice(
       {},
@@ -103,6 +159,7 @@ test('resolveHomePopupNotice：可选字段缺失走兜底（版本 / 天数 / �
         buttonText: undefined,
         minVersion: undefined,
         count: undefined,
+        envWhitelist: undefined,
       },
     ),
   ])
@@ -113,8 +170,10 @@ test('resolveHomePopupNotice：可选字段缺失走兜底（版本 / 天数 / �
     buttonText: undefined,
     minVersion: '0.0.0',
     count: 1,
+    envWhitelist: undefined,
   })
   assert.equal(res?.storageKey, 'popup_notice_state_6')
+  setWxEnv(undefined)
 })
 
 // ---------------------------------------------------------------------------
@@ -137,7 +196,7 @@ test('dayDiff：跨月 / 同年天数差', () => {
 // shouldShowPopupNotice：一天一次 × count 天
 // ---------------------------------------------------------------------------
 
-// minVersion 取 '1.0.2'：测试环境 wx 不可用，getAppVersion() 回退 FALLBACK_VERSION '1.0.2'
+// minVersion 取 '1.0.2'：测试环境 wx 不可用，getAppVersion() 回退 FALLBACK_VERSION '1.1.0'
 // （utils/version.ts），保证 tryShowPopupNotice 能越过版本门槛、真正测到 storage 逻辑
 const notice: PopupNotice = { content: 'x', path: '/p', minVersion: '1.0.2', count: 3 }
 
@@ -285,4 +344,48 @@ test('tryShowPopupNotice：storage 读取异常 → 不展示', () => {
     set: () => {},
   }
   assert.equal(tryShowPopupNotice(notice, 'k', throwing, NOW), null)
+})
+
+test('tryShowPopupNotice：envWhitelist 不命中当前环境 → 拦截（不写缓存）', () => {
+  setWxEnv('develop') // 开发版不在 ['trial', 'release'] 白名单内
+  const gated: PopupNotice = {
+    content: 'x',
+    path: '/p',
+    minVersion: '1.0.2',
+    count: 3,
+    envWhitelist: ['trial', 'release'],
+  }
+  const { storage, map } = mockStorage()
+  assert.equal(tryShowPopupNotice(gated, 'k', storage, NOW), null)
+  assert.equal(map.size, 0)
+  setWxEnv(undefined)
+})
+
+test('tryShowPopupNotice：envWhitelist 命中当前环境 → 正常展示并写缓存', () => {
+  setWxEnv('release')
+  const allowed: PopupNotice = {
+    content: 'x',
+    path: '/p',
+    minVersion: '1.0.2',
+    count: 3,
+    envWhitelist: ['trial', 'release'],
+  }
+  const { storage, map } = mockStorage()
+  const res = tryShowPopupNotice(allowed, 'k', storage, NOW)
+  assert.deepEqual(res, { title: '', content: 'x', path: '/p', buttonText: '' })
+  assert.deepEqual(map.get('k'), { firstShownDate: '2026-08-30', lastShownDate: '2026-08-30' })
+  setWxEnv(undefined)
+})
+
+test('tryShowPopupNotice：envWhitelist 空数组 / 缺省 → 不限（照常展示）', () => {
+  const noLimit: PopupNotice = {
+    content: 'x',
+    path: '/p',
+    minVersion: '1.0.2',
+    count: 3,
+    envWhitelist: [],
+  }
+  const { storage } = mockStorage()
+  const res = tryShowPopupNotice(noLimit, 'k', storage, NOW)
+  assert.deepEqual(res, { title: '', content: 'x', path: '/p', buttonText: '' })
 })

@@ -76,7 +76,7 @@ export function redirectFromShare(options: Record<string, string | undefined>): 
   // 分时页分享直达：入口开关（后台 display 配置 canShowMinute / canShowMinuteDev）关闭时
   // 不中转（返回 false，首页正常渲染，避免绕过开关直达分时页）。
   if (target === 'minute' && !isMinuteEnabled()) {
-    wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
+    // wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
     return false
   }
   const query: string[] = []

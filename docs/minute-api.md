@@ -71,7 +71,7 @@
 | 全球·指数 | AVG（A股平均股价） | 47.800005（东财官方平均股价指数） | — | — |
 | 全球·指数 | usDJI / usINX / usIXIC | 100.DJIA / 100.SPX / 100.NDX | — | — |
 | 全球·宏观 | BRT / UDI / TLT | 112.B00Y / 100.UDI / 105.TLT | — | — |
-| 全球·宏观 | GC / SI / HG / NG | 101.GC00Y / 101.SI00Y / 101.HG00Y / 102.NG00Y | — | — |
+| 全球·宏观 | GC / SI / HG / NG | 122.XAU / 122.XAG / 101.HG00Y / 102.NG00Y | — | — |
 | 全球·宏观 | SOX | 251.SOX | — | — |
 | 全球·宏观 | VIX | —（东财无此标的） | — | ^VIX |
 | 全球·板块 | BK1134 … BK0451（39个，含 2026-09-07 扩充） | 90.BKxxxx | — | — |
@@ -83,7 +83,7 @@
 | 日韩·个股 | 8035…7974（日8） | 176.8035 … 176.7974 | — | <code>.T（兜底） |
 | 日韩·汇率 | USDKRW / USDJPY | 119.USDKRW / 119.USDJPY | — | KRW=X / JPY=X（兜底） |
 | 日韩·汇率 | CNYKRW / CNYJPY / USDCNY | CNYJPY→133.CNHJPY、USDCNY→133.USDCNH（离岸）；CNYKRW→119.USDKRW ÷ 133.USDCNH（交叉合成） | — | CNYKRW=X / CNYJPY=X / CNY=X（兜底） |
-| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 101.GC00Y COMEX；SILVER | 113.aum / 113.agm | 101.GC00Y（外盘卡） | — |
+| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 122.XAU 现货 XAUUSD；SILVER | 113.aum / 113.agm | 122.XAU（外盘卡）/ 122.XAG | — |
 | 有色·工业金属 | COPPER / ALUMINUM / ZINC / NICKEL / TIN | 113.cum / 113.alm / 113.znm / 113.nim / 113.snm | — | — |
 | 有色·其他金属 | TUNGSTEN / MOLY / GERMANIUM / INDIUM / ANTIMONY | 1.600549 / 1.603993 / 0.002428 / 1.600961 / 1.601020 | sh600549 / sh603993 / sz002428 / sh600961 / sh601020 | — |
 
@@ -94,6 +94,7 @@
 > - TOPIX（东证指数）：东财 / 腾讯 / Yahoo 均无东证指数本身分时（Yahoo `^TPX` 实测为空），用「日本东证指数ETF南方(513800)」（跟踪 TOPIX，同东财/腾讯家族）代理，页面展示说明。
 > - 金店金价（金投网零售价）**无分时**，不做角标、点击提示。
 > - 外汇等无成交量的标的：东财 trends2 的均价字段恒为 `0.00000`，解析器将其归一为 `null`（不画均价线、不参与纵轴计算）；价格为 `0` 的分钟行直接跳过——否则 `|0-昨收|` 会把纵轴对称撑到异常范围（实测复现 -1.88 ~ 48.87）。
+> - 现货贵金属 XAUUSD/XAGUSD（市场 122）：东财对非期货标的**冗余返回** `preSettlement` 字段且恒等于 `preClose`（非真实结算价）——`utils/minute.ts` 的 `mergeMinuteQuoteInfo` 按「`preSettlement ≠ preClose` 才算期货」判定，现货正确标注「昨收」；仅真期货（如沪银主连 16611 ≠ 昨收 16771）才用「昨结算」基准。
 
 ### 2.1 会话切换（卡片展示什么，点进去就看什么）
 
@@ -101,9 +102,9 @@
 
 | 场景 | 卡片展示 | 分时取数（mcode） |
 | --- | --- | --- |
-| 有色页 黄金·外盘卡（恒展示） | COMEX 黄金（美元/盎司） | `GOLD-US` → 东财 COMEX 分时（`101.GC00Y`，与全球页 GC 同一已验证源） |
+| 有色页 黄金·外盘卡（恒展示） | 现货 XAUUSD（伦敦金，美元/盎司） | `GOLD-US` → 东财现货分时（`122.XAU`，与全球页 GC 同源） |
 | 有色页 黄金·内盘卡（恒展示） | 沪金主连（元/克） | 既有源 `113.aum`（沪金主连） |
-| 有色页 外盘时段 SILVER/COPPER | COMEX 报价（美元/盎司、美元/磅） | `SILVER-US`/`COPPER-US` → 东财 COMEX 分时（`101.SI00Y`/`101.HG00Y`，与全球页 SI/HG 同一已验证源） |
+| 有色页 外盘时段 SILVER/COPPER | SILVER 现货 XAGUSD、COPPER COMEX 报价（美元/盎司、美元/磅） | `SILVER-US` → `122.XAG`（与全球页 SI 同源）；`COPPER-US` → `101.HG00Y`（COMEX 铜） |
 | 有色页 国内盘（其余时段） | 沪主连 / A股个股 | 既有源（`113.xm` / `shxxxxxx`） |
 | 有色页 外盘时段 铝/锌/镍/锡/钨 | 外盘报价（`hf_*`） | **无分时源**（`us-ALUMINUM` 等占位），点击给出提示 |
 | 全球页 行业板块 A股时段 | 东财板块涨跌幅 | `90.BKxxxx`（东财板块分时） |
@@ -160,6 +161,15 @@ node --import ./tests/register.mjs --experimental-strip-types scripts/verify-min
 
 **C2. 东财离岸汇率与交叉合成（2026-08-20 新增，大陆可直连）实测返回：**
 `133.USDCNH`(1115，24h)、`133.CNHJPY`(1116，24h)；CNYKRW = `119.USDKRW`(1115) ÷ `133.USDCNH`(1115) 交叉合成约 1115 点（与新浪在岸 fx_scnykrw≈207 同量级、逐分钟吻合）。
+
+**C3. 东财现货贵金属 XAUUSD/XAGUSD（2026-09-02 新增，全球页 GC/SI 与有色页金银外盘卡均改走现货）实测返回：**
+`122.XAU`（伦敦金 XAUUSD，黄金/美元，06:00 起连续 1 分钟线，与卡片同 secid）、
+`122.XAG`（伦敦银 XAGUSD，白银/美元，06:00 起连续 1 分钟线，与卡片同 secid）；
+preClose 与 ulist.np/get（fltt=2）f18 一致（XAU 4328.36 / XAG 64.09），「卡片=分时」同源成立。
+注意：现货 trends2 的 `preSettlement` 字段恒等于 `preClose`（东财对非期货冗余填充），
+`utils/minute.ts mergeMinuteQuoteInfo` 已按「preSettlement ≠ preClose 才算期货」判定，
+现货正确标注「昨收」（真期货如沪银主连 16611 ≠ 昨收 16771 才用「昨结算」）。
+（铜 COPPER-US 仍走 COMEX `101.HG00Y`，口径不变。）
 
 **D. 单测覆盖性校验（tests/minute-parsers.test.ts）：**
 全球页 / 日韩页 / 有色页**全部卡片 code 均有分时源**（金店金价除外），新增卡片漏配会直接测试失败。

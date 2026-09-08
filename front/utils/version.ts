@@ -1,3 +1,5 @@
+import { getAccountInfo } from './account-info'
+
 /**
  * 小程序版本号读取
  *
@@ -6,18 +8,24 @@
  * 发版后自动跟随，无需改动代码；
  * 开发版（微信开发者工具）中该字段为空，回退到 FALLBACK_VERSION —— 该常量需与仓库根
  * package.json 的 version 保持一致，仅用于开发态展示。
+ *
+ * 账号信息经 utils/account-info.ts 惰性缓存：首次调用后不再重复读取 wx.getAccountInfoSync()。
  */
-const FALLBACK_VERSION = '1.1.1'
+const FALLBACK_VERSION = '1.1.0'
 
 export function getAppVersion(): string {
-  try {
-    const account = wx.getAccountInfoSync()
-    const version = account?.miniProgram?.version
-    if (version && version.trim()) return version.trim()
-  } catch {
-    // wx 不可用（如单测环境）时走兜底
-  }
+  const version = getAccountInfo()?.miniProgram?.version
+  if (version && version.trim()) return version.trim()
   return FALLBACK_VERSION
+}
+
+/**
+ * 当前小程序运行环境（wx.getAccountInfoSync().miniProgram.envVersion）：
+ * 'develop'（开发版 / 开发者工具）/ 'trial'（体验版）/ 'release'（正式版）。
+ * wx 不可用（如单测环境）或字段缺失时返回空串。
+ */
+export function getAppEnvVersion(): string {
+  return getAccountInfo()?.miniProgram?.envVersion ?? ''
 }
 
 /**

@@ -673,20 +673,21 @@ test('覆盖性：每个 code 至少配置一个源，且源格式合法', () =>
 
 // ---------------------------------------------------------------------------
 // 会话切换分时源（卡片展示什么，点进去就看什么）：
-// 外盘时段有色 GOLD/SILVER/COPPER 卡片展示 COMEX 报价，分时切到已验证的 COMEX 源；
+// 外盘时段有色 GOLD/SILVER 卡片展示现货 XAUUSD/XAGUSD（122.XAU/122.XAG）、
+// COPPER 展示 COMEX 报价（101.HG00Y），分时切到同源已验证源；
 // 美股时段板块 / 外盘无分时源的金属用 us- 前缀占位（无源），点击给出提示，
 // 绝不跳转到与卡片展示口径不一致（A股/沪主连）的分时。
 // ---------------------------------------------------------------------------
 
-test('会话切换：外盘 GOLD/SILVER/COPPER 分时源为 COMEX（与卡片口径一致）', () => {
+test('会话切换：外盘 GOLD/SILVER/COPPER 分时源（金银现货 XAUUSD/XAGUSD、铜 COMEX）', () => {
   const expected: Record<string, string> = {
-    'GOLD-US': '101.GC00Y',
-    'SILVER-US': '101.SI00Y',
+    'GOLD-US': '122.XAU',
+    'SILVER-US': '122.XAG',
     'COPPER-US': '101.HG00Y',
   }
   for (const [code, em] of Object.entries(expected)) {
     assert.ok(hasMinuteSources(code), `${code} 应配置分时源`)
-    assert.equal(MINUTE_SOURCES[code]?.em, em, `${code} 应为 COMEX 分时 ${em}`)
+    assert.equal(MINUTE_SOURCES[code]?.em, em, `${code} 分时源应为 ${em}`)
   }
 })
 

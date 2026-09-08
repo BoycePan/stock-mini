@@ -200,7 +200,7 @@ Page({
     // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
     // utils/system-config.ts）：关闭时禁止跳转分时页。
     if (!isMinuteEnabled()) {
-      wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
+      // wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
       return
     }
     trackEvent('us.top100.tap', { code: item.code, name: item.name, secid: item.secid })

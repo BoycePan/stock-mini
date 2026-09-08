@@ -1040,6 +1040,7 @@ Authorization: Bearer {token}
 | buttonText | string | 否 | 主按钮文案（缺省：有 path「立即查看」，否则「知道了」） |
 | minVersion | string | 否 | 版本门槛：当前小程序版本 >= minVersion 才展示；缺省不设门槛 |
 | count | number | 否 | 展示天数：自首次展示当天起连续展示 count 天，每天最多一次；缺省 1 |
+| envWhitelist | string[] | 否 | 运行环境白名单：仅当当前小程序环境（develop / trial / release）在列表内才展示；缺省 / 空数组不限 |
 
 展示频率由客户端本地缓存控制（按公告 id 的 `popup_notice_state_{id}` 键），
 前端不做修改时管理端调整 / 新建公告即时生效（无需发版）。示例：
@@ -1057,8 +1058,9 @@ Authorization: Bearer {token}
     "content": "<p>…HTML…</p>",
     "path": "/packageQuote/pages/us-top100/index",
     "buttonText": "立即查看",
-    "minVersion": "1.1.2",
-    "count": 3
+    "minVersion": "1.1.1",
+    "count": 2,
+    "envWhitelist": ["trial", "release"]
   }
 }
 ```

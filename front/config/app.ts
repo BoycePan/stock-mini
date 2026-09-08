@@ -1,3 +1,5 @@
+import { getAccountInfo } from '../utils/account-info'
+
 /**
  * 小程序 AppID 集合（const 对象而非 enum：Node strip-types 测试环境不支持 TS enum，
  * 且本仓库无外部代码把 AppId 当类型用；值语义与 enum 完全一致）
@@ -30,12 +32,7 @@ const FALLBACK_LOGIN_SOURCE: string = APP_LOGIN_SOURCES[AppId.MarketTracker] ?? 
 
 /** 当前小程序 AppID；wx 不可用（如单测环境）或读取失败时返回空串 */
 function getCurrentAppId(): string {
-  try {
-    const account = wx.getAccountInfoSync()
-    return account?.miniProgram?.appId || ''
-  } catch {
-    return ''
-  }
+  return getAccountInfo()?.miniProgram?.appId || ''
 }
 
 /** 按 AppID 解析展示名称；未登记时回退默认名称（纯函数，便于单测） */

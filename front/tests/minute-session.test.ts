@@ -309,7 +309,7 @@ test('resolveMinuteSession：MINUTE_SOURCES 全部条目都有合理分类（防
     ZINC: 'continuous',
     NICKEL: 'continuous',
     TIN: 'continuous',
-    // 有色页 · 外盘 COMEX
+    // 有色页 · 外盘（金银现货 XAUUSD/XAGUSD、铜 COMEX，连续交易）
     'GOLD-US': 'continuous',
     'SILVER-US': 'continuous',
     'COPPER-US': 'continuous',

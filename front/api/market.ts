@@ -455,10 +455,10 @@ const A_SHARE_SOURCES = new Set(['tencent', 'sina_ashare', 'em'])
 /**
  * 金属分时取数随会话切换，保证「卡片展示什么，点进去就看到什么」：
  * - 国内盘（useA）：卡片展示沪主连/A股个股，分时沿用 config/minute.ts 既有源（113.xm / shxxxxxx）；
- * - 外盘（useA=false）：GOLD/SILVER/COPPER 卡片展示 COMEX 报价，分时切到已验证的 COMEX 源
- *   （GOLD-US/SILVER-US/COPPER-US）；铝/锌/镍/锡/钨卡片展示外盘报价但无已验证外盘分时源，
- *   用 us- 前缀占位（无源）并给提示，避免误入沪主连/A股分时；钼/锗/铟/锑无外盘报价，
- *   外盘时段仍展示 A 股个股，分时不变。
+ * - 外盘（useA=false）：GOLD/SILVER 卡片展示现货 XAUUSD/XAGUSD、COPPER 展示 COMEX 报价，
+ *   分时切到已验证的同源分时（GOLD-US→122.XAU / SILVER-US→122.XAG / COPPER-US→101.HG00Y）；
+ *   铝/锌/镍/锡/钨卡片展示外盘报价但无已验证外盘分时源，用 us- 前缀占位（无源）并给提示，
+ *   避免误入沪主连/A股分时；钼/锗/铟/锑无外盘报价，外盘时段仍展示 A 股个股，分时不变。
  */
 function metalMinuteVariant(
   metal: MetalConfig,
@@ -498,13 +498,15 @@ async function resolveMetal(
   },
 ): Promise<QuoteItem> {
   const base = { code: metal.code, name: metal.name }
-  // 分时取数随会话切换（外盘时段切 COMEX / 占位无源，见 metalMinuteVariant）
+  // 分时取数随会话切换（外盘时段切现货 XAUUSD/XAGUSD 或 COMEX 铜 / 占位无源，见 metalMinuteVariant）
   const minute = metalMinuteVariant(metal, ctx.useA)
-  // ①b 外盘优先东财（金银 emSecid 与首页宏观卡片、分时页同源）：
+  // ①b 外盘优先东财（金银外盘卡 emSecid 与全球页宏观 GC/SI、有色页 GOLD-US/SILVER-US 分时
+  //     同源，均现货 XAUUSD/XAGUSD 122.XAU/122.XAG；铜仍 COMEX 101.HG00Y）：
   //     新浪 hf_GC/hf_SI 的 [0] 最新价系统性偏高（实测黄金 4664.48 vs 东财 4661.60、
   //     白银 69.725 vs 69.01），不再作外盘首选；东财失败时仍走下方新浪批量兜底。
-  //     取数走 fetchEastmoneyUlistQuote（ulist + fltt=2 十进制）：市场 101 的 stock/get
-  //     原始刻度无规则（GC×10 / SI×1000），10^f152 除数会得到错误价格被区间校验丢弃。
+  //     取数走 fetchEastmoneyUlistQuote（ulist + fltt=2 十进制）：stock/get 的原始刻度无规则
+  //     （市场 101 GC×10 / SI×1000 / HG×10000、市场 122 XAU/XAG×100），10^f152 除数会得到
+  //     错误价格被区间校验丢弃。
   //     仅外盘口径（restrict='us' 或未 restrict 且外盘会话）尝试东财。
   if (metal.emSecid && (ctx.restrict === 'us' || (ctx.restrict === undefined && !ctx.useA))) {
     const emQuote = await fetchEastmoneyUlistQuote(metal.emSecid)
@@ -601,7 +603,7 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   const tcMap = new Map(tcRows.map((row) => [row.code, row]))
 
   // ③ 金银内外盘同屏：黄金、白银恒同时解析内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘
-  //    （COMEX 美元/盎司）两路报价，不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；
+  //    （现货 XAUUSD/XAGUSD 美元/盎司）两路报价，不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；
   //    其余金属仍随会话切换。
   const goldCfg = METALS.find((metal) => metal.code === 'GOLD')!
   const silverCfg = METALS.find((metal) => metal.code === 'SILVER')!

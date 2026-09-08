@@ -114,23 +114,24 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
     code: 'GC',
     // name: '黄金盎司',
     // sources: [{ kind: 'sina_hf', key: ['hf_GC', 'hf_XAU'], min: 1200, max: 6000 }],
-    name: 'COMEX黄金(纽约金)',
-    // 与分时页同源（东财 101.GC00Y，见 config/minute.ts GC），保证「卡片=分时」口径一致；
-    // 新浪 hf_GC 的 [0] 最新价（实测 4664.48）与东财 COMEX黄金最新价（4661.60）系统性不一致，
-    // 新浪 hf_ 贵金属字段语义不可靠（本仓库 docs 自相矛盾、伦敦金 hf_XAU 昨收字段连续冻结），
-    // 故改用东财。必须走 em_ulist（ulist.np/get + fltt=2 十进制）：stock/get 对市场 101 的
-    // 原始刻度无规则（GC×10 / SI×1000 / HG×10000），10^f152 除数会得到错误价格被区间校验丢弃。
-    // 且不能与新浪并存为多源：fetchAccurate 会把两者判相似取中位数（4663.04）。
-    sources: [{ kind: 'em_ulist', secid: '101.GC00Y', min: 1200, max: 8000 }],
+    name: '伦敦金(XAUUSD)',
+    // 与分时页同源（东财 122.XAU，见 config/minute.ts GC），保证「卡片=分时」口径一致；
+    // 由 COMEX 期货（101.GC00Y）改走现货黄金 XAUUSD（东财市场 122，quote.eastmoney.com/q/122.XAU.html）：
+    // 新浪 hf_GC 的 [0] 最新价（实测 4664.48）与东财 COMEX 最新价（4661.60）系统性不一致，且新浪
+    // hf_ 贵金属字段语义不可靠（本仓库 docs 自相矛盾、伦敦金 hf_XAU 昨收字段连续冻结），弃用新浪；
+    // COMEX 期货与现货 XAUUSD 亦非同一报价（期货升贴水），统一改走现货口径，与分时同源。
+    // 走 em_ulist（ulist.np/get + fltt=2 十进制）与分时页「基础信息」同构，避免 stock/get 刻度换算。
+    sources: [{ kind: 'em_ulist', secid: '122.XAU', min: 1200, max: 8000 }],
   },
   {
     code: 'SI',
     // name: '白银盎司',
     // sources: [{ kind: 'sina_hf', key: ['hf_SI', 'hf_XAG'], min: 8, max: 120 }],
-    name: 'COMEX白银(纽约银)',
-    // 同 GC：新浪 hf_SI [0]（69.725）与东财 SI00Y（69.01）、伦敦银 hf_XAG（68.97）均不一致，
-    // 统一走东财 101.SI00Y（em_ulist），与分时页（config/minute.ts SI）同源。
-    sources: [{ kind: 'em_ulist', secid: '101.SI00Y', min: 8, max: 120 }],
+    name: '伦敦银(XAGUSD)',
+    // 同 GC：由 COMEX 期货（101.SI00Y）改走现货白银 XAGUSD（东财市场 122，
+    // quote.eastmoney.com/q/122.XAG.html），与分时页（config/minute.ts SI）同源；
+    // 新浪 hf_SI [0]（69.725）与东财 SI00Y（69.01）、伦敦银 hf_XAG（68.97）均不一致，弃用新浪。
+    sources: [{ kind: 'em_ulist', secid: '122.XAG', min: 8, max: 120 }],
   },
   {
     code: 'HG',
@@ -389,7 +390,9 @@ export interface MetalConfig {
   aKeys: string[]
   /** 外盘新浪 key */
   usKeys: string[]
-  /** 外盘优先的东财 secid（金银：与首页宏观卡片、分时页同源；新浪 hf_GC/hf_SI [0] 值系统性偏高不可靠） */
+  /** 外盘优先的东财 secid（金银：外盘卡展示现货 XAUUSD/XAGUSD，与全球页宏观 GC/SI、
+   *  有色页 GOLD-US/SILVER-US 分时同源（122.XAU/122.XAG）；铜仍为 COMEX 101.HG00Y；
+   *  新浪 hf_GC/hf_SI [0] 值系统性偏高不可靠） */
   emSecid?: string
   /** 国内价格区间校验（aExtra） */
   aRange?: [number, number]
@@ -405,7 +408,8 @@ export const METALS: MetalConfig[] = [
     name: '黄金',
     aKeys: ['nf_AU0', 'nf_AU'],
     usKeys: ['hf_GC', 'hf_XAU'],
-    emSecid: '101.GC00Y',
+    // 外盘卡走现货 XAUUSD（东财市场 122，与全球页宏观 GC 同源），不再用 COMEX 期货 101.GC00Y
+    emSecid: '122.XAU',
     aRange: [200, 1200],
     usRange: [1200, 6000],
   },
@@ -414,7 +418,8 @@ export const METALS: MetalConfig[] = [
     name: '白银',
     aKeys: ['nf_AG0', 'nf_AG'],
     usKeys: ['hf_SI', 'hf_XAG'],
-    emSecid: '101.SI00Y',
+    // 外盘卡走现货 XAGUSD（东财市场 122，与全球页宏观 SI 同源），不再用 COMEX 期货 101.SI00Y
+    emSecid: '122.XAG',
     aRange: [2000, 20000],
     usRange: [8, 120],
   },
@@ -450,7 +455,7 @@ export const METAL_SECTIONS: MetalSectionConfig[] = [
     id: 'precious',
     title: '金银',
     codes: ['GOLD', 'SILVER'],
-    tip: '黄金、白银同时展示内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘（COMEX 美元/盎司）；其余金属随交易时段自动切换内外盘口径',
+    tip: '黄金、白银同时展示内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘（伦敦金 XAUUSD / 伦敦银 XAGUSD，美元/盎司）；其余金属随交易时段自动切换内外盘口径',
   },
   { id: 'industrial', title: '工业金属', codes: ['COPPER', 'ALUMINUM', 'ZINC', 'NICKEL', 'TIN'] },
   {

@@ -13,9 +13,9 @@ const handledInstances = new WeakSet<object>()
  * 缩放渐变动画），卡片内标题 / 正文（rich-text，可滚动）/ 圆角主按钮 / 关闭按钮
  * 全部由本组件自定义渲染；深色主题通过 tdesign CSS 变量 + 组件自身 dark 样式适配。
  *
- * 用法：传入 notice（title / content / path / buttonText / minVersion / count），
- * 组件自管理弹窗生命周期——进入页面时自动校验 minVersion 版本门槛 + count 天每日一次
- * （wx 本地缓存记录日期），命中即弹出；无需调用方写任何调度代码：
+ * 用法：传入 notice（title / content / path / buttonText / minVersion / count / envWhitelist），
+ * 组件自管理弹窗生命周期——进入页面时自动校验 minVersion 版本门槛 + envWhitelist 运行环境
+ * 白名单 + count 天每日一次（wx 本地缓存记录日期），命中即弹出；无需调用方写任何调度代码：
  *
  * ```xml
  * <popup-notice notice="{{ popupNotice }}" storage-key="{{ popupStorageKey }}" />
@@ -29,6 +29,8 @@ const handledInstances = new WeakSet<object>()
  * - path：点主按钮跳转的页面路径；为空时按钮文案变「知道了」仅关闭；
  *   跳转目标与当前页相同视为「知道了」不重复压栈；
  * - buttonText：底部圆角主按钮文案（缺省：有跳转路径「立即查看」，否则「知道了」）；
+ * - envWhitelist：运行环境白名单（develop / trial / release，见 utils/version.ts
+ *   getAppEnvVersion）；不在白名单内不弹，缺省 / 空数组不限；
  * - storageKey：展示状态缓存键，建议按公告 id 区分（换公告 = 换键 = 重新计天），
  *   同一条公告全端共用同一键即可去重；
  * - 事件：bind:close（关闭，含遮罩 / 关闭按钮 / 主按钮）、bind:show（命中展示，可做埋点或扩展）。
@@ -70,7 +72,7 @@ Component({
   },
   methods: {
     /**
-     * 调度：minVersion 版本门槛 + count 天每日一次，命中则弹出。
+     * 调度：minVersion 版本门槛 + envWhitelist 运行环境白名单 + count 天每日一次，命中则弹出。
      * notice 为空（服务端公告未到达）时不占用「已调度」标记，等 notice 异步
      * 变为非空时 observers 会再次触发本方法补调度。
      */

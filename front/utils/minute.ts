@@ -115,12 +115,15 @@ export function mergeMinuteQuoteInfo(
   const quoteVolume =
     typeof quote?.volume === 'number' && Number.isFinite(quote.volume) ? quote.volume : null
   const volume = quoteVolume !== null && quoteVolume > 0 ? quoteVolume : derivedVolume
-  // 涨跌幅基准：期货昨结算优先（沪主连等 昨收≠昨结算，报价 f18 为昨收不可覆盖结算基准）
+  // 涨跌幅基准：期货昨结算优先（沪主连等 昨收≠昨结算，报价 f18 为昨收不可覆盖结算基准）；
+  // 但东财对非期货（现货贵金属 XAUUSD/XAGUSD、外汇、美元指数等）也冗余返回 preSettlement 字段
+  // 且恒等于 preClose——此时不是结算价，按昨收处理（标签「昨收」），避免现货被误标「昨结算」。
   const isSettlementBase =
     result.preSettlement !== null &&
     result.preSettlement !== undefined &&
     Number.isFinite(result.preSettlement) &&
-    (result.preSettlement as number) > 0
+    (result.preSettlement as number) > 0 &&
+    result.preSettlement !== result.preClose
   const preClose = isSettlementBase
     ? (result.preSettlement as number)
     : positive(quote?.previousClose, result.preClose)
