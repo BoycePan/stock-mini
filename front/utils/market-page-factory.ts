@@ -226,6 +226,12 @@ export function createMarketPage(opts: MarketPageOptions) {
         wx.navigateTo({ url: '/packageQuote/pages/us-top100/index' })
         return
       }
+      // 行业板块区入口卡（A股全部行业，见 api/market.ts）：跳转行业全量列表页，不走分时逻辑。
+      if (code === 'industry-all') {
+        trackEvent('industry.all.enter')
+        wx.navigateTo({ url: '/packageQuote/pages/industry-all/index' })
+        return
+      }
       // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
       // utils/system-config.ts）：关闭时禁止跳转分时页。
       if (!isMinuteEnabled()) {

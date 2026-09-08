@@ -1,0 +1,105 @@
+<view class="page theme-{{ theme }}">
+  <!-- 粘性头部：导航 + 搜索框（加载完成前不显示搜索） -->
+  <view class="page-header">
+    <app-header
+      title="A股全部行业"
+      showShare="{{ false }}"
+      showBack="{{ true }}"
+      showBrand="{{ false }}"
+    ></app-header>
+    <view wx:if="{{ !loading && !error }}" class="header-search">
+      <view class="search-box">
+        <t-icon name="search" size="28rpx" color="{{ theme === 'dark' ? '#9cacc0' : '#99a6b7' }}" />
+        <input
+          class="search-input"
+          placeholder="搜索行业，如 煤炭 / 影视院线"
+          placeholder-class="search-placeholder"
+          value="{{ query }}"
+          confirm-type="search"
+          bindinput="onSearchInput"
+        />
+        <view
+          wx:if="{{ query }}"
+          class="search-clear"
+          hover-class="search-clear-hover"
+          bindtap="onSearchClear"
+          aria-role="button"
+          aria-label="清空搜索"
+        >
+          <t-icon name="close" size="24rpx" color="{{ theme === 'dark' ? '#9cacc0' : '#99a6b7' }}" />
+        </view>
+      </view>
+    </view>
+  </view>
+  <view class="content-scroll">
+    <loading-state
+      wx:if="{{ loading }}"
+      text="正在加载全部行业"
+      desc="正在为您同步 A 股全部行业板块涨跌幅，请稍候…"
+    ></loading-state>
+
+    <!-- 首次加载失败 / 空数据：错误提示 + 重试 -->
+    <view wx:elif="{{ error }}" class="error-card">
+      <view class="error-icon"><text>!</text></view>
+      <text class="error-text">{{ error }}</text>
+      <button class="error-retry" bindtap="onRetry">重新加载</button>
+    </view>
+
+    <block wx:else>
+      <view class="data-notice">
+        <view class="notice-icon">!</view>
+        <text class="notice-text"
+          >行情来自东方财富公开接口（延迟行情），仅供参考，不构成投资建议。</text
+        >
+      </view>
+
+      <!-- 列表上方信息行：行业总数 + 排序按钮 + 更新时间 -->
+      <view class="list-meta">
+        <text class="total-text">共 {{ totalCount }} 个行业</text>
+        <view
+          class="sort-btn"
+          hover-class="sort-btn-hover"
+          bindtap="onSortToggle"
+          aria-role="button"
+          aria-label="切换涨跌幅排序"
+        >
+          <text>按涨跌幅</text>
+          <t-icon
+            name="{{ sortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up' }}"
+            size="26rpx"
+            color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
+          />
+          <text class="sort-label">{{ sortDir === 'desc' ? '领涨榜' : '领跌榜' }}</text>
+        </view>
+        <text wx:if="{{ updatedLabel }}" class="list-updated">{{ updatedLabel }}</text>
+      </view>
+
+      <!-- 表头 -->
+      <view class="list-head">
+        <text class="hd-rank">#</text>
+        <text class="hd-name">行业</text>
+        <text class="hd-pct">涨跌幅</text>
+      </view>
+
+      <view wx:if="{{ !items.length }}" class="empty-row">
+        <text>未找到匹配的行业，换个关键词试试</text>
+      </view>
+
+      <view
+        class="board-row"
+        wx:for="{{ items }}"
+        wx:key="code"
+      >
+        <text class="hd-rank rank-no">{{ index + 1 }}</text>
+        <view class="hd-name name-col">
+          <text class="board-name">{{ item.name }}</text>
+          <text class="board-code">{{ item.code }}</text>
+        </view>
+        <text class="hd-pct pct-text {{ item.pctClass }}">{{ item.pctText }}</text>
+      </view>
+    </block>
+
+    <disclaimer-footer></disclaimer-footer>
+    <view class="bottom-space"></view>
+  </view>
+</view>

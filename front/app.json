@@ -15,7 +15,8 @@
         "pages/minute/index",
         "pages/stock-detail/index",
         "pages/sector-detail/index",
-        "pages/us-top100/index"
+        "pages/us-top100/index",
+        "pages/industry-all/index"
       ]
     },
     {

@@ -218,6 +218,23 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     }
     return item
   })
+  // 行业板块区末尾的整行入口卡：进入「A股全部行业板块」列表页（前端直连东财行业清单，
+  // 覆盖 石油石化/煤炭/钢铁/化工/农林牧渔/医疗服务/影视院线 等全部 A 股行业细分，
+  // 见 api/industry-boards.ts 与 packageQuote/pages/industry-all；入口跳转在
+  // utils/market-page-factory.ts onMetricTap 拦截，code=industry-all）。
+  // 纯数据入口，无行情涨跌语义：hideChange + 不出现在分享海报（hideFromPoster）。
+  sectors.push({
+    code: 'industry-all',
+    name: 'A股全部行业板块',
+    price: null,
+    pct: null,
+    valueText: '查看全部',
+    hideChange: true,
+    hideFromPoster: true,
+    featured: true,
+    featuredDesc: '石油石化 · 煤炭 · 钢铁 · 化工 · 农林牧渔 等 500+ 细分一览',
+    icon: '🗂️',
+  })
 
   if (!cnIndices.length && !usIndices.length && !macro.length && !sectors.length) {
     throw new Error('暂无行情数据')
