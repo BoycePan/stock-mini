@@ -1,5 +1,5 @@
 <view class="page theme-{{ theme }}">
-  <!-- 粘性头部：导航 + 概念/行业 tab + 搜索框（加载完成前不显示搜索） -->
+  <!-- 头部固定在滚动区外（不随内容滚动）：导航 + 概念/行业 tab + 搜索框（加载完成前不显示搜索） -->
   <view class="page-header">
     <app-header
       title="{{ headerTitle }}"
@@ -43,12 +43,27 @@
           aria-role="button"
           aria-label="清空搜索"
         >
-          <t-icon name="close" size="24rpx" color="{{ theme === 'dark' ? '#9cacc0' : '#99a6b7' }}" />
+          <t-icon
+            name="close"
+            size="24rpx"
+            color="{{ theme === 'dark' ? '#9cacc0' : '#99a6b7' }}"
+          />
         </view>
       </view>
     </view>
   </view>
-  <view class="content-scroll">
+  <!-- 内容区滚动容器：列表滚动 / 下拉刷新都在 scroll-view 内，不使用页面默认下拉刷新 -->
+  <scroll-view
+    class="content-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{ false }}"
+    refresher-enabled
+    refresher-triggered="{{ refreshing }}"
+    refresher-default-style="{{ theme === 'dark' ? 'white' : 'black' }}"
+    refresher-background="{{ theme === 'dark' ? '#151e2d' : '#e4ecf5' }}"
+    bindrefresherrefresh="onRefresherRefresh"
+  >
     <loading-state
       wx:if="{{ loading }}"
       text="{{ loadingText }}"
@@ -65,9 +80,7 @@
     <block wx:else>
       <view class="data-notice">
         <view class="notice-icon">!</view>
-        <text class="notice-text"
-          >行情来自东方财富公开接口（延迟行情），仅供参考，不构成投资建议。</text
-        >
+        <text class="notice-text">行情来自公开接口，仅供参考，不构成投资建议。</text>
       </view>
 
       <!-- 列表上方信息行：当前板块总数 + 排序按钮 + 更新时间 -->
@@ -104,8 +117,13 @@
 
       <view
         class="board-row"
+        hover-class="board-row-hover"
         wx:for="{{ items }}"
         wx:key="code"
+        data-index="{{ index }}"
+        bindtap="onBoardRowTap"
+        aria-role="button"
+        aria-label="查看{{ item.name }}成分股"
       >
         <text class="hd-rank rank-no">{{ index + 1 }}</text>
         <view class="hd-name name-col">
@@ -118,5 +136,101 @@
 
     <disclaimer-footer></disclaimer-footer>
     <view class="bottom-space"></view>
+  </scroll-view>
+
+  <!-- 板块成分股弹窗：点板块行打开，成分股按涨跌幅排序 -->
+  <view
+    wx:if="{{ memberVisible }}"
+    class="member-mask"
+    catchtouchmove="onMemberMaskTouch"
+    bindtap="onMemberClose"
+  >
+    <view class="member-sheet" catchtap="onMemberMaskTouch">
+      <view class="member-head">
+        <view class="member-head-text">
+          <text class="member-title">{{ memberBoardName }}</text>
+          <text
+            wx:if="{{ memberKindLabel && !memberLoading && !memberError && !memberEmpty }}"
+            class="member-sub"
+            >{{ memberKindLabel }} · 共 {{ memberCount }} 只成分股</text
+          >
+        </view>
+        <view
+          class="member-close"
+          hover-class="member-close-hover"
+          bindtap="onMemberClose"
+          aria-role="button"
+          aria-label="关闭成分股"
+        >
+          <t-icon
+            name="close"
+            size="28rpx"
+            color="{{ theme === 'dark' ? '#9cacc0' : '#718096' }}"
+          />
+        </view>
+      </view>
+
+      <!-- 弹窗内容：加载 / 失败 / 空 / 列表 -->
+      <view wx:if="{{ memberLoading }}" class="member-state">
+        <text class="member-state-text">正在加载成分股…</text>
+      </view>
+      <view wx:elif="{{ memberError }}" class="member-state">
+        <text class="member-state-text">{{ memberError }}</text>
+        <view
+          class="member-retry"
+          hover-class="member-retry-hover"
+          bindtap="onMemberRetry"
+          aria-role="button"
+          aria-label="重新加载成分股"
+        >
+          <text>重新加载</text>
+        </view>
+      </view>
+      <view wx:elif="{{ memberEmpty }}" class="member-state">
+        <text class="member-state-text">该板块暂无成分股数据</text>
+      </view>
+      <block wx:else>
+        <view class="member-meta">
+          <view
+            class="sort-btn member-sort"
+            hover-class="sort-btn-hover"
+            bindtap="onMemberSortToggle"
+            aria-role="button"
+            aria-label="切换成分股涨跌幅排序"
+          >
+            <text>按涨跌幅</text>
+            <t-icon
+              name="{{ memberSortDir === 'desc' ? 'arrow-triangle-down' : 'arrow-triangle-up' }}"
+              size="26rpx"
+              color="{{ theme === 'dark' ? '#6fa3ff' : '#4278ed' }}"
+            />
+            <text class="sort-label">{{ memberSortDir === 'desc' ? '领涨榜' : '领跌榜' }}</text>
+          </view>
+          <text wx:if="{{ memberUpdatedLabel }}" class="list-updated">{{
+            memberUpdatedLabel
+          }}</text>
+        </view>
+
+        <scroll-view class="member-scroll" scroll-y enhanced show-scrollbar="{{ false }}">
+          <view
+            class="member-row"
+            hover-class="member-row-hover"
+            wx:for="{{ memberItems }}"
+            wx:key="code"
+            data-index="{{ index }}"
+            bindtap="onMemberRowTap"
+            aria-role="button"
+            aria-label="查看{{ item.name }}当日分时"
+          >
+            <text class="member-rank">{{ index + 1 }}</text>
+            <view class="member-name-col">
+              <text class="member-name">{{ item.name }}</text>
+              <text class="member-code">{{ item.code }}</text>
+            </view>
+            <text class="member-pct pct-text {{ item.pctClass }}">{{ item.pctText }}</text>
+          </view>
+        </scroll-view>
+      </block>
+    </view>
   </view>
 </view>

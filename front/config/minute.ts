@@ -347,17 +347,45 @@ function buildUsBoardMinuteSources(): Record<string, MinuteSources> {
  */
 export const EM_US_SECID_RE = /^(105|106|107)\.[A-Z][A-Z0-9._]*$/i
 
-/** 该卡片 code 是否支持当日分时图（有任一可用源；美股个股 secid 走兜底） */
+/**
+ * A股个股行情代码互转（板块成分股等场景直连分时用，无需逐条登记）：
+ * - 腾讯行情前缀 code：sh600519（沪）/ sz000001（深）/ bj920010（北交所，含 4/8/92 开头）；
+ * - 东财 secid：1.600519（沪）/ 0.000001（深、北交同 0. 前缀）。
+ * 命名互转规则见 ashareTcCode / ashareEmSecid，与东财 clist 成员清单实测对齐。
+ */
+
+/** A股个股裸代码（如 603679）→ 腾讯行情前缀 code（6 开头 → sh；4/8/92 开头 → bj；其余 → sz） */
+export function ashareTcCode(code: string): string {
+  if (/^6/.test(code)) return `sh${code}`
+  if (/^(4|8|92)/.test(code)) return `bj${code}`
+  return `sz${code}`
+}
+
+/** 腾讯行情前缀 code（sh600519 / sz000001 / bj920010）→ 东财 secid（sh → 1.，sz/bj → 0.） */
+export function ashareEmSecid(tcCode: string): string {
+  const market = tcCode.startsWith('sh') ? '1' : '0'
+  return `${market}.${tcCode.slice(2)}`
+}
+
+/** 腾讯行情 A股个股 code 模式（sh/sz/bj + 6 位代码） */
+const TC_ASHARE_RE = /^(sh|sz|bj)[0-9]{6}$/
+/** 东财 A股个股 secid 模式（1.600519 沪 / 0.000001 深 / 0.920010 北交） */
+const EM_ASHARE_SECID_RE = /^[01]\.[0-9]{6}$/
+
+/** 该卡片 code 是否支持当日分时图（有任一可用源；美股 / A股个股 secid 走兜底） */
 export function hasMinuteSources(code: string): boolean {
   return !!code && !!resolveMinuteSources(code)
 }
 
 /**
  * 取某卡片的分时源（无源返回 null）。
- * 美股个股 secid 未在 MINUTE_SOURCES 登记时直接按东财分时兜底（见 EM_US_SECID_RE）。
+ * 美股个股 secid 未在 MINUTE_SOURCES 登记时直接按东财分时兜底（见 EM_US_SECID_RE）；
+ * A股个股（sh/sz/bj 前缀 code 或 1./0. secid）未登记时按东财 → 腾讯双源兜底。
  */
 export function resolveMinuteSources(code: string): MinuteSources | null {
   if (MINUTE_SOURCES[code]) return MINUTE_SOURCES[code]
   if (EM_US_SECID_RE.test(code)) return { em: code }
+  if (TC_ASHARE_RE.test(code)) return { em: ashareEmSecid(code), tc: code }
+  if (EM_ASHARE_SECID_RE.test(code)) return { em: code, tc: ashareTcCode(code.slice(2)) }
   return null
 }

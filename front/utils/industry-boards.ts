@@ -1,9 +1,12 @@
 /**
- * A股全部行业板块 解析与排序过滤（纯函数，供 api/industry-boards.ts 与页面使用）。
+ * A股全部板块（行业 + 概念）与板块成分股 解析与排序过滤（纯函数，供
+ * api/industry-boards.ts 与页面使用）。
  *
  * 数据源：东财延迟行情 clist/get（push2delay.eastmoney.com，与首页行情同域），
- * fs=m:90+t:2+f:!50 为东财「行业板块」清单（496 项，含申万一级~三级细分，
- * 如 石油石化 BK0464 / 农林牧渔 BK0433 / 钢铁 BK0479 / 影视院线 BK1222 / 地面兵装Ⅱ BK1229 等）。
+ * - fs=m:90+t:2+f:!50 为东财「行业板块」清单（496 项，含申万一级~三级细分，
+ *   如 石油石化 BK0464 / 农林牧渔 BK0433 / 钢铁 BK0479 / 影视院线 BK1222 / 地面兵装Ⅱ BK1229 等）；
+ * - fs=m:90+t:3+f:!50 为东财「概念板块」清单（504 项，华为 / 机器人 / 低空经济 等主题）；
+ * - fs=b:BKxxxx 为某板块成分股清单（A股个股，代码不带 BK 前缀）。
  */
 
 /** A股行业板块条目（名称 + 当日涨跌幅，无价格） */
@@ -42,6 +45,24 @@ export function parseIndustryBoardRows(
     const code = typeof row['f12'] === 'string' ? row['f12'] : ''
     const name = typeof row['f14'] === 'string' && row['f14'] ? row['f14'] : ''
     if (!code || !code.startsWith('BK') || !name) continue
+    items.push({ code, name, pct: num(row['f3']) })
+  }
+  return items
+}
+
+/**
+ * 解析 clist/get 单页响应为板块成分股行（fs=b:BKxxxx，成员为 A 股个股，代码不带 BK 前缀）。
+ * 跳过缺代码 / 缺名称的行（数据异常防护）；涨跌幅 "-" → null（停牌等无数据）。
+ */
+export function parseBoardStockRows(
+  body: EastmoneyBoardListBody | null | undefined,
+): IndustryBoardRow[] {
+  const rows = body?.data?.diff ?? []
+  const items: IndustryBoardRow[] = []
+  for (const row of rows) {
+    const code = typeof row['f12'] === 'string' ? row['f12'] : ''
+    const name = typeof row['f14'] === 'string' && row['f14'] ? row['f14'] : ''
+    if (!code || !name) continue
     items.push({ code, name, pct: num(row['f3']) })
   }
   return items

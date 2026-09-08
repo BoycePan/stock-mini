@@ -60,9 +60,9 @@ export interface MinuteGrid {
  */
 export function resolveMinuteSession(code: string): MinuteSessionKind {
   if (!code) return 'continuous'
-  // A股：沪深代码 / 东财板块指数 BKxxxx / 平均股价 AVG / 日经ETF代理 TPX / 有色页 A股个股代理
+  // A股：沪深京代码 / 东财板块指数 BKxxxx / 平均股价 AVG / 日经ETF代理 TPX / 有色页 A股个股代理
   if (
-    /^(sh|sz)\d+$/.test(code) ||
+    /^(sh|sz|bj)\d+$/.test(code) ||
     /^BK\d+$/.test(code) ||
     code === 'AVG' ||
     code === 'TPX' ||

@@ -5,5 +5,5 @@
     "disclaimer-footer": "/components/disclaimer-footer/index",
     "t-icon": "tdesign-miniprogram/icon/icon"
   },
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": false
 }

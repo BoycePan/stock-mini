@@ -30,12 +30,13 @@ export interface MarketPageOptions {
   /** 加载中副文本 */
   loadingDesc: string
   /**
-   * 首页是否展示「美股市值TOP100」入口卡（仅全局页配置，见 pages/global/index.ts）：
-   * 页面层按后端 display 配置 + 运行环境判读（utils/system-config.ts resolveTop100Enabled），
-   * 是纯视图过滤——不参与数据加载，不影响其他数据加载速度；
+   * 首页是否展示「配置开关控制的入口卡」——美股市值TOP100 与 A股全部板块
+   * （行业板块区入口）共用同一 display 开关（homeShowTop100 / homeShowTop100Dev，
+   * 见 pages/global/index.ts 与 utils/system-config.ts resolveTop100Enabled）：
+   * 纯视图过滤——不参与数据加载，不影响其他数据加载速度；
    * 函数体读取 rootStore.system.configs，MobX 绑定自动追踪，配置到达时卡片即时出现。
    */
-  showTop100?: () => boolean
+  showHomeEntries?: () => boolean
   /**
    * 弹窗公告（服务端 notices 接口 position='home' 驱动，见 stores/system.store.ts
    * homePopupNotice / utils/popup-notice.ts resolveHomePopupNotice）：响应式 getter，
@@ -125,10 +126,13 @@ export function createMarketPage(opts: MarketPageOptions) {
             popupNotice: () => opts.popupNotice?.() ?? null,
             popupStorageKey: () => opts.popupStorageKey?.() ?? 'popup_notice_state',
             sections: () => {
-              // 全局页「市值TOP100」入口卡的视图层判读（showTop100 由 pages/global/index.ts
-              // 提供，纯读 store 不触发任何请求）：配置未就绪缺省隐藏、配置到达即时出现，
-              // 绝不进入数据加载路径，不影响其他数据加载速度；非全局页恒展示（无此入口卡）。
-              const showTop100 = opts.showTop100?.() ?? true
+              // 全局页「配置开关控制的入口卡」的视图层判读：美股市值TOP100（us-top100）与
+              // A股全部板块（industry-all，行业板块区入口）共用同一开关（showHomeEntries 由
+              // pages/global/index.ts 提供，纯读 store 不触发任何请求）——配置未就绪缺省隐藏、
+              // 配置到达即时出现，绝不进入数据加载路径；非全局页恒展示（无此类入口卡）。
+              const showHomeEntries = opts.showHomeEntries?.() ?? true
+              const isHomeEntryCode = (code: string) =>
+                code === 'us-top100' || code === 'industry-all'
               // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
               // utils/system-config.ts）：关闭时隐藏「分时」角标，
               // 避免展示一个点进去会被拦截的入口；纯读 store，配置到达即时生效。
@@ -136,7 +140,7 @@ export function createMarketPage(opts: MarketPageOptions) {
               return (rootStore.market.pages[pageKey]?.sections ?? []).map((section) => ({
                 ...section,
                 metrics: section.metrics
-                  .filter((metric) => metric.code !== 'us-top100' || showTop100)
+                  .filter((metric) => !isHomeEntryCode(metric.code ?? '') || showHomeEntries)
                   .map((metric) => ({
                     ...metricViewModel(metric),
                     // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。

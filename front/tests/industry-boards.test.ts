@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   filterIndustryRows,
+  parseBoardStockRows,
   parseIndustryBoardRows,
   sortIndustryRows,
   type EastmoneyBoardListBody,
@@ -90,4 +91,32 @@ test('filterIndustryRows：按名称 / 代码（含去前缀数字）模糊过�
     ['BK1222'],
   )
   assert.deepEqual(filterIndustryRows(rows, '不存在'), [])
+})
+
+test('parseBoardStockRows：板块成分股解析 f12/f14/f3（A股个股不带 BK 前缀），跳过缺代码/缺名行', () => {
+  const body: EastmoneyBoardListBody = {
+    data: {
+      diff: [
+        { f12: '603679', f14: '华体科技', f3: 10.01 },
+        { f12: '300911', f14: '亿田智能', f3: 6.21 },
+        { f12: '920010', f14: '凯添燃气', f3: '-' }, // 无涨跌幅 → null
+        // 异常 / 噪音行应被跳过
+        { f12: '', f14: '无代码', f3: 1 },
+        { f12: '603000', f14: '', f3: 2 },
+        { f12: 'BK0464', f14: '石油石化', f3: 3.3 }, // 成分股不含板块行，此处仅验证不被排除
+      ],
+    },
+  }
+  assert.deepEqual(parseBoardStockRows(body), [
+    row('603679', '华体科技', 10.01),
+    row('300911', '亿田智能', 6.21),
+    row('920010', '凯添燃气', null),
+    row('BK0464', '石油石化', 3.3),
+  ])
+})
+
+test('parseBoardStockRows：空响应/缺 data 返回空数组', () => {
+  assert.deepEqual(parseBoardStockRows(null), [])
+  assert.deepEqual(parseBoardStockRows({}), [])
+  assert.deepEqual(parseBoardStockRows({ data: {} }), [])
 })

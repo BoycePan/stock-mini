@@ -1,10 +1,11 @@
-import { fetchAllBoards, type BoardKind } from '../../../api/industry-boards'
+import { fetchAllBoards, fetchBoardMembers, type BoardKind } from '../../../api/industry-boards'
 import {
   filterIndustryRows,
   sortIndustryRows,
   type IndustryBoardRow,
   type PctSortDir,
 } from '../../../utils/industry-boards'
+import { ashareTcCode } from '../../../config/minute'
 import { rootStore } from '../../../stores/root.store'
 import { startAutoRefresh, stopAutoRefresh } from '../../../utils/auto-refresh'
 import { computeChangeView } from '../../../utils/market'
@@ -16,7 +17,10 @@ import { bindTheme, unbindTheme } from '../../../utils/theme'
  * - 概念板块：fs=m:90+t:3+f:!50（约 504 项，华为 / 机器人 / 低空经济 / 代糖概念 等主题）；
  * - 行业板块：fs=m:90+t:2+f:!50（496 项，石油石化 / 煤炭 / 钢铁 / 化工 / 农林牧渔 /
  *   医疗服务 / 影视院线 等一级~三级细分）。
- * 两类均支持按名称/代码过滤 + 按涨跌幅排序，仅展示涨跌幅（板块无价格，点击不做跳转）。
+ * 两类均支持按名称/代码过滤 + 按涨跌幅排序，仅展示涨跌幅（板块无价格）。
+ * 点击板块行弹出「成分股」面板：fs=b:BKxxxx 拉该板块全部 A 股个股，按涨跌幅排序
+ * （领涨/领跌可切换，仅展示涨跌幅）；点击个股进当日分时图
+ * （minute 页：分时 + 基础信息，作个股详情入口，A股个股走东财 → 腾讯双源兜底）。
  * 全量清单量小（合计约千行），按板块分类缓存在模块级：切 tab / 二次进入直接复用缓存渲染，
  * 并后台静默刷新保鲜，避免反复整页 loading。
  */
@@ -25,6 +29,9 @@ import { bindTheme, unbindTheme } from '../../../utils/theme'
 const LIST_REFRESH_INTERVAL = 60000
 /** 模块级共享（跨页面实例）：onShow 立即刷新门闩，距上次请求不足 5s 不补刷 */
 let lastListRequestAt = 0
+/** 成分股弹窗加载串行队列（跨页面实例共享）：关闭后重开其它板块时排队等待，
+ *  避免在途旧请求把上一板块的成分股写进新标题下。 */
+let memberChain: Promise<void> = Promise.resolve()
 
 /** tab 顺序：概念板块在前（默认展示），行业板块在后 */
 const TAB_ORDER: BoardKind[] = ['concept', 'industry']
@@ -51,8 +58,8 @@ interface BoardKindMeta {
 const KIND_META: Record<BoardKind, BoardKindMeta> = {
   concept: {
     label: '概念板块',
-    headerTitle: '全部概念板块',
-    searchPlaceholder: '搜索概念，如 华为 / 机器人',
+    headerTitle: 'A股概念板块',
+    searchPlaceholder: '搜索概念，如 CPO / 机器人 / 华为',
     countUnit: '概念',
     loadingText: '正在加载全部概念板块',
     loadingDesc: '正在为您同步 A 股全部概念板块涨跌幅，请稍候…',
@@ -61,8 +68,8 @@ const KIND_META: Record<BoardKind, BoardKindMeta> = {
   },
   industry: {
     label: '行业板块',
-    headerTitle: 'A股全部行业',
-    searchPlaceholder: '搜索行业，如 煤炭 / 影视院线',
+    headerTitle: 'A股行业板块',
+    searchPlaceholder: '搜索行业，如 煤炭 / 证券',
     countUnit: '行业',
     loadingText: '正在加载全部行业',
     loadingDesc: '正在为您同步 A 股全部行业板块涨跌幅，请稍候…',
@@ -91,7 +98,7 @@ const cacheByKind: Record<BoardKind, BoardKindCache> = {
   industry: createKindCache(),
 }
 
-/** 列表行展示模型（涨跌幅文本 + 着色） */
+/** 列表行展示模型（涨跌幅文本 + 着色；板块行 / 成分股行共用） */
 interface IndustryRowView extends IndustryBoardRow {
   pctText: string
   pctClass: 'up' | 'down' | 'flat'
@@ -141,6 +148,26 @@ Page({
     updatedLabel: '',
     /** 各板块分类是否有请求进行中（不入渲染，供 isLoading / 防并发使用） */
     requestingByKind: { concept: false, industry: false } as Record<BoardKind, boolean>,
+    /** scroll-view 下拉刷新进行中（refresher-triggered 受控值） */
+    refreshing: false,
+    /* ---- 板块成分股弹窗 ---- */
+    memberVisible: false,
+    memberLoading: false,
+    memberError: '',
+    /** 成分股为空（成功但 0 只） */
+    memberEmpty: false,
+    memberBoardName: '',
+    memberBoardCode: '',
+    /** 板块所属 tab 标签（概念板块 / 行业板块） */
+    memberKindLabel: '',
+    /** 成分股只数（过滤前） */
+    memberCount: 0,
+    memberSortDir: 'desc' as PctSortDir,
+    memberUpdatedLabel: '',
+    /** 成分股原始条目（未排序，供切换领涨/领跌时重排） */
+    memberRawRows: [] as IndustryBoardRow[],
+    /** 成分股当前展示条目（排序后） */
+    memberItems: [] as IndustryRowView[],
   },
 
   isLoading() {
@@ -174,12 +201,20 @@ Page({
     stopAutoRefresh(this)
   },
 
-  async onPullDownRefresh() {
-    try {
-      await this.loadData()
-    } finally {
-      wx.stopPullDownRefresh()
+  /**
+   * scroll-view 下拉刷新（页面级下拉已关闭，见 index.json enablePullDownRefresh=false）：
+   * 静默刷新当前 tab 数据——不闪整页 loading，列表原地保留，下拉圈显示到请求结束；
+   * 已有请求进行中（自动刷新 tick / 手动）时直接结束，避免并发。
+   */
+  onRefresherRefresh() {
+    if (this.isLoading()) {
+      this.setData({ refreshing: false })
+      return
     }
+    this.setData({ refreshing: true })
+    void this.loadData({ silent: true }).finally(() => {
+      this.setData({ refreshing: false })
+    })
   },
 
   /** 重算当前 tab 展示列表（内存过滤 + 排序，不重新请求） */
@@ -277,6 +312,143 @@ Page({
       // 首次进入该分类：整页 loading 拉取
       void this.loadKind(target)
     }
+  },
+
+  // ---------------------------------------------------------------------------
+  // 板块行 → 成分股弹窗
+  // ---------------------------------------------------------------------------
+
+  /** 点击板块行：弹出该板块成分股面板（按涨跌幅排序） */
+  onBoardRowTap(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const board = this.data.items[index]
+    if (!board) return
+    void this.openMemberPanel(board)
+  },
+
+  /** 打开成分股弹窗：同板块二次打开复用上次数据即时展示，再后台静默刷新保鲜 */
+  async openMemberPanel(board: IndustryRowView) {
+    const sameBoard = this.data.memberBoardCode === board.code && this.data.memberRawRows.length > 0
+    if (sameBoard) {
+      // 同板块二次打开：复用缓存数据，单次 setData 直接展示列表（避免中间态闪烁）
+      this.setData({
+        memberVisible: true,
+        memberLoading: false,
+        memberError: '',
+        memberEmpty: false,
+        memberBoardName: board.name,
+        memberBoardCode: board.code,
+        memberKindLabel: KIND_META[this.data.activeTab].label,
+        memberItems: sortIndustryRows(this.data.memberRawRows, this.data.memberSortDir).map(toView),
+      })
+      await this.runMemberLoad(board.code, true)
+      return
+    }
+    // 新板块：单次 setData 置为加载态并清空旧内容，保证弹窗首帧就是 loading，不闪旧数据/空列表
+    this.setData({
+      memberVisible: true,
+      memberLoading: true,
+      memberError: '',
+      memberEmpty: false,
+      memberBoardName: board.name,
+      memberBoardCode: board.code,
+      memberKindLabel: KIND_META[this.data.activeTab].label,
+      memberCount: 0,
+      memberSortDir: 'desc',
+      memberUpdatedLabel: '',
+      memberRawRows: [],
+      memberItems: [],
+    })
+    await this.runMemberLoad(board.code, false)
+  },
+
+  /**
+   * 拉取指定板块的全部成分股并渲染（入串行队列执行，避免并发）。
+   * - silent：后台保鲜刷新，不闪 loading、失败保留现有数据；
+   * - 常规：展示加载 / 失败态；
+   * - 请求返回后仅当弹窗仍打开且目标板块未变才写入，过期结果直接丢弃
+   *   （关闭弹窗后快速重开其它板块时，旧请求不会覆盖新标题内容）。
+   */
+  runMemberLoad(boardCode: string, silent: boolean): Promise<void> {
+    const job = async () => {
+      try {
+        const rows = await fetchBoardMembers(boardCode)
+        // 弹窗已关闭 / 用户已切换目标板块：丢弃过期结果
+        if (!this.data.memberVisible || this.data.memberBoardCode !== boardCode) return
+        if (!rows.length) {
+          if (!silent) {
+            this.setData({
+              memberLoading: false,
+              memberEmpty: true,
+              memberCount: 0,
+              memberRawRows: [],
+              memberItems: [],
+              memberUpdatedLabel: '',
+            })
+          }
+          return
+        }
+        this.setData({
+          memberLoading: false,
+          memberError: '',
+          memberEmpty: false,
+          memberRawRows: rows,
+          memberCount: rows.length,
+          memberUpdatedLabel: buildUpdatedLabel(Date.now()),
+          // 与 loading 同帧写入列表，避免先闪一帧空列表/旧排序
+          memberItems: sortIndustryRows(rows, this.data.memberSortDir).map(toView),
+        })
+      } catch (error) {
+        console.warn('[industry-all] 成分股加载异常:', error)
+        if (!silent && this.data.memberVisible && this.data.memberBoardCode === boardCode) {
+          this.setData({
+            memberLoading: false,
+            memberError: '成分股加载失败，请点击下方按钮重试',
+            memberCount: 0,
+            memberItems: [],
+          })
+        }
+      }
+    }
+    const next = memberChain.then(job)
+    // 队列继续传递：任何一次失败都不阻塞后续排队任务
+    memberChain = next.catch(() => undefined).then(() => undefined)
+    return next
+  },
+
+  /** 重算成分股展示列表（内存排序，不重新请求） */
+  applyMemberView() {
+    const rows = sortIndustryRows(this.data.memberRawRows, this.data.memberSortDir)
+    this.setData({ memberItems: rows.map(toView) })
+  },
+
+  onMemberSortToggle() {
+    const next: PctSortDir = this.data.memberSortDir === 'desc' ? 'asc' : 'desc'
+    this.setData({ memberSortDir: next }, () => this.applyMemberView())
+  },
+
+  onMemberRetry() {
+    this.setData({ memberLoading: true, memberError: '' })
+    void this.runMemberLoad(this.data.memberBoardCode, false)
+  },
+
+  onMemberClose() {
+    this.setData({ memberVisible: false })
+  },
+
+  /** 拦截弹窗蒙层上的滚动，避免带动下层页面滚动（内容滚动由弹窗内 scroll-view 自理） */
+  onMemberMaskTouch() {
+    // no-op
+  },
+
+  /** 点击成分股：进当日分时图（minute 页：分时 + 基础信息，作个股详情入口） */
+  onMemberRowTap(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const member = this.data.memberItems[index]
+    if (!member) return
+    const tcCode = ashareTcCode(member.code)
+    const query = `code=${tcCode}&name=${encodeURIComponent(member.name)}`
+    wx.navigateTo({ url: `/packageQuote/pages/minute/index?${query}` })
   },
 
   onRetry() {

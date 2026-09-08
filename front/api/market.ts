@@ -122,8 +122,8 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   // 美股指数区末尾的入口卡：点击进入「美股市值TOP100」列表（纯前端直连东财 clist/get，
   // 见 docs/us-top100-api.md；入口跳转在 utils/market-page-factory.ts onMetricTap 拦截）。
   // 数据层恒构建该入口卡；是否展示由全局首页视图层按后端 display 配置判读
-  // （pages/global/index.ts showTop100 → market-page-factory 过滤），判读不进入数据加载路径，
-  // 不影响其他数据加载速度。
+  // （pages/global/index.ts showHomeEntries → market-page-factory 过滤），判读不进入数据加载路径，
+  // 不影响其他数据加载速度。与「A股全部板块」入口共用同一开关（homeShowTop100 / Dev）。
   usIndices.push({
     code: 'us-top100',
     name: '美股市值TOP100',
@@ -218,11 +218,13 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     }
     return item
   })
-  // 行业板块区末尾的整行入口卡：进入「A股全部行业板块」列表页（前端直连东财行业清单，
-  // 覆盖 石油石化/煤炭/钢铁/化工/农林牧渔/医疗服务/影视院线 等全部 A 股行业细分，
+  // 行业板块区末尾的整行入口卡：进入「A股全部板块」列表页（概念 + 行业全量，
+  // 覆盖 华为/机器人/低空经济 等概念与 石油石化/煤炭/钢铁/化工/农林牧渔/影视院线 等行业细分，
   // 见 api/industry-boards.ts 与 packageQuote/pages/industry-all；入口跳转在
   // utils/market-page-factory.ts onMetricTap 拦截，code=industry-all）。
   // 纯数据入口，无行情涨跌语义：hideChange + 不出现在分享海报（hideFromPoster）。
+  // 是否展示与「美股市值TOP100」入口共用同一开关（homeShowTop100 / Dev，视图层过滤，
+  // 见 market-page-factory.ts isHomeEntryCode），数据层恒构建。
   sectors.push({
     code: 'industry-all',
     name: 'A股全部行业板块',
