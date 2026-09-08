@@ -88,9 +88,12 @@ const allJsonLd = [...(breadcrumbJsonLd ? [breadcrumbJsonLd] : []), orgJsonLd, .
 <meta name="generator" content={Astro.generator} />
 <meta
   name="robots"
-  content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'}
+  content={noindex
+    ? 'noindex, follow'
+    : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}
 />
 <meta name="applicable-device" content="pc,mobile" />
+<meta name="author" content={APP_NAME} />
 {keywords && <meta name="keywords" content={keywords} />}
 {!noindex && <link rel="canonical" href={canonical} />}
 

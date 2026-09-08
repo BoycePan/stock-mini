@@ -25,6 +25,8 @@ const verificationMetas = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eef3f8" />
     <link rel="icon" type="image/png" href={LOGO_IMAGE} />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="sitemap" href={`${SITE_URL}/sitemap-index.xml`} />
     {verificationMetas.map((meta) => <meta name={meta.name} content={meta.content} />)}
     <slot name="head" />
