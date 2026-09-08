@@ -232,7 +232,7 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     hideChange: true,
     hideFromPoster: true,
     featured: true,
-    featuredDesc: '石油石化 · 煤炭 · 钢铁 · 化工 · 农林牧渔 等 500+ 细分一览',
+    featuredDesc: 'A 股全行业 500+ 细分板块一览',
     icon: '🗂️',
   })
 

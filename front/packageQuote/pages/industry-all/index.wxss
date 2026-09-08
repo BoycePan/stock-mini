@@ -1,6 +1,9 @@
 /* 与 us-top100 / minute / stock-detail 同风格：页面级滚动 + 粘性头部 */
 .page {
   display: block;
+  /* 必须重置全局 app.wxss 的 height: 100vh：页面级滚动下 .page 需随内容撑高，
+     否则 sticky 头部的包含块只有一屏高，滚过一屏后吸顶即失效、头部跟着内容滚走 */
+  height: auto;
   min-height: 100vh;
   overflow: visible;
 }
