@@ -14,6 +14,7 @@ import { SHARE_HOME_PATH, SHARE_IMAGE_URL } from '../../utils/share'
 import { getEnv, isReleaseBuild } from '../../config/env'
 import { productionEnv } from '../../config/env.production'
 import { APP_NAME } from '../../config/app'
+import { isUserShowEnvEnabled } from '../../utils/system-config'
 
 Page({
   data: {
@@ -23,6 +24,13 @@ Page({
     isLoggedIn: false,
     version: '',
     isDev: !isReleaseBuild(),
+    /**
+     * 「开发者选项」（接口环境切换）入口的后台配置开关（display 配置 userShowEnv，
+     * 见 utils/system-config.ts）：仅 isDev（开发/体验版）时叠加生效——
+     * 入口展示 = isDev && userShowEnv，缺省关闭，后台配 true 才展示。
+     * onShow syncNotices 内 bootstrap 完成后按全局配置刷新（配置到达即时出现）。
+     */
+    userShowEnv: false,
     /** 当前实际生效环境是否为线上（按 getEnv() 推导，无覆盖的默认态按真实地址判定） */
     envIsProd: true,
     /** 当前小程序名称（按 AppID 动态解析，页脚展示） */
@@ -82,9 +90,13 @@ Page({
   async syncNotices() {
     try {
       await rootStore.bootstrap()
-      this.setData({ notices: rootStore.system.settingsNotices })
+      this.setData({
+        notices: rootStore.system.settingsNotices,
+        // 「开发者选项」入口后台开关（userShowEnv）随 display 配置同步，缺省关闭
+        userShowEnv: isUserShowEnvEnabled(),
+      })
     } catch {
-      // 就绪失败时保持空公告，不阻塞设置页
+      // 就绪失败时保持空公告与入口默认态，不阻塞设置页
     }
   },
   onNoticeTap(event: WechatMiniprogram.BaseEvent) {

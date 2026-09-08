@@ -3,7 +3,9 @@
   <view class="page-header">
     <app-header
       title="{{ headerTitle }}"
-      showShare="{{ false }}"
+      showShare="{{ true }}"
+      posterShare="{{ true }}"
+      bind:share="onSharePoster"
       showBack="{{ true }}"
       showBrand="{{ false }}"
     ></app-header>
@@ -225,4 +227,11 @@
       </block>
     </view>
   </view>
+
+  <!-- 分享海报（隐藏画布 + 预览弹窗；海报数据 = 当前 tab 的领涨 / 领跌双榜，见 refreshPosterData） -->
+  <share-poster
+    id="sharePoster"
+    posterData="{{ posterData }}"
+    entrancePath="{{ shareEntrancePath }}"
+  ></share-poster>
 </view>

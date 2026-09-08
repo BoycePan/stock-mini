@@ -218,24 +218,30 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     }
     return item
   })
-  // 行业板块区末尾的整行入口卡：进入「A股全部板块」列表页（概念 + 行业全量，
+  // 行业板块区末尾的整行入口卡：进入「全部板块」列表页（A股概念 + A股行业 全量，
   // 覆盖 华为/机器人/低空经济 等概念与 石油石化/煤炭/钢铁/化工/农林牧渔/影视院线 等行业细分，
-  // 见 api/industry-boards.ts 与 packageQuote/pages/industry-all；入口跳转在
+  // 另含 美股概念 + 美股行业 精选，见 api/industry-boards.ts / config/us-board-catalog.ts
+  // 与 packageQuote/pages/industry-all；入口跳转在
   // utils/market-page-factory.ts onMetricTap 拦截，code=industry-all）。
   // 纯数据入口，无行情涨跌语义：hideChange + 不出现在分享海报（hideFromPoster）。
   // 是否展示与「美股市值TOP100」入口共用同一开关（homeShowTop100 / Dev，视图层过滤，
   // 见 market-page-factory.ts isHomeEntryCode），数据层恒构建。
   sectors.push({
     code: 'industry-all',
-    name: 'A股全部行业板块',
+    name: '全部板块',
     price: null,
     pct: null,
     valueText: '查看全部',
     hideChange: true,
     hideFromPoster: true,
     featured: true,
-    featuredDesc: 'A 股全行业 500+ 细分板块一览',
+    featuredDesc: 'A股概念与行业全量 · 美股概念与行业精选',
     icon: '🗂️',
+    // 与首页板块区当前展示口径一致的初始 tab（industry-all 页 onLoad 按此预选默认 tab）：
+    // A股时段（首页板块区展示 A股板块涨跌，标题「中国行业板块」）→ A股概念板块；
+    // 美股盘前/盘中/盘后（首页板块区展示美股代理股口径，标题「美股行业板块」）→ 美股概念，
+    // 保证从首页进入时默认选中与首页展示状态一致的 tab，避免美股时段落回 A股概念 tab。
+    initialTab: industrySource === 'a' ? 'concept' : 'us-concept',
   })
 
   if (!cnIndices.length && !usIndices.length && !macro.length && !sectors.length) {

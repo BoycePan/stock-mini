@@ -230,10 +230,17 @@ export function createMarketPage(opts: MarketPageOptions) {
         wx.navigateTo({ url: '/packageQuote/pages/us-top100/index' })
         return
       }
-      // 行业板块区入口卡（A股全部行业，见 api/market.ts）：跳转行业全量列表页，不走分时逻辑。
+      // 行业板块区入口卡（全部板块，见 api/market.ts）：跳转全部板块列表页，不走分时逻辑。
+      // 入口卡携带与首页板块区当前展示口径一致的 initialTab（A股板块 → 概念板块；
+      // 美股 → 美股概念，见 api/market.ts industry-all 入口构建）：以 URL ?tab= 透传给
+      // industry-all 页，页面 onLoad 按此预选默认 tab，与首页展示状态保持一致。
       if (code === 'industry-all') {
         trackEvent('industry.all.enter')
-        wx.navigateTo({ url: '/packageQuote/pages/industry-all/index' })
+        const tab = metric?.initialTab
+        const url = tab
+          ? `/packageQuote/pages/industry-all/index?tab=${encodeURIComponent(tab)}`
+          : '/packageQuote/pages/industry-all/index'
+        wx.navigateTo({ url })
         return
       }
       // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { resolveMinuteEnabled, resolveTop100Enabled } from '../utils/system-config.ts'
+import {
+  resolveMinuteEnabled,
+  resolveTop100Enabled,
+  resolveUserShowEnvEnabled,
+} from '../utils/system-config.ts'
 import type { AppConfig } from '../types/system.ts'
 
 const withConfig = (config: NonNullable<AppConfig['config']>): AppConfig => ({ config })
@@ -102,4 +106,14 @@ test('分时页开关：开发版/体验版由 canShowMinuteDev 决定', () => {
 test('分时页开关：配置未就绪缺省关闭（false = 不能跳转分时页）', () => {
   assert.equal(resolveMinuteEnabled(undefined, true), false)
   assert.equal(resolveMinuteEnabled(undefined, false), false)
+})
+
+test('开发者选项开关 userShowEnv：单一键、无 Dev 尾缀，由 userShowEnv 单独决定', () => {
+  assert.equal(resolveUserShowEnvEnabled(withConfig({ userShowEnv: true }).config), true)
+  assert.equal(resolveUserShowEnvEnabled(withConfig({ userShowEnv: false }).config), false)
+})
+
+test('开发者选项开关 userShowEnv：配置未就绪 / 键缺省一律关闭（入口缺省隐藏）', () => {
+  assert.equal(resolveUserShowEnvEnabled(undefined), false)
+  assert.equal(resolveUserShowEnvEnabled(withConfig({}).config), false)
 })

@@ -107,7 +107,7 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
   /** 首页美股指数区点「市值TOP100」入口：trackEvent('us.top100.enter') */
   'us.top100.enter': { name: 'us.top100.enter', type: TrackEventType.Tap },
 
-  /** 首页行业板块区点「A股全部行业」入口：trackEvent('industry.all.enter') */
+  /** 首页行业板块区点「全部板块」入口：trackEvent('industry.all.enter') */
   'industry.all.enter': { name: 'industry.all.enter', type: TrackEventType.Tap },
 
   /** 点美股TOP100行进入分时：trackEvent('us.top100.tap', { code, name, secid }) → target=code */

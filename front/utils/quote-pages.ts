@@ -48,6 +48,11 @@ export interface QuoteItem {
   featured?: boolean
   /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
   featuredDesc?: string
+  /**
+   * 入口卡跳转目标列表页时预选的初始 tab（如 首页板块区入口 → industry-all 页，
+   * 由 metricOf 透传到 MarketMetric，页面跳转时按此携带 URL 参数）。
+   */
+  initialTab?: string
 }
 
 export interface QuoteGroup {
@@ -185,6 +190,7 @@ function metricOf(
     hideFromPoster: item.hideFromPoster === true,
     featured: item.featured === true,
     featuredDesc: item.featuredDesc,
+    initialTab: item.initialTab,
     unit: item.unit,
     icon: item.icon ?? QUOTE_ICONS[item.code],
     iconImage: item.iconImage ?? QUOTE_ICON_ASSETS[item.code],

@@ -2,7 +2,7 @@
  * 美股精选概念/行业板块 行情取数（纯前端直连国内公开行情，见
  * config/us-board-catalog.ts 头注释与 utils/us-boards.ts）。
  *
- * - 板块清单：config/us-board-catalog.ts 精选目录（概念 27 / 行业 23），无需目录接口；
+ * - 板块清单：config/us-board-catalog.ts 精选目录（概念 43 / 行业 40），无需目录接口；
  * - 板块涨跌幅：成分股等权均值 —— 复用 utils/quote.ts 现成的
  *   fetchUsProxyChangeMap（新浪 gb_ 优先 + 东财 ulist 兜底）/ fetchUsProxyPremarketMap
  *   （新浪 gb_ [22] 盘前参考涨跌幅，仅实时盘前成分）/ averageBoardPcts；

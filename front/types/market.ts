@@ -32,6 +32,12 @@ export interface MarketMetric {
   featured?: boolean
   /** 特殊入口卡的副标题（如「美股三大市场 · 市值前100个股」） */
   featuredDesc?: string
+  /**
+   * 入口卡跳转目标列表页时预选的初始 tab（如 首页板块区入口 → industry-all 页：
+   * 首页展示 A股板块口径 → 概念板块；美股口径 → 美股概念，见 api/market.ts 入口构建）。
+   * 仅特殊入口卡使用，普通行情条目缺省。
+   */
+  initialTab?: string
   /** 点击查看详情时透传的扩展数据（如新闻标题/摘要/原文链接） */
   detail?: Record<string, string | undefined>
 }

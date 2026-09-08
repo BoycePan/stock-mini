@@ -12,7 +12,17 @@ import { ashareTcCode } from '../../../config/minute'
 import { rootStore } from '../../../stores/root.store'
 import { startAutoRefresh, stopAutoRefresh } from '../../../utils/auto-refresh'
 import { computeChangeView } from '../../../utils/market'
+import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
+import {
+  APP_NAME,
+  formatShareStamp,
+  type PosterData,
+  type PosterRow,
+  type PosterSection,
+  type PosterTone,
+} from '../../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
+import { trackEvent } from '../../../utils/tracker'
 
 /**
  * 板块列表页 —— A股全部板块（概念板块 + 行业板块）+ 美股精选板块（概念 + 行业）。
@@ -23,20 +33,28 @@ import { bindTheme, unbindTheme } from '../../../utils/theme'
  *
  * 美股（国内公开源无「美股板块全量目录行情」接口，采用首页同口径的精选目录 +
  * 美股成分股实时聚合，见 config/us-board-catalog.ts / api/us-board-quotes.ts）：
- * - 美股概念：精选主题 27 项（AI算力 / 减肥药 / 加密货币 / 量子计算 等）；
- * - 美股行业：精选行业 23 项（银行 / 保险 / 半导体设备 / 医疗 等）；
+ * - 美股概念：精选主题 43 项（AI算力 / 减肥药 / 加密货币 / 量子计算 等）；
+ * - 美股行业：精选行业 40 项（银行 / 保险 / 半导体设备 / 医疗 等）；
  * - 板块涨跌幅 = 成分股（东财 secid，新浪 gb_ 优先、东财 ulist 兜底）当日涨跌幅等权均值，
  *   美股盘前时段（resolveIndustrySource==='us-pre'）展示新浪 gb_ 盘前参考涨跌幅；
  * - 成分弹窗 = 该板块美股成分股实时涨跌幅（中文名来自东财 f14），点击进当日分时图
  *   （minute 页按 EM_US_SECID_RE 直接识别 105./106./107. secid）。
  *
  * 四类均支持按名称/代码过滤 + 按涨跌幅排序，仅展示涨跌幅（板块无价格）。
- * 全量 A 股清单量小（合计约千行）与美股目录（50 项）均按板块分类缓存在模块级：
+ * 分享能力与其他页面一致「经首页中转」：顶栏「分享」按当前 tab 生成分享海报
+ * （标题为当前分类，主体为领涨 / 领跌板块双榜各 8 名），右上角胶囊的系统默认分享
+ * 与分享原图的「打开小程序」入口均经 utils/share.ts buildSharePath 带回当前 tab
+ * （见 refreshPosterData / switchTab 的 shareEntrancePath / onShareAppMessage）。
+ * 默认 tab 为 A股概念；从首页板块入口进入时按首页板块展示口径透传 ?tab= 预选默认 tab
+ * （首页展示 A股板块 → 概念板块；美股 → 美股概念，见 onLoad / utils/market-page-factory.ts）。
+ * 全量 A 股清单量小（合计约千行）与美股目录（83 项）均按板块分类缓存在模块级：
  * 切 tab / 二次进入直接复用缓存渲染，并后台静默刷新保鲜，避免反复整页 loading。
  */
 
 /** 列表自动刷新间隔：60s（全量约千行，刷新节奏比 100 行列表放慢，避免频繁重渲染） */
 const LIST_REFRESH_INTERVAL = 60000
+/** 分享海报每个榜单收录的板块数（双列网格 4 行 × 2 列，避免海报过长） */
+const POSTER_BOARD_LIMIT = 8
 /** 模块级共享（跨页面实例）：onShow 立即刷新门闩，距上次请求不足 5s 不补刷 */
 let lastListRequestAt = 0
 /** 成分股弹窗加载串行队列（跨页面实例共享）：关闭后重开其它板块时排队等待，
@@ -56,7 +74,10 @@ function usCatalogKind(kind: TabKind): UsBoardKind {
   return kind === 'us-concept' ? 'concept' : 'industry'
 }
 
-/** tab 顺序：A股概念在前（默认展示），A股行业、美股概念、美股行业在后 */
+/**
+ * tab 顺序：A股概念在前（默认展示），A股行业、美股概念、美股行业在后；
+ * 从首页板块入口进入时可透传 ?tab=（如 concept / us-concept）预选默认 tab（见 onLoad）。
+ */
 const TAB_ORDER: TabKind[] = ['concept', 'industry', 'us-concept', 'us-industry']
 
 /** 单个板块分类的展示元信息（标题 / 文案随 tab 切换） */
@@ -201,7 +222,7 @@ Page({
     theme: rootStore.settings.theme,
     /** tab 列表（A股概念在前，A股行业、美股概念、美股行业在后） */
     tabs: TAB_ORDER.map((key) => ({ key, label: KIND_META[key].label })),
-    /** 当前 tab：默认 A股概念板块 */
+    /** 当前 tab：默认 A股概念板块（首页入口按展示口径透传 ?tab= 覆盖，见 onLoad） */
     activeTab: 'concept' as TabKind,
     /* ---- 当前 tab 的展示文案（随切 tab 同步，供 wxml 使用） ---- */
     headerTitle: KIND_META.concept.headerTitle,
@@ -222,6 +243,13 @@ Page({
     /** 当前 tab 板块总数（过滤前），头部展示 */
     totalCount: 0,
     updatedLabel: '',
+    /** 分享海报数据（当前 tab 的领涨 / 领跌双榜，随 tab / 数据刷新同步，见 refreshPosterData） */
+    posterData: null as PosterData | null,
+    /**
+     * 分享原图（wx.showShareImageMenu）的小程序入口路径：与分享图一致带当前 tab，
+     * 接收方从图上的「打开小程序」进入时经首页中转回到本页同一分类（utils/share.ts buildSharePath）。
+     */
+    shareEntrancePath: '',
     /** 各板块分类是否有请求进行中（不入渲染，供 isLoading / 防并发使用） */
     requestingByKind: {
       concept: false,
@@ -262,16 +290,13 @@ Page({
     return current === (this as unknown as WechatMiniprogram.Page.TrivialInstance)
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined> = {}) {
     bindTheme(this)
-    const cache = cacheByKind[this.data.activeTab]
-    if (cache.loaded) {
-      // 二次进入：直接复用模块级缓存渲染，再后台静默刷新保鲜
-      this.applyCachedToView()
-      void this.loadKind(this.data.activeTab, { silent: true })
-    } else {
-      void this.loadData()
-    }
+    // 从首页板块区入口进入时按首页当前展示口径预选默认 tab（入口透传 URL ?tab=，
+    // 见 utils/market-page-factory.ts industry-all 拦截 / api/market.ts 入口构建：
+    // 首页展示 A股板块 → 概念板块；美股 → 美股概念），保证默认选中与首页展示状态一致；
+    // 直接进入或非法取值回退 A股概念板块。加载策略与手动切 tab 一致（switchTab）。
+    this.switchTab(this.resolveInitialTab(options.tab))
   },
 
   onShow() {
@@ -322,7 +347,11 @@ Page({
         totalCount: cache.rawItems.length,
         updatedLabel: cache.lastSuccessAt ? buildUpdatedLabel(cache.lastSuccessAt) : '',
       },
-      () => this.refreshView(),
+      () => {
+        this.refreshView()
+        // 列表就绪后同步当前 tab 的分享海报数据（领涨 / 领跌双榜）
+        this.refreshPosterData()
+      },
     )
   },
 
@@ -360,7 +389,13 @@ Page({
         cache.loaded = false
         cache.lastSuccessAt = 0
         if (!silent && isActive) {
-          this.setData({ loading: false, error: meta.errorText, items: [], totalCount: 0 })
+          this.setData({
+            loading: false,
+            error: meta.errorText,
+            items: [],
+            totalCount: 0,
+            posterData: null,
+          })
         }
         return
       }
@@ -371,21 +406,30 @@ Page({
     } catch (error) {
       console.warn(`[industry-all] ${meta.label}加载异常:`, error)
       if (!silent && isActive) {
-        this.setData({ loading: false, error: meta.errorText, items: [], totalCount: 0 })
+        this.setData({
+          loading: false,
+          error: meta.errorText,
+          items: [],
+          totalCount: 0,
+          posterData: null,
+        })
       }
     } finally {
       this.setData({ requestingByKind: { ...this.data.requestingByKind, [kind]: false } })
     }
   },
 
-  /** 点击 tab：A股概念 ↔ A股行业 ↔ 美股概念 ↔ 美股行业 切换 */
-  onTabTap(event: WechatMiniprogram.TouchEvent) {
-    const target = event.currentTarget.dataset.kind as TabKind | undefined
-    const meta = target ? KIND_META[target] : undefined
-    if (!target || !meta || target === this.data.activeTab) return
-    const cache = cacheByKind[target]
+  /**
+   * 切换到指定板块分类（更新该分类的展示文案；按缓存状态决定加载策略）：
+   * - 已有缓存：即时切换渲染，再后台静默刷新保鲜；
+   * - 首次进入该分类：整页 loading 拉取。
+   * onLoad（URL 参数初始 tab）与 onTabTap（手动点击切换）共用同一路径。
+   */
+  switchTab(kind: TabKind) {
+    const meta = KIND_META[kind]
+    const cache = cacheByKind[kind]
     this.setData({
-      activeTab: target,
+      activeTab: kind,
       headerTitle: meta.headerTitle,
       searchPlaceholder: meta.searchPlaceholder,
       countUnit: meta.countUnit,
@@ -394,15 +438,32 @@ Page({
       dataNote: meta.dataNote,
       emptyText: meta.emptyText,
       error: '',
+      // 清空海报：新分类数据未就绪前分享按钮只提示「内容加载中」（refreshPosterData 就绪后重填）
+      posterData: null,
+      // 分享原图的小程序入口：与当前 tab 一致，接收方从图上的「打开小程序」进入仍落在同分类
+      shareEntrancePath: buildSharePath('industry-all', { tab: kind }),
     })
     if (cache.loaded) {
       // 已有缓存：即时切换渲染，再后台静默刷新保鲜
       this.applyCachedToView()
-      void this.loadKind(target, { silent: true })
+      void this.loadKind(kind, { silent: true })
     } else {
       // 首次进入该分类：整页 loading 拉取
-      void this.loadKind(target)
+      void this.loadKind(kind)
     }
+  },
+
+  /** 解析跳转参数指定的初始 tab（仅接受四类板块键值，非法 / 缺省回退 A股概念板块） */
+  resolveInitialTab(raw?: string): TabKind {
+    const tab = TAB_ORDER.find((kind) => kind === raw)
+    return tab ?? 'concept'
+  },
+
+  /** 点击 tab：A股概念 ↔ A股行业 ↔ 美股概念 ↔ 美股行业 切换 */
+  onTabTap(event: WechatMiniprogram.TouchEvent) {
+    const target = event.currentTarget.dataset.kind as TabKind | undefined
+    if (!target || !KIND_META[target] || target === this.data.activeTab) return
+    this.switchTab(target)
   },
 
   // ---------------------------------------------------------------------------
@@ -580,6 +641,76 @@ Page({
   onSortToggle() {
     const next: PctSortDir = this.data.sortDir === 'desc' ? 'asc' : 'desc'
     this.setData({ sortDir: next }, () => this.refreshView())
+  },
+
+  /**
+   * 组装当前 tab 的分享海报数据：标题用当前分类（A股概念 / 行业 / 美股概念 / 行业），
+   * 主体分「领涨板块」「领跌板块」双榜各取前 POSTER_BOARD_LIMIT 名（板块名 + 涨跌幅），
+   * 数据取模块级缓存全量（与列表过滤 / 排序无关），仅在分类有有效行情时生成。
+   */
+  refreshPosterData() {
+    const kind = this.data.activeTab
+    const meta = KIND_META[kind]
+    const cache = cacheByKind[kind]
+    if (!cache.loaded || !cache.rawItems.length) {
+      this.setData({ posterData: null })
+      return
+    }
+    // 仅收录有涨跌幅的板块（无数据行「--」不入榜，避免占位干扰榜单可读性）
+    const rows = cache.rawItems.filter((item) => item.pct !== null)
+    if (!rows.length) {
+      this.setData({ posterData: null })
+      return
+    }
+    const toPosterRow = (item: IndustryBoardRow): PosterRow => {
+      const view = computeChangeView(item.pct)
+      return {
+        name: item.name,
+        value: '',
+        changeText: view.changeText,
+        tone: view.changeClass as PosterTone,
+      }
+    }
+    const sections: PosterSection[] = []
+    const leaders = sortIndustryRows(rows, 'desc').slice(0, POSTER_BOARD_LIMIT).map(toPosterRow)
+    if (leaders.length) sections.push({ title: '领涨板块', rows: leaders, compact: true })
+    const laggards = sortIndustryRows(rows, 'asc').slice(0, POSTER_BOARD_LIMIT).map(toPosterRow)
+    if (laggards.length) sections.push({ title: '领跌板块', rows: laggards, compact: true })
+    if (!sections.length) {
+      this.setData({ posterData: null })
+      return
+    }
+    this.setData({
+      posterData: {
+        title: meta.headerTitle,
+        subtitle: APP_NAME,
+        statusText: `共 ${cache.rawItems.length} 个${meta.countUnit}`,
+        stamp: formatShareStamp(new Date()),
+        includeWatermark: true,
+        sections,
+      },
+    })
+  },
+
+  /** 顶栏分享按钮：调起 share-poster 组件按当前 tab 的海报数据生成并预览 */
+  onSharePoster() {
+    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+    if (poster) poster.open()
+  },
+
+  /**
+   * 右上角胶囊菜单的系统默认分享：与其他页面一致「经首页中转」——
+   * 卡片 path 带当前 tab 走 utils/share.ts buildSharePath，接收方先进首页再自动跳回本页同分类；
+   * 图片分享（分享海报的 entrancePath）与此共用同一路径（见 switchTab 的 shareEntrancePath）。
+   */
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    trackEvent('share.trigger')
+    const meta = KIND_META[this.data.activeTab]
+    return {
+      title: meta.headerTitle,
+      path: buildSharePath('industry-all', { tab: this.data.activeTab }),
+      imageUrl: SHARE_IMAGE_URL,
+    }
   },
 
   onUnload() {

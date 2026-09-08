@@ -13,11 +13,11 @@ import { filterUsBoardRows, type UsBoardRow } from '../utils/us-boards.ts'
 /** 成分 secid 合法形态：105/106/107.代码 */
 const PROXY_RE = /^(105|106|107)\.[A-Z][A-Z0-9._]*$/i
 
-test('美股目录：概念/行业数量与总数落在 40-60 区间', () => {
-  assert.ok(US_CONCEPT_BOARDS.length >= 20, '概念应不少于 20 项')
-  assert.ok(US_INDUSTRY_BOARDS.length >= 15, '行业应不少于 15 项')
+test('美股目录：概念/行业数量与总数落在合理区间', () => {
+  assert.ok(US_CONCEPT_BOARDS.length >= 35, '概念应不少于 35 项')
+  assert.ok(US_INDUSTRY_BOARDS.length >= 30, '行业应不少于 30 项')
   const total = US_CONCEPT_BOARDS.length + US_INDUSTRY_BOARDS.length
-  assert.ok(total >= 40 && total <= 60, `目录总数 ${total} 应在 40-60 项`)
+  assert.ok(total >= 70 && total <= 95, `目录总数 ${total} 应在 70-95 项`)
 })
 
 test('美股目录：板块 code 全局唯一、成分为合法东财 secid、单板块无重复成分', () => {

@@ -33,6 +33,11 @@ export type AppConfig = Partial<{
     canShowMinute?: boolean
     /** 分时页入口开关（开发版 / 体验版） */
     canShowMinuteDev?: boolean
+    /** 设置页「开发者选项」（接口环境切换）入口开关：与 homeShowTop100 / canShowMinute 的
+     *  「正式键 + Dev 键」双键模式不同，userShowEnv 为**单一键、无 Dev 尾缀**——正式 / 开发 /
+     *  体验版统一读此键（后端只维护一个键）；缺省关闭，配 true 开启。入口仍需叠加环境限制
+     *  （设置页 = isDev && userShowEnv，即仅在开发 / 体验版可能展示，见 utils/system-config.ts）。 */
+    userShowEnv?: boolean
   }
   /** 广告位配置（各页面按 location 查找 unit-id 渲染，见 components/ad-banner） */
   adConfig?: AdConfig

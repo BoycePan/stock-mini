@@ -23,6 +23,7 @@ const SHARE_TARGET_ROUTES: Record<string, string> = {
   'stock-detail': '/packageQuote/pages/stock-detail/index',
   'news-detail': '/packageNews/pages/news-detail/index',
   'sector-detail': '/packageQuote/pages/sector-detail/index',
+  'industry-all': '/packageQuote/pages/industry-all/index',
 }
 
 /** 安全解码：微信 onLoad options 可能已被解码，避免重复解码抛 URIError */

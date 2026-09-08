@@ -83,9 +83,11 @@
     <!-- 更多 -->
     <text class="section-heading">更多</text>
     <view class="setting-group">
-      <!-- 开发者选项：仅非线上版本可见 -->
+      <!-- 开发者选项（接口环境切换）：仅非线上版本（isDev）且后台 display 配置
+           userShowEnv=true（单键、无 Dev 尾缀，见 utils/system-config.ts）才展示；
+           缺省关闭，需管理端在 app_config cfg_type='display' 配 userShowEnv=true -->
       <view
-        wx:if="{{ isDev }}"
+        wx:if="{{ isDev && userShowEnv }}"
         class="setting-row clickable"
         hover-class="row-hover"
         bindtap="onEnvSwitchTap"
@@ -102,7 +104,7 @@
         </view>
         <t-icon name="chevron-right" size="40rpx" class="row-arrow-icon" />
       </view>
-      <view wx:if="{{ isDev }}" class="row-divider"></view>
+      <view wx:if="{{ isDev && userShowEnv }}" class="row-divider"></view>
       <view class="setting-row clickable" hover-class="row-hover" bindtap="onFeedbackTap">
         <view class="row-icon-wrap purple">
           <text class="row-emoji">💬</text>

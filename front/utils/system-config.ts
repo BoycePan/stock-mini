@@ -58,3 +58,17 @@ export const isTop100Enabled = bindToggle(resolveTop100Enabled)
 
 /** 便捷版：当前环境是否开放分时行情页（关闭时「分时」角标隐藏 + 各入口跳转拦截，见调用方） */
 export const isMinuteEnabled = bindToggle(resolveMinuteEnabled)
+
+/**
+ * 设置页「开发者选项」（接口环境切换）入口是否展示（pages/settings/index）：
+ * 与 homeShowTop100 / canShowMinute 的「正式键 + Dev 键」双键模式**不同**，userShowEnv 为
+ * 单一键、无 Dev 尾缀——正式 / 开发 / 体验版统一读 userShowEnv（后端只维护一个键），
+ * 配置未就绪 / 键缺省一律 false（缺省关闭）。返回纯函数（只读 config），
+ * 便于单测；调用方仍需自行叠加环境限制（设置页入口 = isDev && isUserShowEnvEnabled()，
+ * 即仅开发 / 体验版可能展示，正式版恒不展示）。
+ */
+export const resolveUserShowEnvEnabled = (config: AppConfig['config']): boolean =>
+  config?.userShowEnv ?? false
+
+/** 便捷版：后台 display 配置 userShowEnv 是否开启（读全局配置 store，配置到达即时生效） */
+export const isUserShowEnvEnabled = bindToggle((config) => resolveUserShowEnvEnabled(config))
