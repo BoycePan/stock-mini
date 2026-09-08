@@ -1,10 +1,13 @@
 import { fetchAllBoards, fetchBoardMembers, type BoardKind } from '../../../api/industry-boards'
+import { fetchUsBoardMembers, fetchUsBoardRows } from '../../../api/us-board-quotes'
+import type { UsBoardKind } from '../../../config/us-board-catalog'
 import {
   filterIndustryRows,
   sortIndustryRows,
   type IndustryBoardRow,
   type PctSortDir,
 } from '../../../utils/industry-boards'
+import { filterUsBoardRows, type UsBoardRow, type UsMemberRow } from '../../../utils/us-boards'
 import { ashareTcCode } from '../../../config/minute'
 import { rootStore } from '../../../stores/root.store'
 import { startAutoRefresh, stopAutoRefresh } from '../../../utils/auto-refresh'
@@ -12,17 +15,24 @@ import { computeChangeView } from '../../../utils/market'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 
 /**
- * A股全部板块（概念板块 + 行业板块）列表页（纯前端直连东财 clist/get，分页拉全量板块清单）。
- * 顶部 tab 切换板块大类，默认展示概念板块：
- * - 概念板块：fs=m:90+t:3+f:!50（约 504 项，华为 / 机器人 / 低空经济 / 代糖概念 等主题）；
- * - 行业板块：fs=m:90+t:2+f:!50（496 项，石油石化 / 煤炭 / 钢铁 / 化工 / 农林牧渔 /
- *   医疗服务 / 影视院线 等一级~三级细分）。
- * 两类均支持按名称/代码过滤 + 按涨跌幅排序，仅展示涨跌幅（板块无价格）。
- * 点击板块行弹出「成分股」面板：fs=b:BKxxxx 拉该板块全部 A 股个股，按涨跌幅排序
- * （领涨/领跌可切换，仅展示涨跌幅）；点击个股进当日分时图
- * （minute 页：分时 + 基础信息，作个股详情入口，A股个股走东财 → 腾讯双源兜底）。
- * 全量清单量小（合计约千行），按板块分类缓存在模块级：切 tab / 二次进入直接复用缓存渲染，
- * 并后台静默刷新保鲜，避免反复整页 loading。
+ * 板块列表页 —— A股全部板块（概念板块 + 行业板块）+ 美股精选板块（概念 + 行业）。
+ *
+ * A 股（纯前端直连东财 clist/get，分页拉全量板块清单）：
+ * - 概念板块：fs=m:90+t:3+f:!50（约 504 项，华为 / 机器人 / 低空经济 等主题）；
+ * - 行业板块：fs=m:90+t:2+f:!50（496 项，石油石化 / 煤炭 / 钢铁 等一级~三级细分）。
+ *
+ * 美股（国内公开源无「美股板块全量目录行情」接口，采用首页同口径的精选目录 +
+ * 美股成分股实时聚合，见 config/us-board-catalog.ts / api/us-board-quotes.ts）：
+ * - 美股概念：精选主题 27 项（AI算力 / 减肥药 / 加密货币 / 量子计算 等）；
+ * - 美股行业：精选行业 23 项（银行 / 保险 / 半导体设备 / 医疗 等）；
+ * - 板块涨跌幅 = 成分股（东财 secid，新浪 gb_ 优先、东财 ulist 兜底）当日涨跌幅等权均值，
+ *   美股盘前时段（resolveIndustrySource==='us-pre'）展示新浪 gb_ 盘前参考涨跌幅；
+ * - 成分弹窗 = 该板块美股成分股实时涨跌幅（中文名来自东财 f14），点击进当日分时图
+ *   （minute 页按 EM_US_SECID_RE 直接识别 105./106./107. secid）。
+ *
+ * 四类均支持按名称/代码过滤 + 按涨跌幅排序，仅展示涨跌幅（板块无价格）。
+ * 全量 A 股清单量小（合计约千行）与美股目录（50 项）均按板块分类缓存在模块级：
+ * 切 tab / 二次进入直接复用缓存渲染，并后台静默刷新保鲜，避免反复整页 loading。
  */
 
 /** 列表自动刷新间隔：60s（全量约千行，刷新节奏比 100 行列表放慢，避免频繁重渲染） */
@@ -33,8 +43,21 @@ let lastListRequestAt = 0
  *  避免在途旧请求把上一板块的成分股写进新标题下。 */
 let memberChain: Promise<void> = Promise.resolve()
 
-/** tab 顺序：概念板块在前（默认展示），行业板块在后 */
-const TAB_ORDER: BoardKind[] = ['concept', 'industry']
+/** 页面内板块大类：A股概念 / A股行业 + 美股概念 / 美股行业 */
+type TabKind = BoardKind | 'us-concept' | 'us-industry'
+
+/** 是否美股板块 Tab（取数/过滤/成分弹窗走美股聚合口径） */
+function isUsKind(kind: TabKind): boolean {
+  return kind === 'us-concept' || kind === 'us-industry'
+}
+
+/** 美股 Tab 键 → 精选目录分类（us-concept → concept / us-industry → industry） */
+function usCatalogKind(kind: TabKind): UsBoardKind {
+  return kind === 'us-concept' ? 'concept' : 'industry'
+}
+
+/** tab 顺序：A股概念在前（默认展示），A股行业、美股概念、美股行业在后 */
+const TAB_ORDER: TabKind[] = ['concept', 'industry', 'us-concept', 'us-industry']
 
 /** 单个板块分类的展示元信息（标题 / 文案随 tab 切换） */
 interface BoardKindMeta {
@@ -49,13 +72,15 @@ interface BoardKindMeta {
   /** 全屏 loading 文案 */
   loadingText: string
   loadingDesc: string
+  /** 列表上方数据来源说明（A股板块 = 板块公开行情；美股板块 = 成分股等权聚合口径） */
+  dataNote: string
   /** 加载失败错误文案 */
   errorText: string
   /** 无匹配结果文案 */
   emptyText: string
 }
 
-const KIND_META: Record<BoardKind, BoardKindMeta> = {
+const KIND_META: Record<TabKind, BoardKindMeta> = {
   concept: {
     label: '概念板块',
     headerTitle: 'A股概念板块',
@@ -63,6 +88,7 @@ const KIND_META: Record<BoardKind, BoardKindMeta> = {
     countUnit: '概念',
     loadingText: '正在加载全部概念板块',
     loadingDesc: '正在为您同步 A 股全部概念板块涨跌幅，请稍候…',
+    dataNote: '行情来自公开接口，仅供参考，不构成投资建议。',
     errorText: '概念板块加载失败，请点击下方按钮重试',
     emptyText: '未找到匹配的概念，换个关键词试试',
   },
@@ -73,14 +99,39 @@ const KIND_META: Record<BoardKind, BoardKindMeta> = {
     countUnit: '行业',
     loadingText: '正在加载全部行业',
     loadingDesc: '正在为您同步 A 股全部行业板块涨跌幅，请稍候…',
+    dataNote: '行情来自公开接口，仅供参考，不构成投资建议。',
     errorText: '行业板块加载失败，请点击下方按钮重试',
+    emptyText: '未找到匹配的行业，换个关键词试试',
+  },
+  'us-concept': {
+    label: '美股概念',
+    headerTitle: '美股概念板块',
+    searchPlaceholder: '搜索概念或代码，如 减肥药 / NVDA',
+    countUnit: '板块',
+    loadingText: '正在加载美股概念板块',
+    loadingDesc: '正在同步美股概念板块涨跌幅（成分股行情聚合，可能有延迟），请稍候…',
+    dataNote:
+      '美股板块涨跌幅为成分股行情等权聚合（公开行情，可能有延迟），仅供参考，不构成投资建议。',
+    errorText: '美股概念板块加载失败，请点击下方按钮重试',
+    emptyText: '未找到匹配的概念，换个关键词试试',
+  },
+  'us-industry': {
+    label: '美股行业',
+    headerTitle: '美股行业板块',
+    searchPlaceholder: '搜索行业或代码，如 银行 / TSLA',
+    countUnit: '板块',
+    loadingText: '正在加载美股行业板块',
+    loadingDesc: '正在同步美股行业板块涨跌幅（成分股行情聚合，可能有延迟），请稍候…',
+    dataNote:
+      '美股板块涨跌幅为成分股行情等权聚合（公开行情，可能有延迟），仅供参考，不构成投资建议。',
+    errorText: '美股行业板块加载失败，请点击下方按钮重试',
     emptyText: '未找到匹配的行业，换个关键词试试',
   },
 }
 
 /** 每个板块分类的模块级清单缓存（跨页面实例共享：量小，切 tab 即时展示） */
 interface BoardKindCache {
-  /** 已拉取的原始条目（未排序 / 未过滤） */
+  /** 已拉取的原始条目（未排序 / 未过滤；美股行运行时携带 proxies 字段） */
   rawItems: IndustryBoardRow[]
   /** 是否已有成功数据（供复用缓存渲染；成功且非空才置 true） */
   loaded: boolean
@@ -93,15 +144,23 @@ function createKindCache(): BoardKindCache {
 }
 
 /** 模块级缓存（同一小程序会话内跨页面实例共享） */
-const cacheByKind: Record<BoardKind, BoardKindCache> = {
+const cacheByKind: Record<TabKind, BoardKindCache> = {
   concept: createKindCache(),
   industry: createKindCache(),
+  'us-concept': createKindCache(),
+  'us-industry': createKindCache(),
 }
 
 /** 列表行展示模型（涨跌幅文本 + 着色；板块行 / 成分股行共用） */
 interface IndustryRowView extends IndustryBoardRow {
   pctText: string
   pctClass: 'up' | 'down' | 'flat'
+  /** 美股板块行：成分股 secid 列表（成分弹窗按此取数） */
+  proxies?: string[]
+  /** 美股板块行：成分个数文案（如「成分 5 只」）；A股行缺省展示 code */
+  codeText?: string
+  /** 美股成分股行：成分股东财 secid（跳分时用），A股成分行缺省 */
+  mcode?: string
 }
 
 function toView(item: IndustryBoardRow): IndustryRowView {
@@ -111,6 +170,22 @@ function toView(item: IndustryBoardRow): IndustryRowView {
     pctText: pct.changeText,
     pctClass: pct.changeClass,
   }
+}
+
+/** 美股板块行视图：额外携带成分个数文案与成分 secid */
+function toUsBoardView(item: UsBoardRow): IndustryRowView {
+  return {
+    ...toView(item),
+    proxies: item.proxies,
+    codeText: `成分 ${item.proxies.length} 只`,
+  }
+}
+
+/** 美股成分股行 → 通用行模型（code=ticker 展示，mcode=secid 保留给跳分时） */
+type MemberRow = IndustryBoardRow & { mcode?: string }
+
+function toMemberRows(rows: UsMemberRow[]): MemberRow[] {
+  return rows.map((row) => ({ code: row.code, name: row.name, pct: row.pct, mcode: row.mcode }))
 }
 
 /** 「HH:MM 更新」标签 */
@@ -124,22 +199,23 @@ function buildUpdatedLabel(time: number): string {
 Page({
   data: {
     theme: rootStore.settings.theme,
-    /** tab 列表（概念板块在前，行业板块在后） */
+    /** tab 列表（A股概念在前，A股行业、美股概念、美股行业在后） */
     tabs: TAB_ORDER.map((key) => ({ key, label: KIND_META[key].label })),
-    /** 当前 tab：默认概念板块 */
-    activeTab: 'concept' as BoardKind,
+    /** 当前 tab：默认 A股概念板块 */
+    activeTab: 'concept' as TabKind,
     /* ---- 当前 tab 的展示文案（随切 tab 同步，供 wxml 使用） ---- */
     headerTitle: KIND_META.concept.headerTitle,
     searchPlaceholder: KIND_META.concept.searchPlaceholder,
     countUnit: KIND_META.concept.countUnit,
     loadingText: KIND_META.concept.loadingText,
     loadingDesc: KIND_META.concept.loadingDesc,
+    dataNote: KIND_META.concept.dataNote,
     emptyText: KIND_META.concept.emptyText,
     loading: true,
     error: '',
     /** 当前展示条目（当前 tab：过滤 + 排序后的视图） */
     items: [] as IndustryRowView[],
-    /** 名称/代码过滤词（两类板块共用，切 tab 保留） */
+    /** 名称/代码过滤词（四类板块共用，切 tab 保留） */
     query: '',
     /** 涨跌幅排序方向：默认领涨在前 */
     sortDir: 'desc' as PctSortDir,
@@ -147,7 +223,12 @@ Page({
     totalCount: 0,
     updatedLabel: '',
     /** 各板块分类是否有请求进行中（不入渲染，供 isLoading / 防并发使用） */
-    requestingByKind: { concept: false, industry: false } as Record<BoardKind, boolean>,
+    requestingByKind: {
+      concept: false,
+      industry: false,
+      'us-concept': false,
+      'us-industry': false,
+    } as Record<TabKind, boolean>,
     /** scroll-view 下拉刷新进行中（refresher-triggered 受控值） */
     refreshing: false,
     /* ---- 板块成分股弹窗 ---- */
@@ -158,14 +239,14 @@ Page({
     memberEmpty: false,
     memberBoardName: '',
     memberBoardCode: '',
-    /** 板块所属 tab 标签（概念板块 / 行业板块） */
+    /** 板块所属 tab 标签（概念板块 / 行业板块 / 美股概念 / 美股行业） */
     memberKindLabel: '',
     /** 成分股只数（过滤前） */
     memberCount: 0,
     memberSortDir: 'desc' as PctSortDir,
     memberUpdatedLabel: '',
     /** 成分股原始条目（未排序，供切换领涨/领跌时重排） */
-    memberRawRows: [] as IndustryBoardRow[],
+    memberRawRows: [] as MemberRow[],
     /** 成分股当前展示条目（排序后） */
     memberItems: [] as IndustryRowView[],
   },
@@ -221,8 +302,14 @@ Page({
   refreshView() {
     const cache = cacheByKind[this.data.activeTab]
     const { query, sortDir } = this.data
-    const rows = sortIndustryRows(filterIndustryRows(cache.rawItems, query), sortDir)
-    this.setData({ items: rows.map(toView) })
+    const rows = isUsKind(this.data.activeTab)
+      ? sortIndustryRows(filterUsBoardRows(cache.rawItems as UsBoardRow[], query), sortDir)
+      : sortIndustryRows(filterIndustryRows(cache.rawItems, query), sortDir)
+    this.setData({
+      items: isUsKind(this.data.activeTab)
+        ? rows.map((row) => toUsBoardView(row as UsBoardRow))
+        : rows.map(toView),
+    })
   },
 
   /** 用当前 tab 的模块级缓存直接渲染列表（成功拉取 / 切 tab / 二次进入共用） */
@@ -245,14 +332,15 @@ Page({
   },
 
   /**
-   * 拉取指定板块分类的全量清单。
+   * 拉取指定板块分类的清单。
+   * - A股：东财 clist/get 全量板块；美股：精选目录 + 成分实时聚合（fetchUsBoardRows）；
    * - 静默刷新（silent）：不闪 loading，成功原地更新缓存（若仍为当前 tab 则同步视图），
    *   失败保留旧数据；
    * - 常规加载（首屏 / 下拉 / 重试 / 首次切 tab）：展示 loading 与错误态
    *   （仅当该分类仍是当前 tab 时写入页面状态，避免切走后被旧请求覆盖）；
    * - 该分类已有请求进行中直接跳过（防并发）。
    */
-  async loadKind(kind: BoardKind, options?: { silent?: boolean }) {
+  async loadKind(kind: TabKind, options?: { silent?: boolean }) {
     if (this.data.requestingByKind[kind]) return
     const { silent = false } = options ?? {}
     const meta = KIND_META[kind]
@@ -263,7 +351,9 @@ Page({
       this.setData({ loading: true, error: '' })
     }
     try {
-      const items = await fetchAllBoards(kind)
+      const items = isUsKind(kind)
+        ? await fetchUsBoardRows(usCatalogKind(kind))
+        : await fetchAllBoards(kind as BoardKind)
       const cache = cacheByKind[kind]
       if (!items.length) {
         cache.rawItems = []
@@ -288,9 +378,9 @@ Page({
     }
   },
 
-  /** 点击 tab：概念板块 ↔ 行业板块 切换 */
+  /** 点击 tab：A股概念 ↔ A股行业 ↔ 美股概念 ↔ 美股行业 切换 */
   onTabTap(event: WechatMiniprogram.TouchEvent) {
-    const target = event.currentTarget.dataset.kind as BoardKind | undefined
+    const target = event.currentTarget.dataset.kind as TabKind | undefined
     const meta = target ? KIND_META[target] : undefined
     if (!target || !meta || target === this.data.activeTab) return
     const cache = cacheByKind[target]
@@ -301,6 +391,7 @@ Page({
       countUnit: meta.countUnit,
       loadingText: meta.loadingText,
       loadingDesc: meta.loadingDesc,
+      dataNote: meta.dataNote,
       emptyText: meta.emptyText,
       error: '',
     })
@@ -317,6 +408,15 @@ Page({
   // ---------------------------------------------------------------------------
   // 板块行 → 成分股弹窗
   // ---------------------------------------------------------------------------
+
+  /** 当前板块行所属成分的取数器（A股 = 东财成分清单；美股 = 成分股实时聚合） */
+  buildMemberLoader(): () => Promise<MemberRow[]> {
+    const boardCode = this.data.memberBoardCode
+    if (isUsKind(this.data.activeTab)) {
+      return () => fetchUsBoardMembers(boardCode).then(toMemberRows)
+    }
+    return () => fetchBoardMembers(boardCode)
+  },
 
   /** 点击板块行：弹出该板块成分股面板（按涨跌幅排序） */
   onBoardRowTap(event: WechatMiniprogram.TouchEvent) {
@@ -341,7 +441,7 @@ Page({
         memberKindLabel: KIND_META[this.data.activeTab].label,
         memberItems: sortIndustryRows(this.data.memberRawRows, this.data.memberSortDir).map(toView),
       })
-      await this.runMemberLoad(board.code, true)
+      await this.runMemberLoad(board.code, true, this.buildMemberLoader())
       return
     }
     // 新板块：单次 setData 置为加载态并清空旧内容，保证弹窗首帧就是 loading，不闪旧数据/空列表
@@ -359,20 +459,25 @@ Page({
       memberRawRows: [],
       memberItems: [],
     })
-    await this.runMemberLoad(board.code, false)
+    await this.runMemberLoad(board.code, false, this.buildMemberLoader())
   },
 
   /**
    * 拉取指定板块的全部成分股并渲染（入串行队列执行，避免并发）。
    * - silent：后台保鲜刷新，不闪 loading、失败保留现有数据；
    * - 常规：展示加载 / 失败态；
+   * - loader：A股/美股的成分取数器（fetchBoardMembers / fetchUsBoardMembers）；
    * - 请求返回后仅当弹窗仍打开且目标板块未变才写入，过期结果直接丢弃
    *   （关闭弹窗后快速重开其它板块时，旧请求不会覆盖新标题内容）。
    */
-  runMemberLoad(boardCode: string, silent: boolean): Promise<void> {
+  runMemberLoad(
+    boardCode: string,
+    silent: boolean,
+    loader: () => Promise<MemberRow[]>,
+  ): Promise<void> {
     const job = async () => {
       try {
-        const rows = await fetchBoardMembers(boardCode)
+        const rows = await loader()
         // 弹窗已关闭 / 用户已切换目标板块：丢弃过期结果
         if (!this.data.memberVisible || this.data.memberBoardCode !== boardCode) return
         if (!rows.length) {
@@ -429,7 +534,8 @@ Page({
 
   onMemberRetry() {
     this.setData({ memberLoading: true, memberError: '' })
-    void this.runMemberLoad(this.data.memberBoardCode, false)
+    // 取数器按当前板块代码实时重建（memberBoardCode 已就位），无需额外状态
+    void this.runMemberLoad(this.data.memberBoardCode, false, this.buildMemberLoader())
   },
 
   onMemberClose() {
@@ -446,6 +552,12 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const member = this.data.memberItems[index]
     if (!member) return
+    if (member.mcode) {
+      // 美股成分股：mcode = 东财 secid（105./106./107. 前缀），minute 页按 EM_US_SECID_RE 直连
+      const query = `code=${encodeURIComponent(member.mcode)}&name=${encodeURIComponent(member.name)}`
+      wx.navigateTo({ url: `/packageQuote/pages/minute/index?${query}` })
+      return
+    }
     const tcCode = ashareTcCode(member.code)
     const query = `code=${tcCode}&name=${encodeURIComponent(member.name)}`
     wx.navigateTo({ url: `/packageQuote/pages/minute/index?${query}` })

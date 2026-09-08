@@ -130,7 +130,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  margin-top: 16rpx;
+  margin-top: 14rpx;
   padding: 0 24rpx;
 }
 
@@ -186,107 +186,92 @@
   color: #9cacc0;
 }
 
-/* 表头 */
-.list-head {
-  display: flex;
-  align-items: center;
-  margin-top: 16rpx;
-  padding: 0 24rpx 14rpx;
-  border-bottom: 1rpx solid #e2eaf3;
+/* 板块卡片网格：一行三列，卡片 = 板块名 + 涨跌幅标签（序号 / 代码不展示） */
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  padding: 12rpx 24rpx 16rpx;
 }
 
-.page.theme-dark .list-head {
-  border-bottom-color: #2a394e;
-}
-
-.list-head text {
-  color: #99a6b7;
-  font-size: 22rpx;
-}
-
-.page.theme-dark .list-head text {
-  color: #9cacc0;
-}
-
-/* 列宽（与 .board-row 各列一致） */
-.hd-rank {
-  width: 64rpx;
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.hd-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.hd-pct {
-  width: 130rpx;
-  flex-shrink: 0;
-  text-align: right;
-}
-
-/* 行业行 */
-.board-row {
-  display: flex;
-  align-items: center;
-  padding: 24rpx;
-  border-bottom: 1rpx solid #e2eaf3;
-}
-
-.page.theme-dark .board-row {
-  border-bottom-color: #2a394e;
-}
-
-.rank-no {
-  color: #99a6b7;
-  font-size: 24rpx;
-  font-feature-settings: 'tnum';
-  font-variant-numeric: tabular-nums;
-}
-
-/* 前三名排名号高亮（领涨/领跌榜首） */
-.board-row:nth-child(-n + 3) .rank-no {
-  color: #4278ed;
-  font-weight: 700;
-}
-
-.page.theme-dark .rank-no {
-  color: #9cacc0;
-}
-
-.page.theme-dark .board-row:nth-child(-n + 3) .rank-no {
-  color: #6fa3ff;
-}
-
-.name-col {
+.board-cell {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  min-height: 132rpx;
+  padding: 16rpx 8rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 18rpx;
+  background: #fff;
+  box-shadow: 0 2rpx 8rpx rgba(21, 35, 56, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.board-name {
+.board-cell-name {
+  width: 100%;
+  padding: 0 6rpx;
   color: #152338;
-  font-size: 27rpx;
+  font-size: 26rpx;
   font-weight: 600;
+  line-height: 36rpx;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.board-code {
-  margin-top: 4rpx;
-  color: #8a98aa;
-  font-size: 20rpx;
+/* 涨跌幅标签：圆角浅底胶囊，最小宽度保证整列对齐（涨跌色两主题一致） */
+.board-cell-pct {
+  min-width: 108rpx;
+  height: 38rpx;
+  margin-top: 10rpx;
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 38rpx;
+  text-align: center;
   font-feature-settings: 'tnum';
   font-variant-numeric: tabular-nums;
 }
 
-.page.theme-dark .board-name {
+.board-cell-pct.up {
+  background: rgba(235, 81, 77, 0.1);
+  color: #eb514d;
+}
+
+.board-cell-pct.down {
+  background: rgba(32, 166, 106, 0.1);
+  color: #20a66a;
+}
+
+.board-cell-pct.flat {
+  background: rgba(138, 152, 170, 0.13);
+  color: #8a98aa;
+}
+
+.page.theme-dark .board-cell {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.18);
+}
+
+.page.theme-dark .board-cell-name {
   color: #f5f7fb;
 }
 
-.page.theme-dark .board-code {
+.page.theme-dark .board-cell-pct.up {
+  background: rgba(235, 81, 77, 0.2);
+}
+
+.page.theme-dark .board-cell-pct.down {
+  background: rgba(32, 166, 106, 0.2);
+}
+
+.page.theme-dark .board-cell-pct.flat {
+  background: rgba(156, 172, 192, 0.16);
   color: #9cacc0;
 }
 
@@ -458,13 +443,16 @@
   background: #6fa3ff;
 }
 
-/* 板块行可点击反馈 */
-.board-row-hover {
+/* 板块卡片点击反馈：轻微缩小 + 提亮，保留圆角与阴影层次 */
+.board-cell-hover {
   background: #f2f6fa;
+  transform: scale(0.97);
+  box-shadow: 0 1rpx 4rpx rgba(21, 35, 56, 0.06);
 }
 
-.page.theme-dark .board-row-hover {
+.page.theme-dark .board-cell-hover {
   background: #223248;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.25);
 }
 
 /* ---------------------------------------------------------------------------

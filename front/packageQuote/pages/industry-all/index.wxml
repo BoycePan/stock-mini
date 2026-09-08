@@ -80,7 +80,7 @@
     <block wx:else>
       <view class="data-notice">
         <view class="notice-icon">!</view>
-        <text class="notice-text">行情来自公开接口，仅供参考，不构成投资建议。</text>
+        <text class="notice-text">{{ dataNote }}</text>
       </view>
 
       <!-- 列表上方信息行：当前板块总数 + 排序按钮 + 更新时间 -->
@@ -104,33 +104,25 @@
         <text wx:if="{{ updatedLabel }}" class="list-updated">{{ updatedLabel }}</text>
       </view>
 
-      <!-- 表头 -->
-      <view class="list-head">
-        <text class="hd-rank">#</text>
-        <text class="hd-name">板块名称</text>
-        <text class="hd-pct">涨跌幅</text>
-      </view>
-
       <view wx:if="{{ !items.length }}" class="empty-row">
         <text>{{ emptyText }}</text>
       </view>
 
-      <view
-        class="board-row"
-        hover-class="board-row-hover"
-        wx:for="{{ items }}"
-        wx:key="code"
-        data-index="{{ index }}"
-        bindtap="onBoardRowTap"
-        aria-role="button"
-        aria-label="查看{{ item.name }}成分股"
-      >
-        <text class="hd-rank rank-no">{{ index + 1 }}</text>
-        <view class="hd-name name-col">
-          <text class="board-name">{{ item.name }}</text>
-          <text class="board-code">{{ item.code }}</text>
+      <!-- 板块卡片：一行三列，只展示板块名 + 涨跌幅（序号 / 代码不展示），点卡片看成分股 -->
+      <view class="board-grid">
+        <view
+          class="board-cell"
+          hover-class="board-cell-hover"
+          wx:for="{{ items }}"
+          wx:key="code"
+          data-index="{{ index }}"
+          bindtap="onBoardRowTap"
+          aria-role="button"
+          aria-label="查看{{ item.name }}成分股"
+        >
+          <text class="board-cell-name">{{ item.name }}</text>
+          <text class="board-cell-pct {{ item.pctClass }}">{{ item.pctText }}</text>
         </view>
-        <text class="hd-pct pct-text {{ item.pctClass }}">{{ item.pctText }}</text>
       </view>
     </block>
 
