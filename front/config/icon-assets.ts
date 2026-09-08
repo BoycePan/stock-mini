@@ -27,10 +27,16 @@ export const QUOTE_ICON_ASSETS: Record<string, string> = {
   ALUMINUM: '/static/icons/emoji/1fa99.png',
   ANTIMONY: '/static/icons/emoji/1f9ea.png',
   AVG: '/static/icons/emoji/1f9ee.png',
+  BK0422: '/static/icons/emoji/1f69a.png', // 物流（2026-09-07 手动补充，下同）
   BK0438: '/static/icons/emoji/1f6d2.png',
+  BK0448: '/static/icons/emoji/1f4e1.png',
+  BK0451: '/static/icons/emoji/1f3e2.png',
   BK0464: '/static/icons/emoji/1f6e2.png',
+  BK0473: '/static/icons/emoji/1f4b9.png',
+  BK0474: '/static/icons/emoji/2602.png',
   BK0475: '/static/icons/emoji/1f3e6.png',
   BK0478: '/static/icons/emoji/1f9f2.png',
+  BK0479: '/static/icons/emoji/1f9f1.png',
   BK0490: '/static/icons/emoji/1f6e1.png',
   BK0493: '/static/icons/emoji/1f331.png',
   BK0547: '/static/icons/metal/gold-bar.png',
@@ -38,18 +44,27 @@ export const QUOTE_ICON_ASSETS: Record<string, string> = {
   BK0577: '/static/icons/emoji/2622.png',
   BK0579: '/static/icons/emoji/2601.png',
   BK0588: '/static/icons/emoji/2600.png',
+  BK0737: '/static/icons/emoji/1f4bb.png', // 软件
+  BK0739: '/static/icons/emoji/1f3ed.png', // 工程机械
   BK0802: '/static/icons/emoji/1f697.png',
   BK0843: '/static/icons/emoji/26fd.png',
   BK0917: '/static/icons/emoji/1f52c.png',
   BK0921: '/static/icons/emoji/1f6f0.png',
   BK0922: '/static/icons/emoji/1f5c4.png',
   BK0963: '/static/icons/emoji/1f680.png',
-  BK1016: '/static/icons/emoji/1f9ea.png',
+  BK1037: '/static/icons/emoji/1f4f1.png', // 消费电子
   BK1090: '/static/icons/emoji/1f916.png',
   BK1128: '/static/icons/emoji/1f4a1.png',
   BK1134: '/static/icons/emoji/1f9e0.png',
   BK1137: '/static/icons/emoji/1f4be.png',
   BK1216: '/static/icons/emoji/1f48a.png',
+  BK1262: '/static/icons/emoji/1f698.png', // 汽车
+  BK1301: '/static/icons/emoji/1f3ae.png', // 游戏
+  BK1326: '/static/icons/emoji/2699.png', // 半导体设备
+  BK1479: '/static/icons/emoji/2708.png', // 航空
+  BK1600: '/static/icons/emoji/1f9ec.png', // 医药外包
+  BK1605: '/static/icons/emoji/1fa7a.png', // 医疗设备
+  BK1626: '/static/icons/emoji/1f9ea.png', // 稀土（2026-09-07 由 BK1016 改现行代码）
   BK1647: '/static/icons/emoji/26a1.png',
   BRT: '/static/icons/emoji/1f6e2.png',
   CNYJPY: '/static/icons/emoji/1f4b1.png',

@@ -219,7 +219,7 @@
 | 0b   | A股平均股价（通达信 880003 口径，等权平均）：①东财官方平均股价指数（`ulist.np/get`，secid `47.800005`，**用户指定接口**）→ ②腾讯 `sh880003`（与步骤 0 同批请求）→ ③新浪 `sh880003` → ④东财全市场等权自算（`clist/get`，**60s 缓存**）                                                                                       | ①的入参：`fltt=2&fields=f17,f18,f8,f15,f12,f16,f115,f2,f14,f5,f6,f3,f20,f13,f145,f100,f265,f266&secids=47.800005`（`data.diff[0]` 取 `f2` 最新价 / `f3` 涨跌幅 / `f18` 昨收 / `f14` 名称）；④的入参：`fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23`（沪深主板+创业板+科创板）、`fields=f2,f18`；优先 `push2delay` 大页（pz=8000）→ 覆盖不足分页补齐 → 回退 `push2.eastmoney.com`（生产需加白名单） | 平均股价=最新价等权平均，涨跌幅=(今均价−昨均价)/昨均价；全部源失败 / 覆盖度与区间校验不过时该卡片显示 `--`；卡片支持当日分时（东财 `trends2/get?secid=47.800005`，见 minute-api.md） |
 | 1    | ②新浪批量预取 1 次                                                                                                                                    | 宏观资产全部新浪 key：`znb_VIX,DINIW`（`gb_TLT` 不在此批，逐项拉取；BRT/GC/SI/HG/NG/USDCNY 均走东财单一源，`hf_OIL/hf_GC/hf_XAU/hf_SI/hf_XAG/hf_HG/hf_NG/fx_susdcny` 不再预取）                                                                                 | 供后续逐项解析复用，避免重复请求                                               |
 | 2    | 宏观资产 10 项逐项 `quote.fetchAccurate` 多源并发现拉                                                                                                  | 见下表 A（新浪→腾讯→东财兜底，`parallel=min(2,n)`）                                                                                                                                               | 共识聚合取中位数                                                               |
-| 3    | 行业板块：A 股时段（09:30–15:00 含午休 + 待盘前窗口 15:00–美股盘前开始前，夏令时 16:00 / 冬令时 17:00）`fetchAShareBoardChangeMap(24 个板块代码)` 1 次；美股盘前/盘中/盘后及周末 `fetchUsProxyChangeMap(全部 proxies, usMode)`（②新浪 + ④东财各 1 次） | 见下表 B                                                                                                                                                                                          | 板块涨跌幅；A 股时段（含待盘前窗口）取东财板块，其余取美股代理股涨跌幅均值；数据源判定见 `utils/market-clock.ts` `resolveIndustryUseA`，标题右侧阶段胶囊见 `resolveIndustryPhase` |
+| 3    | 行业板块：A 股时段（09:30–15:00 含午休 + 待盘前窗口 15:00–美股盘前开始前，夏令时 16:00 / 冬令时 17:00）`fetchAShareBoardChangeMap(39 个板块代码)` 1 次；美股盘前/盘中/盘后及周末 `fetchUsProxyChangeMap(全部 proxies, usMode)`（②新浪 + ④东财各 1 次） | 见下表 B                                                                                                                                                                                          | 板块涨跌幅；A 股时段（含待盘前窗口）取东财板块，其余取美股代理股涨跌幅均值；数据源判定见 `utils/market-clock.ts` `resolveIndustryUseA`，标题右侧阶段胶囊见 `resolveIndustryPhase` |
 
 **A. 宏观资产 10 项（code / name / 数据源）**
 
@@ -236,7 +236,11 @@
 | NG   | 天然气         | 东财 `102.NG00Y`（**em_ulist**，与分时页同源；曾误配 `101.HG00Y`（铜）导致卡片展示铜价） |
 | SOX  | 费城半导体指数 | 东财 `251.SOX`                                                  |
 
-**B. 行业板块 24 项（code / name / aSecid / 美股代理 proxies）**
+**B. 行业板块 39 项（code / name / aSecid / 美股代理 proxies）**
+
+> 24 项为原「跨市场科技/资源赛道」；2026-09-07 起扩充 15 项主流行业（金融/医药/科技制造/
+> 地产物流航空等）。全部板块保持双源口径：A 股时段取东财板块（`90.BKxxxx`，BK 代码按东财
+> 行业板块清单实测），其余时段取美股代理股涨跌幅均值（代理 secid 均经东财 searchapi/ulist 核实）。
 
 | code   | name     | aSecid    | proxies                              |
 | ------ | -------- | --------- | ------------------------------------ |
@@ -263,7 +267,22 @@
 | BK0475 | 银行金融 | 90.BK0475 | JPM, BAC, WFC, GS                    |
 | BK1216 | 生物医药 | 90.BK1216 | LLY, PFE, MRK, ABBV                  |
 | BK0438 | 消费     | 90.BK0438 | KO, PG, WMT, COST                    |
-| BK1016 | 稀土     | 90.BK1016 | MP, REMX, UUUU                       |
+| BK1626 | 稀土     | 90.BK1626 | MP, REMX, UUUU                       |
+| BK0473 | 证券     | 90.BK0473 | GS, MS, SCHW                         |
+| BK0474 | 保险     | 90.BK0474 | KIE                                  |
+| BK1605 | 医疗设备 | 90.BK1605 | MDT, ABT, SYK, BSX                   |
+| BK1600 | 医药外包 | 90.BK1600 | IQV, CRL, ICLR                       |
+| BK1326 | 半导体设备 | 90.BK1326 | AMAT, LRCX, KLAC, ASML             |
+| BK0737 | 软件     | 90.BK0737 | IGV                                  |
+| BK1301 | 游戏     | 90.BK1301 | NTES, TTWO                           |
+| BK1037 | 消费电子 | 90.BK1037 | AAPL, DELL, HPQ                      |
+| BK0448 | 通信设备 | 90.BK0448 | CSCO, ERIC, NOK                      |
+| BK1262 | 汽车     | 90.BK1262 | TSLA, GM, F                          |
+| BK0739 | 工程机械 | 90.BK0739 | CAT, DE                              |
+| BK0479 | 钢铁     | 90.BK0479 | SLX                                  |
+| BK0422 | 物流     | 90.BK0422 | FDX, UPS                             |
+| BK1479 | 航空     | 90.BK1479 | JETS                                 |
+| BK0451 | 房地产   | 90.BK0451 | XHB                                  |
 
 > 美股代理 secid 前缀规则：`105.`/`106.`/`107.` 表示不同市场号（原配置即如此，如 `105.NVDA`、`106.COHR`、`107.ROBO`）；`fetchUsProxyChangeMap` 对市场 100/105/106/107 走新浪 `gb_` 优先。
 
@@ -437,7 +456,7 @@
 
 | 页面 | 数据字段                                                                                                                                                   | 来源                                    |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 10 项 + 行业板块 24 项 + 会话   |
+| 全球 | `economyItems[]`（code/name/value/toneClass/arrow/changeText）、`industryItems[]`（code/name/icon/changeText/…）、`sessionLabel/sessionPhase/sessionBadge` | 宏观资产 10 项 + 行业板块 39 项 + 会话   |
 | 日韩 | `krIndexes/jpIndexes/asiaIndexes/krStocks/jpStocks/forexRates[]`（code/name/price/rawPct/change/changeText/toneClass/arrow）                               | 指数 6 + 个股 16 + 汇率 5               |
 | 有色 | `sections[]`（title + cards[]（name/value/toneClass/arrow/changeText））                                                                                   | 金银 2 + 工业金属 5 + 其他金属 5        |
 | AI   | `productItems[]`（name/price/pct）、`deviceItems[]`                                                                                                        | A 股产品标的 + 美股设备标的（当前为空） |

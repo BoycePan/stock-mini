@@ -150,7 +150,16 @@ export const MACRO_ASSETS: MacroAssetConfig[] = [
   },
 ]
 
-/** 行业板块 24 项（docs 表 B：aSecid 固定 90.BKxxxx，proxies 为美股代理股） */
+/**
+ * 行业板块 39 项（docs 表 B：aSecid 固定 90.BKxxxx，proxies 为美股代理股）。
+ * 24 项为原「跨市场科技/资源赛道」（A 股时段展示东财板块、美股时段展示代理股均值）；
+ * 2026-09-07 起扩充 15 项主流行业（金融/医药/科技制造/地产物流等），全部板块均保持
+ * 「A股 BK 板块 + 美股代理股」双源口径，BK 代码取自东财行业板块实时清单实测，
+ * 代理股 secid 均经东财 searchapi/ulist 核实市场号。新增板块需同步：
+ * config/minute.ts（BK 分时源 + US_PROXY_NAMES 中文名）、utils/quote-pages.ts（图标）、
+ * config/icon-assets.ts（图标 PNG 映射）、docs/tabbar-api.md 表 B。
+ */
+
 export interface IndustryBoardConfig {
   code: string
   name: string
@@ -197,7 +206,67 @@ export const INDUSTRY_BOARDS: IndustryBoardConfig[] = [
   { code: 'BK0475', name: '银行金融', proxies: ['106.JPM', '106.BAC', '106.WFC', '106.GS'] },
   { code: 'BK1216', name: '生物医药', proxies: ['106.LLY', '106.PFE', '106.MRK', '106.ABBV'] },
   { code: 'BK0438', name: '消费', proxies: ['106.KO', '106.PG', '105.WMT', '105.COST'] },
-  { code: 'BK1016', name: '稀土', proxies: ['106.MP', '107.REMX', '107.UUUU'] },
+  // 稀土：原 BK1016 已被东财现行口径改指「汽车服务」（代码漂移），2026-09-07 改为现行
+  // 行业清单实测的 BK1626「稀土」（东财 searchapi/ulist 实测），展示名与代理股不变
+  { code: 'BK1626', name: '稀土', proxies: ['106.MP', '107.REMX', '107.UUUU'] },
+
+  // ---------------------------------------------------------------------------
+  // 2026-09-07 扩充：主流行业（东财行业板块清单实测 BK 代码 + 美股代理股，
+  // 代理股均经东财 searchapi/ulist 核实市场号；新增须同步 minute.ts / quote-pages.ts / docs）
+  // ---------------------------------------------------------------------------
+
+  // 金融
+  {
+    code: 'BK0473',
+    name: '证券', // 东财行业板块「证券Ⅱ」
+    proxies: ['106.GS', '106.MS', '106.SCHW'],
+  },
+  {
+    code: 'BK0474',
+    name: '保险', // 东财行业板块「保险Ⅱ」
+    proxies: ['107.KIE'],
+  },
+  // 医药
+  {
+    code: 'BK1605',
+    name: '医疗设备', // 东财行业板块「医疗设备」
+    proxies: ['106.MDT', '106.ABT', '106.SYK', '106.BSX'],
+  },
+  {
+    code: 'BK1600',
+    name: '医药外包', // 东财行业板块「医疗研发外包」(CXO)
+    proxies: ['106.IQV', '106.CRL', '105.ICLR'],
+  },
+  // 科技
+  {
+    code: 'BK1326',
+    name: '半导体设备', // 东财行业板块「半导体设备」
+    proxies: ['105.AMAT', '105.LRCX', '105.KLAC', '105.ASML'],
+  },
+  { code: 'BK0737', name: '软件', proxies: ['107.IGV'] }, // 东财「软件开发」
+  { code: 'BK1301', name: '游戏', proxies: ['105.NTES', '105.TTWO'] }, // 东财「游戏Ⅲ」
+  {
+    code: 'BK1037',
+    name: '消费电子', // 东财行业板块「消费电子」
+    proxies: ['105.AAPL', '106.DELL', '106.HPQ'],
+  },
+  {
+    code: 'BK0448',
+    name: '通信设备', // 东财行业板块「通信设备」
+    proxies: ['105.CSCO', '105.ERIC', '106.NOK'],
+  },
+  // 汽车 / 高端制造
+  {
+    code: 'BK1262',
+    name: '汽车', // 东财行业板块「乘用车」
+    proxies: ['105.TSLA', '106.GM', '106.F'],
+  },
+  { code: 'BK0739', name: '工程机械', proxies: ['106.CAT', '106.DE'] }, // 东财「工程机械」
+  // 周期 / 物流 / 地产 / 航空
+  { code: 'BK0479', name: '钢铁', proxies: ['107.SLX'] }, // 东财「钢铁」
+  { code: 'BK0422', name: '物流', proxies: ['106.FDX', '106.UPS'] }, // 东财「物流」
+  { code: 'BK1479', name: '航空', proxies: ['107.JETS'] }, // 东财「航空运输」
+  { code: 'BK0451', name: '房地产', proxies: ['107.XHB'] }, // 东财「房地产开发」
 ]
 
 // ---------------------------------------------------------------------------
