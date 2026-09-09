@@ -59,12 +59,10 @@ function usCatalogKind(kind: TabKind): UsBoardKind {
 /** tab 顺序：A股概念在前（默认展示），A股行业、美股概念、美股行业在后 */
 const TAB_ORDER: TabKind[] = ['concept', 'industry', 'us-concept', 'us-industry']
 
-/** 单个板块分类的展示元信息（标题 / 文案随 tab 切换） */
+/** 单个板块分类的展示元信息（文案随 tab 切换；顶部标题统一为 logo + 小程序名称，见 wxml） */
 interface BoardKindMeta {
   /** tab 标签 */
   label: string
-  /** 导航标题 */
-  headerTitle: string
   /** 搜索框占位 */
   searchPlaceholder: string
   /** 「共 N 个{{countUnit}}」的计数单位 */
@@ -83,7 +81,6 @@ interface BoardKindMeta {
 const KIND_META: Record<TabKind, BoardKindMeta> = {
   concept: {
     label: '概念板块',
-    headerTitle: 'A股概念板块',
     searchPlaceholder: '搜索概念，如 CPO / 机器人 / 华为',
     countUnit: '概念',
     loadingText: '正在加载全部概念板块',
@@ -94,7 +91,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   industry: {
     label: '行业板块',
-    headerTitle: 'A股行业板块',
     searchPlaceholder: '搜索行业，如 煤炭 / 证券',
     countUnit: '行业',
     loadingText: '正在加载全部行业',
@@ -105,7 +101,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   'us-concept': {
     label: '美股概念',
-    headerTitle: '美股概念板块',
     searchPlaceholder: '搜索概念或代码，如 减肥药 / NVDA',
     countUnit: '板块',
     loadingText: '正在加载美股概念板块',
@@ -117,7 +112,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   'us-industry': {
     label: '美股行业',
-    headerTitle: '美股行业板块',
     searchPlaceholder: '搜索行业或代码，如 银行 / TSLA',
     countUnit: '板块',
     loadingText: '正在加载美股行业板块',
@@ -204,7 +198,6 @@ Page({
     /** 当前 tab：默认 A股概念板块 */
     activeTab: 'concept' as TabKind,
     /* ---- 当前 tab 的展示文案（随切 tab 同步，供 wxml 使用） ---- */
-    headerTitle: KIND_META.concept.headerTitle,
     searchPlaceholder: KIND_META.concept.searchPlaceholder,
     countUnit: KIND_META.concept.countUnit,
     loadingText: KIND_META.concept.loadingText,
@@ -386,7 +379,6 @@ Page({
     const cache = cacheByKind[target]
     this.setData({
       activeTab: target,
-      headerTitle: meta.headerTitle,
       searchPlaceholder: meta.searchPlaceholder,
       countUnit: meta.countUnit,
       loadingText: meta.loadingText,

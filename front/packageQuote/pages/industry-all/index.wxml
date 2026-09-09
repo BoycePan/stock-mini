@@ -1,11 +1,12 @@
 <view class="page theme-{{ theme }}">
   <!-- 头部固定在滚动区外（不随内容滚动）：导航 + 概念/行业 tab + 搜索框（加载完成前不显示搜索） -->
   <view class="page-header">
+    <!-- 顶部标题与首页一致：logo + 小程序名称（不传 title，app-header 兜底展示 appName）；
+         当前所属分类由下方 board-tabs 常驻标识，不再显示随 Tab 切换的 headerTitle -->
     <app-header
-      title="{{ headerTitle }}"
       showShare="{{ false }}"
       showBack="{{ true }}"
-      showBrand="{{ false }}"
+      showBrand="{{ true }}"
     ></app-header>
 
     <!-- 概念板块 / 行业板块 切换 tab（常驻：加载中 / 失败也可切到另一类） -->
@@ -64,6 +65,9 @@
     refresher-background="{{ theme === 'dark' ? '#151e2d' : '#e4ecf5' }}"
     bindrefresherrefresh="onRefresherRefresh"
   >
+    <!-- 广告位：滚动内容区第一个元素（location=industry-all；后端 adConfig 配置对应
+         unit-id 且 status=true 后渲染，未配置 / 未启用时不占位、不影响布局） -->
+    <ad-banner location="industry-all" placement="card"></ad-banner>
     <loading-state
       wx:if="{{ loading }}"
       text="{{ loadingText }}"
