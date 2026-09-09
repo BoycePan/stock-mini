@@ -5,6 +5,7 @@ import { stripHtml, truncateRichHtml } from '../../../utils/html'
 import type { NewsItem } from '../../../types/stock'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 import { SHARE_IMAGE_URL } from '../../../utils/share'
 
 const FEED_PAGE_SIZE = 20
@@ -56,6 +57,10 @@ Page({
       title: options.code ? `${options.code} 新闻` : '财经新闻',
     })
     await this.loadData(options.code)
+  },
+  onShow() {
+    // 插屏广告：页面每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('news')
   },
   async onPullDownRefresh() {
     try {

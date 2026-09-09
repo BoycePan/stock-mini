@@ -7,6 +7,7 @@ import { computeChangeView } from '../../../utils/market'
 import { isMinuteEnabled } from '../../../utils/system-config'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 import {
   formatUsMarketCap,
   sortUsStocks,
@@ -101,6 +102,8 @@ Page({
   },
 
   onShow() {
+    // 插屏广告：页面显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('us-top100')
     startAutoRefresh(this, lastListRequestAt, LIST_REFRESH_INTERVAL)
   },
 

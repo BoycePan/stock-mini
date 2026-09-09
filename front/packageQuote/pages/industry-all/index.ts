@@ -23,6 +23,7 @@ import {
 } from '../../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 
 /**
  * 板块列表页 —— A股全部板块（概念板块 + 行业板块）+ 美股精选板块（概念 + 行业）。
@@ -304,6 +305,8 @@ Page({
   },
 
   onShow() {
+    // 插屏广告：页面显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('industry-all')
     startAutoRefresh(this, lastListRequestAt, LIST_REFRESH_INTERVAL)
   },
 
