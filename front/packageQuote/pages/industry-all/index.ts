@@ -80,12 +80,10 @@ function usCatalogKind(kind: TabKind): UsBoardKind {
  */
 const TAB_ORDER: TabKind[] = ['concept', 'industry', 'us-concept', 'us-industry']
 
-/** 单个板块分类的展示元信息（标题 / 文案随 tab 切换） */
+/** 单个板块分类的展示元信息（文案随 tab 切换；顶部标题统一为 logo + 小程序名称，见 wxml） */
 interface BoardKindMeta {
   /** tab 标签 */
   label: string
-  /** 导航标题 */
-  headerTitle: string
   /** 搜索框占位 */
   searchPlaceholder: string
   /** 「共 N 个{{countUnit}}」的计数单位 */
@@ -104,7 +102,6 @@ interface BoardKindMeta {
 const KIND_META: Record<TabKind, BoardKindMeta> = {
   concept: {
     label: '概念板块',
-    headerTitle: 'A股概念板块',
     searchPlaceholder: '搜索概念，如 CPO / 机器人 / 华为',
     countUnit: '概念',
     loadingText: '正在加载全部概念板块',
@@ -115,7 +112,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   industry: {
     label: '行业板块',
-    headerTitle: 'A股行业板块',
     searchPlaceholder: '搜索行业，如 煤炭 / 证券',
     countUnit: '行业',
     loadingText: '正在加载全部行业',
@@ -126,7 +122,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   'us-concept': {
     label: '美股概念',
-    headerTitle: '美股概念板块',
     searchPlaceholder: '搜索概念或代码，如 减肥药 / NVDA',
     countUnit: '板块',
     loadingText: '正在加载美股概念板块',
@@ -138,7 +133,6 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
   },
   'us-industry': {
     label: '美股行业',
-    headerTitle: '美股行业板块',
     searchPlaceholder: '搜索行业或代码，如 银行 / TSLA',
     countUnit: '板块',
     loadingText: '正在加载美股行业板块',
@@ -148,6 +142,17 @@ const KIND_META: Record<TabKind, BoardKindMeta> = {
     errorText: '美股行业板块加载失败，请点击下方按钮重试',
     emptyText: '未找到匹配的行业，换个关键词试试',
   },
+}
+
+/**
+ * 分享 / 海报文案中的分类标题（含市场前缀，如「A股概念板块」）。
+ * 仅用于分享场景区分当前分类；页内顶部标题已统一为 logo + 小程序名称（见 wxml）。
+ */
+const SHARE_TITLE: Record<TabKind, string> = {
+  concept: 'A股概念板块',
+  industry: 'A股行业板块',
+  'us-concept': '美股概念板块',
+  'us-industry': '美股行业板块',
 }
 
 /** 每个板块分类的模块级清单缓存（跨页面实例共享：量小，切 tab 即时展示） */
@@ -225,7 +230,6 @@ Page({
     /** 当前 tab：默认 A股概念板块（首页入口按展示口径透传 ?tab= 覆盖，见 onLoad） */
     activeTab: 'concept' as TabKind,
     /* ---- 当前 tab 的展示文案（随切 tab 同步，供 wxml 使用） ---- */
-    headerTitle: KIND_META.concept.headerTitle,
     searchPlaceholder: KIND_META.concept.searchPlaceholder,
     countUnit: KIND_META.concept.countUnit,
     loadingText: KIND_META.concept.loadingText,
@@ -430,7 +434,6 @@ Page({
     const cache = cacheByKind[kind]
     this.setData({
       activeTab: kind,
-      headerTitle: meta.headerTitle,
       searchPlaceholder: meta.searchPlaceholder,
       countUnit: meta.countUnit,
       loadingText: meta.loadingText,
@@ -682,7 +685,7 @@ Page({
     }
     this.setData({
       posterData: {
-        title: meta.headerTitle,
+        title: SHARE_TITLE[kind],
         subtitle: APP_NAME,
         statusText: `共 ${cache.rawItems.length} 个${meta.countUnit}`,
         stamp: formatShareStamp(new Date()),
@@ -705,10 +708,10 @@ Page({
    */
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     trackEvent('share.trigger')
-    const meta = KIND_META[this.data.activeTab]
+    const kind = this.data.activeTab
     return {
-      title: meta.headerTitle,
-      path: buildSharePath('industry-all', { tab: this.data.activeTab }),
+      title: SHARE_TITLE[kind],
+      path: buildSharePath('industry-all', { tab: kind }),
       imageUrl: SHARE_IMAGE_URL,
     }
   },

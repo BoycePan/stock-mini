@@ -4,6 +4,7 @@
     "loading-state": "/components/loading-state/index",
     "disclaimer-footer": "/components/disclaimer-footer/index",
     "share-poster": "/components/share-poster/index",
+    "ad-banner": "/components/ad-banner/index",
     "t-icon": "tdesign-miniprogram/icon/icon"
   },
   "enablePullDownRefresh": false
