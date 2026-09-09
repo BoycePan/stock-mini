@@ -38,6 +38,18 @@ export interface MarketPageOptions {
    */
   showHomeEntries?: () => boolean
   /**
+   * 首页是否展示「A股指数 + 美股指数」主入口分区（`cn-index` / `us-index` 两个分区，
+   * login 配置 showMainEntrance / showMainEntranceDev 驱动，见 pages/global/index.ts 与
+   * utils/system-config.ts resolveMainEntranceEnabled）。与 showHomeEntries（仅过滤分区内
+   * 的入口卡）不同，本开关**整块过滤分区**：关闭时首页不展示这两个指数分区。
+   * 纯视图过滤——数据层（api/market.ts getGlobalMarketPage）恒拉取指数数据，**不影响
+   * 实际请求**，也不影响其他分区（宏观经济 / 行业板块等）的展示与请求；
+   * 函数体读取 rootStore.system.loginConfig（登录接口下发的 login 配置），MobX 绑定
+   * 自动追踪，登录配置到达时分区即时出现/隐藏。仅首页（global）传此选项；
+   * 其他页面缺省 true（无此类分区，不影响）。
+   */
+  showMainEntrance?: () => boolean
+  /**
    * 弹窗公告（服务端 notices 接口 position='home' 驱动，见 stores/system.store.ts
    * homePopupNotice / utils/popup-notice.ts resolveHomePopupNotice）：响应式 getter，
    * 返回 PopupNotice | null，作为 store 绑定 computed 字段——公告拉取到达时即时出现，
@@ -126,6 +138,13 @@ export function createMarketPage(opts: MarketPageOptions) {
             popupNotice: () => opts.popupNotice?.() ?? null,
             popupStorageKey: () => opts.popupStorageKey?.() ?? 'popup_notice_state',
             sections: () => {
+              // 全局页「A股指数 + 美股指数」主入口分区的视图层判读（login 配置
+              // showMainEntrance / showMainEntranceDev，showMainEntrance 由 pages/global/index.ts
+              // 提供，纯读 store 不触发任何请求）：关闭时整块过滤 cn-index / us-index 分区——
+              // 数据层恒拉取指数数据（不影响实际请求），仅首页视图不展示；登录配置到达
+              // 即时出现 / 隐藏。分区 id 与 utils/quote-pages.ts buildQuoteGlobalPage 对齐。
+              const showMainEntrance = opts.showMainEntrance?.() ?? true
+              const isMainEntranceSection = (id: string) => id === 'cn-index' || id === 'us-index'
               // 全局页「配置开关控制的入口卡」的视图层判读：美股市值TOP100（us-top100）与
               // A股全部板块（industry-all，行业板块区入口）共用同一开关（showHomeEntries 由
               // pages/global/index.ts 提供，纯读 store 不触发任何请求）——配置未就绪缺省隐藏、
@@ -137,19 +156,21 @@ export function createMarketPage(opts: MarketPageOptions) {
               // utils/system-config.ts）：关闭时隐藏「分时」角标，
               // 避免展示一个点进去会被拦截的入口；纯读 store，配置到达即时生效。
               const minuteEnabled = isMinuteEnabled()
-              return (rootStore.market.pages[pageKey]?.sections ?? []).map((section) => ({
-                ...section,
-                metrics: section.metrics
-                  .filter((metric) => !isHomeEntryCode(metric.code ?? '') || showHomeEntries)
-                  .map((metric) => ({
-                    ...metricViewModel(metric),
-                    // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
-                    // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code；
-                    // 分时入口开关关闭时整体置 false（角标隐藏）。
-                    minuteAvailable:
-                      hasMinuteSources(metric.minuteCode ?? metric.code ?? '') && minuteEnabled,
-                  })),
-              }))
+              return (rootStore.market.pages[pageKey]?.sections ?? [])
+                .filter((section) => !isMainEntranceSection(section.id) || showMainEntrance)
+                .map((section) => ({
+                  ...section,
+                  metrics: section.metrics
+                    .filter((metric) => !isHomeEntryCode(metric.code ?? '') || showHomeEntries)
+                    .map((metric) => ({
+                      ...metricViewModel(metric),
+                      // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
+                      // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code；
+                      // 分时入口开关关闭时整体置 false（角标隐藏）。
+                      minuteAvailable:
+                        hasMinuteSources(metric.minuteCode ?? metric.code ?? '') && minuteEnabled,
+                    })),
+                }))
             },
           },
           actions: [],

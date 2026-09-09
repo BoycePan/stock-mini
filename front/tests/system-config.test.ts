@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  resolveMainEntranceEnabled,
   resolveMinuteEnabled,
   resolveTop100Enabled,
   resolveUserShowEnvEnabled,
@@ -9,6 +10,9 @@ import {
 import type { AppConfig } from '../types/system.ts'
 
 const withConfig = (config: NonNullable<AppConfig['config']>): AppConfig => ({ config })
+const withLoginConfig = (config: NonNullable<AppConfig['loginConfig']>): AppConfig => ({
+  loginConfig: config,
+})
 
 test('线上正式版：展示由 homeShowTop100 决定', () => {
   assert.equal(
@@ -116,4 +120,47 @@ test('开发者选项开关 userShowEnv：单一键、无 Dev 尾缀，由 userS
 test('开发者选项开关 userShowEnv：配置未就绪 / 键缺省一律关闭（入口缺省隐藏）', () => {
   assert.equal(resolveUserShowEnvEnabled(undefined), false)
   assert.equal(resolveUserShowEnvEnabled(withConfig({}).config), false)
+})
+
+test('首页主入口分区开关（login 配置）：线上正式版由 showMainEntrance 决定', () => {
+  assert.equal(
+    resolveMainEntranceEnabled(
+      withLoginConfig({ showMainEntrance: true, showMainEntranceDev: false }).loginConfig,
+      true,
+    ),
+    true,
+  )
+  assert.equal(
+    resolveMainEntranceEnabled(
+      withLoginConfig({ showMainEntrance: false, showMainEntranceDev: true }).loginConfig,
+      true,
+    ),
+    false,
+  )
+})
+
+test('首页主入口分区开关（login 配置）：开发版/体验版由 showMainEntranceDev 决定', () => {
+  assert.equal(
+    resolveMainEntranceEnabled(
+      withLoginConfig({ showMainEntrance: false, showMainEntranceDev: true }).loginConfig,
+      false,
+    ),
+    true,
+  )
+  assert.equal(
+    resolveMainEntranceEnabled(
+      withLoginConfig({ showMainEntrance: true, showMainEntranceDev: false }).loginConfig,
+      false,
+    ),
+    false,
+  )
+})
+
+test('首页主入口分区开关（login 配置）：登录未下发 / 键缺省一律关闭（分区缺省不展示）', () => {
+  // 无 loginConfig 分组（登录接口未下发 login 配置，如旧后端 / 后台未建组）
+  assert.equal(resolveMainEntranceEnabled(undefined, true), false)
+  assert.equal(resolveMainEntranceEnabled(undefined, false), false)
+  // 分组存在但键缺省
+  assert.equal(resolveMainEntranceEnabled(withLoginConfig({}).loginConfig, true), false)
+  assert.equal(resolveMainEntranceEnabled(withLoginConfig({}).loginConfig, false), false)
 })

@@ -23,8 +23,22 @@ export interface AdConfig {
   bannerAd?: AdBannerConfig[]
 }
 
+/**
+ * cfg_type='login' 的配置分组（跟随登录接口下发，见 types/user.ts LoginResult.config 与
+ * docs/API.md 8.3）：登录接口响应 `data.config`（摊平对象）里的顶层分组键。
+ */
+export interface LoginConfig {
+  /** 首页「A股指数 + 美股指数」主入口分区是否展示（线上正式版读取 showMainEntrance） */
+  showMainEntrance?: boolean
+  /** 首页「A股指数 + 美股指数」主入口分区是否展示（开发版 / 体验版读取 showMainEntranceDev，
+   *  键由 showMainEntrance 自动推导 + 'Dev' 尾缀，见 utils/system-config.ts） */
+  showMainEntranceDev?: boolean
+}
+
 /** 前端展示配置：分组→嵌套对象 / 单独项→顶层键，值已解析。
- *  单个配置键均可缺省（后台未创建 / 尚未下发时为 undefined，前端按「关闭」处理）。 */
+ *  单个配置键均可缺省（后台未创建 / 尚未下发时为 undefined，前端按「关闭」处理）。
+ *  顶层键为各交付类型（cfg_type）摊平树的组键：display 组 `config` / `adConfig`、
+ *  login 组 `loginConfig`（见 LoginConfig）等。 */
 export type AppConfig = Partial<{
   config: {
     homeShowTop100?: boolean
@@ -39,6 +53,9 @@ export type AppConfig = Partial<{
      *  （设置页 = isDev && userShowEnv，即仅在开发 / 体验版可能展示，见 utils/system-config.ts）。 */
     userShowEnv?: boolean
   }
+  /** cfg_type='login' 的配置分组（跟随登录接口下发、登录后即用，见 stores/system.store.ts
+   *  loginConfig 与 docs/API.md 8.3）；登录未下发 / 尚未配置时为 undefined（前端按「关闭」处理） */
+  loginConfig?: LoginConfig
   /** 广告位配置（各页面按 location 查找 unit-id 渲染，见 components/ad-banner） */
   adConfig?: AdConfig
 }>

@@ -1,5 +1,5 @@
 import { rootStore } from '../../stores/root.store'
-import { isTop100Enabled } from '../../utils/system-config'
+import { isMainEntranceEnabled, isTop100Enabled } from '../../utils/system-config'
 import { createMarketPage } from '../../utils/market-page-factory'
 
 /**
@@ -12,11 +12,24 @@ import { createMarketPage } from '../../utils/market-page-factory'
  */
 const showHomeEntries = () => isTop100Enabled()
 
+/**
+ * 首页是否展示「A股指数 + 美股指数」主入口分区（cn-index / us-index 两个分区，
+ * 见 utils/quote-pages.ts buildQuoteGlobalPage）——**login 配置**驱动：
+ * 线上正式版读 showMainEntrance，开发版/体验版读 showMainEntranceDev
+ * （utils/system-config.ts，isMainEntranceEnabled 自动读取当前环境 +
+ * rootStore.system.loginConfig，该配置跟随登录接口下发、登录后即用）。
+ * 判读是纯视图层同步读 store（MobX 绑定自动追踪，登录配置到达时分区即时出现），
+ * 数据层（api/market.ts getGlobalMarketPage）恒拉取指数数据，**不影响实际请求**；
+ * 配置未就绪时缺省隐藏。
+ */
+const showMainEntrance = () => isMainEntranceEnabled()
+
 createMarketPage({
   pageKey: 'global',
   loadingText: '正在加载全球行情',
   loadingDesc: '正在为您同步全球主要市场最新数据，请稍候…',
   showHomeEntries,
+  showMainEntrance,
   // 首页弹窗公告（服务端 notices 接口 position='home' 驱动）：进入首页按规则弹出——
   // minVersion 版本门槛 + count 天每日一次（utils/popup-notice.ts），点击跳转 TOP100 列表页。
   // 公告标题 / 内容 / 跳转路径 / 按钮文案 / 版本门槛 / 展示天数由管理端在公告配置中维护，

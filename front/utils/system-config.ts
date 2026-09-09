@@ -8,6 +8,22 @@ const DEV_KEY_SUFFIX = 'Dev'
 type FeatureToggleKey = keyof NonNullable<AppConfig['config']>
 
 /**
+ * 「正式键 + Dev 键」双键布尔读取核心（display 开关工厂与 login 配置开关解析器共用）：
+ * 线上正式版（release）读 `<releaseKey>`、开发版 / 体验版（develop / trial）读自动推导的
+ * `<releaseKey>Dev`；配置未就绪（undefined）或键缺省一律 false（缺省关闭），
+ * 绝不等配置接口、不影响行情首屏加载；配置到达后下一次刷新即生效。
+ */
+function pickDualKeyToggle<C extends object>(
+  config: C | undefined,
+  releaseKey: keyof C & string,
+  release: boolean,
+): boolean {
+  if (!config) return false
+  const key = (release ? releaseKey : `${releaseKey}${DEV_KEY_SUFFIX}`) as keyof C & string
+  return (config[key] as boolean | undefined) ?? false
+}
+
+/**
  * createFeatureToggle — 「双环境布尔开关」解析器工厂（配置驱动，见 docs/API.md 八「前端配置与公告」）。
  *
  * 后台 app_config（cfg_type='display'）为每个开关维护一对键：
@@ -29,11 +45,7 @@ type FeatureToggleKey = keyof NonNullable<AppConfig['config']>
 export function createFeatureToggle(
   releaseKey: FeatureToggleKey,
 ): (config: AppConfig['config'], release: boolean) => boolean {
-  const devKey = `${releaseKey}${DEV_KEY_SUFFIX}` as FeatureToggleKey
-  return (config, release) => {
-    if (!config) return false
-    return release ? (config[releaseKey] ?? false) : (config[devKey] ?? false)
-  }
+  return (config, release) => pickDualKeyToggle(config, releaseKey, release)
 }
 
 /**
@@ -72,3 +84,24 @@ export const resolveUserShowEnvEnabled = (config: AppConfig['config']): boolean 
 
 /** 便捷版：后台 display 配置 userShowEnv 是否开启（读全局配置 store，配置到达即时生效） */
 export const isUserShowEnvEnabled = bindToggle((config) => resolveUserShowEnvEnabled(config))
+
+/**
+ * 首页「A股指数 + 美股指数」主入口分区是否展示（**login 配置驱动**，与 display 开关的
+ * 「正式键 + Dev 键」双键语义一致）：
+ * - 配置源为 `cfg_type='login'`、跟随登录接口下发（`LoginResult.config` 里的顶层分组
+ *   `loginConfig`，见 types/user.ts / types/system.ts LoginConfig 与 docs/API.md 8.3），
+ *   由 rootStore.bootstrap 登录成功后写入 `rootStore.system.loginConfig`，登录后即用、
+ *   无需再单独请求配置接口（复用「登录下发 login 配置」链路）；
+ * - 线上正式版读 `showMainEntrance`，开发版 / 体验版读 `showMainEntranceDev`（自动推导
+ *   + 'Dev' 尾缀）；配置未就绪 / 键缺省一律 false（缺省不展示该分区）。
+ * 返回纯函数（只读 loginConfig 分组、环境判定由调用方传入），便于单测。
+ */
+export const resolveMainEntranceEnabled = (
+  config: AppConfig['loginConfig'],
+  release: boolean,
+): boolean => pickDualKeyToggle(config, 'showMainEntrance', release)
+
+/** 便捷版：当前环境首页是否展示「A股指数 + 美股指数」主入口分区
+ *  （读全局 login 配置 store rootStore.system.loginConfig，登录配置到达即时生效）。 */
+export const isMainEntranceEnabled = (): boolean =>
+  resolveMainEntranceEnabled(rootStore.system.loginConfig.loginConfig, isReleaseBuild())
