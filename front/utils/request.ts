@@ -57,18 +57,29 @@ export async function request<T>({
         ...(withAuth && token ? { Authorization: `Bearer ${token}` } : {}),
       },
       success: (response) => {
-        const body = response.data
-        if (body.code === 200 && body.data !== undefined) {
-          resolve(body.data)
-          return
+        // 响应体解析必须包在 try/catch 内：wx 的 success 回调是异步调用的，
+        // 这里抛出的异常不会回到下面的 Promise 执行器，会让 Promise 既不 resolve
+        // 也不 reject（永久 pending）——对调用方意味着 inFlight 永不清除、页面永久 loading。
+        try {
+          const body = response.data
+          if (!body || typeof body !== 'object') {
+            reject(new Error('响应格式异常'))
+            return
+          }
+          if (body.code === 200 && body.data !== undefined) {
+            resolve(body.data)
+            return
+          }
+          if (body.code === 200) {
+            resolve(undefined as T)
+            return
+          }
+          const error = new Error(body.msg || '请求失败') as Error & { code?: number }
+          error.code = body.code
+          reject(error)
+        } catch (parseError) {
+          reject(parseError instanceof Error ? parseError : new Error('响应解析失败'))
         }
-        if (body.code === 200) {
-          resolve(undefined as T)
-          return
-        }
-        const error = new Error(body.msg || '请求失败') as Error & { code?: number }
-        error.code = body.code
-        reject(error)
       },
       fail: (error) => {
         const networkError = new Error(error.errMsg || '网络请求失败') as Error & {

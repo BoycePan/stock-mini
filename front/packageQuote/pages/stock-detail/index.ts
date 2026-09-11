@@ -35,9 +35,25 @@ type QuoteView = StockQuote & {
   amountText: string
 }
 
+/** 列表展示条目：附带 wx:key 用的稳定 key（后端部分条目 url 为空，不能用 url 作 wx:key） */
+type NewsViewItem = NewsItem & { key: string }
+
+/**
+ * 实例 → 最新一次 K 线请求序号（WeakMap 随实例回收，不泄漏）。
+ * 快速「日线→周线」连点时旧周期响应可能后到，只有序号仍是最新才允许写入。
+ */
+const klineSeq = new WeakMap<object, number>()
+
 /** 新闻条目摘要截断到安全上限（truncateRichHtml 未超限时原样返回） */
 function capNewsSummary(item: NewsItem): NewsItem {
   return { ...item, summary: truncateRichHtml(item.summary ?? '', MAX_RAW_SUMMARY_CHARS) }
+}
+
+/** 新闻条目 → 列表展示条目（key 优先用后端 id，缺 id 时用「下标 + 时间」派生，保证列表内唯一） */
+function toNewsViewItem(item: NewsItem, index: number): NewsViewItem {
+  const capped = capNewsSummary(item)
+  // 用 || 而非 ??：后端可能返回空串 id，空 key 会触发 wx:key 重复告警
+  return { ...capped, key: capped.id || `news-${index}-${capped.time ?? ''}` }
 }
 
 Page({
@@ -47,7 +63,7 @@ Page({
     loading: true,
     quote: null as QuoteView | null,
     klines: [] as KlinePoint[],
-    news: [] as NewsItem[],
+    news: [] as NewsViewItem[],
     newsPage: 1,
     newsHasMore: false,
     loadingMoreNews: false,
@@ -87,10 +103,13 @@ Page({
       return
     }
     this.setData({ loading: true, error: '' })
+    // 记录本次请求使用的周期：响应回来时用户可能已切到其它周期，把旧周期数据写进 klines
+    // 会与 tab 选中态冲突（tab 已是周线、图仍是日线），故周期已变时不覆盖图表
+    const scale = this.data.scale
     try {
       const [quote, klineResult, newsResult, announcementResult] = await Promise.all([
         stockApi.getQuote(targetCode),
-        stockApi.getKlines(targetCode, this.data.scale, 30),
+        stockApi.getKlines(targetCode, scale, 30),
         newsApi.getStockNews(targetCode, 1),
         newsApi.getAnnouncements(targetCode, 1),
       ])
@@ -102,9 +121,10 @@ Page({
           volumeText: formatWan(quote.volume),
           amountText: formatWan(quote.amount),
         },
-        klines: klineResult.klines,
+        // 周期已变（切周期请求在途会自行写入）：保留当前 klines，避免旧周期数据覆盖
+        klines: scale === this.data.scale ? klineResult.klines : this.data.klines,
         posterData: this.buildPosterData(quote),
-        news: newsResult.map(capNewsSummary),
+        news: newsResult.map(toNewsViewItem),
         newsPage: 1,
         newsHasMore: newsResult.length > 0,
         announcements: announcementResult,
@@ -132,12 +152,26 @@ Page({
   },
   async loadKlines(code: string, scale: string) {
     if (!code) return
+    // 登记本次请求序号：快速「日线→周线」连点时旧周期响应可能后到
+    const seq = (klineSeq.get(this) ?? 0) + 1
+    klineSeq.set(this, seq)
     try {
       const result = await stockApi.getKlines(code, scale, 30)
+      // 仅当仍是最新一次请求且 tab 周期未被改写才写入，否则会出现「tab 选中周线、图仍是日线」
+      if (!this.isLatestKlines(seq, scale)) return
       this.setData({ klines: result.klines })
     } catch {
+      if (!this.isLatestKlines(seq, scale)) return
+      // 失败必须清空 klines：保留旧周期数据会让 tab 与图表长期不一致且无任何复位，
+      // 清空后图表显示「暂无K线数据」，与失败态一致（海报的 K 线由组件按 klines 单独绘制，
+      // posterData 只含行情指标，故无需重建）
+      this.setData({ klines: [] })
       wx.showToast({ title: 'K线加载失败', icon: 'none' })
     }
+  },
+  /** 是否仍可写入本次 K 线请求结果：序号仍为最新（未被后一次切周期取代）且周期未被改写 */
+  isLatestKlines(seq: number, scale: string): boolean {
+    return klineSeq.get(this) === seq && this.data.scale === scale
   },
   /**
    * 新闻列表触底追加：条数达到 MAX_LIST_ITEMS 后不再追加（超过上限时丢弃最旧条目），
@@ -154,8 +188,9 @@ Page({
     this.setData({ loadingMoreNews: true })
     try {
       const items = await newsApi.getStockNews(this.data.code, nextPage)
-      const capped = items.map(capNewsSummary)
       const base = this.data.news.length
+      // 展示条目的 key 用全列表下标派生，保证与首屏条目不重复
+      const capped = items.map((item, i) => toNewsViewItem(item, base + i))
       const merged = this.data.news.concat(capped)
       const patch: Record<string, unknown> = {
         newsPage: nextPage,

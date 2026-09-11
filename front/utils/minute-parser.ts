@@ -106,7 +106,10 @@ export function parseTencentMinuteNode(node?: TencentMinuteNode): MinuteResult |
     const price = Number(row[1])
     const volume = Number(row[2])
     const amount = Number(row[3])
-    if (!time || !Number.isFinite(price)) continue
+    // 价格 <= 0（含空字段 Number('')=0）视为该分钟无成交，跳过——与东财分支同口径。
+    // 否则 0 价点会进入序列：被判为下跌、把图表纵轴撑到约 [-margin, 2×昨收]，
+    // 分时线被压扁到上半区，价格线还会在底部拉出贯穿成交量区的假尖刺。
+    if (!time || !Number.isFinite(price) || price <= 0) continue
     cumVolume += Number.isFinite(volume) ? volume : 0
     cumAmount += Number.isFinite(amount) ? amount : 0
     points.push({

@@ -23,10 +23,17 @@ export function bareCode(marketCode: string): string {
   return index >= 0 ? marketCode.slice(index + 1) : marketCode
 }
 
-/** A股行情代码 → 东财 secid：sh600519 → 1.600519、sz000001 → 0.000001 */
+/** A股行情代码 → 东财 secid：sh600519 → 1.600519、sz000001 → 0.000001、bj920010 → 0.920010 */
 export function aShareSecid(code: string): string {
-  const digits = code.replace(/^(sh|sz)/i, '')
-  return `${code.startsWith('sz') ? '0' : '1'}.${digits}`
+  // 前缀剥离大小写不敏感，市场判定却必须同样不敏感（否则 'SZ000001' 会被剥成 '000001' 却按
+  // 1. 市场拼出 '1.000001'，东财返回空 → 该兜底源被静默跳过）；北交所 bj（4/8/92 开头）
+  // 与深市同为 0. 市场。规则与 config/minute.ts 的 ashareEmSecid 保持一致。
+  const lower = code.toLowerCase()
+  const digits =
+    lower.startsWith('sh') || lower.startsWith('sz') || lower.startsWith('bj')
+      ? code.slice(2)
+      : code
+  return `${lower.startsWith('sh') ? '1' : '0'}.${digits}`
 }
 
 /**

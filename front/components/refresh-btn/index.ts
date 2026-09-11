@@ -1,10 +1,13 @@
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 /**
- * 模块级共享（跨组件实例），原生 tabBar keep-alive 下组件常驻：
- * pageVisible：组件所在页面是否可见（pageLifetimes 维护），页面隐藏时不再显示按钮。
+ * 按实例记录的「所在页面是否可见」（WeakSet 键为 this，与 components/section-card 的
+ * prevMetrics / bumpTimers 同风格）。
+ *
+ * 不用模块级共享布尔量：一旦第二个页面复用本组件，任一实例隐藏就会把它置 false，
+ * 另一实例的 show() 会被静默忽略（按钮再也亮不起来），属于隐性串页。
  */
-let pageVisible = false
+const visibleInstances = new WeakSet<object>()
 
 /**
  * 悬浮刷新按钮：右下角圆形，出现/隐藏完全由页面驱动——
@@ -29,15 +32,16 @@ Component({
       bindTheme(this)
     },
     detached() {
+      visibleInstances.delete(this)
       unbindTheme(this)
     },
   },
   pageLifetimes: {
     show() {
-      pageVisible = true
+      visibleInstances.add(this)
     },
     hide() {
-      pageVisible = false
+      visibleInstances.delete(this)
       // 同时隐藏按钮，避免返回时残留旧状态
       this.setData({ show: false, tapping: false })
     },
@@ -49,7 +53,7 @@ Component({
     },
     /** 页面检测到最新新闻时调用：显示按钮（页面不可见 / 已显示时忽略） */
     show() {
-      if (pageVisible && !this.data.show) {
+      if (visibleInstances.has(this) && !this.data.show) {
         this.setData({ show: true })
       }
     },

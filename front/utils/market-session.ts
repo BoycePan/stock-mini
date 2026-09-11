@@ -15,7 +15,7 @@ import {
   type MarketSession,
   type NonferrousSession,
 } from './market-clock'
-import { quoteTimeToDate } from './quote-parser'
+import { quoteTimeToDate, quoteTimeToUtcMs } from './quote-parser'
 
 export type { MarketSession, NonferrousSession } from './market-clock'
 
@@ -33,18 +33,32 @@ let globalSessionInflight: Promise<MarketSession> | null = null
 function isFreshQuote(quote: TencentQuote | undefined): boolean {
   if (!quote || !quote.valid) return false
   const date = quoteTimeToDate(quote.quoteTime)
-  return date !== null && Date.now() - date.getTime() <= FRESH_MS
+  if (date === null) return false
+  // 行情时间是北京墙钟：quoteTimeToDate 按设备本地时区构造，必须先还原为真实时刻再算年龄，
+  // 否则非 UTC+8 设备（如美西）会把数小时前的行情算成负数年龄、恒判「新鲜」，
+  // 导致收盘 / 周末仍报「A股盘中」并选中错误的数据源口径。
+  return Date.now() - quoteTimeToUtcMs(date) <= FRESH_MS
 }
 
 /**
  * 全球页实时会话：
- * 传入 4 路腾讯指数行情（sh000001/sz399001/usIXIC/usINX，与展示数据同一次请求）时直接复用；
- * 未传入则内部探测。按行情时间新鲜度修正时钟判定。
+ * 传入 4 路腾讯指数行情（sh000001/sz399001/usIXIC/usINX，与展示数据同一次请求，见
+ * api/market.ts getGlobalMarketPage）时直接用本次传入的行情计算；未传入则内部探测。
+ * 按行情时间新鲜度修正时钟判定。
+ *
+ * 有 probes 时不参与 in-flight 去重（内部探测才需要去重）：调用方的 probes 与展示数据同源，
+ * 若被另一路「无 probes 的内部探测」在途结果顶掉，本次会话就会用别人的探测快照算出来。
+ * 这不增加任何请求（probes 已随展示请求拿到），30s 缓存照旧回写，缓存语义不变。
  */
 export async function resolveGlobalMarketSession(probes?: TencentQuote[]): Promise<MarketSession> {
   const now = Date.now()
   if (globalSessionCache && now - globalSessionCache.at < SESSION_TTL) {
     return globalSessionCache.value
+  }
+  if (probes) {
+    const value = sessionFromProbes(probes)
+    globalSessionCache = { at: Date.now(), value }
+    return value
   }
   if (!globalSessionInflight) {
     globalSessionInflight = (async () => {

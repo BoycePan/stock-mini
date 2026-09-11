@@ -216,16 +216,18 @@ export function drawMinuteOnPoster(
     ctx.fillText(isZero ? '0%' : (gridLabels[i] ?? ''), x + padL - 8, gy + 3)
   }
 
-  // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%
+  // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%。
+  // 非正价 / 非有限价（无成交分钟）置 null 并断开折线——与纵轴 / 均价线同口径，
+  // 否则 priceY(0) 会在海报上拉出一条贯穿整张图的斜线。
   const baseY = hasPre ? priceY(preClose) : null
-  const linePts: Array<{ x: number; y: number }> = points.map((p, i) => ({
-    x: xOf(i),
-    y: priceY(p.price ?? 0),
-  }))
+  const linePts: Array<{ x: number; y: number } | null> = points.map((p, i) =>
+    Number.isFinite(p.price) && p.price > 0 ? { x: xOf(i), y: priceY(p.price) } : null,
+  )
   const segPts: Array<{ x: number; y: number }> = []
   for (let i = 0; i < n - 1; i += 1) {
     const a = linePts[i]
     const b = linePts[i + 1]
+    // 任一端无有效价格：跳过，折线在缺口处断开
     if (!a || !b) continue
     segPts.push(a)
     if (baseY !== null && ((a.y <= baseY && b.y > baseY) || (a.y > baseY && b.y <= baseY))) {

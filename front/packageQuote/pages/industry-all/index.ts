@@ -55,6 +55,17 @@ import { trackEvent } from '../../../utils/tracker'
 const LIST_REFRESH_INTERVAL = 60000
 /** 分享海报每个榜单收录的板块数（双列网格 4 行 × 2 列，避免海报过长） */
 const POSTER_BOARD_LIMIT = 8
+/**
+ * 搜索输入防抖时长：A股概念约 504 / 行业约 496 项，每敲一个字都全量 setData({items})
+ * 会跨线程序列化近千个对象，输入长词明显掉帧；停顿 180ms 后再过滤渲染。
+ */
+const SEARCH_DEBOUNCE_MS = 180
+/**
+ * 实例 → 搜索防抖定时器（WeakMap 随实例回收）。
+ * 本页是分包页、正常只有栈内一个实例，但按实例存放更保险：模块级单变量会被后创建的
+ * 实例清掉前一个实例的待触发输入（前一个实例的列表就永远停在旧关键词上）。
+ */
+const searchTimers = new WeakMap<object, ReturnType<typeof setTimeout>>()
 /** 模块级共享（跨页面实例）：onShow 立即刷新门闩，距上次请求不足 5s 不补刷 */
 let lastListRequestAt = 0
 /** 成分股弹窗加载串行队列（跨页面实例共享）：关闭后重开其它板块时排队等待，
@@ -314,11 +325,13 @@ Page({
   /**
    * scroll-view 下拉刷新（页面级下拉已关闭，见 index.json enablePullDownRefresh=false）：
    * 静默刷新当前 tab 数据——不闪整页 loading，列表原地保留，下拉圈显示到请求结束；
-   * 已有请求进行中（自动刷新 tick / 手动）时直接结束，避免并发。
+   * 已有请求进行中（自动刷新 tick / 手动）时不丢弃用户动作：保持下拉圈转起，
+   * 复位交给在途请求的 finally（见 loadKind），让用户至少看到一次完整的下拉反馈
+   * （立刻复位会让下拉圈一闪即收、数据也没更新，用户以为下拉刷新失效）。
    */
   onRefresherRefresh() {
     if (this.isLoading()) {
-      this.setData({ refreshing: false })
+      this.setData({ refreshing: true })
       return
     }
     this.setData({ refreshing: true })
@@ -389,9 +402,10 @@ Page({
         : await fetchAllBoards(kind as BoardKind)
       const cache = cacheByKind[kind]
       if (!items.length) {
-        cache.rawItems = []
-        cache.loaded = false
-        cache.lastSuccessAt = 0
+        // 空结果（上游限流 / 抖动偶发返回空）不清空已有缓存：silent 刷新本就不更新视图，
+        // 若把 rawItems / loaded / lastSuccessAt 一并清掉，页面仍显示上一次的 items（缓存已空），
+        // 而 refreshPosterData 按缓存会把 posterData 置 null →「列表有货、分享说加载中」不自洽，
+        // 点板块行也会基于失效清单项取成分股。保留上次成功数据，列表 / 海报 / 成分弹窗同源更安全。
         if (!silent && isActive) {
           this.setData({
             loading: false,
@@ -419,7 +433,14 @@ Page({
         })
       }
     } finally {
-      this.setData({ requestingByKind: { ...this.data.requestingByKind, [kind]: false } })
+      const patch: Record<string, unknown> = {
+        requestingByKind: { ...this.data.requestingByKind, [kind]: false },
+      }
+      // 下拉刷新撞上在途请求时保留了 refreshing（见 onRefresherRefresh）：请求结束在此复位，
+      // 否则下拉圈会一直转。这里不限定分类：下拉后用户可能已切走 tab，
+      // 若只让当前分类的请求负责复位，下拉圈就会卡住。
+      if (this.data.refreshing) patch.refreshing = false
+      this.setData(patch)
     }
   },
 
@@ -631,13 +652,32 @@ Page({
     void this.loadData()
   },
 
-  /** 搜索框输入：名称/代码过滤（内存过滤，作用于当前 tab） */
+  /**
+   * 搜索输入 / 清空：过滤条件变更统一走防抖（见 scheduleSearch）。
+   * 值先同步进 this.data.query 保证输入框受控回显，过滤与列表渲染延后到停顿后，
+   * 避免每敲一个字就全量 setData 近千行（输入长词明显掉帧）。
+   */
   onSearchInput(event: WechatMiniprogram.BaseEvent & { detail: { value: string } }) {
-    this.setData({ query: event.detail.value ?? '' }, () => this.refreshView())
+    this.scheduleSearch(event.detail.value ?? '')
   },
 
   onSearchClear() {
-    this.setData({ query: '' }, () => this.refreshView())
+    // 清空同样是过滤条件变更，走同一防抖路径：点 × 与随之而来的 input 事件只触发一次过滤
+    this.scheduleSearch('')
+  },
+
+  /** 防抖调度搜索过滤：重置定时器，停顿 SEARCH_DEBOUNCE_MS 后按最新关键词重算列表 */
+  scheduleSearch(query: string) {
+    const existing = searchTimers.get(this)
+    if (existing) clearTimeout(existing)
+    this.setData({ query })
+    searchTimers.set(
+      this,
+      setTimeout(() => {
+        searchTimers.delete(this)
+        this.refreshView()
+      }, SEARCH_DEBOUNCE_MS),
+    )
   },
 
   /** 涨跌幅排序：点击切换 领涨榜（降序）/ 领跌榜（升序） */
@@ -718,6 +758,10 @@ Page({
 
   onUnload() {
     stopAutoRefresh(this)
+    // 清理待触发的搜索防抖：卸载后再 setData 无意义（且定时器会闭包持有已销毁页面实例）
+    const timer = searchTimers.get(this)
+    if (timer) clearTimeout(timer)
+    searchTimers.delete(this)
     unbindTheme(this)
   },
 })

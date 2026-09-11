@@ -125,6 +125,7 @@
               lazy-load
               binderror="onLogoError"
               data-index="{{ index }}"
+              data-code="{{ item.code }}"
             ></image>
             <text wx:else class="logo-fallback">{{ item.logoChar }}</text>
           </view>

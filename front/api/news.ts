@@ -37,18 +37,27 @@ export const newsApi = {
    * 仅滚动加载传 id（第一页第一条的 id，后端用作游标分页去重）；刷新 / 首屏走 getFeed 不传。
    */
   async getFeedPage(page = 1, size = 20, options?: { id?: string | number }) {
-    const response = await request<NewsListResponse>({
+    // 响应类型显式带上 undefined / 数组：请求层在 code===200 且 data===undefined 时 resolve
+    // undefined（见 utils/request.ts），后端 / 网关返回 200 空 body、或字段改名时都会命中。
+    const response = await request<NewsListResponse | NewsItem[] | undefined>({
       path: '/api/v1/news/feed',
       query: { page, size, id: options?.id },
       withAuth: true,
     })
-    if (Array.isArray(response)) {
-      return { items: response, hasMore: response.length >= size }
-    }
-    return {
-      items: response.news,
-      hasMore: response.hasMore ?? response.news.length >= size,
-    }
+    // 统一兜底取值：旧实现只判 Array.isArray 后直接取 response.news / response.news.length，
+    // response 为 undefined 时抛 "Cannot read property 'news' of undefined"，
+    // 财经页滚动加载会以不可读的 TypeError 失败（而不是安静地显示「没有更多」）。
+    const list = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.news)
+        ? response.news
+        : []
+    // hasMore：后端显式给出时以它为准，否则按「本页是否拉满一页」推断；
+    // 括号必须显式——?? 与 >= 混写时优先级极易读错。
+    const hasMore = Array.isArray(response)
+      ? list.length >= size
+      : (response?.hasMore ?? list.length >= size)
+    return { items: list, hasMore }
   },
 
   /**
@@ -78,6 +87,8 @@ export const newsApi = {
    * 仅「从分享外部直接进入详情页」（URL 带 id）时调用；列表进入走本地缓存，不请求。
    * 后端接口 GET /api/v1/news/{id}（见 docs/API.md）：id 不存在或 <=0 时返回 404，
    * 详情页会降级展示分享 URL 携带的标题 / 原文链接，避免白屏。
+   * 注意：响应类型不收窄成「可能 undefined」——详情页调用方在 try/catch 内直接取 item.title，
+   * 200 空 body 时会被 catch 兜住并提示失败；改类型反而会让该调用方编译不过，这里保持原契约。
    */
   async getById(id: string | number) {
     return request<NewsItem>({
@@ -86,19 +97,25 @@ export const newsApi = {
     })
   },
   async getStockNews(code: string, page = 1) {
-    const response = await request<NewsListResponse>({
+    // 空响应兜底：unwrapNewsItems（utils/api-normalizers.ts）内部直接取 response.news，
+    // 200 空 body / 字段改名时同样会抛 TypeError 让个股详情整屏失败；
+    // 这里先拦掉 undefined，至少保证「拿不到数据」表现为空列表而非异常。
+    const response = await request<NewsListResponse | undefined>({
       path: `/api/v1/stock/${code}/news`,
       query: { page },
       withAuth: true,
     })
+    if (!response) return []
     return unwrapNewsItems(response)
   },
   async getAnnouncements(code: string, page = 1, size = 20) {
-    const response = await request<AnnouncementListResponse>({
+    // 同 getStockNews：空响应兜底，避免 unwrapAnnouncementItems 取 response.items 抛错
+    const response = await request<AnnouncementListResponse | undefined>({
       path: `/api/v1/stock/${code}/announcements`,
       query: { page, size },
       withAuth: true,
     })
+    if (!response) return []
     return unwrapAnnouncementItems(response)
   },
 }

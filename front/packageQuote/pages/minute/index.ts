@@ -44,6 +44,24 @@ interface MinuteQuoteView {
 const MINUTE_REFRESH_INTERVAL = 8000
 /** 模块级共享（跨页面实例），用于 onShow 立即刷新门闩：距上次请求不足 5s 不补刷 */
 let lastMinuteRequestAt = 0
+/**
+ * 实例 → 「待补发的用户主动刷新」标记（WeakMap 随实例回收，不泄漏）。
+ * 触发场景：8s 静默轮询在途时用户下拉刷新 / 点「重新加载」——旧实现直接 return 丢弃，
+ * 而 onPullDownRefresh 的 finally 会立刻 stopPullDownRefresh，下拉圈一闪即收、数据也没更新。
+ */
+const pendingUserRefresh = new WeakSet<object>()
+
+/** 微信 onLoad 的 options 不保证自动解码，做一次安全解码兜底 */
+function decodeQuery(value: string | undefined): string {
+  if (!value) return ''
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    // name/code 含孤立 '%'，或微信已自动解码（二次解码非法序列）时 decodeURIComponent 会抛
+    // URIError；onLoad 抛异常会导致整页加载失败，故退回原值继续渲染
+    return value
+  }
+}
 
 /**
  * 首页卡片当日分时图查看页（纯前端直连外部接口，见 docs/minute-api.md）。
@@ -99,10 +117,10 @@ Page({
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
-    const code = decodeURIComponent(options.code || '')
-    const name = decodeURIComponent(options.name || '')
+    const code = decodeQuery(options.code)
+    const name = decodeQuery(options.name)
     // 分时取数代码：显式 mcode 优先（外盘/会话切换口径），缺省用展示 code
-    const mcode = decodeURIComponent(options.mcode || '') || code
+    const mcode = decodeQuery(options.mcode) || code
     this.setData({
       code,
       name,
@@ -146,13 +164,22 @@ Page({
    * 拉取分时数据。
    * - 静默刷新（silent）：不闪 loading，成功后原地更新数据，失败保留旧数据不打扰；
    * - 常规加载（首屏 / 下拉 / 重试）：展示 loading 与错误态；
-   * - 已有请求进行中时直接跳过（防并发）。
+   * - 已有请求进行中：静默轮询直接跳过（防并发），用户主动刷新则登记为「待补发」，
+   *   由在途请求结束后立即补发一次，避免下拉刷新被静默吞掉。
    * 基础信息（今开/最高/最低/昨收/成交量）并发拉东财 ulist 报价（与分时同 secid），
    * 缺字段回退分时推算（代理合成/交叉汇率/Yahoo 兜底无单一 secid 时整体回退）。
    */
   async loadData(options?: { silent?: boolean }) {
-    if (this.data.requesting) return
     const { silent = false } = options ?? {}
+    if (this.data.requesting) {
+      // 在途请求（多为 8s 静默轮询）占用中：用户主动刷新不能静默丢弃，
+      // 否则下拉圈一闪即收、数据没更新，用户会以为下拉刷新坏了。登记补发标记后返回，
+      // 由在途请求的 finally 补发一次非静默刷新。
+      if (!silent) pendingUserRefresh.add(this)
+      return
+    }
+    // 本次是真正发起的请求：消费掉待补发标记（补发的就是这一次），避免重复触发
+    pendingUserRefresh.delete(this)
     lastMinuteRequestAt = Date.now()
     this.setData({ requesting: true })
     if (!silent) this.setData({ loading: true, error: '', noData: false })
@@ -180,12 +207,11 @@ Page({
           session,
           quote: this.buildQuote(result.points, info),
           posterData: this.buildPosterData(result.points, info),
-          minutePoster: {
-            points: result.points,
-            preClose: info.preClose ?? 0,
-            session,
-            title: `${this.data.name} · 当日分时`,
-          },
+          // 不在这里写 minutePoster：8s 静默刷新每轮都写会让同一份 ~390 点数组在同一次 setData
+          // 里序列化两遍（points + minutePoster.points），且 share-poster 的 minuteChart 属性
+          // 每 8s 换新引用触发无谓同步；改为用户打开海报时按需组装（见 onSharePoster）。
+          // 数据（points / preClose / session）变化时旧 minutePoster 一并作废，避免海报画旧数据。
+          minutePoster: null,
         })
       } else if (!silent) {
         // 查不到数据：首次失败展示「错误 + 重试」，第二次及以后失败引导「暂无数据」
@@ -223,6 +249,12 @@ Page({
       }
     } finally {
       this.setData({ requesting: false })
+      // 在途期间用户主动刷新被登记（见上方 requesting 分支）：此刻立即补发一次非静默刷新。
+      // 先删标记再补发：补发调用自身不会再登记（此时已无在途请求），故补发只有一次、不会自激循环。
+      if (pendingUserRefresh.has(this)) {
+        pendingUserRefresh.delete(this)
+        void this.loadData()
+      }
     }
   },
   /** 由分时数据 + 基础信息（东财 ulist 报价优先）推算基本信息卡（最新价 / 涨跌额 / 涨跌幅 / 今开 / 最高 / 最低 / 均价 / 成交量 / 昨收） */
@@ -343,13 +375,32 @@ Page({
   onRetry() {
     void this.loadData()
   },
-  /** 顶栏分享按钮：调起 share-poster 组件生成并预览海报 */
+  /** 组装海报内嵌分时图数据（points + 昨收 + 时段），仅在用户打开海报时调用，见 onSharePoster */
+  buildMinutePoster(): MinutePosterChartData | null {
+    if (!this.data.points.length) return null
+    return {
+      points: this.data.points,
+      preClose: this.data.preClose,
+      session: this.data.session,
+      title: `${this.data.name} · 当日分时`,
+    }
+  },
+  /**
+   * 顶栏分享按钮：调起 share-poster 组件生成并预览海报。
+   * 分时图数据在此按需组装（平时不写 minutePoster，见 loadData 注释）：
+   * setData 回调里再 open()，保证组件分钟图属性已随本次更新同步完成，
+   * 否则海报会因 minuteChart 为空而不绘制分时图。
+   */
   onSharePoster() {
-    const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
-    if (poster) poster.open()
+    this.setData({ minutePoster: this.buildMinutePoster() }, () => {
+      const poster = this.selectComponent('#sharePoster') as unknown as { open(): void } | null
+      if (poster) poster.open()
+    })
   },
   onUnload() {
     stopAutoRefresh(this)
+    // 丢弃待补发的用户刷新：卸载后不应再发起新请求 / 对已销毁页面 setData
+    pendingUserRefresh.delete(this)
     unbindTheme(this)
   },
   // 显式返回类型：方法体内引用 this.data 时，若无注解会触发 Page 泛型推断循环

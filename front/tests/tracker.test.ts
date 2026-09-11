@@ -155,7 +155,7 @@ test('上报失败：事件放回队首重试（eventId 幂等，不重复计数
   assert.deepEqual(secondIds, firstIds, '重试批次 eventId 与首次一致')
 })
 
-test('失败堆积超过队列上限：丢弃最旧事件', async () => {
+test('失败堆积超过队列上限：丢最旧，且每批不超过 batchSize（后端 max-batch 超限会整批被拒）', async () => {
   reset()
   installWx()
   failRequests = true
@@ -163,9 +163,55 @@ test('失败堆积超过队列上限：丢弃最旧事件', async () => {
   // 让失败重试的微任务（放回 + 截断到 maxQueue=200）执行完
   await new Promise((resolve) => setTimeout(resolve, 0))
   failRequests = false
+  captured = []
   await flush()
-  const last = captured[captured.length - 1]!
-  assert.equal(last.data.events.length, 200)
+  // 队列上限 200 → 逐批 50 条排空：共 4 批，任何一批都不超过 batchSize=50
+  assert.deepEqual(
+    captured.map((req) => req.data.events.length),
+    [50, 50, 50, 50],
+  )
+  // 丢最旧：保留的应是最后入队的 200 条（eventId 序号 51..250）
+  const firstSeq = Number(String(captured[0]!.data.events[0]!.eventId).split('-').pop())
+  const lastSeq = Number(String(captured[3]!.data.events[49]!.eventId).split('-').pop())
+  assert.equal(firstSeq, 51)
+  assert.equal(lastSeq, 250)
+})
+
+test('未登录（登录门闩返回 false）时队列不会无界增长：入队即按 maxQueue 裁剪', async () => {
+  reset()
+  installWx()
+  setTrackingLoginWaiter(() => Promise.resolve(false))
+  // 远超 maxQueue=200 的事件：门闩返回 false 时 flush 会在裁剪分支之前 return，
+  // 队列上限必须由入队路径自己保证
+  for (let i = 0; i < 400; i++) track('test.pending', { page: 'pages/x/index' })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(captured.length, 0, '未登录不上报')
+  // 门闩放开后排空：只可能有上限 200 条（每批 ≤50）
+  setTrackingLoginWaiter(null)
+  await flush()
+  const total = captured.reduce((sum, req) => sum + req.data.events.length, 0)
+  assert.equal(total, 200)
+  assert.ok(
+    captured.every((req) => req.data.events.length <= 50),
+    '任何一批都不超过 batchSize',
+  )
+})
+
+test('flush：单批严格不超过 batchSize（后端 max-batch-size 默认 100）', async () => {
+  reset()
+  installWx()
+  for (let i = 0; i < 120; i++) track('test.batchcap', { page: 'pages/x/index' })
+  // 攒满 batchSize 会自动触发上报（fire-and-forget），等这些批次跑完
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  // 再显式 flush 排空剩余事件
+  await flush()
+  assert.ok(captured.length > 0, '有事件被上报')
+  assert.ok(
+    captured.every((req) => req.data.events.length <= 50),
+    '每批不超过 batchSize',
+  )
+  const total = captured.reduce((sum, req) => sum + req.data.events.length, 0)
+  assert.equal(total, 120, '120 条事件全部上报，无遗漏')
 })
 
 test('props 清洗：剔除 undefined / 函数，超长字符串截断到 256', async () => {

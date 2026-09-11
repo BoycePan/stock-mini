@@ -56,6 +56,8 @@ Component({
       this.draw(this.data.points as MinutePoint[], this.data.preClose as number)
     },
     detached() {
+      // 标记销毁：draw 的 exec 回调是异步的，可能晚于本方法触发（见 destroyedInstances 注释）
+      destroyedInstances.add(this)
       unbindTheme(this)
     },
   },
@@ -65,6 +67,9 @@ Component({
         .select('#minute-canvas')
         .fields({ node: true, size: true, rect: true })
         .exec((result) => {
+          // 组件已销毁（查询发起后用户返回上一页）：丢弃本次绘制。
+          // 继续执行会对已失效的 canvas 节点取 ctx / 绘制并写回状态，产生无效绘制与报错。
+          if (destroyedInstances.has(this)) return
           const info = result?.[0] as
             { node?: CanvasNode; width?: number; height?: number; left?: number } | undefined
           const canvas = info?.node
@@ -107,6 +112,8 @@ Component({
         })
     },
     render() {
+      // 已销毁实例不再绘制：触摸事件 / 异步回调都可能晚于 detached 触发
+      if (destroyedInstances.has(this)) return
       const st = chartState.get(this)
       if (!st) return
       const { ctx, width, height } = st
@@ -227,16 +234,18 @@ Component({
         ctx.fillText(isZero ? '0%' : (gridLabels[i] ?? ''), padL - 8, y + 3)
       }
 
-      // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%
+      // 价格线分段点：以昨收 0% 为界，穿越 0% 的线段在交点处拆分，保证单段内不跨 0%。
+      // 非正价 / 非有限价（无成交分钟）置 null 并断开折线——与上方纵轴用同一口径过滤，
+      // 否则 priceY(0) 会在图表底部拉出一条贯穿成交量区的假尖刺，并把该段判成错误颜色。
       const baseY = hasPre ? priceY(preClose) : null
-      const linePts: Array<{ x: number; y: number }> = points.map((p, i) => ({
-        x: xOf(i),
-        y: priceY(p.price ?? 0),
-      }))
+      const linePts: Array<{ x: number; y: number } | null> = points.map((p, i) =>
+        Number.isFinite(p.price) && p.price > 0 ? { x: xOf(i), y: priceY(p.price) } : null,
+      )
       const segPts: Array<{ x: number; y: number }> = []
       for (let i = 0; i < n - 1; i += 1) {
         const a = linePts[i]
         const b = linePts[i + 1]
+        // 任一端无有效价格：跳过，折线在缺口处断开
         if (!a || !b) continue
         segPts.push(a)
         if (baseY !== null && ((a.y <= baseY && b.y > baseY) || (a.y > baseY && b.y <= baseY))) {
@@ -554,6 +563,16 @@ interface PaddedLayout {
 
 /** 组件实例 → 画布状态（避免在 data 中放非响应式对象） */
 const chartState = new WeakMap<object, MinuteChartState>()
+
+/**
+ * 已销毁的组件实例（WeakSet，与 chartState 的 WeakMap 同风格）。
+ *
+ * 为什么需要：draw() 的 createSelectorQuery().exec(cb) 回调是异步的，而 points / theme 变更
+ * （8s 自动刷新、主题切换、预收盘价更新）都会发起一次查询。用户在这之间返回上一页会先触发
+ * detached，回调随后仍在已销毁实例上执行——对已失效的 canvas 节点取 ctx 并绘制、
+ * 还会把状态写回 chartState，产生无效绘制与报错。因此 exec 回调与 render 入口都先判存活。
+ */
+const destroyedInstances = new WeakSet<object>()
 
 /** 一组文本的最大渲染宽度（当前 ctx.font 已设置） */
 function maxLabelWidth(ctx: CanvasCtx, labels: string[]): number {

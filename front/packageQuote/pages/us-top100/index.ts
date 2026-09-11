@@ -21,6 +21,14 @@ import {
 const LIST_REFRESH_INTERVAL = 30000
 /** 模块级共享（跨页面实例），用于 onShow 立即刷新门闩：距上次请求不足 5s 不补刷 */
 let lastListRequestAt = 0
+/**
+ * logo 外链加载失败的 code 集合（模块级跨实例共享，随会话累积）。
+ * 失败标记若只存在 items 里，每 30s 静默刷新与每次点表头排序都会重建 items 把它重置成 false，
+ * `<image wx:if="{{ !item.logoFailed }}">` 随之重新挂载，对这批必然失败的外链再发一轮请求
+ * （最多 100 行），既耗流量又反复重建图片节点。条目数有界：仅美股 TOP100 的 code 集合
+ * （最多 100 个短字符串），随会话增长也不构成内存问题。
+ */
+const failedLogoCodes = new Set<string>()
 
 /** logo 加载失败时的兜底字符：优先公司名首字（中文名如「英伟达」→「英」） */
 function logoCharOf(item: UsTopStock): string {
@@ -54,7 +62,8 @@ function toView(item: UsTopStock): UsTopStockView {
     capText: formatUsMarketCap(item.marketCap),
     logoUrl: usLogoUrl(item.code),
     logoTone: usLogoChipTone(item.code),
-    logoFailed: false,
+    // 已确认加载失败的 code 直接置失败态：重建列表（静默刷新 / 排序）后不再重新挂载 <image>
+    logoFailed: failedLogoCodes.has(item.code),
     logoChar: logoCharOf(item),
   }
 }
@@ -198,9 +207,10 @@ Page({
     const item = this.data.items[index]
     if (!item) return
     // 分时页入口开关（后台 display 配置 canShowMinute / canShowMinuteDev，见
-    // utils/system-config.ts）：关闭时禁止跳转分时页。
+    // utils/system-config.ts）：关闭时禁止跳转分时页，并给出可见提示——
+    // 静默 return 会让用户以为页面卡死（点击无任何反馈）。
     if (!isMinuteEnabled()) {
-      // wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
+      wx.showToast({ title: '分时行情暂未开放', icon: 'none' })
       return
     }
     trackEvent('us.top100.tap', { code: item.code, name: item.name, secid: item.secid })
@@ -213,9 +223,15 @@ Page({
     })
   },
 
-  /** logo 加载失败（外链不可达 / 上游无图）：本行换公司名首字兜底，不影响其他行 */
+  /**
+   * logo 加载失败（外链不可达 / 上游无图）：本行换公司名首字兜底，不影响其他行；
+   * 同时把 code 记入模块级失败集合——列表下次重建（30s 静默刷新 / 点表头排序）时
+   * toView 会直接置 logoFailed，不再对这批必然失败的外链重发请求。
+   */
   onLogoError(event: WechatMiniprogram.TouchEvent) {
-    const index = event.currentTarget.dataset.index as number | undefined
+    const dataset = event.currentTarget.dataset as { code?: string; index?: number }
+    if (dataset.code) failedLogoCodes.add(dataset.code)
+    const index = dataset.index
     if (index === undefined) return
     this.setData({ [`items[${index}].logoFailed`]: true })
   },

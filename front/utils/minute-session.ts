@@ -86,7 +86,13 @@ export function resolveMinuteSession(code: string): MinuteSessionKind {
   // 韩/日个股：用配置里的 Yahoo 符号后缀区分市场（分时源可能已是东财 177/176，
   // 但 Yahoo 符号仍保留用于识别市场，东财与 Yahoo 的韩/日时段形状一致）
   if (/^\d+$/.test(code)) {
-    const symbol = MINUTE_SOURCES[code]?.yahoo ?? ''
+    // 查表用自有属性判定：code 来自 URL query（分享链接可构造），
+    // MINUTE_SOURCES['toString' / 'constructor' / '__proto__'] 会沿原型链命中
+    // Object.prototype 上的函数，`?.yahoo` 得 undefined 虽不会崩，但会绕过「未登记」语义，
+    // 与 config/minute.ts 的 hasMinuteSources 判定口径不一致。此处统一为自有属性查找。
+    const symbol = Object.prototype.hasOwnProperty.call(MINUTE_SOURCES, code)
+      ? (MINUTE_SOURCES[code]?.yahoo ?? '')
+      : ''
     if (symbol.endsWith('.KS')) return 'kr'
     if (symbol.endsWith('.T')) return 'jp-yahoo'
   }

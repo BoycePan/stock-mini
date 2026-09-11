@@ -412,8 +412,19 @@ export const METALS: MetalConfig[] = [
     name: '铜',
     aKeys: ['nf_CU0', 'nf_CU'],
     usKeys: ['hf_HG'],
+    // 外盘铜补东财 secid（101.HG00Y，与有色页分时 COPPER-US 同源，见 config/minute.ts），
+    // 否则外盘时段卡片只走新浪 hf_HG、点进分时却是东财 101.HG00Y，违反「卡片=分时」不变量。
+    // 注意两个源的刻度相差 100 倍（实测：东财 ulist fltt=2 为 6.534 美元/磅；
+    // 新浪 hf_HG 为 659.17 美分/磅，见 docs/frontend-data-sources.md 表），
+    // usRange 必须按东财刻度来，否则 resolveMetal 的区间校验会把东财报价全部拒掉、
+    // 卡片又退回新浪刻度。这里取 [3, 20]，与全球页 HG 宏观卡
+    // （sources: em_ulist 101.HG00Y, min 3, max 20）完全一致。
+    // 代价：新浪 hf_HG（美分/磅）不再通过区间校验，东财不可用时外盘铜卡显示 --，
+    // 这是「杜绝单位串口径」的有意取舍——若日后要保留新浪兜底，需在 resolveMetal 里
+    // 给新浪源加 ÷100 刻度换算，而不是放宽区间。
+    emSecid: '101.HG00Y',
     aRange: [30000, 120000],
-    usRange: [50, 2000],
+    usRange: [3, 20],
   },
   { code: 'ALUMINUM', name: '铝', aKeys: ['nf_AL0', 'nf_AL'], usKeys: ['hf_AHD'] },
   { code: 'ZINC', name: '锌', aKeys: ['nf_ZN0', 'nf_ZN'], usKeys: ['hf_ZSD'] },

@@ -37,13 +37,66 @@ const wxStorage: PopupNoticeStorage = {
   },
 }
 
-/** 非法 / 损坏的缓存状态视为「从未展示」，重新走首次展示逻辑 */
-function isValidState(state: unknown): state is PopupNoticeState {
+/** 弹窗状态缓存键前缀（按公告 id 生成，见 resolveHomePopupNotice 的 storageKey） */
+const STATE_KEY_PREFIX = 'popup_notice_state_'
+
+/**
+ * 是否为可用的 YYYY-MM-DD 日期串：格式必须匹配，且必须是**真实存在**的日历日期。
+ *
+ * 不能只依赖 Date.parse：V8 对「月内溢出日」不做校验而是归一化——
+ * `Date.parse('2026-02-31T00:00:00')` 返回的是 3 月 3 日（不是 NaN），只有
+ * `2026-13-01`（月份溢出）/ `garbage` / `2026/08/30`（分隔符不合法）才返回 NaN。
+ * 因此这里额外做一次回环比对（构造 Date 后校验年月日字段未被归一化），
+ * 把 2026-02-31 / 2026-13-01 / 2026-8-1 这类值判为不可用。
+ *
+ * 回环用 UTC 构造：与设备时区、DST 无关（个别时区存在被 DST 整体跳过的日期，
+ * 本地构造会把它误判为非法，UTC 不受影响）。
+ */
+function isDateString(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!matched) return false
+  const year = Number(matched[1])
+  const month = Number(matched[2])
+  const day = Number(matched[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
   return (
-    !!state &&
-    typeof (state as PopupNoticeState).firstShownDate === 'string' &&
-    typeof (state as PopupNoticeState).lastShownDate === 'string'
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   )
+}
+
+/**
+ * 非法 / 损坏的缓存状态视为「从未展示」，重新走首次展示逻辑。
+ *
+ * 必须校验日期本身可用，不能只校验 typeof === 'string'：dayDiff 在 Date.parse 失败时
+ * 返回 NaN，而 `NaN >= notice.count` 恒为 false → count 天到期规则静默失效，
+ * 公告变成每天无限弹（如缓存被写成 {firstShownDate:'garbage', lastShownDate:'2026-08-29'}）。
+ * 判为损坏后按「从未展示」处理会立即展示一次并把状态重写为合法日期，实现自愈。
+ */
+function isValidState(state: unknown): state is PopupNoticeState {
+  const candidate = state as PopupNoticeState | null | undefined
+  return (
+    !!candidate && isDateString(candidate.firstShownDate) && isDateString(candidate.lastShownDate)
+  )
+}
+
+/**
+ * 清理其它公告遗留的展示状态键（只保留当前公告的键，尽力而为、失败不影响展示）。
+ *
+ * 为什么：storageKey 按公告 id 生成（`popup_notice_state_{id}`），换一条公告就会新增一个
+ * 永久键，全仓只写不清会长期缓慢累积（wx storage 有容量上限，遍历成本也随键数增长）。
+ * 只在命中展示、真正要写状态时顺带清理一次；且只在当前键本身就是「按 id 的键」时清理——
+ * 用默认键（popup_notice_state，非按 id）的调用方不动别人的 id 键，避免误删。
+ */
+function pruneStaleStateKeys(currentKey: string): void {
+  if (!currentKey.startsWith(STATE_KEY_PREFIX)) return
+  try {
+    for (const key of wx.getStorageInfoSync().keys) {
+      if (key !== currentKey && key.startsWith(STATE_KEY_PREFIX)) wx.removeStorageSync(key)
+    }
+  } catch {
+    // 存储信息不可用：跳过清理，不影响本次展示逻辑
+  }
 }
 
 /**
@@ -153,6 +206,8 @@ export function tryShowPopupNotice(
   } catch {
     // 写缓存失败：本次照常展示，下次再记
   }
+  // 只在默认 wx storage 上清理历史公告键（注入的 storage 由调用方自行管理，无枚举能力）
+  if (storage === wxStorage) pruneStaleStateKeys(storageKey)
   return {
     title: notice.title ?? '',
     content: notice.content,
@@ -176,7 +231,8 @@ function popupConfigOf(notice: Notice): (NoticeConfig & { content: string }) | n
  * 从公告列表解析「首页弹窗公告」（position='home'，服务端 notices 接口驱动）：
  * 取第一条 config 合法的 home 公告（列表已按 pinned DESC, sort ASC 排序），
  * 映射为弹窗配置 + 按公告 id 的展示状态缓存键（`popup_notice_state_{id}`，
- * 与 components/popup-notice 的 storageKey 对应——换公告 = 换缓存键 = 重新计天）；
+ * 与 components/popup-notice 的 storageKey 对应——换公告 = 换缓存键 = 重新计天；
+ * 展示命中时由 tryShowPopupNotice 顺带清理其它公告的旧键，见 pruneStaleStateKeys）；
  * 无 home 公告 / 正文缺失时返回 null（不弹）。
  *
  * 缺省兜底：title / buttonText 缺省为空串（组件兜底文案）；path 缺省空串（不跳转）；

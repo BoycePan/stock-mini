@@ -10,9 +10,9 @@ import { resolveHomePopupNotice } from '../utils/popup-notice'
  * - configs：cfg_type='display' 的前端展示配置，随全局就绪流程拉取；
  * - notices：当前端全部有效公告，页面按 position 过滤使用。
  *
- * 拉取由 rootStore.bootstrap 编排（登录成功后执行）。失败时静默降级：
- * 保留空数据并记录 error、ready 保持 false，不阻塞业务接口，
- * 下次请求会重新走一遍就绪流程。
+ * 拉取由 rootStore.bootstrap 编排（登录成功后执行）。两路各自降级（Promise.allSettled）：
+ * 成功的一路写回，失败的一路保留旧值并记录 error；display 配置成功即 ready=true，
+ * 配置失败则 ready 保持 false 且不阻塞业务接口，下次请求会重新走一遍就绪流程。
  */
 export class SystemStore {
   loginConfig: AppConfig = {}
@@ -54,18 +54,34 @@ export class SystemStore {
   async fetchAll(): Promise<void> {
     this.loading = true
     try {
-      const [configs, notices] = await Promise.all([
+      // allSettled 而非 all：display 配置与公告是两条彼此独立的链路，Promise.all 下任一失败
+      // 会让整体 reject —— 已成功取到的 display 配置被一起丢弃（回退默认值）、ready 保持 false，
+      // 之后每次业务请求都要重跑一遍就绪流程。改为各自降级：成功的写回，失败的保留旧值并记录 error。
+      const [configsResult, noticesResult] = await Promise.allSettled([
         systemApi.configs('display'),
         systemApi.notices(),
       ])
+      const failures: string[] = []
+      if (configsResult.status === 'rejected') {
+        failures.push(reasonText(configsResult.reason, '展示配置'))
+      }
+      if (noticesResult.status === 'rejected') {
+        failures.push(reasonText(noticesResult.reason, '公告'))
+      }
 
       runInAction(() => {
-        this.configs = configs ?? {}
-        this.notices = notices ?? []
-        this.error = ''
-        this.ready = true
+        // 失败的那一路保留旧值：瞬时失败不应把页面上已在用的配置 / 公告清空
+        if (configsResult.status === 'fulfilled') this.configs = configsResult.value ?? {}
+        if (noticesResult.status === 'fulfilled') this.notices = noticesResult.value ?? []
+        this.error = failures.join('；')
+        // ready 判定依据 = display 配置是否取到：它是业务页面渲染直接依赖的必需数据，
+        // 公告只是可选展示（拉不到最多不弹公告，不影响任何页面渲染）。
+        // 因此配置成功即视为「配置已就绪」，公告失败不改 ready；
+        // 配置失败则保持 false（不清掉旧的 true），下一次业务请求会重跑就绪流程。
+        if (configsResult.status === 'fulfilled') this.ready = true
       })
     } catch (error) {
+      // 兜底：allSettled 不会 reject，但两个 api 调用若在参数求值时同步抛错仍会走到这里
       runInAction(() => {
         this.error = error instanceof Error ? error.message : '系统配置拉取失败'
       })
@@ -75,4 +91,10 @@ export class SystemStore {
       })
     }
   }
+}
+
+/** 降级错误文案：失败原因可能是 Error、字符串或任意抛出值 */
+function reasonText(reason: unknown, label: string): string {
+  const detail = reason instanceof Error ? reason.message : String(reason)
+  return `${label}拉取失败：${detail}`
 }

@@ -50,6 +50,10 @@ export type AStockPhase = 'pre' | 'morning' | 'lunch' | 'afternoon' | 'closed'
 export function getAStockPhase(now: Date = new Date()): AStockPhase {
   const { weekday, hour, minute } = beijingParts(now)
   if (weekday === 0 || weekday === 6) return 'closed'
+  // 法定节假日休市：与 getRegionStatus（cn 分支）和 getUsPhase 同源查节假日日历。
+  // 此前只判周末，会在国庆/春节等工作日节假日给出「A股盘中 / active」，与同屏
+  // A股指数分区的「休市」自相矛盾，并让有色页按已休市的内盘口径取价。
+  if (isMarketHoliday('cn', now)) return 'closed'
   const minutes = hour * 60 + minute
   if (minutes >= 9 * 60 + 15 && minutes < 9 * 60 + 30) return 'pre'
   if (minutes >= 9 * 60 + 30 && minutes < 11 * 60 + 30) return 'morning'
@@ -58,8 +62,11 @@ export function getAStockPhase(now: Date = new Date()): AStockPhase {
   return 'closed'
 }
 
+/** 是否 A股交易日：非周末且非法定节假日（未维护年份仅按周末判定） */
 export function isAStockTradingDay(now: Date = new Date()): boolean {
-  return beijingParts(now).weekday !== 0 && beijingParts(now).weekday !== 6
+  const { weekday } = beijingParts(now)
+  if (weekday === 0 || weekday === 6) return false
+  return !isMarketHoliday('cn', now)
 }
 
 /** 该年某月第 nth 个周日的 UTC 毫秒（month: 0-11） */

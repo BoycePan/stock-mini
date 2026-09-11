@@ -163,15 +163,29 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   const sinaRows = await fetchSinaQuotes(sinaKeys)
   const sinaBatch = new Map(sinaRows.map((row) => [row.key, parseSinaQuote(row.key, row.fields)]))
 
-  // ③ 宏观资产逐项 fetchAccurate（新浪批量优先，腾讯 / 东财兜底，共识取中位数）
+  // ③ 宏观资产 fetchAccurate（新浪批量优先，腾讯 / 东财兜底，共识取中位数）
+  //    原实现逐项 await：每资产内部还按 parallel:2 分轮，常态即约 10 次串行往返、
+  //    弱网多源兜底时最坏约 20 次串行请求叠加，全球页首屏长期停在 loading。
+  //    这里改并发但分片（每批 4 项）：微信 wx.request 并发上限为 10，而单个资产内部按
+  //    parallel:2 分轮占用请求（多源兜底 + 共识），一次性 Promise.all 全部 ~10 项会顶满上限，
+  //    超出的请求排队并各自吃满 15s 超时；每批 4 项 → 单批最多 4×2=8 个并发请求，留 2 个额度
+  //    给埋点上报等并行请求，串行轮次也从 10 降到 3。
+  //    取数顺序仍严格按 MACRO_ASSETS：批内 Promise.all 保序，批间串行按序 push，macro 内容与顺序不变。
+  const MACRO_FETCH_BATCH = 4
   const macro: QuoteItem[] = []
-  for (const asset of MACRO_ASSETS) {
-    const quote = await fetchAccurate(asset.sources, { sina: sinaBatch }, { parallel: 2 })
-    macro.push({
-      code: asset.code,
-      name: asset.name,
-      price: quote?.price ?? null,
-      pct: quote?.changePercent ?? null,
+  for (let start = 0; start < MACRO_ASSETS.length; start += MACRO_FETCH_BATCH) {
+    const batch = MACRO_ASSETS.slice(start, start + MACRO_FETCH_BATCH)
+    const quotes = await Promise.all(
+      batch.map((asset) => fetchAccurate(asset.sources, { sina: sinaBatch }, { parallel: 2 })),
+    )
+    batch.forEach((asset, index) => {
+      const quote = quotes[index]
+      macro.push({
+        code: asset.code,
+        name: asset.name,
+        price: quote?.price ?? null,
+        pct: quote?.changePercent ?? null,
+      })
     })
   }
 
@@ -613,28 +627,44 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   // ③ 金银内外盘同屏：黄金、白银恒同时解析内盘（沪金主连 元/克 / 沪银主连 元/千克）与外盘
   //    （现货 XAUUSD/XAGUSD 美元/盎司）两路报价，不再随交易时段二选一（restrict 强制各自口径，见 resolveMetal）；
   //    其余金属仍随会话切换。
-  const goldCfg = METALS.find((metal) => metal.code === 'GOLD')!
-  const silverCfg = METALS.find((metal) => metal.code === 'SILVER')!
-  const [[goldCn, goldUs], [silverCn, silverUs]] = await Promise.all([
-    Promise.all([
-      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
-      resolveMetal(goldCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
-    ]),
-    Promise.all([
-      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
-      resolveMetal(silverCfg, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
-    ]),
-  ])
-  const dualCards: Record<string, QuoteItem[]> = {
-    GOLD: [
-      { ...goldCn, name: '黄金·内盘', tags: ['元/克'] },
-      { ...goldUs, name: '黄金·外盘', tags: ['美元/盎司'] },
-    ],
-    SILVER: [
-      { ...silverCn, name: '白银·内盘', tags: ['元/千克'] },
-      { ...silverUs, name: '白银·外盘', tags: ['美元/盎司'] },
-    ],
+  //    注意：这里不做 METALS.find(...)! 非空断言——config/tabbar.ts 一旦改名 / 删除 GOLD、SILVER，
+  //    断言后解构会抛 "Cannot read properties of undefined"，让整页数据构建失败（有色页全白）；
+  //    改为逐项判空：缺失的金银直接跳过对应双卡，其余分组照常渲染（优雅降级）。
+  const dualCardOf = async (
+    metal: MetalConfig | undefined,
+    cnName: string,
+    cnUnit: string,
+    usName: string,
+  ): Promise<QuoteItem[] | null> => {
+    if (!metal) return null
+    const [cn, us] = await Promise.all([
+      resolveMetal(metal, { sinaBatch, tcMap, useA: true, restrict: 'a' }),
+      resolveMetal(metal, { sinaBatch, tcMap, useA: false, restrict: 'us' }),
+    ])
+    return [
+      { ...cn, name: cnName, tags: [cnUnit] },
+      { ...us, name: usName, tags: ['美元/盎司'] },
+    ]
   }
+  const [goldDual, silverDual] = await Promise.all([
+    dualCardOf(
+      METALS.find((metal) => metal.code === 'GOLD'),
+      '黄金·内盘',
+      '元/克',
+      '黄金·外盘',
+    ),
+    dualCardOf(
+      METALS.find((metal) => metal.code === 'SILVER'),
+      '白银·内盘',
+      '元/千克',
+      '白银·外盘',
+    ),
+  ])
+  const dualCards: Record<string, QuoteItem[]> = {}
+  if (goldDual) dualCards.GOLD = goldDual
+  if (silverDual) dualCards.SILVER = silverDual
+  /** 金银双卡的全部条目（用于末尾「是否有任何报价」判定；缺失的金银不参与） */
+  const dualItems: QuoteItem[] = [...(goldDual ?? []), ...(silverDual ?? [])]
 
   // ④ 其余金属逐项解析（工业金属 / 其他金属，随会话切换）
   const otherMetals = METALS.filter((metal) => metal.code !== 'GOLD' && metal.code !== 'SILVER')
@@ -670,7 +700,7 @@ async function getMetalsMarketPage(): Promise<MarketPageData> {
   }
 
   if (
-    ![...items, goldCn, goldUs, silverCn, silverUs].some((item) => item.price !== null) &&
+    ![...items, ...dualItems].some((item) => item.price !== null) &&
     !goldShopGroup?.items.length &&
     !physicalGoldGroup?.items.length
   ) {

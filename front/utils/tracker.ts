@@ -30,6 +30,8 @@ const PAGE_HIDE = 'page.hide'
 
 /** 会话 id：小程序一次启动一个（eventId 前缀 + 批量归组） */
 const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+/** 单次 flush 最多连续上报的批数：防队列被并发写入时长时间占用（剩余留给下次触发） */
+const MAX_BATCHES_PER_FLUSH = 20
 let seq = 0
 let queue: TrackEvent[] = []
 let flushing = false
@@ -128,7 +130,17 @@ export function track(eventName: string, extra: TrackExtra = {}): void {
     appVersion,
   }
   queue.push(event)
+  // 入队即裁剪：队列上限不能只在上报失败的 catch 里维护——登录门闩返回 false 时 flush 会在
+  // 进入 catch 之前就 return，仅靠 catch 裁剪会让队列在「始终未登录」时无界增长（真实内存泄漏）。
+  trimQueue()
   if (queue.length >= TRACKING_CONFIG.batchSize) void flush()
+}
+
+/** 队列上限裁剪：超出 maxQueue 丢弃最旧事件（track 入队后与上报失败放回后统一调用） */
+function trimQueue(): void {
+  if (queue.length > TRACKING_CONFIG.maxQueue) {
+    queue.splice(0, queue.length - TRACKING_CONFIG.maxQueue)
+  }
 }
 
 /**
@@ -195,10 +207,15 @@ export function trackEvent(key: string, params: TrackEventParams = undefined): v
 }
 
 /**
- * 立即上报队列内全部事件（成功清空；失败放回队首重试，队列超 maxQueue 丢最旧）。
+ * 立即上报队列内事件（逐批上报，成功清空；失败放回队首重试，队列超 maxQueue 丢最旧）。
  * **只在登录成功后上报**：flush 前先 await 登录门闩，登录未成功（含失败）时事件留在队列，
  * 等定时器 / onHide / 下一次 flush 再试，绝不匿名上报。
  * 上报走独立异步请求，不阻塞业务；重复上报由服务端按 eventId 幂等去重。
+ *
+ * 单批条数受 batchSize 约束（不能整队列一次发出）：后端 TrackService 对
+ * `events.size() > max-batch-size`（默认 100）直接拒绝整批，若某次把 100+ 条一次发出，
+ * 该批就会永远被拒 → 事件放回队首 → 下一轮仍超限 → 队列永久卡死排不出去。
+ * 成功一批后继续发下一批，直到队列排空；失败即停止本轮（等下次触发），避免无谓重试风暴。
  */
 export async function flush(): Promise<void> {
   if (!enabled || flushing || queue.length === 0) return
@@ -208,26 +225,29 @@ export async function flush(): Promise<void> {
     if (!ok || flushing || queue.length === 0) return
   }
   flushing = true
-  const events = queue.splice(0, queue.length)
-  return request<TrackBatchResult>({
-    path: TRACKING_CONFIG.apiPath,
-    method: 'POST',
-    data: { events },
-    // 打点已在上面保证登录成功，这里跳过通用登录门闩（避免二次等待）；withAuth 带 Bearer 解析 user_id
-    withAuth: true,
-    skipLoginWait: true,
-  })
-    .then(() => undefined)
-    .catch(() => {
-      // 失败放回队首（保持事件时序），eventId 幂等兜底；堆积超上限丢最旧
-      queue.unshift(...events)
-      if (queue.length > TRACKING_CONFIG.maxQueue) {
-        queue.splice(0, queue.length - TRACKING_CONFIG.maxQueue)
+  try {
+    // 本轮最多上报 MAX_BATCHES_PER_FLUSH 批（防队列被并发写入时长时间占用）
+    for (let round = 0; round < MAX_BATCHES_PER_FLUSH && queue.length > 0; round++) {
+      const events = queue.splice(0, Math.min(queue.length, TRACKING_CONFIG.batchSize))
+      try {
+        await request<TrackBatchResult>({
+          path: TRACKING_CONFIG.apiPath,
+          method: 'POST',
+          data: { events },
+          // 打点已在上面保证登录成功，这里跳过通用登录门闩（避免二次等待）；withAuth 带 Bearer 解析 user_id
+          withAuth: true,
+          skipLoginWait: true,
+        })
+      } catch {
+        // 失败放回队首（保持事件时序），eventId 幂等兜底；堆积超上限丢最旧
+        queue.unshift(...events)
+        trimQueue()
+        return
       }
-    })
-    .finally(() => {
-      flushing = false
-    })
+    }
+  } finally {
+    flushing = false
+  }
 }
 
 /**

@@ -48,6 +48,11 @@ Page({
     title: '财经新闻',
     hasMore: false,
     loadingMore: false,
+    /**
+     * 下一页页码：显式递增。个股新闻每页条数由后端解析结果决定（getStockNews 不带 size），
+     * 用「条数 / 固定页大小」反推页码会在每页不足 20 条时重复请求同一页，把首屏条目再追加一遍。
+     */
+    page: 2,
   },
   async onLoad(options: Record<string, string | undefined>) {
     bindTheme(this)
@@ -65,15 +70,20 @@ Page({
     }
   },
   async loadData(code?: string) {
+    // 缺省参数回退页面自身的 code：下拉刷新 / 「重新加载」不传参时必须仍拉个股新闻，
+    // 否则会静默切到通用财经 feed（标题仍是「600519 新闻」而列表内容已换源、hasMore 口径也变）。
+    const targetCode = code || this.data.code
     this.setData({ loading: true, error: '', loadingMore: false })
     try {
-      if (code) {
-        const items = await newsApi.getStockNews(code, 1)
+      if (targetCode) {
+        const items = await newsApi.getStockNews(targetCode, 1)
         this.setData({
           loading: false,
           error: '',
           items: items.map(toNewsViewItem),
           hasMore: items.length > 0,
+          // 列表重建回第一页：页码同步重置
+          page: 2,
         })
       } else {
         const items = await newsApi.getFeed(1, FEED_PAGE_SIZE)
@@ -82,6 +92,7 @@ Page({
           error: '',
           items: items.map(toNewsViewItem),
           hasMore: items.length >= FEED_PAGE_SIZE,
+          page: 2,
         })
       }
     } catch (error) {
@@ -106,7 +117,8 @@ Page({
     this.setData({ loadingMore: true })
     try {
       const base = this.data.items.length
-      const page = Math.ceil((base + 1) / FEED_PAGE_SIZE)
+      // 页码显式递增（不从条数反推）
+      const page = this.data.page
       let items: NewsItem[]
       let hasMore: boolean
       if (this.data.code) {
@@ -120,10 +132,10 @@ Page({
       }
       const freshView = items.map((item, i) => toNewsViewItem(item, base + i))
       const merged = this.data.items.concat(freshView)
-      const patch: Record<string, unknown> = { hasMore }
+      const patch: Record<string, unknown> = { hasMore, page: page + 1 }
       if (merged.length > MAX_FEED_ITEMS) {
-        // 超上限：整体重建并丢弃最旧条目（新闻越旧价值越低，保留最新）
-        patch.items = merged.slice(merged.length - MAX_FEED_ITEMS)
+        // 超上限：整体重建并丢弃最旧条目（列表为「新→旧」序，保留最新即取头部）
+        patch.items = merged.slice(0, MAX_FEED_ITEMS)
       } else {
         // 未超上限：增量 setData 只传输新增条目的路径
         freshView.forEach((item, i) => {

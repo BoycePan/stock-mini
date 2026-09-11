@@ -96,10 +96,11 @@
           <text>相关新闻</text>
         </view>
         <view wx:if="{{ news.length }}">
+          <!-- 后端部分条目 url 为空，不能用 url 作 wx:key，改用 ts 里派生好的稳定 key（toNewsViewItem） -->
           <view
             class="news-row"
             wx:for="{{ news }}"
-            wx:key="url"
+            wx:key="key"
             data-index="{{ index }}"
             bindtap="onNewsTap"
           >

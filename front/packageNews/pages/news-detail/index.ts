@@ -22,6 +22,17 @@ function decodeQuery(value: string | undefined): string {
   }
 }
 
+/**
+ * 已卸载的页面实例：异步回调（按 id 拉取明细返回、富文本主题绑定注册）据此短路。
+ * 触发场景：分享进入后 `void loadFromApi(id)` 在途时用户返回上一页——onUnload 已
+ * releaseStoreBindings，若此后 applyNews 再 registerStoreBinding，就永远等不到下一次
+ * release（页面不再卸载）：mobx-miniprogram-bindings 的每个 field 都是一个
+ * `reaction(..., { fireImmediately: true })`，会常驻并闭包持有已销毁页面实例 →
+ * 页面实例无法回收（真实内存泄漏），且每次切换主题都会对已销毁页面执行
+ * buildRichHtml + setData。
+ */
+const destroyedPages = new WeakSet<object>()
+
 Page({
   data: {
     theme: rootStore.settings.theme,
@@ -63,6 +74,9 @@ Page({
    * 避免 <rich-text> 节点树 / 全尺寸图片解码撑爆 WebView 内存。
    */
   applyNews(news: NewsDetail) {
+    // 页面已卸载（按 id 拉取在途时用户返回）：不再 setData、更不再注册 store 绑定，避免
+    // 订阅永久泄漏与对已销毁页面写入
+    if (destroyedPages.has(this)) return
     const rawSummary = news.summary ?? ''
     const summary = truncateRichHtml(rawSummary, MAX_RICH_HTML_CHARS)
     const cappedNews: NewsDetail = summary === rawSummary ? news : { ...news, summary }
@@ -78,6 +92,9 @@ Page({
       summaryRest: leadMatch ? summary.slice(leadMatch[0].length) : '',
       posterData: this.buildPosterData(cappedNews),
       shareEntrancePath: cappedNews.id ? buildSharePath('news-detail', { id: cappedNews.id }) : '',
+      // 换了一篇文章必须复位复制态：否则复用同一页面实例时（分享进入 / 多篇连看），
+      // 链接卡片会一直挂着上一篇的「已复制 ✓」
+      copied: false,
     })
     registerStoreBinding(
       this,
@@ -114,6 +131,7 @@ Page({
       this.applyNews(capped)
     } catch (error) {
       console.warn('[news-detail] 按 id 拉取新闻明细失败:', error)
+      if (destroyedPages.has(this)) return
       wx.showToast({ title: error instanceof Error ? error.message : '加载失败', icon: 'none' })
       this.setData({
         loading: false,
@@ -168,9 +186,15 @@ Page({
           duration: 2200,
         })
       },
+      // 复制失败必须复位：否则「已复制 ✓」会一直挂在链接卡片上，与实际状态不符
+      fail: () => {
+        this.setData({ copied: false })
+      },
     })
   },
   onUnload() {
+    // 先置销毁标记再释放绑定：在途请求返回后据此短路，不会重新注册绑定
+    destroyedPages.add(this)
     releaseStoreBindings(this)
     unbindTheme(this)
   },

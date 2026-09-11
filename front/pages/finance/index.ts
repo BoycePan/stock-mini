@@ -71,7 +71,9 @@ function toNewsItemView(item: NewsSourceItem, index: number): NewsItemView {
     title: item.title,
     summary: stripHtml(cappedSummary),
     rawSummary: cappedSummary,
-    url: item.url,
+    // url 兜底空串：news_feed.url 允许 NULL，而跳详情页时会 encodeURIComponent(url)，
+    // 为 null 时会拼出字面量 "null"，与首屏（toNewsView 已兜底）口径不一致
+    url: item.url ?? '',
     source,
     time,
     timeText: formatNewsTime(time),
@@ -115,13 +117,13 @@ let lastFinanceRequestAt = 0
  * 重启后为 0，首次轮询 needToPull 恒返回 true，退化为「拉最新一条比对」的旧行为，无功能损失。
  */
 let lastNewsPullAt = 0
-/** 最新新闻轮询间隔：每 10s 检查一次（只拉第一页，与 store 首屏同源，见 checkNewNews） */
+/** 最新新闻轮询间隔：每 NEWS_POLL_INTERVAL（30s）检查一次（只拉第一页，与 store 首屏同源，见 checkNewNews） */
 const NEWS_POLL_INTERVAL = 30000
 let newsPollTimer: ReturnType<typeof setInterval> | null = null
 let newsPolling = false
 /**
  * 刷新失败重试态：refresh 失败时 restore() 显示的按钮是「重试入口」，
- * 不受轮询隐藏影响（否则 10s 后按钮会被 poll 隐藏，用户无法重试）；
+ * 不受轮询隐藏影响（否则一个 NEWS_POLL_INTERVAL（30s）后按钮会被 poll 隐藏，用户无法重试）；
  * 刷新成功后清除。
  */
 let refreshFailed = false
@@ -390,8 +392,10 @@ Page({
         nextPage: page + 1,
       }
       if (merged.length > MAX_NEWS_ITEMS) {
-        // 超上限：整体重建并丢弃最旧条目（新闻越旧价值越低，保留最新），列表内存有上界
-        patch.news = merged.slice(merged.length - MAX_NEWS_ITEMS)
+        // 超上限：整体重建并丢弃最旧条目。列表是「新→旧」序（后端 feed 按 published_at DESC，
+        // 滚动加载追加在尾部），故保留最新 = 取数组头部；取尾部会把最新几条丢掉，
+        // 还会让 news[0]（上方滚动加载游标）从最新条变成旧条、污染后续分页基准。
+        patch.news = merged.slice(0, MAX_NEWS_ITEMS)
       } else {
         // 未超上限：增量 setData 只传输新增条目的路径，避免整数组序列化
         freshView.forEach((item, i) => {
@@ -437,7 +441,8 @@ Page({
   },
   /**
    * 检查是否有最新新闻：先调 needToPull 做轻量判断（服务端新闻更新时间 > 本地上次拉取时间
-   * 才返回 true），未超时直接跳过本轮，避免每 10s 都拉一页 feed；返回 true 时再拉第一页
+   * 才返回 true），未超时直接跳过本轮，避免每轮轮询（NEWS_POLL_INTERVAL，30s）都拉一页 feed；
+   * 返回 true 时再拉第一页
    * （getFeed(1, 1)，与 store 首屏同源），第一页里只要存在「本地已加载列表中没有的条目」就视为有新新闻：
    * - 显示悬浮刷新按钮（用户点击后走与下拉刷新相同的流程）；
    * - 抑制回到顶部按钮（两按钮互斥）。
@@ -454,7 +459,8 @@ Page({
     if (this.getRefreshBtn()?.isShown?.()) return
     newsPolling = true
     try {
-      // 先做轻量判断：服务端新闻更新时间未超过上次拉取时间，直接跳过（避免每 10s 都拉一页 feed）
+      // 先做轻量判断：服务端新闻更新时间未超过上次拉取时间，直接跳过
+      // （避免每轮轮询（NEWS_POLL_INTERVAL，30s）都拉一页 feed）
       if (!(await newsApi.needToPull(lastNewsPullAt))) return
       // 只拉最新 1 条：仅用于判断「有没有本地未收录的新新闻」，无需多条
       const items = await newsApi.getFeed(1, 1)

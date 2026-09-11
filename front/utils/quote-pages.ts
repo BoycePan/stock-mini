@@ -278,7 +278,12 @@ export function buildQuoteGlobalPage(
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of groups) {
-    const section = sectionOf(group, offset, 'global', { now })
+    // hideFlatChange 必须按分组透传（与 metals 构建器一致）：分组声明了该字段却被丢弃时，
+    // pct === null 的条目会按 metricOf 的 `change: item.pct ?? 0` 渲染出无意义的「0.00%」
+    const section = sectionOf(group, offset, 'global', {
+      hideFlatChange: group.hideFlatChange,
+      now,
+    })
     if (group.id === 'industry-board') {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
@@ -332,7 +337,8 @@ export function buildQuoteAsiaPage(
   const sections: MarketSection[] = []
   let offset = 0
   for (const group of [...params.indexGroups, ...params.stockGroups]) {
-    sections.push(sectionOf(group, offset, 'asia', { now }))
+    // 同全球页：分组级 hideFlatChange 需透传，否则 pct === null 的条目会渲染出无意义的「0.00%」
+    sections.push(sectionOf(group, offset, 'asia', { hideFlatChange: group.hideFlatChange, now }))
     offset += group.items.length
   }
   if (params.rates.length) {

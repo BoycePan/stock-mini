@@ -15,6 +15,10 @@ export function formatChange(change: number): string {
   const sign = change > 0 ? '+' : ''
   const fixed = Math.abs(change) < 0.0001 && change !== 0 ? change.toFixed(4) : change.toFixed(2)
   const stripped = stripTrailingZeros(fixed)
+  // ±0 归一：-0.00001 → "-0.0000" → "-0"、0.00001 → "0.0000" → "0"，直接拼符号会得到
+  // "-0%" / "+0%"，与精确 0 的 "0%" 口径不一致（"-0%" 尤其容易被误读成下跌）；
+  // 因此凡是数值上等于 0 的结果，统一输出不带符号的 "0%"。
+  if (/^-?0(\.0+)?$/.test(stripped)) return '0%'
   return `${sign}${stripped === '' ? '0' : stripped}%`
 }
 
@@ -62,29 +66,55 @@ export function formatItemUpdatedAt(value?: string | number | Date): string {
   return `${md} ${hm} 更新`
 }
 
+/** 东八区偏移（后端 published_at 为 Asia/Shanghai 墙钟，串内无时区标记） */
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
+
+/** 取某一时刻的东八区墙钟字段（展示与「当天」判定统一按北京时间，任何设备时区下文案一致） */
+function beijingWallClock(date: Date): {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+} {
+  const shifted = new Date(date.getTime() + BEIJING_OFFSET_MS)
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth(),
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes(),
+  }
+}
+
 /**
  * 新闻时间展示：解析「yyyy-MM-dd HH:mm[:ss]」格式，
  * 当天显示「x分钟前 / x小时前」，跨天显示「MM-DD HH:mm」，跨年补年份；
  * 时间晚于当前（时钟偏差）按「刚刚」处理。解析失败返回原文。
+ *
+ * 时区：后端返回的是东八区墙钟且串内不带时区标记，因此一律按 UTC+8 解析为真实时刻，
+ * 展示也按 UTC+8 计算。此前按设备本地时区解析，非 UTC+8 设备会整体偏移
+ * (本地时区偏移 − 8h)：偏西设备 diff 变负 → 所有新闻恒显示「刚刚」，
+ * 偏东设备则恒显示「N小时前」，跨天/跨年判定同时错位。
  */
 export function formatNewsTime(value: string, now = new Date()): string {
   if (!value) return ''
   const matched = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value.trim())
   if (!matched) return value
   const [, year, month, day, hour, minute] = matched
-  const date = new Date(+year!, +month! - 1, +day!, +hour!, +minute!)
+  const date = new Date(Date.UTC(+year!, +month! - 1, +day!, +hour!, +minute!) - BEIJING_OFFSET_MS)
   if (Number.isNaN(date.getTime())) return value
   const diff = now.getTime() - date.getTime()
   if (diff < 60_000) return '刚刚'
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}分钟前`
+  const parts = beijingWallClock(date)
+  const nowParts = beijingWallClock(now)
   const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
+    parts.year === nowParts.year && parts.month === nowParts.month && parts.day === nowParts.day
   if (sameDay) return `${Math.floor(diff / 3_600_000)}小时前`
-  const hm = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  const md = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  if (date.getFullYear() === now.getFullYear()) return `${md} ${hm}`
+  const hm = `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`
+  const md = `${String(parts.month + 1).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`
+  if (parts.year === nowParts.year) return `${md} ${hm}`
   return `${year}-${md} ${hm}`
 }
 

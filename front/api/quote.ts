@@ -200,19 +200,36 @@ function hasEnoughCoverage(page: EastmoneyClistPage): boolean {
   return page.items.length >= 3000
 }
 
+/**
+ * clist 分页硬上限（页数）：pageCount 由上游 total 推导，total 异常（被污染 / 单位变化 /
+ * 误返回全市场含退市标的等）时会瞬间展开成几十上百个 wx.request——微信并发上限仅 10，
+ * 超出的请求排队且各自吃满 15s 超时，所有页结果再 flatMap 成大数组常驻内存。
+ * A 股全市场约 5400 只 → 6 页；10 页（1 万只）已远超现实上限，超出部分直接截断。
+ */
+const CLIST_MAX_PAGES = 10
+/** 每批并发页数：单批 ≤5 个请求，避开微信 10 个并发上限（与首屏其他请求共用额度） */
+const CLIST_PAGE_BATCH = 5
+
 async function fetchClistAll(host: string): Promise<EastmoneyClistPage> {
   const first = await fetchEastmoneyClistPage(1, 8000, host)
   if (hasEnoughCoverage(first)) return first
 
-  // 分页补齐：total 已知按页数并行拉全；未知逐页追加到空页 / 数量下限为止
+  // 分页补齐：total 已知按页数分批拉全；未知逐页追加到空页 / 数量下限为止
   if (first.total > 0) {
     const pageSize = 1000
-    const pageCount = Math.ceil(first.total / pageSize)
-    const pages = await Promise.all(
-      Array.from({ length: pageCount }, (_, index) =>
-        fetchEastmoneyClistPage(index + 1, pageSize, host),
-      ),
-    )
+    const pageCount = Math.min(CLIST_MAX_PAGES, Math.ceil(first.total / pageSize))
+    // 分批串行（每批 5 页并发，上一批 await 完再发下一批）：既避免瞬时 fan-out 打满并发额度，
+    // 也让 total 异常大时最多只发 10 个请求。
+    // total 保持原样返回（调用方 hasEnoughCoverage / 平均股价的覆盖度校验都依赖它）：
+    // 被截断时 items 数量必然达不到 total 的 90%，覆盖度校验会如实判定「覆盖不足」并丢弃
+    // 这一轮快照（卡片显示 --），而不是拿局部子集算出一个错误的平均值。
+    const pages: EastmoneyClistPage[] = []
+    for (let start = 1; start <= pageCount; start += CLIST_PAGE_BATCH) {
+      const pns: number[] = []
+      for (let pn = start; pn < start + CLIST_PAGE_BATCH && pn <= pageCount; pn++) pns.push(pn)
+      const batch = await Promise.all(pns.map((pn) => fetchEastmoneyClistPage(pn, pageSize, host)))
+      pages.push(...batch)
+    }
     return { items: pages.flatMap((page) => page.items), total: first.total }
   }
   const items = [...first.items]

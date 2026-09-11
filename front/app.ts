@@ -23,7 +23,7 @@ App({
     themeListenerRegistered: false,
   },
   onLaunch() {
-    // 打点：注册全局路由监听（自动 page.view / page.hide）+ 启动攒批定时上报
+    // 打点：注册全局路由监听（自动 page.view / page.hide）；攒批定时上报在下方无条件启动
     initTracker()
     const theme = getTheme()
     this.globalData.theme = theme
@@ -42,15 +42,17 @@ App({
         }
       })
     }
-    // 每次打开小程序自动完成「登录 + 系统配置」就绪；登录成功后启动打点定时上报
-    rootStore
-      .bootstrap()
-      .then(() => {
-        if (rootStore.auth.isLoggedIn) startFlushTimer()
-      })
-      .catch((error) => {
-        console.warn('[bootstrap] 登录/系统配置就绪失败:', error)
-      })
+    // 打点定时上报：无条件启动（startFlushTimer 内部幂等），不依赖登录结果——
+    // 冷启动登录接口失败（离线 / 后端异常）时，若只在登录成功后才启动，本次会话将永远没有
+    // 定时上报：事件只能靠攒满 batchSize 或 App.onHide / onError 发出，崩溃 / 被杀即丢数据。
+    // 安全性前提：flush() 前会 await 登录门闩（见文件顶部 setTrackingLoginWaiter），
+    // 未登录时门闩返回 false 直接 return，不发任何请求（绝不匿名上报），事件留队等下次重试；
+    // 队列为空时 flush 更是在等门闩之前就返回，不会平白触发登录。
+    startFlushTimer()
+    // 每次打开小程序自动完成「登录 + 系统配置」就绪
+    rootStore.bootstrap().catch((error) => {
+      console.warn('[bootstrap] 登录/系统配置就绪失败:', error)
+    })
   },
   onShow() {
     // 打点：冷启动兜底补发首个 page.view（路由事件可能晚于 onShow）；后台返回时补发新一次 page.view

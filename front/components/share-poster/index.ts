@@ -5,6 +5,14 @@ import { renderSharePoster, type PosterChart, type PosterData } from '../../util
 import { bindTheme, getTheme, unbindTheme } from '../../utils/theme'
 
 /**
+ * 已卸载的组件实例：海报生成（图片加载 + canvasToTempFilePath，约 0.5~1s）期间用户退出页面时，
+ * 异步回调不再对已销毁组件 setData。wx.hideLoading 是全局遮罩，无论是否已卸载都必须关闭。
+ */
+const detachedInstances = new WeakSet<object>()
+/** 转发菜单延迟调起的定时器句柄（按实例存放），detached 时清理 */
+const shareMenuTimers = new WeakMap<object, ReturnType<typeof setTimeout>>()
+
+/**
  * 分享海报组件（行情 / 分时 / 新闻详情通用）：
  * - 持有隐藏 Canvas（#shareCanvas）绘制海报并导出临时文件；
  * - 预览弹窗：水印开关（重画）、长按保存 / 转发、保存相册、调起微信图片分享菜单；
@@ -61,6 +69,10 @@ Component({
       bindTheme(this)
     },
     detached() {
+      detachedInstances.add(this)
+      const timer = shareMenuTimers.get(this)
+      if (timer) clearTimeout(timer)
+      shareMenuTimers.delete(this)
       unbindTheme(this)
     },
   },
@@ -102,12 +114,15 @@ Component({
       const chart = this.buildChart()
       renderSharePoster(this, data, chart ? { chart } : undefined)
         .then((path) => {
-          this.setData({ shareLoading: false, sharePreviewPath: path, modalVisible: true })
+          // 全局遮罩先关（即使组件已卸载）；再按存活状态决定是否 setData
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false, sharePreviewPath: path, modalVisible: true })
         })
         .catch((err) => {
-          this.setData({ shareLoading: false })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false })
           wx.showToast({ title: (err && err.message) || '生成失败，请重试', icon: 'none' })
         })
     },
@@ -116,6 +131,9 @@ Component({
     },
     /** 水印开关：切换后按当前设置重画海报 */
     onWatermarkToggle() {
+      // 生成中忽略切换：两次生成共用同一张隐藏画布，并发会互相重置画布尺寸 / 上下文变换，
+      // 造成绘制与导出交错、导出半张或错位的图
+      if (this.data.shareLoading) return
       if (!this.data.posterData) return
       const next = !this.data.includeWatermark
       this.setData({ includeWatermark: next, shareLoading: true })
@@ -124,12 +142,14 @@ Component({
       const chart = this.buildChart()
       renderSharePoster(this, data, chart ? { chart } : undefined)
         .then((path) => {
-          this.setData({ shareLoading: false, sharePreviewPath: path })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false, sharePreviewPath: path })
         })
         .catch(() => {
-          this.setData({ shareLoading: false })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false })
         })
     },
     /** 保存海报到相册（需相册权限，拒绝时引导去设置） */
@@ -165,22 +185,29 @@ Component({
         return
       }
       this.setData({ modalVisible: false })
-      setTimeout(() => {
-        // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面。
-        // 不指定时微信默认取「当前页面路径且不带参数」，详情页（分时/个股/板块/新闻）
-        // 会因缺少 code/id 等参数而无法加载，因此必须与卡片分享一致经首页中转
-        // （页面传入 buildSharePath(target, params) 生成的路径，分享路径不带前导斜杠）。
-        // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
-        const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
-          path: this.data.sharePreviewPath,
-          fail: () => {
-            // 旧版本不支持该接口时引导长按图片分享
-            wx.showToast({ title: '请长按图片分享', icon: 'none' })
-          },
-        }
-        if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
-        wx.showShareImageMenu(options)
-      }, 150)
+      // 定时器句柄登记到实例：detached 时清理，避免卸载后仍调起分享菜单
+      const existing = shareMenuTimers.get(this)
+      if (existing) clearTimeout(existing)
+      shareMenuTimers.set(
+        this,
+        setTimeout(() => {
+          shareMenuTimers.delete(this)
+          // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面。
+          // 不指定时微信默认取「当前页面路径且不带参数」，详情页（分时/个股/板块/新闻）
+          // 会因缺少 code/id 等参数而无法加载，因此必须与卡片分享一致经首页中转
+          // （页面传入 buildSharePath(target, params) 生成的路径，分享路径不带前导斜杠）。
+          // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
+          const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
+            path: this.data.sharePreviewPath,
+            fail: () => {
+              // 旧版本不支持该接口时引导长按图片分享
+              wx.showToast({ title: '请长按图片分享', icon: 'none' })
+            },
+          }
+          if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
+          wx.showShareImageMenu(options)
+        }, 150),
+      )
     },
   },
 })

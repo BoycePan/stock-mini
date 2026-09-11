@@ -6,5 +6,6 @@
     "refresh-btn": "/components/refresh-btn/index",
     "back-to-top": "/components/back-to-top/index",
     "ad-banner": "/components/ad-banner/index"
-  }
+  },
+  "enablePullDownRefresh": false
 }

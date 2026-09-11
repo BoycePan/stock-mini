@@ -19,6 +19,14 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
 
+/**
+ * 已卸载的组件实例：draw 里的 createSelectorQuery().exec(cb) 回调是异步的，
+ * klines / theme 变更（自动刷新、主题切换）发起查询后用户立刻返回上一页时，
+ * 回调仍会在已销毁组件上取 ctx、写 chartState 并绘制失效的 canvas 节点，
+ * 产生无效绘制与控制台报错，故回调与 render 先判存活后直接返回。
+ */
+const detachedInstances = new WeakSet<object>()
+
 /** 均线周期与主题配色（浅/深各一套，保证双主题可读） */
 const MA_PERIODS = [5, 10, 20] as const
 const MA_LABELS = ['MA5', 'MA10', 'MA20'] as const
@@ -57,6 +65,8 @@ Component({
       this.draw(this.data.klines as KlinePoint[])
     },
     detached() {
+      // 先置销毁标记再解绑主题：在途的 selectorQuery 回调据此短路，不再对已销毁画布绘制
+      detachedInstances.add(this)
       unbindTheme(this)
     },
   },
@@ -66,6 +76,8 @@ Component({
         .select('#kline-canvas')
         .fields({ node: true, size: true, rect: true })
         .exec((result) => {
+          // 组件已卸载：画布节点已失效，取 ctx / 绘制都会报错，直接放弃本次绘制
+          if (detachedInstances.has(this)) return
           const info = result?.[0] as
             { node?: CanvasNode; width?: number; height?: number; left?: number } | undefined
           const canvas = info?.node
@@ -105,6 +117,8 @@ Component({
         })
     },
     render() {
+      // 已卸载（触摸回调 / 主题或数据变更的在途重绘）：不再绘制失效画布
+      if (detachedInstances.has(this)) return
       const st = chartState.get(this)
       if (!st) return
       const { ctx, width, height } = st

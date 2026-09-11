@@ -821,6 +821,23 @@ function loadCanvasImage(
   })
 }
 
+/**
+ * 上一次导出的海报临时文件路径：下一次导出成功后回收，避免反复生成（分享 / 水印开关）
+ * 在临时目录持续累积数 MB 的 PNG。只在「新图已导出成功」后回收，确保预览弹窗始终有图可显示。
+ */
+let lastPosterPath = ''
+
+function releasePosterFile(): void {
+  if (!lastPosterPath) return
+  const path = lastPosterPath
+  lastPosterPath = ''
+  try {
+    wx.getFileSystemManager().unlink({ filePath: path, fail: () => undefined })
+  } catch {
+    // 清理失败不影响海报生成
+  }
+}
+
 function exportCanvas(canvas: WechatMiniprogram.Canvas, target: PosterTarget): Promise<string> {
   return new Promise((resolve, reject) => {
     wx.canvasToTempFilePath(
@@ -833,7 +850,12 @@ function exportCanvas(canvas: WechatMiniprogram.Canvas, target: PosterTarget): P
         destWidth: canvas.width,
         destHeight: canvas.height,
         fileType: 'png',
-        success: (res) => resolve(res.tempFilePath),
+        success: (res) => {
+          // 新图已就绪：回收上一轮临时文件
+          releasePosterFile()
+          lastPosterPath = res.tempFilePath
+          resolve(res.tempFilePath)
+        },
         fail: () => reject(new Error('生成失败，请重试')),
       },
       // 自定义组件内操作画布：传入组件实例（官方文档要求）
@@ -862,59 +884,85 @@ export function renderSharePoster(
         .select('#shareCanvas')
         .fields({ node: true, size: true })
         .exec((res) => {
-          const info = res && res[0]
-          const canvas = info && (info.node as WechatMiniprogram.Canvas | undefined)
-          if (!canvas) {
-            reject(new Error('画布未就绪，请重试'))
-            return
-          }
-          const dpr = wx.getWindowInfo().pixelRatio || 2
-          const width = POSTER_WIDTH
-          // 设置画布尺寸会重置 2d 上下文状态，因此先用探针 ctx 测量总高度
-          // （含文本分区的真实换行行数），再 resize 画布并重新取 ctx。
-          const probe = canvas.getContext('2d')
-          const height = measurePosterHeight(data, options?.chart, probe)
-          // Canvas 2D 画布物理像素单边上限 8192（微信限制，超出抛
-          // 「set height out of range」），分区多 / 内嵌 K 线图的海报易触顶：
-          // 超出时整体等比缩小（长宽同比例），保证画布创建成功且海报完整可导出。
-          const MAX_CANVAS_PX = 8192
-          const scale = Math.min(1, MAX_CANVAS_PX / (height * dpr), MAX_CANVAS_PX / (width * dpr))
-          canvas.width = Math.floor(width * dpr * scale)
-          canvas.height = Math.floor(height * dpr * scale)
-          const ctx = canvas.getContext('2d')
-          ctx.scale(dpr * scale, dpr * scale)
+          // 回调体必须自包 try/catch：createSelectorQuery().exec 的回调是**异步调用**的，
+          // 外层 try/catch 只覆盖 exec 的「调用」、接不到回调内抛出的异常；而一旦抛出，
+          // 本 Promise 既不 resolve 也不 reject → 调用方的 .catch 兜底全部失效：
+          // shareLoading 永久为 true（分享入口被自身守卫永久挡住）、
+          // wx.showLoading({ mask: true }) 遮罩永不关闭，只能重启小程序。
+          try {
+            const info = res && res[0]
+            const canvas = info && (info.node as WechatMiniprogram.Canvas | undefined)
+            if (!canvas) {
+              reject(new Error('画布未就绪，请重试'))
+              return
+            }
+            const dpr = wx.getWindowInfo().pixelRatio || 2
+            const width = POSTER_WIDTH
+            // 设置画布尺寸会重置 2d 上下文状态，因此先用探针 ctx 测量总高度
+            // （含文本分区的真实换行行数），再 resize 画布并重新取 ctx。
+            const probe = canvas.getContext('2d')
+            if (!probe) {
+              reject(new Error('画布上下文不可用，请重试'))
+              return
+            }
+            const height = measurePosterHeight(data, options?.chart, probe)
+            // 画布物理像素双重上限：
+            // ① 单边 8192（微信限制，超出抛「set height out of range」）；
+            // ② 总像素 400 万——仅限单边不足以约束内存：750×2400 的海报在 dpr=3 下是
+            //    2250×7200 ≈ 1620 万像素 ≈ 65MB 位图，低端机上足以触发 OOM / 导出失败。
+            // 超出时整体等比缩小（长宽同比例），保证画布创建成功且海报完整可导出。
+            const MAX_CANVAS_PX = 8192
+            const MAX_CANVAS_AREA = 4_000_000
+            const areaScale = Math.sqrt(MAX_CANVAS_AREA / (width * dpr * height * dpr))
+            const scale = Math.min(
+              1,
+              MAX_CANVAS_PX / (height * dpr),
+              MAX_CANVAS_PX / (width * dpr),
+              areaScale,
+            )
+            canvas.width = Math.floor(width * dpr * scale)
+            canvas.height = Math.floor(height * dpr * scale)
+            const ctx = canvas.getContext('2d')
+            if (!ctx) {
+              reject(new Error('画布上下文不可用，请重试'))
+              return
+            }
+            ctx.scale(dpr * scale, dpr * scale)
 
-          // 收集需要绘制的行图标（本地静态图片），与头部 logo 一起预加载
-          const iconPaths: string[] = []
-          const seen = new Set<string>()
-          for (const section of data.sections ?? []) {
-            for (const row of section.rows ?? []) {
-              if (row.iconImage && !seen.has(row.iconImage)) {
-                seen.add(row.iconImage)
-                iconPaths.push(row.iconImage)
+            // 收集需要绘制的行图标（本地静态图片），与头部 logo 一起预加载
+            const iconPaths: string[] = []
+            const seen = new Set<string>()
+            for (const section of data.sections ?? []) {
+              for (const row of section.rows ?? []) {
+                if (row.iconImage && !seen.has(row.iconImage)) {
+                  seen.add(row.iconImage)
+                  iconPaths.push(row.iconImage)
+                }
               }
             }
+            const loadLogo = loadCanvasImage(canvas, LOGO_PATH).catch(() => null)
+            const loadIcons = iconPaths.map((p) =>
+              loadCanvasImage(canvas, p)
+                .then((img) => [p, img] as const)
+                .catch(() => null),
+            )
+            Promise.all([loadLogo, ...loadIcons])
+              .then((results) => {
+                const logo = results[0] as WechatMiniprogram.Image | null
+                const iconImgs: Record<string, WechatMiniprogram.Image> = {}
+                for (const pair of results.slice(1) as Array<
+                  readonly [string, WechatMiniprogram.Image] | null
+                >) {
+                  if (pair) iconImgs[pair[0]] = pair[1]
+                }
+                // logo 加载失败不阻塞：占位绘制后继续导出
+                drawPoster(ctx, data, width, logo, options?.chart, iconImgs)
+              })
+              .then(() => exportCanvas(canvas, target))
+              .then(resolve, reject)
+          } catch (e) {
+            reject(e instanceof Error ? e : new Error('生成失败，请重试'))
           }
-          const loadLogo = loadCanvasImage(canvas, LOGO_PATH).catch(() => null)
-          const loadIcons = iconPaths.map((p) =>
-            loadCanvasImage(canvas, p)
-              .then((img) => [p, img] as const)
-              .catch(() => null),
-          )
-          Promise.all([loadLogo, ...loadIcons])
-            .then((results) => {
-              const logo = results[0] as WechatMiniprogram.Image | null
-              const iconImgs: Record<string, WechatMiniprogram.Image> = {}
-              for (const pair of results.slice(1) as Array<
-                readonly [string, WechatMiniprogram.Image] | null
-              >) {
-                if (pair) iconImgs[pair[0]] = pair[1]
-              }
-              // logo 加载失败不阻塞：占位绘制后继续导出
-              drawPoster(ctx, data, width, logo, options?.chart, iconImgs)
-            })
-            .then(() => exportCanvas(canvas, target))
-            .then(resolve, reject)
         })
     } catch (e) {
       reject(e instanceof Error ? e : new Error('生成失败，请重试'))

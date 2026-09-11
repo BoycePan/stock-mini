@@ -379,3 +379,39 @@ test('buildQuoteAsiaPage：韩国/日本板块附加盘面状态，午休与无�
   assert.equal(krHoliday.marketStatus, '休市')
   assert.equal(krHoliday.marketTone, 'rest')
 })
+
+// ---------------------------------------------------------------------------
+// 分组级 hideFlatChange 透传（pct 缺失 / 为 0 时隐藏涨跌徽标）
+// ---------------------------------------------------------------------------
+
+test('buildQuoteAsiaPage：分组级 hideFlatChange 透传到指标（此前仅 metals 构建器透传）', () => {
+  const items: QuoteItem[] = [
+    { code: 'USDJPY', name: '美元/日元', price: 150.2, pct: null },
+    { code: 'CNYJPY', name: '人民币/日元', price: 20.5, pct: 0 },
+    { code: 'USDKRW', name: '美元/韩元', price: 1380.5, pct: 1.2 },
+  ]
+
+  const gated = buildQuoteAsiaPage({
+    indexGroups: [{ id: 'asia-fx', title: '汇率', items, hideFlatChange: true }],
+    stockGroups: [],
+    rates: [],
+    statusTone: 'active',
+  })
+  const gatedSection = gated.sections.find((section) => section.id === 'asia-fx')
+  assert.ok(gatedSection)
+  assert.equal(gatedSection.metrics[0]?.hideChange, true, 'pct 为 null 时应隐藏涨跌徽标')
+  assert.equal(gatedSection.metrics[1]?.hideChange, true, 'pct 为 0 时应隐藏涨跌徽标')
+  assert.equal(gatedSection.metrics[2]?.hideChange, false, '有真实涨跌幅时照常展示徽标')
+
+  // 未声明 hideFlatChange 的分组：行为不变（pct 缺失仍按 change=0 渲染）
+  const plain = buildQuoteAsiaPage({
+    indexGroups: [{ id: 'asia-jp-index', title: '日本指数', items }],
+    stockGroups: [],
+    rates: [],
+    statusTone: 'active',
+  })
+  const plainSection = plain.sections.find((section) => section.id === 'asia-jp-index')
+  assert.ok(plainSection)
+  assert.equal(plainSection.metrics[0]?.hideChange, false)
+  assert.equal(plainSection.metrics[0]?.change, 0)
+})

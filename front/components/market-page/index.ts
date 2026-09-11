@@ -8,6 +8,15 @@ import {
   type PosterData,
 } from '../../utils/share-poster'
 
+/**
+ * 已卸载的组件实例：海报生成（图片加载 + canvasToTempFilePath，约 0.5~1s）期间用户退出页面时，
+ * 异步回调不再对已销毁组件 setData（框架会告警且数据被丢弃）。
+ * wx.hideLoading 是全局遮罩，无论是否已卸载都必须关闭。
+ */
+const detachedInstances = new WeakSet<object>()
+/** 转发菜单延迟调起的定时器句柄（按实例存放），detached 时清理 */
+const shareMenuTimers = new WeakMap<object, ReturnType<typeof setTimeout>>()
+
 Component({
   properties: {
     /** 是否显示搜索按钮 */
@@ -61,6 +70,10 @@ Component({
       bindTheme(this)
     },
     detached() {
+      detachedInstances.add(this)
+      const timer = shareMenuTimers.get(this)
+      if (timer) clearTimeout(timer)
+      shareMenuTimers.delete(this)
       unbindTheme(this)
     },
   },
@@ -100,12 +113,15 @@ Component({
       wx.showLoading({ title: '生成图片中…', mask: true })
       renderSharePoster(this, this.buildShareData())
         .then((path) => {
-          this.setData({ shareLoading: false, sharePreviewPath: path, shareModalVisible: true })
+          // 全局遮罩先关（即使组件已卸载）；再按存活状态决定是否 setData
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false, sharePreviewPath: path, shareModalVisible: true })
         })
         .catch((err) => {
-          this.setData({ shareLoading: false })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false })
           wx.showToast({ title: (err && err.message) || '生成失败，请重试', icon: 'none' })
         })
     },
@@ -114,17 +130,22 @@ Component({
     },
     /** 水印开关：切换后按当前设置重画海报 */
     onWatermarkToggle() {
+      // 生成中忽略切换：两次生成共用同一张隐藏画布，并发会互相重置画布尺寸 / 上下文变换，
+      // 造成绘制与导出交错、导出半张或错位的图
+      if (this.data.shareLoading) return
       const next = !this.data.includeWatermark
       this.setData({ includeWatermark: next, shareLoading: true })
       wx.showLoading({ title: '重画图片中…', mask: true })
       renderSharePoster(this, this.buildShareData())
         .then((path) => {
-          this.setData({ shareLoading: false, sharePreviewPath: path })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false, sharePreviewPath: path })
         })
         .catch(() => {
-          this.setData({ shareLoading: false })
           wx.hideLoading()
+          if (detachedInstances.has(this)) return
+          this.setData({ shareLoading: false })
         })
     },
     /** 保存海报到相册（需相册权限，拒绝时引导去设置） */
@@ -160,20 +181,27 @@ Component({
         return
       }
       this.setData({ shareModalVisible: false })
-      setTimeout(() => {
-        // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面，
-        // 避免依赖微信「默认取当前页面路径」的兜底行为（见属性注释，分享路径不带前导斜杠）。
-        // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
-        const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
-          path: this.data.sharePreviewPath,
-          fail: () => {
-            // 旧版本不支持该接口时引导长按图片分享
-            wx.showToast({ title: '请长按图片分享', icon: 'none' })
-          },
-        }
-        if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
-        wx.showShareImageMenu(options)
-      }, 150)
+      // 定时器句柄登记到实例：detached 时清理，避免卸载后仍调起分享菜单
+      const existing = shareMenuTimers.get(this)
+      if (existing) clearTimeout(existing)
+      shareMenuTimers.set(
+        this,
+        setTimeout(() => {
+          shareMenuTimers.delete(this)
+          // entrancePath（基础库 3.2.0+）：指定接收方从分享图片打开小程序的入口页面，
+          // 避免依赖微信「默认取当前页面路径」的兜底行为（见属性注释，分享路径不带前导斜杠）。
+          // 本地 typings 未收录 entrancePath（3.2.0 新增），运行时多余参数会被忽略。
+          const options: WechatMiniprogram.ShowShareImageMenuOption & { entrancePath?: string } = {
+            path: this.data.sharePreviewPath,
+            fail: () => {
+              // 旧版本不支持该接口时引导长按图片分享
+              wx.showToast({ title: '请长按图片分享', icon: 'none' })
+            },
+          }
+          if (this.data.entrancePath) options.entrancePath = this.data.entrancePath
+          wx.showShareImageMenu(options)
+        }, 150),
+      )
     },
   },
 })

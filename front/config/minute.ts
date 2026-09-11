@@ -383,7 +383,13 @@ export function hasMinuteSources(code: string): boolean {
  * A股个股（sh/sz/bj 前缀 code 或 1./0. secid）未登记时按东财 → 腾讯双源兜底。
  */
 export function resolveMinuteSources(code: string): MinuteSources | null {
-  if (MINUTE_SOURCES[code]) return MINUTE_SOURCES[code]
+  // 查表必须用自有属性判定：code 可能来自 URL query（分享链接可构造），
+  // MINUTE_SOURCES['__proto__' / 'constructor' / 'toString'] 会沿原型链命中 Object.prototype
+  // 上的函数并返回真值 —— hasMinuteSources 会误判「支持分时图」，跳过「该指标暂不支持分时图」
+  // 空态，改为发两个必然失败的分时请求（页面停在空图 + 请求失败提示）。
+  if (Object.prototype.hasOwnProperty.call(MINUTE_SOURCES, code)) {
+    return MINUTE_SOURCES[code] ?? null
+  }
   if (EM_US_SECID_RE.test(code)) return { em: code }
   if (TC_ASHARE_RE.test(code)) return { em: ashareEmSecid(code), tc: code }
   if (EM_ASHARE_SECID_RE.test(code)) return { em: code, tc: ashareTcCode(code.slice(2)) }

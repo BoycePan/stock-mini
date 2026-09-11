@@ -178,17 +178,25 @@ function sinaIndex(key: string, fields: string[]): SinaQuote {
   return { key, price, previousClose: null, change, changePercent }
 }
 
+/**
+ * 新浪 gb_ 美股：现价 [1]；实测 36 字段布局（见 tests/quote-parsers.test.ts 的 gb_nvda 夹具）
+ * [2] 盘中涨跌幅% / [3] 行情时间（北京时间字符串）/ [4] 涨跌额 / [26] 昨收。
+ * 注意 [3] 是时间串而非涨跌幅：早期版本按 [2] 取昨收、[3] 取涨跌幅会把涨跌幅当昨收，
+ * 并让涨跌幅落到 lastEightDigitsPct 兜底（该兜底会取到末尾常量），必须按实测布局取数。
+ * 与同文件 sinaGbProxyPct（涨跌幅取 [2]）口径一致。
+ */
 function sinaGb(key: string, fields: string[]): SinaQuote {
   const price = numAt(fields, 1)
-  const previousClose = numAt(fields, 2)
-  let changePercent = numAt(fields, 3)
+  const previousClose = numAt(fields, 26)
+  let change = numAt(fields, 4)
+  let changePercent = numAt(fields, 2)
   if (changePercent === null) {
     // 涨跌幅缺失时从末尾 8 个字段中取首个 |值|<80 的数字
     changePercent = lastEightDigitsPct(fields)
   }
-  let change: number | null = null
   if (price !== null && previousClose !== null) {
-    change = price - previousClose
+    // 涨跌额缺失时按 现价-昨收 反推
+    if (change === null) change = price - previousClose
     if (changePercent === null && previousClose !== 0) {
       changePercent = (change / previousClose) * 100
     }
@@ -401,6 +409,25 @@ export function quoteTimeToDate(value: string): Date | null {
 function toValidDate(ms: number): Date | null {
   const date = new Date(ms)
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+/**
+ * 把 quoteTimeToDate 的结果还原为真实 UTC 毫秒（跨时区判定用）。
+ *
+ * quoteTimeToDate 对「北京时间墙钟字符串」（腾讯行情时间 [30]、yyyyMMddHHmmss 等）用
+ * `new Date(y, m, d, h, mi, s)` 构造，即按**设备本地时区**解释：UTC+8 设备上得到的
+ * 就是真实时刻，其他时区则整体偏移 (本地时区偏移 − 8h)。
+ *
+ * 推导：设本地时区偏移 off 小时（UTC+8 → +8），墙钟字段 F 对应的真实时刻
+ * T = UTC(F) − 8h，而 quoteTimeToDate 得到的是 D = UTC(F) − off·1h，
+ * 因此 T = D + (off − 8)h。
+ *
+ * 「行情是否新鲜（90min 内）」这类时长效判定必须走本函数，
+ * 否则偏西设备会把数小时前的行情算成负年龄、恒判新鲜（偏东设备则反向误判为陈旧）。
+ */
+export function quoteTimeToUtcMs(date: Date): number {
+  const localOffsetHours = -date.getTimezoneOffset() / 60
+  return date.getTime() + (localOffsetHours - 8) * 3_600_000
 }
 
 // ---------------------------------------------------------------------------

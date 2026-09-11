@@ -60,6 +60,19 @@ export async function fetchPhysicalGoldQuotes(): Promise<GoldShopQuote[]> {
   return fetchJijinhaoQuotes(physicalGoldCodes())
 }
 
+/**
+ * 取有限数，非有限（NaN / Infinity / 非数字串 / 缺失）一律归一为 0。
+ * 为什么必须归一：q70/q80 是上游可选的涨跌字段，给非数字串时 Number() 得到 NaN，
+ * 而 NaN 既不 === null 也不 === 0，会同时绕过 utils/quote-pages.ts hideFlatChange 的两种
+ * 「无涨跌」判定 → 在「金店金价 / 实物黄金价格」两个分组渲染出无意义的涨跌徽标。
+ * 归一为 0（而非 null）的理由：GoldShopQuote 的 pct/change 类型是 number，且 0 同样命中
+ * hideFlatChange 的隐藏分支，消费方（market.ts 金店/实物黄金分组）无需改动。
+ */
+function finiteOrZero(value: unknown): number {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
 /** 解析 JSONP 文本（兼容前后空格/分号/换行） */
 export function parseGoldShopBody(body: string): GoldShopQuote[] {
   const start = body.indexOf('{')
@@ -83,8 +96,8 @@ export function parseGoldShopBody(body: string): GoldShopQuote[] {
       code,
       item: String(node?.showName ?? ''),
       price,
-      change: Number(node?.q70 ?? 0),
-      pct: Number(node?.q80 ?? 0),
+      change: finiteOrZero(node?.q70),
+      pct: finiteOrZero(node?.q80),
       unit: String(node?.unit ?? '元/克'),
       time: Number(node?.time ?? 0),
     })

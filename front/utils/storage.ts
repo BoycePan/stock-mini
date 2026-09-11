@@ -33,7 +33,15 @@ export type ThemePreference = 'system' | ThemeMode
 function read<T>(key: string, fallback: T): T {
   try {
     const value = wx.getStorageSync(key)
-    return (value || fallback) as T
+    // 只在「值缺失」时回退 fallback，不能用 `value || fallback`：后者会把合法的假值
+    // （'' / 0 / false）一并替换掉。wx.getStorageSync 对不存在的键返回空字符串，本仓库
+    // 以「空串 = 缺失」为约定（各 getter 的 fallback 据此取 '' / null / [] 等），
+    // 故空串与 null / undefined 一起按缺失处理。
+    // 注意：本仓库没有任何键会把 '' 作为合法值写入后再读取（token / 主题 / 环境覆盖均为
+    // 非空串，其余为对象 / 数组），因此「空串 = 缺失」不会误伤；0 / false 这类假值
+    // 现在能被正确读出，不再被 fallback 覆盖。
+    if (value === '' || value === null || value === undefined) return fallback
+    return value as T
   } catch {
     return fallback
   }

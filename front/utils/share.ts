@@ -67,11 +67,26 @@ export function buildSharePath(
 
 /**
  * 首页 onLoad 调用：识别分享中转参数并自动跳转目标页。
- * 目标页未登记或缺少 target 时返回 false（首页正常渲染）；已跳转返回 true，
+ * 目标页未登记或缺少 target 时返回 false（首页正常渲染）；已发起跳转返回 true，
  * 调用方应立即终止页面后续初始化（绑定、数据加载、自动刷新等）。
+ *
+ * 注意：wx.redirectTo 是异步的，「是否真的跳转成功」无法同步得知，因此返回 true 只代表
+ * **已发起**中转。跳转失败（目标页在分包且下载失败、网络异常等）时当前页不会被关闭，
+ * 会通过 onFail 回调通知调用方——调用方必须据此补做被跳过的页面初始化，
+ * 否则页面会永久停在未初始化状态（首页 skeleton：无绑定、无数据、无自动刷新）。
+ *
+ * @param onFail 跳转失败（redirectTo:fail）回调；仅在已发起跳转但失败时调用
  */
-export function redirectFromShare(options: Record<string, string | undefined>): boolean {
+export function redirectFromShare(
+  options: Record<string, string | undefined>,
+  onFail?: () => void,
+): boolean {
   const target = safeDecode(options.target)
+  // 必须用 hasOwnProperty 判定「已登记」：SHARE_TARGET_ROUTES 是普通对象字面量，
+  // target 来自分享 query（外部完全可控），直接下标查找会命中原型链——
+  // ?target=__proto__ 取到 Object.prototype、?target=constructor / toString 取到函数，
+  // 都是真值，会绕过未登记拦截，把非法 url 交给 redirectTo（必然 fail）却仍返回 true。
+  if (!Object.prototype.hasOwnProperty.call(SHARE_TARGET_ROUTES, target)) return false
   const route = SHARE_TARGET_ROUTES[target]
   if (!route) return false
   // 分时页分享直达：入口开关（后台 display 配置 canShowMinute / canShowMinuteDev）关闭时
@@ -85,6 +100,10 @@ export function redirectFromShare(options: Record<string, string | undefined>): 
     if (key === 'target' || value === undefined || value === '') continue
     query.push(`${encodeURIComponent(key)}=${encodeURIComponent(safeDecode(value))}`)
   }
-  wx.redirectTo({ url: query.length > 0 ? `${route}?${query.join('&')}` : route })
+  wx.redirectTo({
+    url: query.length > 0 ? `${route}?${query.join('&')}` : route,
+    // 失败时当前页不会被关闭：交由调用方按「未完成中转」补做页面初始化
+    fail: () => onFail?.(),
+  })
   return true
 }

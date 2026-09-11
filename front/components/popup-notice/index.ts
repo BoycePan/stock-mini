@@ -115,11 +115,17 @@ Component({
     /** 点主按钮：有跳转路径则跳转并关闭，否则仅关闭 */
     onConfirm() {
       this.onClose()
+      // path 为空是既定合法状态（公告未配跳转路径，按钮文案为「知道了」，见 maybeShow）：
+      // 必须先早退——wx.navigateTo({ url: '' }) 必然 fail，且下面的 popup.notice.tap 会被误报成
+      // 「真实发生了跳转」。route 是 `/${current.route}`（绝不为空串），与空 path 永不相等，
+      // 因此不能依赖下方「跳转目标就是当前页」的判断来拦截空 path。
+      if (!this.data.path) return
       // 跳转目标就是当前页时视为「知道了」，避免重复压栈
       const pages = getCurrentPages()
       const current = pages[pages.length - 1]
       const route = current ? `/${current.route}` : ''
       if (route === this.data.path) return
+      // 埋点：仅上报真实发生的跳转（空 path / 同页早退时不上报）
       trackEvent('popup.notice.tap')
       wx.navigateTo({ url: this.data.path })
     },

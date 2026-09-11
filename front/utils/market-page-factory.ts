@@ -75,7 +75,9 @@ export function createMarketPage(opts: MarketPageOptions) {
   const { pageKey } = opts
 
   // 分享中转：分享卡片先进首页再自动跳转目标页时，标记该页面实例，跳转完成前
-  // 不再执行首页的数据加载 / 自动刷新（避免中转瞬间多打一次首页请求）
+  // 不再执行首页的数据加载 / 自动刷新（避免中转瞬间多打一次首页请求）。
+  // 仅在**已发起**中转（redirectFromShare 返回 true）时记录；redirectTo 失败时由
+  // resumeHomeAfterShareFail 清除标记并补做首页初始化，避免首页永久停在 skeleton。
   const shareRedirectedPages = new WeakSet<object>()
 
   const shareHandlers = {
@@ -117,11 +119,26 @@ export function createMarketPage(opts: MarketPageOptions) {
     },
 
     onLoad(options: Record<string, string | undefined> = {}) {
-      // 分享中转：所有分享统一先进首页，识别到 target 后自动跳转目标页（见 utils/share.ts）
-      if (redirectFromShare(options)) {
+      // 分享中转：所有分享统一先进首页，识别到 target 后自动跳转目标页（见 utils/share.ts）。
+      // 已发起跳转（返回 true）时刻意跳过首页初始化（onShow 也据 shareRedirectedPages 跳过
+      // 自动刷新），避免中转瞬间多打一次首页请求——中转成功时本页随即被 redirectTo 关闭。
+      // 返回 false（无 target / 未登记 / 分时开关关闭）或跳转失败（fail 回调，如目标页在分包
+      // 且下载失败 / 网络异常，此时本页不会被关闭）时必须走正常首页初始化：否则首页会永久停在
+      // skeleton——无 bindTheme、无 registerStoreBinding（loading / sections / error 永不更新）、
+      // 不加载数据、不启动自动刷新、重试按钮不可达，只能杀进程恢复。
+      if (redirectFromShare(options, () => this.resumeHomeAfterShareFail())) {
         shareRedirectedPages.add(this)
         return
       }
+      this.initHomePage()
+    },
+
+    /**
+     * 首页正常初始化：绑定主题 + store 响应式字段（loading / sections / error / 弹窗公告），
+     * 并加载首屏数据。分享中转未发生时走这里，中转失败时同样走这里
+     * （见 resumeHomeAfterShareFail），因此不能内联在 onLoad 里。
+     */
+    initHomePage() {
       bindTheme(this)
       registerStoreBinding(
         this,
@@ -179,6 +196,18 @@ export function createMarketPage(opts: MarketPageOptions) {
       void this.loadData()
     },
 
+    /**
+     * 分享中转失败兜底（redirectFromShare 的 onFail：redirectTo:fail，当前页不会被关闭）：
+     * 清掉中转标记（否则 onShow 会永久提前返回、页面再也起不来），补做被跳过的首页初始化，
+     * 并补启动自动刷新与 tabBar 同步——onShow 已在标记存在时提前返回过一次，不会再触发。
+     */
+    resumeHomeAfterShareFail() {
+      shareRedirectedPages.delete(this)
+      this.initHomePage()
+      this.syncTabBar()
+      startAutoRefresh(this, rootStore.market.lastRequestAt[pageKey], MARKET_REFRESH_INTERVAL)
+    },
+
     async onPullDownRefresh() {
       try {
         await this.loadData({ force: true })
@@ -188,7 +217,8 @@ export function createMarketPage(opts: MarketPageOptions) {
     },
 
     onShow() {
-      // 分享中转跳转中的页面不再启动首页自动刷新
+      // 分享中转已发起的页面不再启动首页自动刷新
+      // （中转失败时标记已在 resumeHomeAfterShareFail 中清除，本方法会正常同步 tabBar + 启动刷新）
       if (shareRedirectedPages.has(this)) return
       // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
       this.syncTabBar()

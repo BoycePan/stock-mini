@@ -341,7 +341,8 @@ function toFiniteNumber(value: number | string | undefined): number | null {
 /**
  * A股平均股价：沪深A股（主板+创业板+科创板）最新价等权平均（口径对齐通达信 880003 / 同花顺「平均股价」），
  * 涨跌幅 = (今均价 − 昨均价) / 昨均价 × 100（昨收缺失 / 停牌无价个股剔除）。
- * 数据源：东财 clist 全市场快照（push2delay，60s 缓存）。
+ * 数据源：东财 clist 全市场快照（push2delay，60s 缓存；仅「合格结果」写入缓存，
+ * 失败 / 不合格不落缓存，避免形成 60s 负缓存让卡片恒显 --）。
  * 护栏：① 覆盖度校验（total 已知：平均个股数须 ≥ 全市场的 90% 且 ≥ 3000；total 未知：须 ≥ 3000，
  *       防分页截断取到局部子集）；② 价格合理区间 [1, 500]（防单位/异常快照污染展示）；不满足即返回 null（卡片显示 --）。
  */
@@ -386,6 +387,12 @@ export async function fetchAShareAveragePrice(): Promise<{
   } else {
     console.warn('[quote] A股平均股价覆盖度不足，丢弃:', { count, total })
   }
-  averagePriceCache = { at: now, value }
+  // 只有拿到合格快照才写缓存，并用**写缓存时刻**的 Date.now() 作为 TTL 起点：
+  // ① 失败 / 不合格时若把 value = null 写进缓存，会把「上游这一轮没给到合格数据」变成
+  //    60s 负缓存，卡片在此期间恒显 --（上游已恢复也要等缓存过期），故失败不落缓存、
+  //    保留已有缓存值不覆盖（下一次刷新立即重试）；
+  // ② clist 全市场请求耗时数秒，沿用请求发起前的 now 会让实际新鲜窗口缩短为
+  //    「60s − 请求耗时」。
+  if (value) averagePriceCache = { at: Date.now(), value }
   return value ?? { price: null, pct: null }
 }
