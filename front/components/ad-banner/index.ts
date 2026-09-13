@@ -25,7 +25,7 @@ import { resolveAdUnitId } from '../../utils/ad-config'
  * - placement：外边距布局——
  *   - card：行情页分区卡片之间（与 section-card 对齐，左右 20rpx）；
  *   - inline：内容卡片内部（如财经页新闻列表第二条之后，上下留白）；
- *   - top：全宽内容区块（无左右内缩，仅上下留白），用于分时图下方 / 财经详情页顶部。
+ *   - top：全宽内容区块（无左右内缩，仅上下留白），用于分时图下方 / 新闻详情页正文下方（原文链接上方）。
  * - 圆角裁剪：组件根节点自带 border-radius + overflow:hidden，广告内容按圆角裁切。
  * - 事件：bindload / binderror / bindclose 组件内部已监听并打印日志（见 methods）。
  */

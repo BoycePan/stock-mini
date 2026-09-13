@@ -8,8 +8,6 @@
     bind:share="onSharePoster"
   ></app-header>
   <scroll-view scroll-y class="content-scroll">
-    <!-- 广告位：财经详情页放在内容顶部（location=finance-detail） -->
-    <ad-banner location="finance-detail" placement="top"></ad-banner>
     <loading-state
       wx:if="{{ loading }}"
       text="正在加载新闻详情"
@@ -62,6 +60,9 @@
           <text class="detail-empty-text">原文摘要暂未获取，可复制下方链接到浏览器查看全文。</text>
         </view>
       </view>
+
+      <!-- 广告位：新闻正文下方、原文链接上方（location=finance-detail；placement=top 为全宽区块） -->
+      <ad-banner location="finance-detail" placement="top"></ad-banner>
 
       <!-- 原文链接卡片 -->
       <view class="link-card" wx:if="{{ news.url }}">
