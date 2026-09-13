@@ -7,8 +7,14 @@ import { getNewsDetail, saveNewsDetail, type NewsDetail } from '../../../utils/s
 import { newsApi } from '../../../api/news'
 import { rootStore } from '../../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
-import { buildRichHtml, MAX_RICH_HTML_CHARS, stripHtml, truncateRichHtml } from '../../../utils/html'
+import {
+  buildRichHtml,
+  MAX_RICH_HTML_CHARS,
+  stripHtml,
+  truncateRichHtml,
+} from '../../../utils/html'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 import { buildSharePath, buildShareQuery, SHARE_IMAGE_URL } from '../../../utils/share'
 import { APP_NAME, formatShareStamp, type PosterData } from '../../../utils/share-poster'
 
@@ -66,6 +72,10 @@ Page({
     const news =
       cached && cached.url === url ? cached : { title, summary: '', url, source: '', time: '' }
     this.applyNews(news)
+  },
+  onShow() {
+    // 插屏广告：页面每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('news-detail')
   },
   /**
    * 把新闻明细写入页面并注册富文本主题绑定

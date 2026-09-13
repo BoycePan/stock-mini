@@ -11,6 +11,7 @@ import {
 } from '../../../utils/share-poster'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
 
 const MEMBER_QUOTE_LIMIT = 20
@@ -71,6 +72,10 @@ Page({
       }),
     })
     await this.loadData()
+  },
+  onShow() {
+    // 插屏广告：页面每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('sector-detail')
   },
   async onPullDownRefresh() {
     try {

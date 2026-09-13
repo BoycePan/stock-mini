@@ -15,6 +15,7 @@ import type { MinutePoint } from '../../../types/stock'
 import { computeChangeView } from '../../../utils/market'
 import { formatChange, formatNumber, formatVolume } from '../../../utils/formatter'
 import { trackEvent } from '../../../utils/tracker'
+import { maybeShowInterstitial } from '../../../utils/interstitial-ad'
 import { buildSharePath, SHARE_IMAGE_URL } from '../../../utils/share'
 import {
   APP_NAME,
@@ -148,6 +149,8 @@ Page({
     await this.loadData()
   },
   onShow() {
+    // 插屏广告：页面显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('minute')
     startAutoRefresh(this, lastMinuteRequestAt, MINUTE_REFRESH_INTERVAL)
   },
   onHide() {

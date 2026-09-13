@@ -6,6 +6,7 @@ import { getFinanceCache, saveNewsDetail, setFinanceCache } from '../../utils/st
 import { registerStoreBinding, releaseStoreBindings } from '../../utils/store-bindings'
 import { bindTheme, unbindTheme } from '../../utils/theme'
 import { trackEvent } from '../../utils/tracker'
+import { maybeShowInterstitial } from '../../utils/interstitial-ad'
 import { stripHtml, truncateRichHtml } from '../../utils/html'
 import { SHARE_IMAGE_URL } from '../../utils/share'
 import { formatNewsTime } from '../../utils/formatter'
@@ -256,6 +257,8 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
+    // 插屏广告：tab 页每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
+    maybeShowInterstitial('finance')
     // 回到页面：重置刷新失败重试态，按钮显示与否重新由轮询按「本地是否有新新闻」决定
     refreshFailed = false
     // 从新闻详情页返回：不自动刷新（列表 / 滚动位置保持原样），仅恢复轮询
