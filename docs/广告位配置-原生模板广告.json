@@ -96,4 +96,5 @@
   location 复用（微信广告位支持跨页面复用）。
 - 广告位 ID 来自后台截图逐字符转写 + 财经页为新补 ID，配置前建议核对一次（重点核对
   `adunit-60a2a9c21bba69b5`、`adunit-abfe0d5537aafb8f`、`adunit-5dcc3ffaeffc61dd`）。
-- 插屏广告不在本文件范围：其 unit-id 为前端硬编码，见 `front/config/interstitial-ad.ts`。
+- 插屏广告**不在本文件范围**：它在同一个 `adConfig` 分组下另有一个配置项 `interstitialAd`
+  （2026-09-13 起由远端下发，前端不再硬编码 unit-id），见 `docs/广告位配置-插屏广告.json`。

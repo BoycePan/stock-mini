@@ -2,15 +2,17 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { INTERSTITIAL_AD_CONFIG, type InterstitialLocation } from '../config/interstitial-ad.ts'
+import { rootStore } from '../stores/root.store.ts'
+import type { AdConfig } from '../types/system.ts'
 import { maybeShowInterstitial } from '../utils/interstitial-ad.ts'
-import { markTabSwitch, __resetPageShowForTest } from '../utils/page-show.ts'
+import { markAppForeground, markTabSwitch, __resetPageShowForTest } from '../utils/page-show.ts'
 import {
   INTERSTITIAL_DAILY_KEY,
   INTERSTITIAL_LAST_SHOW_KEY,
 } from '../utils/interstitial-frequency.ts'
 
 /**
- * 插屏调度器（utils/interstitial-ad.ts）回归，两个维度：
+ * 插屏调度器（utils/interstitial-ad.ts）回归，三个维度：
  *
  * 一、全局单飞锁的**释放路径** —— 锁泄漏后 state 停在 loading / showing 不再回到 idle，
  * 本次会话所有页面的插屏都会被闸门 2 静默丢弃，从日志上看只是反复「已有插屏在加载/展示」：
@@ -22,15 +24,56 @@ import {
  * 二、**触发时机**（闸门 0，判定逻辑见 utils/page-show.ts，纯函数单测在 page-show.test.ts）：
  * 从子页面返回不展示、用户切 tab 展示——这里验证它在调度器里真正拦得住 / 放得行。
  *
+ * 三、**远端广告位配置**（adConfig.interstitialAd，解析纯函数单测在 ad-config.test.ts）：
+ * 未配置 / status=false 不展示；配置未就绪（冷启动竞态）时挂起本次触发，
+ * 配置到达即补一次展示。
+ *
  * 「页面实例」用 `{}` 充当：判定只看「该实例是否显示过」与意图标记，与页面真实结构无关；
  * 每个「不同页面」用全新对象，同一页面重复显示则复用同一对象（这正是判定依据）。
  */
 
 const DEFAULT_CONFIG = { ...INTERSTITIAL_AD_CONFIG }
 
+/** 远端下发的插屏广告位（模拟后端 app_config adConfig.interstitialAd；测试内手动「下发」） */
+const GLOBAL: InterstitialLocation = 'global'
+const REMOTE_INTERSTITIAL = [
+  { 'unit-id': 'adunit-interstitial-mock', location: GLOBAL, status: true },
+]
+
+/** 远端下发的插屏行为参数（adConfig.interstitialConfig，逐项覆盖本地默认值） */
+type RemoteSettings = NonNullable<AdConfig['interstitialConfig']>
+
+/**
+ * 模拟远端配置下发（写 rootStore.system.configs / ready，与 SystemStore.fetchAll 一致）：
+ * @param entries  adConfig.interstitialAd 条目（默认 global 一条启用）
+ * @param ready    display 配置是否已拉取完成（false = 冷启动配置还没到）
+ * @param settings adConfig.interstitialConfig 行为参数（默认不配 = 全用本地默认值）
+ */
+function setRemoteConfig(
+  entries: Array<{ 'unit-id': string; location: string; status: boolean }> = REMOTE_INTERSTITIAL,
+  ready = true,
+  settings?: RemoteSettings,
+): void {
+  rootStore.system.ready = ready
+  rootStore.system.configs = {
+    adConfig: { interstitialAd: entries, interstitialConfig: settings },
+  }
+}
+
+/** 清掉远端配置（模拟后台未配置 / 退出登录后的会话） */
+function clearRemoteConfig(): void {
+  rootStore.system.ready = false
+  rootStore.system.configs = {}
+}
+
 test.beforeEach(() => {
   // 意图标记（切 tab / 回前台）是一次性消费的，逐用例清空，避免 TTL 内串味
   __resetPageShowForTest()
+  setRemoteConfig()
+})
+
+test.afterEach(() => {
+  clearRemoteConfig()
 })
 
 /** 测试参数：关掉 15s 展示间隔与失败重试的真实等待，避免用例串行变慢 */
@@ -136,8 +179,6 @@ function dailyShownCount(store: Record<string, unknown>): number {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const GLOBAL: InterstitialLocation = 'global'
 
 /** 走完一次「展示成功 → 用户关闭」，让全局锁回到 idle */
 async function finishShown(wxMock: { created: FakeAd[] }, index: number): Promise<void> {
@@ -286,4 +327,152 @@ test('用户点 tabBar 切 tab 回到该页面：仍可触发插屏', async () =
   maybeShowInterstitial(GLOBAL, page)
   assert.equal(wxMock.createCount, 2, '切 tab 应允许展示')
   await finishShown(wxMock, 1)
+})
+
+// ---------------------------------------------------------------------------
+// 六：远端广告位配置（adConfig.interstitialAd）——未配置不展示、配置到达补展示
+// ---------------------------------------------------------------------------
+
+test('远端未配置该 location：不创建实例（未配置就不展示，无本地兜底）', () => {
+  setConfig({ maxAttempts: 1, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig([]) // 后台没配任何插屏广告位
+  const wxMock = installWx()
+
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 0, '远端未配置该 location 时不应创建插屏实例')
+})
+
+test('远端 status=false：不创建实例（临时下线用）', () => {
+  setConfig({ maxAttempts: 1, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig([{ 'unit-id': 'adunit-interstitial-mock', location: GLOBAL, status: false }])
+  const wxMock = installWx()
+
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 0, 'status=false 的插屏不应创建实例')
+})
+
+test('非 global 的 location 未配置：同样不展示（各页面独立配置）', () => {
+  setConfig({ maxAttempts: 1, retryIntervalMs: 5, minIntervalMs: 0 })
+  const wxMock = installWx()
+
+  maybeShowInterstitial('news-detail', {})
+  assert.equal(wxMock.createCount, 0, '只配了 global 时 news-detail 不应创建实例')
+})
+
+test('配置未就绪时挂起，配置到达后补一次展示', async () => {
+  setConfig({ maxAttempts: 3, retryIntervalMs: 5, minIntervalMs: 0 })
+  // 冷启动：页面 onShow 早于「登录 + 配置」返回（ready=false，interstitialAd 还没有）
+  setRemoteConfig([], false)
+  const wxMock = installWx()
+
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 0, '配置未就绪时不应立即创建实例')
+
+  // 配置到达（SystemStore.fetchAll 写回 configs + ready）
+  setRemoteConfig()
+  await tick()
+  assert.equal(wxMock.createCount, 1, '配置到达后应补一次触发')
+
+  await finishShown(wxMock, 0)
+})
+
+test('配置到达但该 location 仍未配置：超时前不展示，且不产生实例', async () => {
+  setConfig({ maxAttempts: 3, retryIntervalMs: 5, minIntervalMs: 0, configWaitTimeoutMs: 20 })
+  setRemoteConfig([], false)
+  const wxMock = installWx()
+
+  maybeShowInterstitial('news', {})
+  // 配置到达，但没有 news 这个 location 的条目 → 解析结果始终为空，不会补展示
+  setRemoteConfig()
+  await sleep(60) // ≫ configWaitTimeoutMs
+  assert.equal(wxMock.createCount, 0, '远端没有该 location 的插屏时不应展示')
+})
+
+test('等待配置期间页面已切走：放弃补展示（避免插屏弹在无关页面上）', async () => {
+  setConfig({ maxAttempts: 3, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig([], false)
+  const wxMock = installWx()
+  const page = {}
+  const otherPage = {}
+  ;(globalThis as Record<string, unknown>).getCurrentPages = () => [otherPage]
+
+  try {
+    maybeShowInterstitial(GLOBAL, page)
+    setRemoteConfig()
+    await tick()
+    assert.equal(wxMock.createCount, 0, '触发页已不是栈顶页时不应补展示')
+  } finally {
+    delete (globalThis as Record<string, unknown>).getCurrentPages
+  }
+})
+
+// ---------------------------------------------------------------------------
+// 七：远端行为参数（adConfig.interstitialConfig）——逐项覆盖本地默认值
+// ---------------------------------------------------------------------------
+
+test('远端 interstitialConfig.enabled=false（总开关）：任何触发都不展示', () => {
+  setConfig({ maxAttempts: 1, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig(REMOTE_INTERSTITIAL, true, { enabled: false })
+  const wxMock = installWx()
+
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 0, '远端总开关关闭时不应创建插屏实例')
+})
+
+test('远端 dailyCap=1（老用户每日上限）：当日展示 1 次后不再展示', async () => {
+  setConfig({ maxAttempts: 3, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig(REMOTE_INTERSTITIAL, true, { dailyCap: 1 })
+  const wxMock = installWx()
+
+  maybeShowInterstitial(GLOBAL, {})
+  await finishShown(wxMock, 0)
+  assert.equal(dailyShownCount(wxMock.store), 1)
+
+  // 另一个页面实例的首次显示：minIntervalMs=0，能拦住的只有「远端下发的每日上限 1」
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 1, '已达远端每日上限时不应再展示')
+})
+
+test('远端 showOnAppForeground=false：回前台不展示，首次进入仍展示', async () => {
+  setConfig({ maxAttempts: 3, retryIntervalMs: 5, minIntervalMs: 0 })
+  setRemoteConfig(REMOTE_INTERSTITIAL, true, { showOnAppForeground: false })
+  const wxMock = installWx()
+  const page = {}
+
+  // 首次进入（onLoad 后首次 onShow）→ 展示
+  maybeShowInterstitial(GLOBAL, page)
+  assert.equal(wxMock.createCount, 1)
+  await finishShown(wxMock, 0)
+
+  // App 回前台 → 闸门 0 拦截（远端参数生效）
+  markAppForeground()
+  maybeShowInterstitial(GLOBAL, page)
+  assert.equal(wxMock.createCount, 1, '远端关闭「回前台展示」时不应触发')
+
+  // 远端改回 true（后台改配置即时生效）→ 回前台可展示
+  setRemoteConfig(REMOTE_INTERSTITIAL, true, { showOnAppForeground: true })
+  markAppForeground()
+  maybeShowInterstitial(GLOBAL, page)
+  assert.equal(wxMock.createCount, 2, '远端开启后回前台应可触发')
+  await finishShown(wxMock, 1)
+})
+
+test('远端参数非法（字符串 / 负数）：回落本地默认值，不产生不限频等副作用', () => {
+  setConfig({ maxAttempts: 1, retryIntervalMs: 5, minIntervalMs: 15 * 1000 })
+  // minIntervalMs 传字符串、dailyCap 传负数：都应被忽略而用本地默认值
+  setRemoteConfig(REMOTE_INTERSTITIAL, true, {
+    minIntervalMs: '123' as unknown as number,
+    dailyCap: -1,
+  })
+  const wxMock = installWx()
+
+  // 本地默认 minIntervalMs=15s 生效：首次触发照常展示
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 1, '非法参数不应影响正常展示')
+
+  // 第二次触发（另一个页面实例）仍被 15s 间隔拦住——证明没退化成 minIntervalMs=0
+  maybeShowInterstitial(GLOBAL, {})
+  assert.equal(wxMock.createCount, 1, '非法 minIntervalMs 应回落默认 15s 间隔')
+
+  createdAd(wxMock, 0).fireClose()
 })

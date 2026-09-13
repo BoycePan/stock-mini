@@ -1,0 +1,187 @@
+本文件供后台（管理端 `app_config`，`cfg_type='display'`）配置**插屏广告**使用；
+前端消费链路：页面 `onShow` 调 `maybeShowInterstitial(location, this)`
+（`front/utils/interstitial-ad.ts`）→ `resolveInterstitialUnitId` / `resolveInterstitialSettings`
+（`front/utils/ad-config.ts`）。
+
+插屏在 `adConfig` 分组下有**两个配置项**（与原生模板广告的 `bannerAd` 平级）：
+
+| 配置项 cfgKey        | 内容                     | 缺省 / 未配置时的行为                                   |
+| -------------------- | ------------------------ | ------------------------------------------------------- |
+| `interstitialAd`     | 广告位列表（unit-id）    | **不展示**（无本地兜底，某 location 没配就不弹）        |
+| `interstitialConfig` | 行为参数（开关/频控/…）  | 逐项沿用前端默认值（`front/config/interstitial-ad.ts`） |
+
+> **已落地状态（2026-09-13）**：11 个插屏广告位已在「流量主 → 广告位管理 → 插屏广告」
+> 后台创建完毕（账号 = **行情追踪助手**），并在管理端录入两个配置项
+> （`interstitialAd` → 分端「行情追踪助手」、`interstitialConfig` → 分端「全部端」）。
+> 本文件即当前线上口径的快照。
+
+一、广告位映射（后台名称 → 前端 location → 触发页面）
+=====================================================
+| 后台广告位名称     | 广告位 ID（unit-id）     | 前端 location   | 触发页面（onShow 接入点）                       |
+| ------------------ | ------------------------ | --------------- | ----------------------------------------------- |
+| 首页_插屏          | adunit-39d025da1ea76a45  | global          | 全球 Tab（pages/global/index）                  |
+| 日韩_插屏          | adunit-e343a69e3e6f5dbe  | asia            | 日韩 Tab（pages/asia/index）                    |
+| 有色_插屏          | adunit-81c9c8b04793168b  | metals          | 有色 Tab（pages/metals/index）                  |
+| 财经_插屏          | adunit-d44e4244cf3b9d4b  | finance         | 财经 Tab（pages/finance/index）                 |
+| 分时页_插屏        | adunit-52f900089b82037a  | minute          | 分时页（packageQuote/pages/minute/index）       |
+| 个股详情_插屏      | adunit-bb97fde25c585170  | stock-detail    | 个股详情（packageQuote/pages/stock-detail）     |
+| 板块详情_插屏      | adunit-2ea2bf90804e0b48  | sector-detail   | 板块详情（packageQuote/pages/sector-detail）    |
+| 板块列表_插屏      | adunit-9abf48f351792905  | industry-all    | 板块列表（packageQuote/pages/industry-all）     |
+| 美股Top100_插屏    | adunit-35aea3b89c1f9d16  | us-top100       | 美股TOP100（packageQuote/pages/us-top100）      |
+| 资讯列表_插屏      | adunit-6b087766f9902383  | news            | 资讯列表（packageNews/pages/news/index）        |
+| 资讯详情_插屏      | adunit-dfbb93f9c1a11035  | news-detail     | 资讯详情（packageNews/pages/news-detail）       |
+
+说明：
+- 11 个广告位**一页一位**（每个页面独立广告位、独立数据），全部创建于 **行情追踪助手**
+  的流量主（AppID `wx0ecd2049e54fbca8`，登录 source `hangQing-tracker`），状态均为「已开启」。
+- 上下线 / 换位**全部在后台改配置**：临时下线把该条 `status` 改成 `false`
+  （或从数组里删掉该条），前端下一次触发即为「未配置 → 不展示」；换广告位只改该条 `unit-id`。
+- **市场追踪助手（AppID `wx2cfd1556edf21a24`，source `shiChang-tracker`）目前没有插屏广告位、
+  也没有 `interstitialAd` 配置 → 该端不展示插屏**。需要时：在其流量主后台按上表新建 11 个插屏
+  广告位，再在管理端加一条 `cfgKey=interstitialAd`、**分端=市场追踪助手** 的配置项
+  （本文件下方 cfgValue 结构不变，仅换 unit-id）。
+- 旧文档曾写「首页_插屏 `adunit-3ad8476bdced05ca` / 日韩_插屏 `adunit-c0b2e35a4896986f`」：
+  这两个 id **不在行情追踪助手的插屏广告位列表中**（该账号此前从未创建过插屏广告位），
+  已作废，以本文件的 11 个新广告位为准。
+
+二、配置项 cfgValue（直接整行粘贴）
+==================================
+第 1 个：item `interstitialAd`（插屏广告位列表；分端 = 行情追踪助手）——
+[{"unit-id":"adunit-39d025da1ea76a45","location":"global","status":true},{"unit-id":"adunit-e343a69e3e6f5dbe","location":"asia","status":true},{"unit-id":"adunit-81c9c8b04793168b","location":"metals","status":true},{"unit-id":"adunit-d44e4244cf3b9d4b","location":"finance","status":true},{"unit-id":"adunit-52f900089b82037a","location":"minute","status":true},{"unit-id":"adunit-bb97fde25c585170","location":"stock-detail","status":true},{"unit-id":"adunit-2ea2bf90804e0b48","location":"sector-detail","status":true},{"unit-id":"adunit-9abf48f351792905","location":"industry-all","status":true},{"unit-id":"adunit-35aea3b89c1f9d16","location":"us-top100","status":true},{"unit-id":"adunit-6b087766f9902383","location":"news","status":true},{"unit-id":"adunit-dfbb93f9c1a11035","location":"news-detail","status":true}]
+
+展开版（同一份配置，便于核对）：
+[
+  {"unit-id":"adunit-39d025da1ea76a45","location":"global","status":true},
+  {"unit-id":"adunit-e343a69e3e6f5dbe","location":"asia","status":true},
+  {"unit-id":"adunit-81c9c8b04793168b","location":"metals","status":true},
+  {"unit-id":"adunit-d44e4244cf3b9d4b","location":"finance","status":true},
+  {"unit-id":"adunit-52f900089b82037a","location":"minute","status":true},
+  {"unit-id":"adunit-bb97fde25c585170","location":"stock-detail","status":true},
+  {"unit-id":"adunit-2ea2bf90804e0b48","location":"sector-detail","status":true},
+  {"unit-id":"adunit-9abf48f351792905","location":"industry-all","status":true},
+  {"unit-id":"adunit-35aea3b89c1f9d16","location":"us-top100","status":true},
+  {"unit-id":"adunit-6b087766f9902383","location":"news","status":true},
+  {"unit-id":"adunit-dfbb93f9c1a11035","location":"news-detail","status":true}
+]
+
+第 2 个：item `interstitialConfig`（插屏行为参数；**对象、全部字段可选，写几个覆盖几个**；
+分端 = 全部端）——
+{"enabled":true,"showOnAppForeground":true,"minIntervalMs":15000,"newUserWindowDays":3,"newUserDailyCap":1,"dailyCap":3,"maxAttempts":3,"retryIntervalMs":1200,"loadTimeoutMs":8000,"configWaitTimeoutMs":8000}
+
+展开版（同一份配置，便于核对；只写要覆盖的字段也可以，如 `{"dailyCap":1}`）：
+{
+  "enabled": true,
+  "showOnAppForeground": true,
+  "minIntervalMs": 15000,
+  "newUserWindowDays": 3,
+  "newUserDailyCap": 1,
+  "dailyCap": 3,
+  "maxAttempts": 3,
+  "retryIntervalMs": 1200,
+  "loadTimeoutMs": 8000,
+  "configWaitTimeoutMs": 8000
+}
+
+字段说明（键名与 `front/config/interstitial-ad.ts` InterstitialAdConfig 一致）：
+
+| 字段                  | 类型    | 默认值 | 含义                                                             |
+| --------------------- | ------- | ------ | ---------------------------------------------------------------- |
+| `enabled`             | boolean | true   | 总开关：false = 任何页面都不弹插屏（整体关闭，优先于单广告位）   |
+| `showOnAppForeground` | boolean | true   | App 从后台回前台时是否允许弹（false = 切后台回来不弹）           |
+| `minIntervalMs`       | number  | 15000  | 两次展示最小间隔（ms），跨启动生效                               |
+| `newUserWindowDays`   | number  | 3      | 新用户窗口（天）：注册距今天数 ≤ 该值算新用户                    |
+| `newUserDailyCap`     | number  | 1      | 新用户每日最多展示次数                                           |
+| `dailyCap`            | number  | 3      | 老用户每日最多展示次数                                           |
+| `maxAttempts`         | number  | 3      | 一次流程最大尝试次数（含首次，≥1；失败重试次数 = maxAttempts - 1）|
+| `retryIntervalMs`     | number  | 1200   | 失败重试间隔（ms）                                               |
+| `loadTimeoutMs`       | number  | 8000   | 加载看门狗（ms）：创建后超时未展示成功则销毁实例、释放全局锁     |
+| `configWaitTimeoutMs` | number  | 8000   | 冷启动「等远端配置」上限（ms），超时放弃本次触发                 |
+
+容错口径（写错不会把插屏链路搞挂）：
+- **只配要覆盖的项**即可，缺的项沿用前端发版默认值（上表默认值）；
+- 布尔项只认 `true` / `false`（`"false"` 字符串按未配置处理）；
+- 数值项必须是 ≥0 的有限数（`maxAttempts` ≥1）；字符串、`null`、`NaN`、`Infinity`、负数
+  一律忽略并回落默认值（不会退化成 0 造成不限频 / 狂重试）；
+- `0` 是合法值：如 `minIntervalMs: 0` = 不限制间隔，`dailyCap: 0` = 当天不展示。
+
+三、下发形态（校验用：GET /api/v1/configs?cfgType=display → data）
+=================================================================
+前端读 `rootStore.system.configs.adConfig`（`front/types/system.ts` AdConfig），
+即 `adConfig` 为分组、`bannerAd` / `interstitialAd` / `interstitialConfig` 为同一分组下的配置项，
+树形摊平后形态（插屏部分，按分端 target 覆盖：全部端兜底、具体端深合并）：
+{
+  "adConfig": {
+    "bannerAd": [ …见《广告位配置-原生模板广告.json》… ],
+    "interstitialAd": [
+      { "unit-id": "adunit-39d025da1ea76a45", "location": "global", "status": true },
+      { "unit-id": "adunit-e343a69e3e6f5dbe", "location": "asia", "status": true },
+      { "unit-id": "adunit-dfbb93f9c1a11035", "location": "news-detail", "status": true }
+    ],
+    "interstitialConfig": {
+      "enabled": true,
+      "showOnAppForeground": true,
+      "minIntervalMs": 15000,
+      "dailyCap": 3
+    }
+  }
+}
+
+四、管理端录入记录 / 复现步骤（POST /api/mgr/configs）
+====================================================
+分组 `adConfig` 若不存在，先建分组（见《广告位配置-原生模板广告.json》第四节）；
+已存在则用分组行右侧的「添加子项」各建一个配置项（注意点**该分组自己那一行**的按钮）。
+
+| id | 分端           | cfgKey               | sort | cfgValue                                  |
+| -- | -------------- | -------------------- | ---- | ----------------------------------------- |
+| 33 | 行情追踪助手   | `interstitialAd`     | 1    | 第二节第 1 段单行数组                     |
+| 34 | 全部端         | `interstitialConfig` | 2    | 第二节第 2 段单行对象                     |
+
+配置项 1（广告位列表，cfgValue = 第二节第 1 段单行数组）：
+{
+  "nodeType": "item",
+  "cfgType": "display",
+  "cfgKey": "interstitialAd",
+  "cfgValue": "[{\"unit-id\":\"adunit-39d025da1ea76a45\",\"location\":\"global\",\"status\":true},…（整行见第二节）]",
+  "remark": "插屏广告位列表（unit-id + location + status；未配置的 location 不展示插屏）",
+  "target": "hangQing-tracker",
+  "sort": 1,
+  "enabled": true,
+  "parentId": 20
+}
+
+配置项 2（行为参数，cfgValue = 第二节第 2 段单行对象；也可只写要覆盖的字段，如 `{"dailyCap":1}`）：
+{
+  "nodeType": "item",
+  "cfgType": "display",
+  "cfgKey": "interstitialConfig",
+  "cfgValue": "{\"enabled\":true,\"showOnAppForeground\":true,\"minIntervalMs\":15000,\"newUserWindowDays\":3,\"newUserDailyCap\":1,\"dailyCap\":3,\"maxAttempts\":3,\"retryIntervalMs\":1200,\"loadTimeoutMs\":8000,\"configWaitTimeoutMs\":8000}",
+  "remark": "插屏行为参数（总开关 / 时机 / 频控 / 重试；缺省项用前端默认值）",
+  "target": "all",
+  "sort": 2,
+  "enabled": true,
+  "parentId": 20
+}
+
+（`parentId` 填 `adConfig` 分组的 id——当前为 20；分端 target 取值 `all` / `shiChang-tracker`
+（市场追踪助手）/ `hangQing-tracker`（行情追踪助手）；配置项已存在时用 PUT /api/mgr/configs/{id} 只改 cfgValue。）
+两项都**即时生效**（配置随 `/api/v1/configs?cfgType=display` 下发），改完无需发版。
+
+备注
+====
+- 前端**没有本地兜底广告位**：远端未下发该 `location` / `status=false` → 该页不弹插屏
+  （2026-09-13 改动，改版前 `front/config/interstitial-ad.ts` 里的硬编码 unit-id 已删除）。
+- 行为参数**全部可在远端覆盖**：`front/config/interstitial-ad.ts` 只作为默认值 / 兜底，
+  解析见 `front/utils/ad-config.ts resolveInterstitialSettings`（纯函数，逐项合并 + 类型校验）。
+- 冷启动竞态：页面 `onShow` 通常早于「登录 + 配置」返回，此时调度器**挂起本次触发**等待配置
+  （上限 `configWaitTimeoutMs`，默认 8s，见 `front/config/interstitial-ad.ts`）；配置到达且能解析出
+  `unit-id` 就补一次展示，始终没有该 `location` 则不展示。等待期间用户跳走 / App 退后台即放弃。
+- 链路规则（与行为参数对应）：两次展示最小间隔、新老用户每日上限、从子页面返回不展示、
+  同一时刻全局只允许一个插屏加载 / 展示（单飞锁，非配置项）。
+- 流量主「广告管理」里另有「广告开关（免开发一键启用）」等全局项，那是**智能接入**模式的开关，
+  与本项目「自主接入 + createInterstitialAd」链路无关，无需开启。
+- `location` 枚举（11 个，与各页面 onShow 接入点一一对应）：`global / asia / metals / finance /
+  minute / stock-detail / sector-detail / industry-all / us-top100 / news / news-detail`；
+  写错 location 的条目会被忽略（不影响其他页面）。
+- 相关文件：`front/config/interstitial-ad.ts`、`front/utils/interstitial-ad.ts`、
+  `front/utils/ad-config.ts`、`front/types/system.ts`、
+  `front/tests/ad-config.test.ts`、`front/tests/interstitial-ad.test.ts`。

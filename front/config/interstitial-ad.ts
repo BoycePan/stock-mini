@@ -1,5 +1,5 @@
 /**
- * 插屏广告统一配置（集中管理：开关 / 广告位 / 频控 / 新老用户每日上限）。
+ * 插屏广告**默认参数**（总开关 / 展示时机 / 频控 / 重试；本地发版级兜底）。
  *
  * 需求口径（2026-09 确认）：
  * - 核心页面在「页面显示（onShow）」时触发插屏：4 个行情 tab 页（全球/日韩/有色/财经）
@@ -10,18 +10,28 @@
  *   ① onLoad 后首次显示（冷启动 / 首次切到该 tab / navigateTo 进子页面）、
  *   ② 用户点 tabBar 切 tab、③ App 从后台回前台（可关，见 showOnAppForeground）三者展示；
  *   **从子页面返回（navigateBack）不展示**——返回是浏览过程中最高频的动作；
- * - 两次展示最小间隔 MIN_INTERVAL_MS = 15s（从上次展示成功起算，跨启动也生效）；
+ * - 两次展示最小间隔默认 15s（从上次展示成功起算，跨启动也生效）；
  * - 按账号注册时间（登录接口返回 user.created_at，见 stores/auth.store.ts）区分新老用户：
- *   注册 ≤ NEW_USER_WINDOW_DAYS(3) 天 = 新用户 → 每天最多 NEW_USER_DAILY_CAP(1) 次；
- *   老用户 → 每天最多 DAILY_CAP(3) 次；取不到 created_at 按老用户处理。
+ *   注册 ≤ newUserWindowDays(3) 天 = 新用户 → 每天最多 newUserDailyCap(1) 次；
+ *   老用户 → 每天最多 dailyCap(3) 次；取不到 created_at 按老用户处理。
  *
- * unit-id 当前为**前端硬编码**（已填正式广告位：首页_插屏 + 日韩_插屏，映射见文末）；
- * 正式投放如需后台远程控制开关/换位，可改为后端 app_config(display).adConfig 下发
- * （与 components/ad-banner 的 bannerAd 同机制），届时仅需改 utils/interstitial-ad.ts 的
- * resolveUnitId 读取后端配置，其余闸门/计数逻辑不变。
+ * **本文件的角色 = 默认值（兜底），不是唯一配置源**：插屏的**广告位**与**行为参数**
+ * 都在远端 —— 后端 app_config（cfg_type='display'）的 `adConfig` 分组下（docs/API.md 八）：
+ * - `interstitialAd`：**广告位列表**，与同组 `bannerAd` 同构的数组，每项
+ *   `{ "unit-id": "adunit-…", "location": "global", "status": true }`；
+ *   解析 utils/ad-config.ts `resolveInterstitialUnitId`。**没有全局兜底广告位**：
+ *   某 location 未配置 / `status=false` → 该位置**不展示**插屏；
+ * - `interstitialConfig`：**行为参数**，键名与本文件 `InterstitialAdConfig` 字段一一对应、
+ *   全部可选；逐项覆盖下面的默认值（解析 utils/ad-config.ts `resolveInterstitialSettings`：
+ *   缺省 / 类型不合法 → 用本文件默认值），后台**只配要覆盖的项**即可；
+ * - 两者都即时生效：上下线 / 调参 / 换广告位都无需发版（`status=false` 为单广告位临时下线开关，
+ *   远端 `enabled=false` 为整体总开关）；
+ * - 冷启动竞态：页面 onShow 通常早于「登录 + 配置」返回，此时调度器挂起本次触发等待
+ *   配置到达（上限见 configWaitTimeoutMs），配置始终没有该 location 则不展示；
+ * - 配置示例 / 后台建配置步骤见 `docs/广告位配置-插屏广告.json`。
  */
 
-/** 触发插屏的页面位置标识（与各页面 onShow 接入点一一对应） */
+/** 触发插屏的页面位置标识（与各页面 onShow 接入点一一对应，也是远端配置的 location 取值） */
 export type InterstitialLocation =
   /** 4 个行情 tab 页 */
   | 'global' // 全球
@@ -38,8 +48,12 @@ export type InterstitialLocation =
   | 'news' // 资讯列表
   | 'news-detail' // 资讯详情
 
+/**
+ * 插屏行为参数（远端 `adConfig.interstitialConfig` 可逐项覆盖，见文件头）。
+ * 每个字段在远端的**键名相同**（后台配置项里就是这些键），本文件的值是缺省兜底。
+ */
 export interface InterstitialAdConfig {
-  /** 总开关：false 时任何页面都不会触发插屏 */
+  /** 总开关：false 时任何页面都不会触发插屏（远端可覆盖；单广告位上下线也可用其 status） */
   enabled: boolean
   /**
    * App 从后台回到前台（该页面非首次显示）时是否允许触发插屏。
@@ -47,20 +61,13 @@ export interface InterstitialAdConfig {
    * 若不希望「切后台回来弹广告」，改为 false 即可（从子页面返回一律不展示，不受此开关影响）。
    */
   showOnAppForeground: boolean
-  /** 插屏广告位 unit-id（微信公众平台「流量主」创建）。
-   *   **全局兜底广告位**：未在 unitIdByLocation 单独配置的页面共用此广告位。
-   *   微信广告位可跨页面复用，填一个已开启的即可让全部核心页都能出插屏；
-   *   之后想按页面用独立广告位（分开展示/数据），在 unitIdByLocation 加一行即可。 */
-  unitId: string
-  /** 按 location 覆盖的 unit-id（优先于 unitId）；未配置的 location 使用 unitId */
-  unitIdByLocation: Partial<Record<InterstitialLocation, string>>
-  /** 两次展示最小间隔（ms）：需求确认 15s */
+  /** 两次展示最小间隔（ms）：默认 15s */
   minIntervalMs: number
   /** 新用户窗口（天）：注册距今天数 ≤ 该值视为新用户 */
   newUserWindowDays: number
-  /** 新用户每日最多展示次数（需求：最多弹 1 次） */
+  /** 新用户每日最多展示次数（默认：最多弹 1 次） */
   newUserDailyCap: number
-  /** 老用户每日最多展示次数（需求：一天 3 次） */
+  /** 老用户每日最多展示次数（默认：一天 3 次） */
   dailyCap: number
   /** 一次完整「创建→加载→展示」流程的最大尝试次数（含首次；加载/展示失败后的连续重试次数 = maxAttempts - 1） */
   maxAttempts: number
@@ -68,29 +75,22 @@ export interface InterstitialAdConfig {
   retryIntervalMs: number
   /** 加载看门狗（ms）：创建后超过该时长仍未 onLoad/展示成功，销毁实例并释放全局锁，避免卡死后续触发 */
   loadTimeoutMs: number
+  /**
+   * 「等待远端广告位配置」的上限（ms）：冷启动时页面 onShow 早于配置接口返回，
+   * 期间插屏触发会被挂起（utils/interstitial-ad.ts scheduleConfigWait），配置到达即补一次；
+   * 超过该时长（配置接口失败 / 后台始终没配该 location）则放弃本次触发。
+   */
+  configWaitTimeoutMs: number
 }
 
 /**
- * 插屏广告位映射（微信公众平台「流量主」后台创建的广告位）：
- * - 首页_插屏 `adunit-3ad8476bdced05ca`：首页（global）使用，并作为全局兜底，
- *   日韩之外的其余核心页面（有色/财经/分时/个股/板块/TOP100/资讯等）在创建独立
- *   广告位前暂共用此位（同一 unit-id 可被多个页面请求展示）；
- * - 日韩_插屏 `adunit-c0b2e35a4896986f`：日韩（asia）页专用。
+ * 插屏参数**默认值**（远端 `adConfig.interstitialConfig` 未配置的项用这里的值；
+ * **不含 unit-id**：广告位由远端 `adConfig.interstitialAd` 下发，见文件头与
+ * docs/广告位配置-插屏广告.json）。
  */
 export const INTERSTITIAL_AD_CONFIG: InterstitialAdConfig = {
   enabled: true,
   showOnAppForeground: true,
-  // 全局兜底 = 首页_插屏（已开启）：首页本身与其余未单独配置的页面共用
-  unitId: 'adunit-3ad8476bdced05ca',
-  unitIdByLocation: {
-    // 首页_插屏：与全局兜底同号（显式声明，便于阅读 / 日后替换）
-    global: 'adunit-3ad8476bdced05ca',
-    // 日韩_插屏（已开启）：日韩 tab 页专用
-    asia: 'adunit-c0b2e35a4896986f',
-    // 其余 location（metals/finance/minute/stock-detail/sector-detail/industry-all/
-    // us-top100/news/news-detail）回退全局兜底 unitId；如需独立广告位在此补行：
-    // metals: 'adunit-xxxx…',
-  },
   minIntervalMs: 15 * 1000, // 15s
   newUserWindowDays: 3,
   newUserDailyCap: 1,
@@ -98,4 +98,5 @@ export const INTERSTITIAL_AD_CONFIG: InterstitialAdConfig = {
   maxAttempts: 3, // 首次 + 2 次重试
   retryIntervalMs: 1200,
   loadTimeoutMs: 8000,
+  configWaitTimeoutMs: 8000,
 }

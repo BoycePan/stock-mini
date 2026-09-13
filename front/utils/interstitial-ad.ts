@@ -1,5 +1,11 @@
-import { INTERSTITIAL_AD_CONFIG, type InterstitialLocation } from '../config/interstitial-ad'
+import { reaction } from 'mobx-miniprogram'
+import {
+  INTERSTITIAL_AD_CONFIG,
+  type InterstitialAdConfig,
+  type InterstitialLocation,
+} from '../config/interstitial-ad'
 import { rootStore } from '../stores/root.store'
+import { resolveInterstitialSettings, resolveInterstitialUnitId } from './ad-config'
 import { todayDateString } from './popup-notice'
 import { markAppForeground, resolvePageShowReason } from './page-show'
 import {
@@ -15,7 +21,8 @@ import {
 /**
  * 插屏广告全局调度（纯脚本，无 wxml / 组件——插屏是原生全屏广告不需要 UI）。
  *
- * 设计（需求口径，参数配置集中在 config/interstitial-ad.ts）：
+ * 设计（需求口径：**广告位与行为参数都来自远端** `adConfig`；本地 config/interstitial-ad.ts
+ * 只是默认值 / 兜底）：
  * - **全局单飞**：module 级状态机 idle / loading / showing，同一时刻只允许一个
  *   「创建 → 加载 → 展示」流程在跑；其他页面 / 其他 tab 的 onShow 触发一律丢弃并打日志，
  *   从根上保证「全局同时只能进行一个插屏加载」——tab 页 keep-alive 下 onShow 高频并发
@@ -24,19 +31,29 @@ import {
  * - **触发时机**（闸门 0，判定见 utils/page-show.ts）：只有「onLoad 后首次显示 / 用户切 tab /
  *   App 回前台」展示，**从子页面返回（navigateBack）不展示**——后者是高频动作，
  *   每次返回都弹全屏广告会严重干扰浏览；
+ * - **广告位与行为参数都来自远端**（后端 app_config 的 `adConfig`）：
+ *   广告位 `adConfig.interstitialAd` 按 location 查 unit-id（utils/ad-config.ts
+ *   resolveInterstitialUnitId）——**没有本地硬编码 / 全局兜底**，某 location 未配置或
+ *   status=false 该位置就不展示；行为参数 `adConfig.interstitialConfig`（总开关 / 展示时机 /
+ *   频控 / 重试）逐项覆盖本地默认值（currentConfig → resolveInterstitialSettings），
+ *   未配置项沿用发版默认值。后台改配置即上下线 / 调参，无需发版。
+ *   冷启动时页面 onShow 通常早于「登录 + 配置」返回：此时**挂起本次触发**（scheduleConfigWait），
+ *   配置到达且该 location 拿到 unit-id 就补一次（仍走闸门 2~6），配置始终没有该 location
+ *   或超过 configWaitTimeoutMs 即放弃（未配置就不展示）；
  * - 展示时序参考 firm/ad-component 的 gdt 插屏：createInterstitialAd → onLoad → show()
  *   （成功才计入「今日次数」与「上次展示时间」）→ onClose 销毁实例并释放锁；onError /
  *   show 失败按 maxAttempts 轻量重试；创建后超 loadTimeoutMs 未就绪由看门狗销毁释放，
- *   避免锁卡死后续触发；App 退后台（wx.onAppHide）销毁在途实例，防止回前台残留。
+ *   避免锁卡死后续触发；App 退后台（wx.onAppHide）销毁在途实例 + 丢弃挂起触发，防止回前台残留。
  * - **异常不外泄、不占锁**：创建实例同步抛错 / 返回非法实例同样按「本次尝试失败」收敛
  *   （重试或收尾），不会把 state 停在 loading 卡死全局锁；展示成功（state='showing'）
  *   之后迟到的失败回调不再重试——否则会销毁正在展示的插屏并重复计数，等待 onClose 收尾。
  *
- * 触发闸门（顺序判定，任一不过即放弃，全部静默降级不影响页面）：
- *   显示原因非「从子页面返回」→ enabled → location 有 unit-id →
- *   微信版本支持 createInterstitialAd → 全局空闲 →
- *   今日已展示次数 < 个人每日上限（新用户 1 / 老用户 3，按 created_at 分级）→
- *   距上次展示 ≥ minIntervalMs(15s，跨启动生效) → 才真正创建展示。
+ * 触发闸门（顺序判定，任一不过即放弃，全部静默降级不影响页面；参数取 currentConfig()）：
+ *   显示原因非「从子页面返回」→ enabled → 全局空闲 →
+ *   location 有远端 unit-id（配置未就绪则挂起等待，见上）→
+ *   微信版本支持 createInterstitialAd →
+ *   今日已展示次数 < 个人每日上限（默认新用户 1 / 老用户 3，按 created_at 分级）→
+ *   距上次展示 ≥ minIntervalMs(默认 15s，跨启动生效) → 才真正创建展示。
  */
 
 type AdRunState = 'idle' | 'loading' | 'showing'
@@ -57,6 +74,16 @@ let watchdog: ReturnType<typeof setTimeout> | null = null
 let shownInRun = false
 /** wx.onAppShow / wx.onAppHide 是否已注册（惰性注册一次） */
 let appLifecycleBound = false
+
+/**
+ * 「等待远端广告位配置」的挂起触发（冷启动竞态：页面 onShow 早于配置接口返回）。
+ * 同一时刻只保留**最新**一次触发——最新的一次就是当前所在页面，配置到达时补它即可。
+ */
+let pendingTrigger: { location: InterstitialLocation; page: object } | null = null
+/** 挂起触发对远端配置的 MobX 监听取消函数（配置到达即补展示） */
+let pendingDisposer: (() => void) | null = null
+/** 挂起触发的等待超时定时器 */
+let pendingTimer: ReturnType<typeof setTimeout> | null = null
 
 function clearTimers() {
   if (retryTimer !== null) {
@@ -79,6 +106,81 @@ function destroyInstance() {
     }
     adInstance = null
   }
+}
+
+/**
+ * 当前生效的插屏参数：远端 `adConfig.interstitialConfig` 逐项覆盖本地默认值
+ * （utils/ad-config.ts resolveInterstitialSettings；未配置 / 非法值回落默认值）。
+ * 每次判定 / 每次挂定时器时现取，后台改配置即时生效，无需发版。
+ */
+function currentConfig(): InterstitialAdConfig {
+  return resolveInterstitialSettings(
+    rootStore.system.configs.adConfig?.interstitialConfig,
+    INTERSTITIAL_AD_CONFIG,
+  )
+}
+
+/** 丢弃「等待远端配置」的挂起触发（配置已到达 / 超时 / App 退后台 / 页面已切换时调用） */
+function clearPendingTrigger() {
+  if (pendingDisposer) {
+    pendingDisposer()
+    pendingDisposer = null
+  }
+  if (pendingTimer !== null) {
+    clearTimeout(pendingTimer)
+    pendingTimer = null
+  }
+  pendingTrigger = null
+}
+
+/**
+ * 触发页是否仍是当前栈顶页面。
+ * 补展示是「延迟发生」的（等配置到达），若用户已经跳到别的页面，全屏插屏会弹在
+ * 与触发无关的页面上——此时放弃本次补展示（`getCurrentPages` 不可用时不拦截）。
+ */
+function isPageStillOnTop(page: object): boolean {
+  if (typeof getCurrentPages !== 'function') return true
+  try {
+    const pages = getCurrentPages()
+    return pages.length > 0 && pages[pages.length - 1] === page
+  } catch {
+    return true
+  }
+}
+
+/**
+ * 挂起本次触发，等远端广告位配置到达（冷启动：页面 onShow 通常早于「登录 + 配置」返回）：
+ * - 配置到达且该 location 解析出 unit-id → 补走一次放行判定（闸门 2~6，见 attemptPlace）；
+ * - 配置到达但该 location 仍未配置 / status=false → 不展示（远端未配置即不展示，
+ *   此时 reaction 不会触发，最终由超时收尾）；
+ * - 等待超过 configWaitTimeoutMs、App 退后台、或触发页已不是栈顶 → 放弃。
+ */
+function scheduleConfigWait(location: InterstitialLocation, page: object) {
+  clearPendingTrigger()
+  pendingTrigger = { location, page }
+  // reaction 追踪「该 location 解析出的 unit-id」：配置写入 rootStore.system.configs 后
+  // （MobX observable）立即回调，无需轮询
+  pendingDisposer = reaction(
+    () => resolveUnitId(location),
+    (unitId) => {
+      const pending = pendingTrigger
+      clearPendingTrigger()
+      if (!pending || !unitId) return
+      if (!isPageStillOnTop(pending.page)) {
+        console.warn('[interstitial] 等待远端配置期间页面已切换，放弃本次补展示')
+        return
+      }
+      console.warn(`[interstitial] 远端插屏配置到达（location=${location}），补一次触发`)
+      attemptPlace(pending.location, pending.page)
+    },
+  )
+  pendingTimer = setTimeout(() => {
+    pendingTimer = null
+    if (pendingTrigger) {
+      console.warn('[interstitial] 等待远端插屏配置超时（未配置则不展示），放弃本次触发')
+    }
+    clearPendingTrigger()
+  }, currentConfig().configWaitTimeoutMs)
 }
 
 /**
@@ -131,7 +233,7 @@ function armWatchdog(token: number) {
     if (token === attemptSeq && state === 'loading') {
       teardown('加载看门狗超时')
     }
-  }, INTERSTITIAL_AD_CONFIG.loadTimeoutMs)
+  }, currentConfig().loadTimeoutMs)
 }
 
 function clearWatchdog() {
@@ -152,7 +254,7 @@ function handleFail(token: number, location: InterstitialLocation, unitId: strin
     console.warn('[interstitial] 插屏已展示成功，忽略迟到的失败回调（不重试，等待 onClose 收尾）')
     return
   }
-  const { maxAttempts, retryIntervalMs } = INTERSTITIAL_AD_CONFIG
+  const { maxAttempts, retryIntervalMs } = currentConfig()
   if (runAttempts < maxAttempts) {
     clearTimers()
     retryTimer = setTimeout(() => {
@@ -224,7 +326,8 @@ function startAttempt(location: InterstitialLocation, unitId: string) {
 
 /**
  * 惰性注册 App 前后台监听（只注册一次）：
- * - 退后台：销毁在途实例并释放锁；
+ * - 退后台：销毁在途实例并释放锁，同时丢弃「等待配置」的挂起触发（避免回到前台后
+ *   补弹一个与当前浏览无关的插屏；回前台时页面 onShow 会重新触发一次）；
  * - 回前台：打标（`markAppForeground`），供闸门 0 把「回到前台」与「从子页面返回」区分开。
  */
 function bindAppLifecycle() {
@@ -232,6 +335,7 @@ function bindAppLifecycle() {
   appLifecycleBound = true
   if (typeof wx.onAppHide === 'function') {
     wx.onAppHide(() => {
+      clearPendingTrigger()
       if (state !== 'idle') teardown('App 退后台')
     })
   }
@@ -240,50 +344,41 @@ function bindAppLifecycle() {
   }
 }
 
-/** 解析 location 对应的 unit-id：位置级覆盖 > 全局默认；未配置返回空串 */
+/**
+ * 解析 location 对应的插屏 unit-id：读远端配置 `adConfig.interstitialAd`
+ * （utils/ad-config.ts resolveInterstitialUnitId）。
+ * 未配置该 location / status=false / 配置尚未到达 → 空串（不展示，不做本地兜底）。
+ * 读取的是 MobX observable（rootStore.system.configs），故 scheduleConfigWait 里用
+ * reaction 追踪本函数即可在配置到达时补一次触发。
+ */
 export function resolveUnitId(location: InterstitialLocation): string {
-  const cfg = INTERSTITIAL_AD_CONFIG
-  return cfg.unitIdByLocation[location] ?? cfg.unitId ?? ''
+  return resolveInterstitialUnitId(rootStore.system.configs.adConfig, location)
 }
 
 /**
- * 插屏广告统一触发入口（页面 onShow 调用，见各接入页）：
- * 所有闸门 + 全局单飞 + 展示流程都在这里收口，调用方无需关心并发与频控。
- *
- * @param location 触发位置（见 config/interstitial-ad.ts）
- * @param page 页面实例（调用处传 `this`）：用于判定这是该页面的第几次显示
+ * 闸门 2~6 + 真正开始展示（闸门 0 显示时机 / 闸门 1 总开关由 maybeShowInterstitial 判定）：
+ * 全局单飞 → 远端有该 location 的 unit-id（配置未就绪则挂起等待）→ 微信版本支持 →
+ * 今日次数上限 → 两次展示最小间隔 → startAttempt。
  */
-export function maybeShowInterstitial(location: InterstitialLocation, page: object): void {
-  const cfg = INTERSTITIAL_AD_CONFIG
+function attemptPlace(location: InterstitialLocation, page: object): void {
+  const cfg = currentConfig()
 
-  // 闸门 0：本次「页面显示」的来源——从子页面返回（navigateBack）触发的 onShow 一律不展示：
-  // 返回是最高频的动作（每次看完详情都要返回），此时弹全屏广告会打断浏览；
-  // 首次进入 / 用户切 tab / App 回前台仍可展示（判定见 utils/page-show.ts）
-  const reason = resolvePageShowReason(location, page)
-  if (reason === 'return') {
-    console.warn('[interstitial] 从子页面返回触发的 onShow，跳过')
-    return
-  }
-  if (reason === 'app-foreground' && !cfg.showOnAppForeground) {
-    console.warn('[interstitial] App 回前台触发的 onShow，配置为不展示，跳过')
-    return
-  }
-
-  // 闸门 1：总开关
-  if (!cfg.enabled) {
-    console.warn('[interstitial] 总开关关闭，跳过')
-    return
-  }
   // 闸门 2：全局单飞——同一时刻只有一个插屏加载/展示
   if (state !== 'idle') {
     console.warn(`[interstitial] 已有插屏在加载/展示（state=${state}），丢弃本次触发`)
     return
   }
-  // 闸门 3：广告位配置
+  // 闸门 3：远端广告位配置（adConfig.interstitialAd 按 location 查 unit-id）+ 就绪判定
   const unitId = resolveUnitId(location)
   if (!unitId) {
+    if (!rootStore.system.ready) {
+      // 配置还没到（冷启动竞态）：不是「未配置」，挂起等配置到达后补一次
+      console.warn(`[interstitial] 远端配置未就绪，挂起 location=${location} 等待配置到达`)
+      scheduleConfigWait(location, page)
+      return
+    }
     console.warn(
-      `[interstitial] location=${location} 未配置 unit-id（config/interstitial-ad.ts），跳过`,
+      `[interstitial] location=${location} 未在远端 adConfig.interstitialAd 配置（或 status=false），跳过`,
     )
     return
   }
@@ -322,4 +417,37 @@ export function maybeShowInterstitial(location: InterstitialLocation, page: obje
   runAttempts = 0
   bindAppLifecycle()
   startAttempt(location, unitId)
+}
+
+/**
+ * 插屏广告统一触发入口（页面 onShow 调用，见各接入页）：
+ * 所有闸门 + 全局单飞 + 展示流程都在这里收口，调用方无需关心并发与频控。
+ *
+ * @param location 触发位置（见 config/interstitial-ad.ts，同时也是远端配置的 location）
+ * @param page 页面实例（调用处传 `this`）：用于判定这是该页面的第几次显示
+ */
+export function maybeShowInterstitial(location: InterstitialLocation, page: object): void {
+  const cfg = currentConfig()
+
+  // 闸门 0：本次「页面显示」的来源——从子页面返回（navigateBack）触发的 onShow 一律不展示：
+  // 返回是最高频的动作（每次看完详情都要返回），此时弹全屏广告会打断浏览；
+  // 首次进入 / 用户切 tab / App 回前台仍可展示（判定见 utils/page-show.ts）
+  const reason = resolvePageShowReason(location, page)
+  if (reason === 'return') {
+    console.warn('[interstitial] 从子页面返回触发的 onShow，跳过')
+    return
+  }
+  if (reason === 'app-foreground' && !cfg.showOnAppForeground) {
+    console.warn('[interstitial] App 回前台触发的 onShow，配置为不展示，跳过')
+    return
+  }
+
+  // 闸门 1：总开关
+  if (!cfg.enabled) {
+    console.warn('[interstitial] 总开关关闭，跳过')
+    return
+  }
+
+  // 闸门 2~6 + 开始展示
+  attemptPlace(location, page)
 }

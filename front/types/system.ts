@@ -17,10 +17,62 @@ interface AdBannerConfig {
   status: boolean
 }
 
-/** 广告配置分组（后端 adConfig 下发的全部广告位，见 utils/ad-config.ts resolveAdUnitId） */
+/**
+ * 插屏广告配置项（app_config cfg_type='display' 下发的 adConfig.interstitialAd 条目）。
+ *
+ * 与 bannerAd 同构：`location` 为插屏的「触发位置」（见 front/config/interstitial-ad.ts
+ * InterstitialLocation，如 global / asia / minute / news-detail …）。
+ * 插屏**没有全局兜底广告位**：某个 location 没有条目（或 status=false）时，该页不展示插屏。
+ */
+interface AdInterstitialConfig {
+  /** 插屏广告位 unit-id（<ad-custom> 之外，createInterstitialAd 使用；流量主后台创建） */
+  'unit-id': string
+  /** 触发位置：global / asia / metals / finance / minute / stock-detail / sector-detail /
+   *  industry-all / us-top100 / news / news-detail */
+  location: string
+  /** 是否启用（status=false 时前端不展示该位置的插屏，用于临时下线） */
+  status: boolean
+}
+
+/**
+ * 插屏**行为参数**（app_config cfg_type='display' 下发的 adConfig.interstitialConfig）。
+ *
+ * 全部字段可选：缺省 / 类型不合法（字符串、负数、NaN）→ 该项回落前端本地默认值
+ * （front/config/interstitial-ad.ts INTERSTITIAL_AD_CONFIG），
+ * 所以后台**只配要覆盖的项**即可，不配就等于沿用发版时的默认值。
+ * 解析见 utils/ad-config.ts resolveInterstitialSettings（纯函数）。
+ */
+interface AdInterstitialSettings {
+  /** 总开关：false 时任何页面都不触发插屏（等价于把整条链路关掉） */
+  enabled?: boolean
+  /** App 从后台回到前台（页面非首次显示）时是否允许触发插屏 */
+  showOnAppForeground?: boolean
+  /** 两次展示最小间隔（ms） */
+  minIntervalMs?: number
+  /** 新用户窗口（天）：注册距今天数 ≤ 该值视为新用户 */
+  newUserWindowDays?: number
+  /** 新用户每日最多展示次数 */
+  newUserDailyCap?: number
+  /** 老用户每日最多展示次数 */
+  dailyCap?: number
+  /** 一次完整流程的最大尝试次数（含首次，≥1） */
+  maxAttempts?: number
+  /** 失败重试间隔（ms） */
+  retryIntervalMs?: number
+  /** 加载看门狗（ms）：创建后超时未展示成功则销毁实例、释放全局锁 */
+  loadTimeoutMs?: number
+  /** 冷启动「等远端配置」的上限（ms） */
+  configWaitTimeoutMs?: number
+}
+
+/** 广告配置分组（后端 adConfig 下发的全部广告位，见 utils/ad-config.ts） */
 export interface AdConfig {
-  /** 原生模板广告位（<ad-custom>）列表 */
+  /** 原生模板广告位（<ad-custom>）列表（utils/ad-config.ts resolveAdUnitId） */
   bannerAd?: AdBannerConfig[]
+  /** 插屏广告位列表（utils/ad-config.ts resolveInterstitialUnitId → utils/interstitial-ad.ts） */
+  interstitialAd?: AdInterstitialConfig[]
+  /** 插屏行为参数（总开关 / 展示时机 / 频控 / 重试；缺省项用本地默认值） */
+  interstitialConfig?: AdInterstitialSettings
 }
 
 /**
@@ -56,7 +108,8 @@ export type AppConfig = Partial<{
   /** cfg_type='login' 的配置分组（跟随登录接口下发、登录后即用，见 stores/system.store.ts
    *  loginConfig 与 docs/API.md 8.3）；登录未下发 / 尚未配置时为 undefined（前端按「关闭」处理） */
   loginConfig?: LoginConfig
-  /** 广告位配置（各页面按 location 查找 unit-id 渲染，见 components/ad-banner） */
+  /** 广告位配置（原生模板按 location 渲染，见 components/ad-banner；插屏按 location 解析
+   *  unit-id，见 utils/interstitial-ad.ts；两者都由后端 adConfig 分组下发） */
   adConfig?: AdConfig
 }>
 
