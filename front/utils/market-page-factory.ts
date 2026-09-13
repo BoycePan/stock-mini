@@ -223,9 +223,10 @@ export function createMarketPage(opts: MarketPageOptions) {
       if (shareRedirectedPages.has(this)) return
       // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
       this.syncTabBar()
-      // 插屏广告：tab 页每次显示时触发一次——由 utils/interstitial-ad.ts 的全局单例 +
+      // 插屏广告：仅「首次进入 / 切 tab / App 回前台」触发，从子页面返回不触发——
+      // 来源判定见 utils/interstitial-ad.ts 闸门 0（utils/page-show.ts）；全局单例 +
       // 频控闸门收敛并发（同一时刻只允许一个插屏加载/展示），页面无需关心节奏
-      maybeShowInterstitial(pageKey)
+      maybeShowInterstitial(pageKey, this)
       // 距上次真正发起的请求超过 5s 才在 onShow 立即补一次刷新
       // （lastRequestAt 由 store 在 loadPage 实际请求处记录，缓存命中不更新）
       // 行情页轮询间隔 8s（MARKET_REFRESH_INTERVAL）

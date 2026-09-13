@@ -6,6 +6,10 @@
  *   + 报价子包（分时/个股详情/板块详情/全部板块/美股TOP100）+ 财经子包（资讯列表/资讯详情）；
  *   设置页不触发。所有触发汇聚到 utils/interstitial-ad.ts 的全局单例——
  *   同一时刻全局只允许一个插屏在「创建/加载/展示」，超出的触发直接丢弃；
+ * - **触发时机**（页面显示原因，判定见 utils/page-show.ts）：只有
+ *   ① onLoad 后首次显示（冷启动 / 首次切到该 tab / navigateTo 进子页面）、
+ *   ② 用户点 tabBar 切 tab、③ App 从后台回前台（可关，见 showOnAppForeground）三者展示；
+ *   **从子页面返回（navigateBack）不展示**——返回是浏览过程中最高频的动作；
  * - 两次展示最小间隔 MIN_INTERVAL_MS = 15s（从上次展示成功起算，跨启动也生效）；
  * - 按账号注册时间（登录接口返回 user.created_at，见 stores/auth.store.ts）区分新老用户：
  *   注册 ≤ NEW_USER_WINDOW_DAYS(3) 天 = 新用户 → 每天最多 NEW_USER_DAILY_CAP(1) 次；
@@ -37,6 +41,12 @@ export type InterstitialLocation =
 export interface InterstitialAdConfig {
   /** 总开关：false 时任何页面都不会触发插屏 */
   enabled: boolean
+  /**
+   * App 从后台回到前台（该页面非首次显示）时是否允许触发插屏。
+   * 用户没有明确这个场景，默认沿用改版前的行为（允许展示）；
+   * 若不希望「切后台回来弹广告」，改为 false 即可（从子页面返回一律不展示，不受此开关影响）。
+   */
+  showOnAppForeground: boolean
   /** 插屏广告位 unit-id（微信公众平台「流量主」创建）。
    *   **全局兜底广告位**：未在 unitIdByLocation 单独配置的页面共用此广告位。
    *   微信广告位可跨页面复用，填一个已开启的即可让全部核心页都能出插屏；
@@ -69,6 +79,7 @@ export interface InterstitialAdConfig {
  */
 export const INTERSTITIAL_AD_CONFIG: InterstitialAdConfig = {
   enabled: true,
+  showOnAppForeground: true,
   // 全局兜底 = 首页_插屏（已开启）：首页本身与其余未单独配置的页面共用
   unitId: 'adunit-3ad8476bdced05ca',
   unitIdByLocation: {

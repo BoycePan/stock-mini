@@ -149,8 +149,9 @@ Page({
     await this.loadData()
   },
   onShow() {
-    // 插屏广告：页面显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
-    maybeShowInterstitial('minute')
+    // 插屏广告：仅「首次进入 / 切 tab / App 回前台」触发，从子页面返回不触发
+    // （全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts 闸门 0）
+    maybeShowInterstitial('minute', this)
     startAutoRefresh(this, lastMinuteRequestAt, MINUTE_REFRESH_INTERVAL)
   },
   onHide() {

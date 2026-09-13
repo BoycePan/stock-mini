@@ -64,8 +64,9 @@ Page({
     await this.loadData(options.code)
   },
   onShow() {
-    // 插屏广告：页面每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
-    maybeShowInterstitial('news')
+    // 插屏广告：仅「首次进入 / 切 tab / App 回前台」触发，从子页面返回不触发
+    // （全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts 闸门 0）
+    maybeShowInterstitial('news', this)
   },
   async onPullDownRefresh() {
     try {

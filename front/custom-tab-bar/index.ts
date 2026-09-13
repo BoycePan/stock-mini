@@ -1,4 +1,5 @@
 import { bindTheme, getTheme, unbindTheme } from '../utils/theme'
+import { markTabSwitch } from '../utils/page-show'
 import { trackEvent } from '../utils/tracker'
 
 /**
@@ -43,6 +44,9 @@ Component({
       if (!key || key === this.data.selected) return
       // 埋点：切换底部 Tab，target = tab key
       trackEvent('tab.switch', key)
+      // 记录「这次页面显示由用户切 tab 引起」：插屏广告只在首次进入 / 切 tab / 回前台展示，
+      // 从子页面返回不展示，而 onShow 本身区分不了来源（见 utils/page-show.ts）
+      markTabSwitch(key)
       // 先更新高亮保证点击即时反馈；页面 onShow 会再次同步（幂等）
       this.setData({ selected: key })
       wx.switchTab({ url: `/pages/${key}/index` })

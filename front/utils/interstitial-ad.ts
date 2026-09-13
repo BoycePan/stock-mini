@@ -1,6 +1,7 @@
 import { INTERSTITIAL_AD_CONFIG, type InterstitialLocation } from '../config/interstitial-ad'
 import { rootStore } from '../stores/root.store'
 import { todayDateString } from './popup-notice'
+import { markAppForeground, resolvePageShowReason } from './page-show'
 import {
   consumeDailyShow,
   readDailyState,
@@ -19,14 +20,21 @@ import {
  *   「创建 → 加载 → 展示」流程在跑；其他页面 / 其他 tab 的 onShow 触发一律丢弃并打日志，
  *   从根上保证「全局同时只能进行一个插屏加载」——tab 页 keep-alive 下 onShow 高频并发
  *   触发（切 tab / 从详情返回 / App 回前台）全部收敛到这里；
- * - 页面接入只需一行：`maybeShowInterstitial('global')`（放在页面 onShow，见各接入页）；
+ * - 页面接入只需一行：`maybeShowInterstitial('global', this)`（放在页面 onShow，见各接入页）；
+ * - **触发时机**（闸门 0，判定见 utils/page-show.ts）：只有「onLoad 后首次显示 / 用户切 tab /
+ *   App 回前台」展示，**从子页面返回（navigateBack）不展示**——后者是高频动作，
+ *   每次返回都弹全屏广告会严重干扰浏览；
  * - 展示时序参考 firm/ad-component 的 gdt 插屏：createInterstitialAd → onLoad → show()
  *   （成功才计入「今日次数」与「上次展示时间」）→ onClose 销毁实例并释放锁；onError /
  *   show 失败按 maxAttempts 轻量重试；创建后超 loadTimeoutMs 未就绪由看门狗销毁释放，
  *   避免锁卡死后续触发；App 退后台（wx.onAppHide）销毁在途实例，防止回前台残留。
+ * - **异常不外泄、不占锁**：创建实例同步抛错 / 返回非法实例同样按「本次尝试失败」收敛
+ *   （重试或收尾），不会把 state 停在 loading 卡死全局锁；展示成功（state='showing'）
+ *   之后迟到的失败回调不再重试——否则会销毁正在展示的插屏并重复计数，等待 onClose 收尾。
  *
  * 触发闸门（顺序判定，任一不过即放弃，全部静默降级不影响页面）：
- *   enabled → location 有 unit-id → 微信版本支持 createInterstitialAd → 全局空闲 →
+ *   显示原因非「从子页面返回」→ enabled → location 有 unit-id →
+ *   微信版本支持 createInterstitialAd → 全局空闲 →
  *   今日已展示次数 < 个人每日上限（新用户 1 / 老用户 3，按 created_at 分级）→
  *   距上次展示 ≥ minIntervalMs(15s，跨启动生效) → 才真正创建展示。
  */
@@ -47,8 +55,8 @@ let retryTimer: ReturnType<typeof setTimeout> | null = null
 let watchdog: ReturnType<typeof setTimeout> | null = null
 /** 本次流程是否已展示成功（保证一次流程只计一次数） */
 let shownInRun = false
-/** wx.onAppHide 是否已注册（惰性注册一次） */
-let appHideBound = false
+/** wx.onAppShow / wx.onAppHide 是否已注册（惰性注册一次） */
+let appLifecycleBound = false
 
 function clearTimers() {
   if (retryTimer !== null) {
@@ -70,6 +78,33 @@ function destroyInstance() {
       // 实例已失效时 destroy 可能抛错，忽略即可
     }
     adInstance = null
+  }
+}
+
+/**
+ * 创建插屏实例：创建过程同步抛错（如 adUnitId 非法）或返回缺少事件挂载方法的非法实例时，
+ * 一律返回 null 交由调用方按「本次尝试失败」收敛（重试 / 达上限收尾）。
+ * **绝不能让异常抛出**：startAttempt 已把 state 置为 loading，异常冒泡到页面 onShow 后
+ * 没有任何路径再改回 idle，本次会话所有后续触发都会被闸门 2（全局单飞）拦死。
+ */
+function createInstance(unitId: string): WechatMiniprogram.InterstitialAd | null {
+  try {
+    const ad = wx.createInterstitialAd({ adUnitId: unitId }) as
+      WechatMiniprogram.InterstitialAd | null | undefined
+    if (
+      !ad ||
+      typeof ad.onLoad !== 'function' ||
+      typeof ad.onError !== 'function' ||
+      typeof ad.onClose !== 'function' ||
+      typeof ad.show !== 'function'
+    ) {
+      console.error('[interstitial] createInterstitialAd 返回非法实例，放弃本次尝试')
+      return null
+    }
+    return ad
+  } catch (error) {
+    console.error('[interstitial] 创建插屏实例失败', error)
+    return null
   }
 }
 
@@ -109,6 +144,14 @@ function clearWatchdog() {
 /** 一次失败后的处理：未达尝试上限则延时重试同一 location/unitId，否则收尾释放锁 */
 function handleFail(token: number, location: InterstitialLocation, unitId: string) {
   if (token !== attemptSeq) return
+  // 展示成功后到达的失败回调（onError / show 异常）：不再重试。
+  // 重试会 destroy 掉正在展示的插屏，并因 startAttempt 重置 shownInRun 而把同一次流程
+  // 重复计入「今日次数」，破坏「一次流程只计一次」；此处保持锁，交给 onClose
+  // （或 App 退后台）收尾，避免对正在展示的广告再发一次 show。
+  if (shownInRun || state === 'showing') {
+    console.warn('[interstitial] 插屏已展示成功，忽略迟到的失败回调（不重试，等待 onClose 收尾）')
+    return
+  }
   const { maxAttempts, retryIntervalMs } = INTERSTITIAL_AD_CONFIG
   if (runAttempts < maxAttempts) {
     clearTimers()
@@ -138,7 +181,13 @@ function startAttempt(location: InterstitialLocation, unitId: string) {
     return
   }
 
-  const interstitialAd = wx.createInterstitialAd({ adUnitId: unitId })
+  const interstitialAd = createInstance(unitId)
+  if (!interstitialAd) {
+    // 创建失败与 onError / show 失败同路径收敛：未达上限则重试，达上限收尾释放锁，
+    // 保证任何异常都不会把 state 留在 loading（见 createInstance 注释）
+    handleFail(token, location, unitId)
+    return
+  }
   adInstance = interstitialAd
 
   interstitialAd.onLoad(() => {
@@ -173,13 +222,22 @@ function startAttempt(location: InterstitialLocation, unitId: string) {
   armWatchdog(token)
 }
 
-/** 惰性注册 App 退后台监听：销毁在途实例并释放锁（只注册一次） */
-function bindAppHide() {
-  if (appHideBound || typeof wx === 'undefined' || typeof wx.onAppHide !== 'function') return
-  appHideBound = true
-  wx.onAppHide(() => {
-    if (state !== 'idle') teardown('App 退后台')
-  })
+/**
+ * 惰性注册 App 前后台监听（只注册一次）：
+ * - 退后台：销毁在途实例并释放锁；
+ * - 回前台：打标（`markAppForeground`），供闸门 0 把「回到前台」与「从子页面返回」区分开。
+ */
+function bindAppLifecycle() {
+  if (appLifecycleBound || typeof wx === 'undefined') return
+  appLifecycleBound = true
+  if (typeof wx.onAppHide === 'function') {
+    wx.onAppHide(() => {
+      if (state !== 'idle') teardown('App 退后台')
+    })
+  }
+  if (typeof wx.onAppShow === 'function') {
+    wx.onAppShow(() => markAppForeground())
+  }
 }
 
 /** 解析 location 对应的 unit-id：位置级覆盖 > 全局默认；未配置返回空串 */
@@ -191,9 +249,25 @@ export function resolveUnitId(location: InterstitialLocation): string {
 /**
  * 插屏广告统一触发入口（页面 onShow 调用，见各接入页）：
  * 所有闸门 + 全局单飞 + 展示流程都在这里收口，调用方无需关心并发与频控。
+ *
+ * @param location 触发位置（见 config/interstitial-ad.ts）
+ * @param page 页面实例（调用处传 `this`）：用于判定这是该页面的第几次显示
  */
-export function maybeShowInterstitial(location: InterstitialLocation): void {
+export function maybeShowInterstitial(location: InterstitialLocation, page: object): void {
   const cfg = INTERSTITIAL_AD_CONFIG
+
+  // 闸门 0：本次「页面显示」的来源——从子页面返回（navigateBack）触发的 onShow 一律不展示：
+  // 返回是最高频的动作（每次看完详情都要返回），此时弹全屏广告会打断浏览；
+  // 首次进入 / 用户切 tab / App 回前台仍可展示（判定见 utils/page-show.ts）
+  const reason = resolvePageShowReason(location, page)
+  if (reason === 'return') {
+    console.warn('[interstitial] 从子页面返回触发的 onShow，跳过')
+    return
+  }
+  if (reason === 'app-foreground' && !cfg.showOnAppForeground) {
+    console.warn('[interstitial] App 回前台触发的 onShow，配置为不展示，跳过')
+    return
+  }
 
   // 闸门 1：总开关
   if (!cfg.enabled) {
@@ -246,6 +320,6 @@ export function maybeShowInterstitial(location: InterstitialLocation): void {
   }
 
   runAttempts = 0
-  bindAppHide()
+  bindAppLifecycle()
   startAttempt(location, unitId)
 }

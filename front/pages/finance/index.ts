@@ -257,8 +257,9 @@ Page({
   onShow() {
     // 同步底部自定义 tabBar 激活态（原生 tabBar keep-alive，onShow 幂等）
     this.syncTabBar()
-    // 插屏广告：tab 页每次显示时触发（全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts）
-    maybeShowInterstitial('finance')
+    // 插屏广告：仅「首次进入 / 切 tab / App 回前台」触发，从子页面返回不触发
+    // （全局单例 + 频控闸门收敛，见 utils/interstitial-ad.ts 闸门 0）
+    maybeShowInterstitial('finance', this)
     // 回到页面：重置刷新失败重试态，按钮显示与否重新由轮询按「本地是否有新新闻」决定
     refreshFailed = false
     // 从新闻详情页返回：不自动刷新（列表 / 滚动位置保持原样），仅恢复轮询
