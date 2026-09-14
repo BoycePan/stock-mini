@@ -1,0 +1,19 @@
+/* 行情图表画布：宽度铺满容器，高度按模式给定（K 线模式更高，容纳成交量 + MACD 两块面板） */
+.quote-canvas {
+  display: block;
+  width: 100%;
+}
+
+/* 分时 / 五日：价格主图 + 成交量 */
+.quote-canvas.mode-minute,
+.quote-canvas.mode-fiveDay {
+  height: 620rpx;
+}
+
+/* 日K / 周K / 月K / 年K：价格主图 + 成交量 + MACD */
+.quote-canvas.mode-day,
+.quote-canvas.mode-week,
+.quote-canvas.mode-month,
+.quote-canvas.mode-year {
+  height: 940rpx;
+}

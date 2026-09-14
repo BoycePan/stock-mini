@@ -79,7 +79,9 @@
   border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .quote-card {
@@ -121,7 +123,7 @@
   font-size: 47rpx;
   font-weight: 750;
   line-height: 56rpx;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
   font-variant-numeric: tabular-nums;
 }
 
@@ -168,18 +170,62 @@
   color: #34445a;
   font-size: 26rpx;
   font-weight: 600;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
   font-variant-numeric: tabular-nums;
 }
 
-.panel-title {
+/* ---------------------------------------------------------------------------
+   周期 TAB（分时 / 五日 / 日K / 周K / 月K / 年K）：胶囊分段控件
+   --------------------------------------------------------------------------- */
+.tab-bar {
+  display: flex;
+  gap: 6rpx;
+  padding: 6rpx;
+  border-radius: 18rpx;
+  background: #f2f6fa;
+}
+
+.tab {
+  flex: 1;
+  border-radius: 13rpx;
+  color: #718096;
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 58rpx;
+  text-align: center;
+}
+
+.tab-active {
+  background: #ffffff;
+  color: #4278ed;
+  font-weight: 700;
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.12);
+}
+
+/* 无该周期数据源：置灰不可点（点击给出 toast 提示），仍保留位置避免 TAB 跳动 */
+.tab-disabled {
+  color: #b6c2d2;
+  font-weight: 500;
+}
+
+.panel-title-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.panel-title {
   color: #152338;
-  font-size: 31rpx;
+  font-size: 30rpx;
   font-weight: 700;
+}
+
+.panel-source {
+  flex-shrink: 0;
+  color: #99a6b7;
+  font-size: 20rpx;
 }
 
 .minute-note {
@@ -199,7 +245,67 @@
   color: #9cacc0;
 }
 
-/* 暂无数据引导卡（无分时源 / 多次加载失败） */
+/* 图表容器：高度与图表画布一致（按周期区分），保证加载 / 空态不引起布局跳动 */
+.chart-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16rpx;
+  min-height: 620rpx;
+}
+
+.chart-wrap.is-kline {
+  min-height: 940rpx;
+}
+
+.chart-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 0 24rpx;
+}
+
+.chart-state-text {
+  color: #99a6b7;
+  font-size: 24rpx;
+  line-height: 38rpx;
+  text-align: center;
+}
+
+/* 加载动效：三点脉冲（纯 CSS，避免额外资源） */
+.chart-spinner {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #4278ed;
+  box-shadow:
+    24rpx 0 0 #4278ed,
+    -24rpx 0 0 #4278ed;
+  animation: chart-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes chart-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.chart-retry {
+  margin: 0;
+  padding: 0 56rpx;
+  border-radius: 40rpx;
+  background: #edf4ff;
+  color: #4278ed;
+  font-size: 26rpx;
+  line-height: 72rpx;
+}
+
+/* 暂无数据引导卡（既无分时源也无 K 线源） */
 .no-data-card {
   display: flex;
   flex-direction: column;
@@ -209,7 +315,9 @@
   border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
 .no-data-icon {
@@ -245,71 +353,55 @@
   text-align: center;
 }
 
-.no-data-retry {
-  margin-top: 36rpx;
-  padding: 0 64rpx;
-  border-radius: 40rpx;
-  background: #edf4ff;
-  color: #4278ed;
-  font-size: 26rpx;
-  line-height: 76rpx;
-}
-
-/* 首次加载失败卡：错误提示 + 重试 */
-.error-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 18rpx;
-  padding: 72rpx 48rpx 64rpx;
-  border: 1rpx solid #d4dfec;
-  border-radius: 28rpx;
-  background: #fff;
-  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.10), 0 12rpx 32rpx rgba(30, 60, 110, 0.14);
-}
-
-.error-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 50%;
-  background: #fdf0ef;
-}
-
-.error-icon text {
-  color: #eb514d;
-  font-size: 44rpx;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.error-text {
-  margin-top: 24rpx;
-  color: #718096;
-  font-size: 27rpx;
-}
-
-.error-retry {
-  margin-top: 32rpx;
-  padding: 0 64rpx;
-  border-radius: 40rpx;
-  background: #edf4ff;
-  color: #4278ed;
-  font-size: 26rpx;
-  line-height: 76rpx;
-}
-
 .bottom-space {
   height: 40rpx;
 }
 
+/* ---------------------------------------------------------------------------
+   深色主题
+   --------------------------------------------------------------------------- */
 .page.theme-dark .panel-title {
   color: #f5f7fb;
 }
 
-/* 深色主题 · 暂无数据 / 错误卡片 */
+.page.theme-dark .tab-bar {
+  background: #223248;
+}
+
+.page.theme-dark .tab {
+  color: #9cacc0;
+}
+
+.page.theme-dark .tab-active {
+  background: #2c3f5c;
+  color: #6fa3ff;
+  box-shadow: none;
+}
+
+.page.theme-dark .tab-disabled {
+  color: #5c6b80;
+}
+
+.page.theme-dark .panel-source {
+  color: #7c8ba0;
+}
+
+.page.theme-dark .chart-state-text {
+  color: #9cacc0;
+}
+
+.page.theme-dark .chart-spinner {
+  background: #6fa3ff;
+  box-shadow:
+    24rpx 0 0 #6fa3ff,
+    -24rpx 0 0 #6fa3ff;
+}
+
+.page.theme-dark .chart-retry {
+  background: #233046;
+  color: #6fa3ff;
+}
+
 .page.theme-dark .no-data-card {
   border-color: #2a394e;
   background: #1a2637;
@@ -329,33 +421,6 @@
 
 .page.theme-dark .no-data-desc {
   color: #9cacc0;
-}
-
-.page.theme-dark .no-data-retry {
-  background: #233046;
-  color: #6fa3ff;
-}
-
-.page.theme-dark .error-card {
-  border-color: #2a394e;
-  background: #1a2637;
-}
-
-.page.theme-dark .error-icon {
-  background: #3a2426;
-}
-
-.page.theme-dark .error-icon text {
-  color: #ff8a85;
-}
-
-.page.theme-dark .error-text {
-  color: #9cacc0;
-}
-
-.page.theme-dark .error-retry {
-  background: #233046;
-  color: #6fa3ff;
 }
 
 /* 深色主题 · 基本信息卡片 */

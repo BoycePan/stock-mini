@@ -3,7 +3,7 @@
  *
  * 与 share-poster.ts 共用设计坐标系（宽 750）。绘制逻辑复用 utils/minute-session.ts 的
  * 时段模型（完整时段铺点 / 休盘留白 / 时间刻度）与 utils/minute.ts 的成交量方向计算，
- * 与屏幕分时组件（minute-chart）视觉一致：红涨绿跌分段价格线、金色均价线、
+ * 与屏幕分时组件（packageQuote/components/quote-chart 的分时模式）视觉一致：红涨绿跌分段价格线、金色均价线、
  * 昨收零轴高亮、按涨跌分色的成交量柱、时段时间刻度。
  *
  * 用法：页面把分时数据交给 buildMinutePosterChart 生成 PosterChart，
@@ -26,7 +26,7 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
-/** 均价线（深色海报底，与 minute-chart 深色主题一致） */
+/** 均价线（深色海报底，与 quote-chart 深色主题一致） */
 const AVG_COLOR = '#f5b94a'
 const GRID_COLOR = 'rgba(255,255,255,0.10)'
 /** 昨收零轴（纵轴中间网格线） */
@@ -104,7 +104,7 @@ function shortTimeLabel(time: string): string {
 /**
  * 在 (x, y, w, h) 矩形内绘制当日分时图（价格区 + 成交量区 + 时间刻度）。
  * 该矩形为海报图表面板的内容区（不含面板标题行）。
- * 与屏幕组件 minute-chart 同口径：纵轴以昨收 0% 对称、价格线分段着色、
+ * 与屏幕组件 quote-chart 同口径：纵轴以昨收 0% 对称、价格线分段着色、
  * 均价线金色、成交量柱按分钟涨跌分色、完整时段模式未来分钟留白。
  */
 export function drawMinuteOnPoster(

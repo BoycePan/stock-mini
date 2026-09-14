@@ -62,13 +62,19 @@ http://100.90.180.33:18487
 1. 在**微信公众平台 → 开发管理 → 服务器域名 → request 合法域名**中配置：
    `https://qt.gtimg.cn`、`https://hq.sinajs.cn`、`https://push2delay.eastmoney.com`、
    `https://push2.eastmoney.com`（A股平均股价全市场快照的 clist 权威端点，push2delay 覆盖不足时回退）；
-2. **首页卡片点击查看当日分时**（`packageQuote/pages/minute/index`，纯前端直连）还需追加：
-   `https://web.ifzq.gtimg.cn`（腾讯分时）、`https://query1.finance.yahoo.com`
+2. **首页卡片点击查看行情图表**（`packageQuote/pages/minute/index`，纯前端直连，
+   TAB：分时 / 五日 / 日K / 周K / 月K / 年K）还需追加：
+   `https://web.ifzq.gtimg.cn`（腾讯分时 + 腾讯 K 线）、`https://query1.finance.yahoo.com`
    （Yahoo 1分钟，仅 VIX/KOSDAQ 等东财腾讯无分时的标的做兜底，见 `docs/minute-api.md`；
    汇率已改走东财 119/133 或交叉合成，大陆可直连，不加 Yahoo 域名只影响 VIX/KOSDAQ）；
    东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
-3. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
-4. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
+3. **K 线兜底源（新浪，未配置时仅影响期货 / 外汇 / 部分兜底）**：
+   `https://money.finance.sina.com.cn`（A股 K 线）、`https://stock.finance.sina.com.cn`（美股 K 线）、
+   `https://stock2.finance.sina.com.cn`（内盘 / 外盘期货 K 线）、
+   `https://vip.stock.finance.sina.com.cn`（外汇 / 美元指数日 K）；
+   K 线数据源与覆盖范围见 `docs/行情页多周期图表.md`；
+4. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
+5. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。
    （腾讯 `qt.gtimg.cn` 返回 GBK 文本，`wx.request` 默认按 UTF-8 解码在**真机**会直接失败
    ——`request:fail response data convert to UTF8 fail`；新浪同理。`api/external.ts`
@@ -101,7 +107,8 @@ pnpm --filter market-tracker-mini lint
 
 分包 `packageQuote`（行情详情，首页进入时预下载）：
 
-- `/packageQuote/pages/minute/index?code=xxx`：当日分时
+- `/packageQuote/pages/minute/index?code=xxx`：行情图表页（分时 / 五日 / 日K / 周K / 月K / 年K，
+  含成交量与 MACD；见 `docs/行情页多周期图表.md`）
 - `/packageQuote/pages/stock-detail/index?code=000001`：股票详情（行情 / K线图 / 新闻 / 公告，支持分页与下拉刷新）
 - `/packageQuote/pages/sector-detail/index?cid=300382`：板块详情（板块K线图 / 成分股行情）
 

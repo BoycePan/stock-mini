@@ -1,0 +1,10 @@
+<!-- 行情图表：分时 / 五日 / 日K / 周K / 月K / 年K（高度随 mode 变化，见 index.wxss） -->
+<canvas
+  type="2d"
+  id="quote-chart-canvas"
+  class="quote-canvas mode-{{mode}}"
+  bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchend="onTouchEnd"
+  bindtouchcancel="onTouchEnd"
+></canvas>

@@ -14,8 +14,14 @@ import {
 } from '../utils/minute-parser'
 
 const HOSTS = {
-  /** 东财分时（与首页报价同域 push2delay，已在小程序合法域名内） */
+  /** 东财分时（与首页报价同域 push2delay，已在小程序合法域名内）*/
   emTrends: 'https://push2delay.eastmoney.com',
+  /**
+   * 东财分时非延迟节点：**只有它才可能支持 `ndays>1`（五日）**——
+   * 实测延迟节点会静默忽略 ndays（ndays=5 与 1 返回完全相同的当日 241 行）。
+   * 该域名（push2.eastmoney.com）已因「A股平均股价全市场快照」在合法域名内。
+   */
+  emTrendsPush2: 'https://push2.eastmoney.com',
   /** 腾讯分时 */
   tencentMinute: 'https://web.ifzq.gtimg.cn',
   /** Yahoo 1分钟线（补充东财/腾讯分时不覆盖的标的） */
@@ -46,21 +52,31 @@ interface EastmoneyTrendsBody {
 
 export async function fetchEastmoneyMinute(
   secid: string,
-  opts?: { keepFullTime?: boolean },
+  opts?: { keepFullTime?: boolean; ndays?: number; host?: 'delay' | 'push2' },
 ): Promise<MinuteResult | null> {
+  // ndays=1 当日分时；2..5 为多日分时（分时页「五日」TAB），上游上限 5，超出按 5 处理。
+  // 注意：延迟节点会静默忽略 ndays（实测 ndays=5 与 1 返回完全相同的当日行数），
+  // 多日场景由调用方校验「是否真的跨日」并回退其他源（utils/minute.ts fetchFiveDayData）。
+  const ndays = opts?.ndays && opts.ndays > 1 ? Math.min(5, Math.floor(opts.ndays)) : 1
   const params = [
     `secid=${encodeURIComponent(secid)}`,
     'fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14',
     'fields2=f51,f53,f56,f58',
-    'ndays=1',
+    `ndays=${ndays}`,
     'iscr=0',
     'iscca=0',
   ].join('&')
-  const url = `${HOSTS.emTrends}/api/qt/stock/trends2/get?${params}`
+  const host = opts?.host === 'push2' ? HOSTS.emTrendsPush2 : HOSTS.emTrends
+  const url = `${host}/api/qt/stock/trends2/get?${params}`
   try {
-    const body = await requestExternal<EastmoneyTrendsBody>(url, { timeout: 10000 })
-    // keepFullTime：保留完整时间戳（美股代理股合成需要跨零点对齐），默认输出 HH:mm
-    return parseEastmoneyTrends(body?.data, opts)
+    const body = await requestExternal<EastmoneyTrendsBody>(url, {
+      timeout: ndays > 1 ? 15000 : 10000,
+    })
+    // keepFullTime：保留完整时间戳（美股代理股合成需要跨零点对齐、五日分时需要按自然日分段），
+    // 默认输出 HH:mm
+    return parseEastmoneyTrends(body?.data, {
+      keepFullTime: opts?.keepFullTime === true || ndays > 1,
+    })
   } catch (error) {
     console.warn(`[minute] 东财分时失败 ${secid}:`, error)
     return null

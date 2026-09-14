@@ -2,8 +2,7 @@
   "usingComponents": {
     "app-header": "/components/app-header/index",
     "loading-state": "/components/loading-state/index",
-    "empty-state": "/components/empty-state/index",
-    "minute-chart": "/components/minute-chart/index",
+    "quote-chart": "/packageQuote/components/quote-chart/index",
     "disclaimer-footer": "/components/disclaimer-footer/index",
     "share-poster": "/components/share-poster/index",
     "ad-banner": "/components/ad-banner/index"

@@ -1,7 +1,7 @@
 <view class="page theme-{{ theme }}">
   <view class="page-header">
     <app-header
-      title="{{ name || '行情分时' }}"
+      title="{{ name || '行情' }}"
       showShare="{{ true }}"
       posterShare="{{ true }}"
       bind:share="onSharePoster"
@@ -12,32 +12,22 @@
   <view class="content-scroll">
     <loading-state
       wx:if="{{ loading }}"
-      text="正在加载分时"
-      desc="正在为您同步该标的当日分时走势，请稍候…"
+      text="正在加载行情"
+      desc="正在为您同步该标的的行情走势，请稍候…"
     ></loading-state>
 
-    <!-- 暂无数据引导态：无分时源（KOSDAQ / TOPIX / VIX 等）或多次加载失败时展示 -->
-    <view wx:elif="{{ noData }}" class="no-data-card">
+    <!-- 页面级空态：既无分时源也无 K 线源（KOSDAQ / TOPIX / VIX 等刻意不配置的标的） -->
+    <view wx:elif="{{ fatal }}" class="no-data-card">
       <view class="no-data-icon"><text>◌</text></view>
-      <text class="no-data-title">暂无分时数据</text>
-      <text class="no-data-desc">{{ noDataDesc }}</text>
-      <button wx:if="{{ noDataRetryable }}" class="no-data-retry" bindtap="onRetry"
-        >重新加载</button
-      >
-    </view>
-
-    <!-- 首次加载失败：错误提示 + 重试 -->
-    <view wx:elif="{{ error }}" class="error-card">
-      <view class="error-icon"><text>!</text></view>
-      <text class="error-text">{{ error }}</text>
-      <button class="error-retry" bindtap="onRetry">重新加载</button>
+      <text class="no-data-title">暂无行情数据</text>
+      <text class="no-data-desc">{{ fatalDesc }}</text>
     </view>
 
     <block wx:else>
       <view class="data-notice">
         <view class="notice-icon">!</view>
         <text class="notice-text"
-          >分时数据来自第三方公开数据，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text
+          >行情数据来自第三方公开数据，可能存在延迟或误差，请以官方渠道为准，自行核实判断。页面内容仅供参考，不构成任何投资建议，据此操作风险自担。</text
         >
       </view>
 
@@ -82,21 +72,48 @@
       </view>
 
       <view class="panel">
-        <view class="panel-title">
-          <text>{{ name }} · 当日分时</text>
+        <!-- 周期 TAB：分时 / 五日 / 日K / 周K / 月K / 年K（无数据源的周期置灰并提示） -->
+        <view class="tab-bar">
+          <view
+            wx:for="{{ tabs }}"
+            wx:key="key"
+            class="tab {{ item.enabled ? '' : 'tab-disabled' }} {{ mode === item.key ? 'tab-active' : '' }}"
+            data-key="{{ item.key }}"
+            bindtap="onTabTap"
+            >{{ item.label }}</view
+          >
         </view>
-        <view wx:if="{{ minuteNote }}" class="minute-note">{{ minuteNote }}</view>
-        <minute-chart
-          wx:if="{{ points.length }}"
-          points="{{ points }}"
-          preClose="{{ preClose }}"
-          theme="{{ theme }}"
-          session="{{ session }}"
-        ></minute-chart>
-        <empty-state wx:else title="暂无分时数据"></empty-state>
+
+        <view class="panel-title-row">
+          <text class="panel-title">{{ panelTitle }}</text>
+          <text class="panel-source" wx:if="{{ sourceLabel }}">{{ sourceLabel }}</text>
+        </view>
+        <view wx:if="{{ chartNote }}" class="minute-note">{{ chartNote }}</view>
+
+        <view class="chart-wrap {{ klineMode ? 'is-kline' : '' }}">
+          <quote-chart
+            wx:if="{{ chartReady }}"
+            mode="{{ mode }}"
+            points="{{ chartPoints }}"
+            preClose="{{ chartPreClose }}"
+            session="{{ session }}"
+            klines="{{ chartKlines }}"
+            theme="{{ theme }}"
+          ></quote-chart>
+          <view wx:elif="{{ chartLoading }}" class="chart-state">
+            <view class="chart-spinner"></view>
+            <text class="chart-state-text">正在加载{{ panelTitle }}</text>
+          </view>
+          <view wx:else class="chart-state">
+            <text class="chart-state-text">{{ chartError }}</text>
+            <button wx:if="{{ chartRetryable }}" class="chart-retry" bindtap="onRetry"
+              >重新加载</button
+            >
+          </view>
+        </view>
       </view>
 
-      <!-- 广告位：分时页放在分时图下方（location=minute-detail） -->
+      <!-- 广告位：行情页放在图表下方（location=minute-detail） -->
       <ad-banner location="minute-detail" placement="top"></ad-banner>
     </block>
 
@@ -104,10 +121,12 @@
     <view class="bottom-space"></view>
   </view>
 
-  <!-- 分享海报（隐藏画布 + 预览弹窗；分时图由 share-poster 组件按 minutePoster 绘制） -->
+  <!-- 分享海报（隐藏画布 + 预览弹窗；分时/五日按 minutePoster 绘制，K 线按 posterKlines 绘制） -->
   <share-poster
     id="sharePoster"
     posterData="{{ posterData }}"
+    klines="{{ posterKlines }}"
+    chartTitle="{{ panelTitle }}"
     minuteChart="{{ minutePoster }}"
     entrancePath="{{ shareEntrancePath }}"
   ></share-poster>

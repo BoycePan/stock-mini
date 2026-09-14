@@ -137,6 +137,17 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
     props: { theme: 'theme' },
   },
 
+  /**
+   * 行情页切换周期 TAB：trackEvent('quote.period.switch', { period, code })
+   * → target=code，props.period 取 minute / fiveDay / day / week / month / year
+   */
+  'quote.period.switch': {
+    name: 'quote.period.switch',
+    type: TrackEventType.Action,
+    target: 'code',
+    props: { period: 'period', code: 'code' },
+  },
+
   /** 登录成功：trackEvent('login.action') */
   'login.action': { name: 'login.action', type: TrackEventType.Action },
 }
