@@ -245,10 +245,14 @@
   color: #9cacc0;
 }
 
-/* 图表容器：高度与图表画布一致（按周期区分），保证加载 / 空态不引起布局跳动 */
+/* 图表容器：高度与图表画布一致（按周期区分），保证加载 / 空态不引起布局跳动。
+   注意必须是「纵向 flex + 交叉轴 stretch（默认）」：行向 flex 的交叉轴是纵向，
+   <quote-chart> 宿主节点会按内容（max-content）收缩宽度，画布 width:100% 失去可解析的
+   包含块宽度、最终塌成 0 宽 → 画布有高度但整块空白（历史缺陷：分时图不出图）。
+   纵向主轴 + justifyContent:center 保留加载 / 空态的水平居中与垂直居中。 */
 .chart-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
   margin-top: 16rpx;
   min-height: 620rpx;
