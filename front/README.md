@@ -68,11 +68,18 @@ http://100.90.180.33:18487
    （Yahoo 1分钟，仅 VIX/KOSDAQ 等东财腾讯无分时的标的做兜底，见 `docs/minute-api.md`；
    汇率已改走东财 119/133 或交叉合成，大陆可直连，不加 Yahoo 域名只影响 VIX/KOSDAQ）；
    东财分时走 `push2delay.eastmoney.com`，已在第 1 条中；
-3. **K 线兜底源（新浪，未配置时仅影响期货 / 外汇 / 部分兜底）**：
-   `https://money.finance.sina.com.cn`（A股 K 线）、`https://stock.finance.sina.com.cn`（美股 K 线）、
-   `https://stock2.finance.sina.com.cn`（内盘 / 外盘期货 K 线）、
-   `https://vip.stock.finance.sina.com.cn`（外汇 / 美元指数日 K）；
-   K 线数据源与覆盖范围见 `docs/行情页多周期图表.md`；
+3. **K 线源**：
+   - 新浪兜底（未配置时仅影响期货 / 外汇 / 部分兜底）：
+     `https://money.finance.sina.com.cn`（A股 K 线）、`https://stock.finance.sina.com.cn`（美股 K 线）、
+     `https://stock2.finance.sina.com.cn`（内盘 / 外盘期货 K 线）、
+     `https://vip.stock.finance.sina.com.cn`（外汇 / 美元指数日 K）；
+   - **东财历史 K 线（2026-09-15 新增）**：`https://push2his.eastmoney.com`
+     （A股板块指数 `90.BKxxxx`、国际指数 KOSPI / 日经225 / 越南 / 印度 / 费半、A股平均股价
+     `47.800005`——这些标的腾讯与新浪都没有日K）；可选再配 `https://82.push2his.eastmoney.com`
+     作为备用节点。未配置时 **30 个 A股板块 + A股平均股价 + KOSPI / 越南 / 印度指数的
+     日/周/月/年 K 会显示「该周期暂无数据」**（日经225 与费半仍有新浪兜底；
+     分时走 `push2delay`，不受影响）；
+   - K 线数据源、覆盖范围与口径提示见 `docs/行情页多周期图表.md`；
 4. 开发调试时在微信开发者工具中勾选「不校验合法域名」；
 5. 新浪接口对 `Referer` 有校验，小程序端无法自定义 `Referer`，若线上被拒（403），
    会由腾讯/东财兜底链自动补齐，或考虑加一层 BFF 转发。

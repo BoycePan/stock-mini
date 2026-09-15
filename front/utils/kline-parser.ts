@@ -12,6 +12,9 @@
  *            内盘 [{ d, o, h, l, c, v, p, s }]、外盘 [{ date, open, high, low, close, volume }]
  *   5. 新浪外汇 vip.stock.finance.sina.com.cn/forex/api/jsonp.php/.../NewForexService.getDayKLine
  *            出参为管道分隔字符串 "日期,开,低,高,收,|日期,开,低,高,收,|…"（**第 3 列是最低、第 4 列是最高**）
+ *   6. 东财   push2his.eastmoney.com/api/qt/stock/kline/get（klt=101 日 / 102 周 / 103 月）
+ *            出参 data.klines = ["日期,开,收,高,低,量,额,…"]，覆盖腾讯与新浪都没有的标的
+ *            （A股板块指数 BKxxxx、国际指数、A股平均股价等，见 config/kline.ts）
  *
  * 统一归一化为 KlinePoint[]（时间升序、字段取正数校验），任一源解析失败返回 null，
  * 由 utils/kline-source.ts 的多源兜底链继续尝试下一源。
@@ -182,6 +185,35 @@ export function parseSinaJsonpKline(input: unknown, fields: SinaFieldMap): Kline
       low: Number(item[fields.low]),
       close: Number(item[fields.close]),
       volume: numberOrZero(fields.volume ? item[fields.volume] : 0),
+    })
+  }
+  return normalizeKlines(bars)
+}
+
+/**
+ * 解析东财 K 线（klt=101 日 / 102 周 / 103 月）。
+ *
+ * 出参 `{ data: { klines: ["2026-09-09,开,收,高,低,量,额,振幅,涨跌幅,涨跌额,换手率", …] } }`；
+ * 无数据时 `data` 为 null 或 `klines` 为空数组（延迟节点 push2/push2delay 恒如此）。
+ * 板块指数 / 国际指数的行字段数可能少于 11 段，故只要求 ≥ 6 段（日期 / 开 / 收 / 高 / 低 / 量），
+ * 行可能是对象（个别市场带扩展信息）时跳过。
+ */
+export function parseEastmoneyKline(input: unknown): KlinePoint[] | null {
+  const parsed = parseJsonLoose(input) as { data?: { klines?: unknown } } | null
+  const rows = parsed?.data?.klines
+  if (!Array.isArray(rows)) return null
+  const bars: KlinePoint[] = []
+  for (const row of rows) {
+    if (typeof row !== 'string') continue
+    const fields = row.split(',')
+    if (fields.length < 6) continue
+    bars.push({
+      time: String(fields[0] ?? '').trim(),
+      open: Number(fields[1]),
+      close: Number(fields[2]),
+      high: Number(fields[3]),
+      low: Number(fields[4]),
+      volume: numberOrZero(fields[5]),
     })
   }
   return normalizeKlines(bars)

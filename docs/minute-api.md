@@ -186,6 +186,8 @@ preClose 与 ulist.np/get（fltt=2）f18 一致（XAU 4328.36 / XAG 64.09），�
    - `https://web.ifzq.gtimg.cn`（腾讯分时）
    - `https://query1.finance.yahoo.com`（Yahoo 1分钟，若启用韩股/日股/汇率/VIX/KOSDAQ 卡片）
    东财分时走 `push2delay.eastmoney.com`，**已在首页合法域名内**，无需新增。
+   分时页的日/周/月/年 K 还需 `https://push2his.eastmoney.com`（板块指数 / 国际指数 / 平均股价）
+   与新浪四个域名，完整清单见 `docs/行情页多周期图表.md` 第五节。
    开发调试可在微信开发者工具勾选「不校验合法域名」。
 2. **中国大陆无法访问 Yahoo**（2021-11-01 起）——本方案已将韩股/日股/全部汇率分时改为主走东财
    （177/176/119/133，CNYKRW 为 119÷133 交叉合成），Yahoo 仅作兜底。若不想开放 Yahoo 域名：
