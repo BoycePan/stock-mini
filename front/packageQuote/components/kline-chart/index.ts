@@ -3,7 +3,6 @@ import { bindTheme, getTheme, unbindTheme } from '../../../utils/theme'
 import {
   candleBody,
   computeKlineRange,
-  computeMA,
   formatKlineTime,
   indexToX,
   isUpKline,
@@ -12,6 +11,26 @@ import {
   timeLabelIndexes,
   volumeBarHeight,
 } from '../../../utils/kline'
+import { fitMaLegend } from '../../../utils/kline-legend'
+import {
+  beginGesture,
+  endGesture,
+  moveGesture,
+  type GestureAction,
+  type GestureConfig,
+  type GestureState,
+} from '../../../utils/chart-gesture'
+import {
+  buildKlineView,
+  clampViewport,
+  DEFAULT_VIEW_BARS,
+  defaultViewport,
+  MIN_VIEW_BARS,
+  panViewport,
+  zoomViewport,
+  type KlineView,
+  type ViewportState,
+} from '../../../utils/kline-viewport'
 
 type CanvasNode = WechatMiniprogram.Canvas
 type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D
@@ -19,40 +38,61 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
 
+/** 均线配色（浅 / 深各一套，下标与 KLINE_MA_PERIODS 对齐），保证双主题可读 */
+const MA_COLORS: Record<'light' | 'dark', string[]> = {
+  light: ['#f0a020', '#a06ee0', '#4278ed', '#0f9b8e'],
+  dark: ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5'],
+}
+
 /**
  * 已卸载的组件实例：draw 里的 createSelectorQuery().exec(cb) 回调是异步的，
  * klines / theme 变更（自动刷新、主题切换）发起查询后用户立刻返回上一页时，
- * 回调仍会在已销毁组件上取 ctx、写 chartState 并绘制失效的 canvas 节点，
+ * 回调仍会在已销毁组件上取 ctx、写状态并绘制失效的 canvas 节点，
  * 产生无效绘制与控制台报错，故回调与 render 先判存活后直接返回。
  */
 const detachedInstances = new WeakSet<object>()
 
-/** 均线周期与主题配色（浅/深各一套，保证双主题可读） */
-const MA_PERIODS = [5, 10, 20] as const
-const MA_LABELS = ['MA5', 'MA10', 'MA20'] as const
-const MA_COLORS: Record<'light' | 'dark', string[]> = {
-  light: ['#f0a020', '#a06ee0', '#4278ed'],
-  dark: ['#f5b94a', '#c08ff0', '#6fa3ff'],
-}
-
 /**
- * 当日 K 线图（canvas 2d）：
- * - 蜡烛图：影线 + 圆角实体，红涨绿跌（与全局涨跌色一致）
- * - MA5 / MA10 / MA20 均线 + 左上角图例（数值为最新值）
- * - 左侧价格刻度 + 底部日期刻度 + 浅色网格（含纵向时间分隔线）
- * - 下方成交量柱按当根 K 线涨跌分色（红涨、绿跌，实色不透明，同花顺风格），左上角标注最大量
- * - 最新价虚线 + 右侧圆角标签（按最后一根涨跌着色）
- * - 点击 / 拖动 canvas 显示十字光标 + 信息框（时间 / 开 / 高 / 低 / 收 / 涨跌幅 / 成交量）
- * - 深浅主题配色跟随 theme
+ * 板块 / 个股详情页的 K 线图（canvas 2d）：
+ * - 蜡烛图：影线 + 圆角实体，红涨绿跌（与全局涨跌色一致）；
+ * - MA5 / MA20 / MA30 / MA60 均线 + 左上角图例（数值取窗口最后一根 / 十字光标选中那根，
+ *   图例排版与行情页图表共用 utils/kline-legend.ts，放不下自动降级）；
+ * - **可见窗口**：默认只画最近 30 根（整段几百根既卡又糊），三种改窗口方式：
+ *   下方 − + ‹ › 控件、单指左右拖动平移、双指捏合缩放（锚点为两指中点）；
+ *   根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）；
+ *   均线在全量 K 线上计算后按窗口切片，所以窗口再小 MA60 也不会失真；
+ * - 触摸分工：单指轻点 / 小幅移动 = 十字光标；单指横向拖动 = 平移（超过阈值后接管）；
+ *   双指 = 缩放；全部手指抬起后收起十字光标；
+ * - 左侧价格刻度 + 底部日期刻度 + 网格（含纵向时间分隔线）；
+ * - 下方成交量柱按当根涨跌分色（同花顺风格），左上角标注窗口内最大量；
+ * - 最新价虚线 + 右侧圆角标签：仅当窗口停在最新一根时展示（翻看历史时不误导）；
+ * - 深浅主题配色跟随 theme（含缩放控件）。
  */
 Component({
   properties: {
+    /** 全量 K 线（窗口在其上开取，勿在此处裁剪，否则 MA60 / 平移都没有历史可用） */
     klines: { type: Array, value: [] as KlinePoint[] },
     theme: { type: String, value: 'light' },
   },
+  data: {
+    theme: 'light',
+    /** 可见窗口根数（− + 调整） */
+    viewBars: DEFAULT_VIEW_BARS,
+    /** 窗口最后一根的全量下标（‹ › / 手势调整，-1 = 末尾） */
+    viewEnd: -1,
+    showControls: false,
+    rangeText: '',
+    zoomInDisabled: false,
+    zoomOutDisabled: false,
+    panLeftDisabled: false,
+    panRightDisabled: false,
+  },
   observers: {
     'klines, theme': function () {
-      this.draw(this.data.klines as KlinePoint[])
+      // 换了 K 线数据（切周期 / 刷新）才把窗口复位到最新一段；主题切换保留用户调好的窗口
+      const reset = this.data.klines !== lastKlineSeries.get(this)
+      lastKlineSeries.set(this, this.data.klines)
+      this.redraw(reset)
     },
   },
   lifetimes: {
@@ -62,16 +102,25 @@ Component({
     },
     ready() {
       // 等组件就绪后查询画布实际尺寸并绘制（klines 晚于 ready 到达时由 observers 触发）
-      this.draw(this.data.klines as KlinePoint[])
+      lastKlineSeries.set(this, this.data.klines)
+      this.redraw(true)
     },
     detached() {
       // 先置销毁标记再解绑主题：在途的 selectorQuery 回调据此短路，不再对已销毁画布绘制
       detachedInstances.add(this)
+      canvasStates.delete(this)
+      chartStates.delete(this)
+      gestureStates.delete(this)
+      lastKlineSeries.delete(this)
       unbindTheme(this)
     },
   },
   methods: {
-    draw(klines: KlinePoint[]) {
+    /**
+     * 查询画布尺寸 → 绘制。
+     * @param reset 是否把窗口复位到最新一段（换周期时 true；主题切换等 false）
+     */
+    redraw(reset = true) {
       this.createSelectorQuery()
         .select('#kline-canvas')
         .fields({ node: true, size: true, rect: true })
@@ -89,60 +138,98 @@ Component({
           canvas.height = height * dpr
           const ctx = canvas.getContext('2d')
           ctx.scale(dpr, dpr)
-          // 数据刷新 / 主题切换重绘时，保留十字光标选中的索引（若仍有效）
-          const prev = chartState.get(this)
-          const prevActive =
-            prev && prev.activeIndex !== null && klines.length > 0
-              ? Math.min(prev.activeIndex, klines.length - 1)
-              : null
-          chartState.set(this, {
+          canvasStates.set(this, {
             ctx,
             width,
             height,
-            klines: klines as KlinePoint[],
-            isDark: this.data.theme === 'dark',
             rectLeft: info.left ?? 0,
-            padL: 0,
-            padR: 8,
-            padT: 0,
-            padB: 0,
-            volH: 0,
-            priceH: 0,
-            plotW: 0,
-            minP: 0,
-            maxP: 0,
-            activeIndex: prevActive,
           })
-          this.render()
+          this.rebuild(reset)
         })
+    },
+    /**
+     * 重建窗口与布局并绘制（不查询画布尺寸；缩放 / 平移 / 手势走这里）。
+     * @param reset 是否把窗口复位到最新一段
+     * @param viewport 指定窗口（缺省沿用 data 里的窗口并夹紧）
+     */
+    rebuild(reset: boolean, viewport?: ViewportState) {
+      if (detachedInstances.has(this)) return
+      const canvasState = canvasStates.get(this)
+      if (!canvasState) return
+      const klines = (this.data.klines as KlinePoint[]) ?? []
+      const total = klines.length
+      const next =
+        viewport ??
+        (reset
+          ? defaultViewport(total)
+          : clampViewport(total, this.data.viewBars, this.data.viewEnd))
+      const view = buildKlineView(klines, next.viewBars, next.viewEnd)
+
+      const showControls = total > MIN_VIEW_BARS
+      const bars = view.klines.length
+      this.setData({
+        viewBars: bars,
+        viewEnd: view.end,
+        showControls,
+        rangeText: showControls ? `${bars} / ${total} 根` : '',
+        zoomInDisabled: !showControls || bars <= Math.min(MIN_VIEW_BARS, total),
+        zoomOutDisabled: !showControls || bars >= total,
+        panLeftDisabled: !showControls || view.start <= 0,
+        panRightDisabled: !showControls || view.atLatest,
+      })
+
+      const prev = chartStates.get(this)
+      // 十字光标只在窗口没变时保留：换窗口后下标指向的是别的 K 线，保留会给出错误读数
+      const windowChanged = !!prev && (prev.view.start !== view.start || prev.view.end !== view.end)
+      const prevActive = prev && !windowChanged ? prev.activeIndex : null
+      chartStates.set(this, {
+        view,
+        isDark: this.data.theme === 'dark',
+        padL: prev?.padL ?? 0,
+        padR: prev?.padR ?? 8,
+        padT: prev?.padT ?? 0,
+        padB: prev?.padB ?? 0,
+        volTop: prev?.volTop ?? 0,
+        volH: prev?.volH ?? 0,
+        priceH: prev?.priceH ?? 0,
+        plotW: prev?.plotW ?? 0,
+        minP: prev?.minP ?? 0,
+        maxP: prev?.maxP ?? 0,
+        activeIndex: prevActive !== null && prevActive < bars ? prevActive : null,
+      })
+      this.render()
     },
     render() {
       // 已卸载（触摸回调 / 主题或数据变更的在途重绘）：不再绘制失效画布
       if (detachedInstances.has(this)) return
-      const st = chartState.get(this)
-      if (!st) return
-      const { ctx, width, height } = st
+      const st = chartStates.get(this)
+      const canvasState = canvasStates.get(this)
+      if (!st || !canvasState) return
+      const { ctx, width, height } = canvasState
       ctx.clearRect(0, 0, width, height)
-      if (!st.klines || st.klines.length === 0) {
+      if (!st.view.klines.length) {
         ctx.fillStyle = st.isDark ? '#8a97a8' : '#9aa7b8'
         ctx.font = '12px sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText('暂无K线数据', width / 2, height / 2)
         return
       }
-      this.renderChart(st)
-      if (st.activeIndex !== null) this.renderCrosshair(st)
+      this.renderChart(st, canvasState)
+      if (st.activeIndex !== null) this.renderCrosshair(st, canvasState)
     },
     /** 绘制基础图（网格 / 刻度 / 蜡烛 / 均线 / 成交量 / 最新价标签），并把布局参数写回 state */
-    renderChart(st: KlineChartState) {
-      const { ctx, width, height, klines, isDark } = st
+    renderChart(st: KlineChartState, canvasState: CanvasState) {
+      const { ctx, width, height } = canvasState
+      const isDark = st.isDark
       const gridColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(20,32,51,0.12)'
       const textColor = isDark ? '#8a97a8' : '#718096'
       const baseColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(20,32,51,0.3)'
       const maColors = isDark ? MA_COLORS.dark : MA_COLORS.light
 
+      // 只画可见窗口内的 K 线（默认 30 根）：均线 / 窗口都在 utils/kline-viewport.ts 里算好
+      const klines = st.view.klines
       const n = klines.length
-      const { minP, maxP } = computeKlineRange(klines, 0.06)
+      const { minP, maxP } = computeKlineRange(klines, 0.06, st.view.maSeries)
 
       // 左侧留白按价格刻度文字宽度自适应
       ctx.font = '10px sans-serif'
@@ -168,13 +255,13 @@ Component({
       st.padR = padR
       st.padT = padT
       st.padB = padB
+      st.volTop = padT + priceH + 8
       st.volH = volH
       st.priceH = priceH
       st.plotW = plotW
       st.minP = minP
       st.maxP = maxP
 
-      const volTop = padT + priceH + 8
       const volBottom = height - padB
       const volMax = Math.max(...klines.map((k) => k.volume || 0), 1)
 
@@ -203,15 +290,15 @@ Component({
         ctx.stroke()
       }
 
-      // 成交量区：分隔线 + 最大量标注 + 按涨跌分色的柱
+      // 成交量区：分隔线 + 窗口内最大量标注 + 按涨跌分色的柱
       ctx.strokeStyle = gridColor
       ctx.beginPath()
-      ctx.moveTo(padL, volTop - 4)
-      ctx.lineTo(width - padR, volTop - 4)
+      ctx.moveTo(padL, st.volTop - 4)
+      ctx.lineTo(width - padR, st.volTop - 4)
       ctx.stroke()
       ctx.fillStyle = textColor
       ctx.textAlign = 'left'
-      ctx.fillText(`量 ${formatVolume(volMax)}`, padL + 2, volTop - 10)
+      ctx.fillText(`量 ${formatVolume(volMax)}`, padL + 2, st.volTop - 10)
 
       // 同色柱合并为一个 path 批量 fill 提升性能
       const upPath: number[] = []
@@ -219,7 +306,7 @@ Component({
       for (let i = 0; i < n; i += 1) {
         const k = klines[i]
         if (!k) continue
-        const h = volumeBarHeight(k.volume || 0, volMax, volBottom - volTop)
+        const h = volumeBarHeight(k.volume || 0, volMax, volBottom - st.volTop)
         if (h <= 0) continue
         const x = indexToX(i, n, padL, plotW)
         const bw = Math.max(1, candleW * 0.72)
@@ -252,8 +339,8 @@ Component({
         ctx.fill()
       }
 
-      // 均线 + 左上角图例（最新值）
-      const maSeries = MA_PERIODS.map((period) => computeMA(klines, period))
+      // 均线（窗口切片，全量算好）+ 图例（十字光标选中那根 / 否则窗口最后一根）
+      const maSeries = st.view.maSeries
       for (let m = 0; m < maSeries.length; m += 1) {
         const values = maSeries[m]
         if (!values) continue
@@ -263,7 +350,10 @@ Component({
         let started = false
         for (let i = 0; i < n; i += 1) {
           const v = values[i]
-          if (v === null || v === undefined) continue
+          if (v === null || v === undefined || !Number.isFinite(v)) {
+            started = false
+            continue
+          }
           const x = indexToX(i, n, padL, plotW)
           const y = priceToY(v, minP, maxP, padT, priceH)
           if (!started) {
@@ -275,20 +365,21 @@ Component({
         }
         if (started) ctx.stroke()
       }
-      // 图例：MA5/10/20 + 最新值（左上角）
-      const lastIndex = n - 1
+      const legendIndex = st.activeIndex !== null ? st.activeIndex : n - 1
+      const legend = fitMaLegend(ctx, {
+        periods: st.view.maPeriods,
+        padL: padL + 2,
+        plotW,
+        valueOf: (index) => maSeries[index]?.[legendIndex],
+      })
       ctx.textAlign = 'left'
-      let legendX = padL + 2
-      for (let m = 0; m < MA_PERIODS.length; m += 1) {
-        const values = maSeries[m]
-        const lastVal = values?.[lastIndex]
-        const text = `${MA_LABELS[m]}:${lastVal === null || lastVal === undefined ? '--' : lastVal.toFixed(2)}`
-        ctx.fillStyle = maColors[m] ?? '#999'
-        ctx.fillText(text, legendX, padT - 8)
-        legendX += ctx.measureText(text).width + 10
+      for (const item of legend.items) {
+        ctx.font = legend.font
+        ctx.fillStyle = maColors[item.colorIndex] ?? '#999'
+        ctx.fillText(item.text, item.x, padT - 8)
       }
 
-      // 底部日期刻度
+      // 底部日期刻度（窗口内的日期）
       ctx.fillStyle = textColor
       ctx.textAlign = 'center'
       for (const idx of timeIdx) {
@@ -297,9 +388,9 @@ Component({
         ctx.fillText(formatKlineTime(k.time), indexToX(idx, n, padL, plotW), height - 4)
       }
 
-      // 最新价虚线 + 右侧圆角标签
-      const last = klines[lastIndex]
-      if (last) {
+      // 最新价虚线 + 右侧圆角标签：仅在窗口停在最新一根时展示（翻看历史时展示会误导）
+      const last = klines[n - 1]
+      if (last && st.view.atLatest) {
         const lastY = priceToY(last.close, minP, maxP, padT, priceH)
         const color = isUpKline(last) ? UP_COLOR : DOWN_COLOR
         ctx.strokeStyle = baseColor
@@ -322,11 +413,13 @@ Component({
         ctx.fillText(label, tagX + labelW / 2, tagY + 11.5)
       }
     },
-    /** 十字光标 + 信息框（同花顺式） */
-    renderCrosshair(st: KlineChartState) {
-      const { ctx, width, height, klines, isDark } = st
+    /** 十字光标 + 信息框（同花顺式）；下标是窗口内下标 */
+    renderCrosshair(st: KlineChartState, canvasState: CanvasState) {
+      const { ctx, width, height } = canvasState
+      const isDark = st.isDark
       const idx = st.activeIndex
       if (idx === null) return
+      const klines = st.view.klines
       const k = klines[idx]
       if (!k) return
       const n = klines.length
@@ -407,57 +500,139 @@ Component({
       })
     },
     onTouchStart(event: WechatMiniprogram.TouchEvent) {
-      this.handleTouch(event)
+      const update = beginGesture(event.touches ?? [], this.gestureConfig())
+      gestureStates.set(this, update.state)
+      this.runGestureAction(update.action)
     },
     onTouchMove(event: WechatMiniprogram.TouchEvent) {
-      this.handleTouch(event)
+      const state = gestureStates.get(this)
+      if (!state) return
+      const update = moveGesture(state, event.touches ?? [], this.gestureConfig())
+      gestureStates.set(this, update.state)
+      this.runGestureAction(update.action)
     },
-    onTouchEnd() {
-      const st = chartState.get(this)
-      if (st && st.activeIndex !== null) {
-        st.activeIndex = null
-        this.render()
+    onTouchEnd(event: WechatMiniprogram.TouchEvent) {
+      const update = endGesture(event.touches?.length ?? 0)
+      gestureStates.set(this, update.state)
+      this.runGestureAction(update.action)
+    },
+    /** 手势识别所需的当前配置（窗口 / 绘图区几何随缩放与平移实时变化） */
+    gestureConfig(): GestureConfig {
+      const st = chartStates.get(this)
+      const canvasState = canvasStates.get(this)
+      return {
+        zoomable: true,
+        total: ((this.data.klines as KlinePoint[]) ?? []).length,
+        viewport: clampViewport(
+          ((this.data.klines as KlinePoint[]) ?? []).length,
+          this.data.viewBars,
+          this.data.viewEnd,
+        ),
+        padL: st?.padL ?? 0,
+        plotW: st?.plotW ?? 0,
+        rectLeft: canvasState?.rectLeft ?? 0,
       }
     },
-    handleTouch(event: WechatMiniprogram.TouchEvent) {
-      const st = chartState.get(this)
-      if (!st || !st.klines || st.klines.length === 0 || st.plotW <= 0) return
-      const touch = event.touches?.[0]
-      if (!touch) return
-      // canvas 触摸事件 touches[0] 运行时自带相对 canvas 的 x（类型声明未包含，这里显式取）
-      const touchX = (touch as unknown as { x?: number }).x
-      const x = typeof touchX === 'number' ? touchX : (touch.clientX ?? 0) - (st.rectLeft ?? 0)
-      const raw = Math.round(((x - st.padL) / st.plotW) * (st.klines.length - 1))
-      const next = Math.max(0, Math.min(st.klines.length - 1, raw))
-      if (next !== st.activeIndex) {
-        st.activeIndex = next
-        this.render()
+    /** 执行手势动作：十字光标 / 收起 / 新窗口 */
+    runGestureAction(action: GestureAction | null) {
+      if (!action) return
+      if (action.kind === 'crosshair') {
+        this.moveCrosshair(action.x)
+        return
       }
+      if (action.kind === 'clear') {
+        this.clearCrosshair()
+        return
+      }
+      this.applyViewportState(action.viewport)
+    },
+    /** 应用新窗口：与当前窗口一致时直接返回，避免无谓重绘 */
+    applyViewportState(next: ViewportState): void {
+      const total = ((this.data.klines as KlinePoint[]) ?? []).length
+      const current = clampViewport(total, this.data.viewBars, this.data.viewEnd)
+      if (next.viewBars === current.viewBars && next.viewEnd === current.viewEnd) return
+      this.rebuild(false, next)
+    },
+    /** 控件：放大（更少根数） */
+    onZoomIn() {
+      this.stepViewport('zoom', 'in')
+    },
+    /** 控件：缩小（更多根数） */
+    onZoomOut() {
+      this.stepViewport('zoom', 'out')
+    },
+    /** 控件：左移（回看更早的 K 线） */
+    onPanLeft() {
+      this.stepViewport('pan', 'left')
+    },
+    /** 控件：右移（看更新的 K 线） */
+    onPanRight() {
+      this.stepViewport('pan', 'right')
+    },
+    stepViewport(kind: 'zoom' | 'pan', dir: 'in' | 'out' | 'left' | 'right') {
+      const total = ((this.data.klines as KlinePoint[]) ?? []).length
+      if (total <= MIN_VIEW_BARS) return
+      const current: ViewportState = { viewBars: this.data.viewBars, viewEnd: this.data.viewEnd }
+      this.applyViewportState(
+        kind === 'zoom'
+          ? zoomViewport(total, current, dir === 'in' ? 'in' : 'out')
+          : panViewport(total, current, dir === 'left' ? 'left' : 'right'),
+      )
+    },
+    /** 十字光标：命中窗口内的最近一根并重绘 */
+    moveCrosshair(x: number) {
+      const st = chartStates.get(this)
+      if (!st || st.plotW <= 0) return
+      const n = st.view.klines.length
+      if (n < 1) return
+      const raw = Math.round(((x - st.padL) / st.plotW) * (n - 1))
+      const next = Math.max(0, Math.min(n - 1, raw))
+      if (next === st.activeIndex) return
+      st.activeIndex = next
+      this.render()
+    },
+    clearCrosshair() {
+      const st = chartStates.get(this)
+      if (!st || st.activeIndex === null) return
+      st.activeIndex = null
+      this.render()
     },
   },
 })
 
-interface KlineChartState {
+/** 画布状态：尺寸 / 上下文 / 命中偏移 */
+interface CanvasState {
   ctx: CanvasCtx
   width: number
   height: number
-  klines: KlinePoint[]
-  isDark: boolean
   rectLeft: number
+}
+
+/** 绘制状态：可见窗口 + 上一次算出的布局参数（十字光标复用） */
+interface KlineChartState {
+  view: KlineView
+  isDark: boolean
   padL: number
   padR: number
   padT: number
   padB: number
+  volTop: number
   volH: number
   priceH: number
   plotW: number
   minP: number
   maxP: number
+  /** 十字光标选中的窗口内下标 */
   activeIndex: number | null
 }
 
-/** 组件实例 → 画布状态（避免在 data 中放非响应式对象） */
-const chartState = new WeakMap<object, KlineChartState>()
+/** 组件实例 → 画布 / 绘制 / 手势状态（避免在 data 中放非响应式对象） */
+const canvasStates = new WeakMap<object, CanvasState>()
+const chartStates = new WeakMap<object, KlineChartState>()
+const gestureStates = new WeakMap<object, GestureState | null>()
+
+/** 组件实例 → 上一次的 K 线数组引用（判断是否换了周期，决定要不要复位窗口） */
+const lastKlineSeries = new WeakMap<object, unknown>()
 
 /** 批量绘制矩形（rect 数组：x,y,w,h 依次排列；同色合并提升性能） */
 function paintRects(ctx: CanvasCtx, rects: number[], color: string): void {
@@ -484,8 +659,8 @@ function roundRectPath(
   ctx.moveTo(x + radius, y)
   ctx.arcTo(x + w, y, x + w, y + h, radius)
   ctx.arcTo(x + w, y + h, x, y + h, radius)
-  ctx.arcTo(x, y + h, x, y, radius)
-  ctx.arcTo(x, y, x + w, y, radius)
+  ctx.arcTo(x + w, y + h, x, y, radius)
+  ctx.arcTo(x + w, y, x + w, y, radius)
   ctx.closePath()
 }
 

@@ -8,7 +8,12 @@
 import type { MarketMetric, MarketPageData, MarketSection } from '../types/market'
 import { QUOTE_ICON_ASSETS } from '../config/icon-assets'
 import { formatDateTime, formatNumber } from './formatter'
-import { getRegionStatus, type IndustryPhase, type MarketRegion } from './market-clock'
+import {
+  getRegionStatus,
+  industryPhaseShort,
+  type IndustryPhase,
+  type MarketRegion,
+} from './market-clock'
 
 /** 页面行情条目（外部数据归一化后的展示单元） */
 export interface QuoteItem {
@@ -231,29 +236,64 @@ export interface QuoteGlobalPageParams {
   /** 美股指数（道琼斯 / 标普500 / 纳斯达克） */
   usIndices: QuoteItem[]
   macro: QuoteItem[]
-  sectors: QuoteItem[]
+  /**
+   * 行业板块双 Tab 数据（A股板块 / 美股板块，见 QuoteGlobalSectorTab）：面板标题固定为
+   * 「行业板块」，两个 Tab 的数据**同时**备好（数据层并行取数），用户点 Tab 即时切换、
+   * 无需重新请求；面板字段（metrics / 阶段胶囊 / 分时角标）恒为选中 Tab 的投影结果。
+   */
+  sectorTabs?: QuoteGlobalSectorTab[]
+  /**
+   * 进入页面默认选中的行业板块 Tab 键，按时段规则判定（utils/market-clock.ts
+   * resolveIndustrySource：A股时段 → 'a'；美股盘前/盘中/盘后及夜间周末 → 'us'）。
+   * 缺省取第一个 Tab；用户手动切换由页面层覆盖（stores/market.store.ts pickSectionTab）。
+   */
+  sectorActiveTab?: string
   statusLabel: string
   statusTone: 'active' | 'rest'
-  /**
-   * 行业板块盘面阶段（大A盘中 / 午间休市 / 休市 / 美股盘前 / 美股盘中 / 美股盘后，
-   * 见 utils/market-clock.ts resolveIndustryPhase）：有值时板块标题右侧展示阶段化胶囊
-   * （复用 marketStatus / marketTone 渲染），与数据源口径一致——展示的是哪个市场的数据，
-   * 就标哪个市场的阶段（A股板块 → A股阶段；美股盘前 → 盘前；美股代理 → 美股阶段）。
-   */
-  sectorPhase?: IndustryPhase
-  /** 板块标题：随数据源会话切换（A股时段 → 中国行业板块；美股时段 → 美股行业板块） */
-  sectorTitle?: string
-  /**
-   * 行业板块「分时」角标：美股盘前仅支持参考涨跌幅、无分时图（false），
-   * A 股时段 / 美股时段默认 true（东财板块分时 / 代理股合成分时）。
-   */
-  sectorMinuteCorner?: boolean
+}
+
+/**
+ * 行业板块面板的单个 Tab（一个市场一份数据）：Tab 键 / 标签 + 该市场的板块条目 +
+ * 盘面阶段胶囊（与该市场数据源口径一致，见 utils/market-clock.ts resolveIndustryPhase）+
+ * 是否展示「分时」角标（美股盘前只有参考涨跌幅、无分时图 → false）。
+ */
+export interface QuoteGlobalSectorTab {
+  /** Tab 键：'a'（A股板块）/ 'us'（美股板块） */
+  key: string
+  /** Tab 标签：A股 / 美股 */
+  label: string
+  /** 该市场的板块条目（无价格，仅涨跌幅；末尾含「全部板块」入口卡） */
+  items: QuoteItem[]
+  /** 该市场盘面阶段（A股 → 大A盘中/午间休市/休市；美股 → 美股盘前/盘中/盘后/休市） */
+  phase: IndustryPhase
+  /** 该 Tab 是否以面板右上角单个「分时」角标提示分时可用 */
+  minuteCorner: boolean
+}
+
+/**
+ * 行业板块面板的「i」说明文案（两个 Tab 共用）：先说数据来源，再给出默认选中规则，
+ * 让用户理解「为什么现在停在某个市场」以及可以手动切到另一个市场。
+ */
+function industryBoardTip(): string {
+  return [
+    '📊 板块数据按市场分 Tab 展示，默认选中与当前时段一致的市场，也可手动切换：',
+    '· A股：东方财富 A 股行业板块涨跌幅（A股交易日 09:15 集合竞价起更新，收盘后为当日收盘涨跌幅）；',
+    '· 美股：美股代表成分股当日涨跌幅等权均值（美股盘前时段为盘前参考涨跌幅，暂不支持分时图）。',
+    '',
+    '🕐 默认选中：工作日 09:15 至美股盘前开始前（夏令时 21:30 / 冬令时 22:30）默认「A股」；其余时段（美股盘前/盘中/盘后、夜间、周末）默认「美股」。',
+    '',
+    '💡 数据来源于公开市场信息，仅供参考，不构成投资建议。',
+  ].join('\n')
 }
 
 export function buildQuoteGlobalPage(
   params: QuoteGlobalPageParams,
   now: Date = new Date(),
 ): MarketPageData {
+  const sectorTabs = params.sectorTabs ?? []
+  // 默认选中 Tab 由数据层按时段规则给出（sectorActiveTab），取不到时回退第一个 Tab
+  const activeSectorTab =
+    sectorTabs.find((tab) => tab.key === params.sectorActiveTab) ?? sectorTabs[0]
   const groups: QuoteGroup[] = []
   if (params.cnIndices.length) {
     groups.push({ id: 'cn-index', title: 'A股指数', items: params.cnIndices, region: 'cn' })
@@ -264,15 +304,11 @@ export function buildQuoteGlobalPage(
   if (params.macro.length) {
     groups.push({ id: 'global-economy', title: '宏观经济', items: params.macro })
   }
-  if (params.sectors.length) {
-    // 板块本体为东方财富 A 股行业板块（BK 代码）；A股时段展示东财板块数据，标题为「中国行业板块」；
-    // 非 A 股时段展示美股代理股涨跌幅均值，标题随之切换为「美股行业板块」。
-    // 标题右侧的阶段化胶囊由 sectorPhase 提供（与数据源会话一致），见 utils/market-clock.ts。
-    groups.push({
-      id: 'industry-board',
-      title: params.sectorTitle ?? '中国行业板块',
-      items: params.sectors,
-    })
+  if (activeSectorTab && activeSectorTab.items.length) {
+    // 面板标题固定为「行业板块」：不再随会话改标题（此前 A股时段叫「中国行业板块」、
+    // 美股时段叫「美股行业板块」），展示的是哪个市场改由面板内 Tab 表达，
+    // 当前市场阶段由 phase 胶囊（大A盘中 / 美股盘中 / 休市 …）表达。
+    groups.push({ id: 'industry-board', title: '行业板块', items: activeSectorTab.items })
   }
 
   const sections: MarketSection[] = []
@@ -284,28 +320,32 @@ export function buildQuoteGlobalPage(
       hideFlatChange: group.hideFlatChange,
       now,
     })
-    if (group.id === 'industry-board') {
+    if (group.id === 'industry-board' && activeSectorTab) {
       // 行业板块无价格，只有涨跌幅：单行展示
       section.singleLine = true
-      // 板块分时随会话切换：A股时段 → 东财板块分时；美股时段 → 美股代理股均值合成分时；
-      // 美股盘前仅支持参考涨跌幅、无分时图（sectorMinuteCorner=false，无「分时」角标）。
-      // 两个有分时的会话以面板右上角单个「分时」角标提示
-      section.minuteCorner = params.sectorMinuteCorner !== false
-      if (params.sectorPhase) {
-        // 阶段化胶囊（大A盘中 / 午间休市 / 休市 / 美股盘前 / 美股盘中 / 美股盘后等）
-        section.marketStatus = params.sectorPhase.label
-        section.marketTone = params.sectorPhase.tone
-      }
-      section.tipTitle = 'A股/美股行业板块'
-
-      section.tip = [
-        '📊 板块数据根据当前市场时段自动切换：',
-        '· A股时段及收盘后（工作日 09:15 至 下午美股盘前开始）：显示中国行业板块涨跌情况；',
-        '· 美股盘前（夏令时 16:00–21:30 / 冬令时 17:00–22:30）：显示美股行业板块盘前参考涨跌幅，暂不支持分时图；',
-        '· 美股盘中/盘后（约 21:30 至次日 08:00/09:00）及周末夜间：显示美股行业板块涨跌情况（休市时段为上一交易日数据）。',
-        '',
-        '💡 数据来源于公开市场信息，仅供参考，不构成投资建议。',
-      ].join('\n')
+      // 面板字段 = 选中 Tab 的投影：分时角标（美股盘前无分时图 → 不展示）与阶段化胶囊
+      // （大A盘中 / 午间休市 / 休市 / 美股盘前 / 美股盘中 / 美股盘后等）都随 Tab 切换
+      section.minuteCorner = activeSectorTab.minuteCorner
+      section.marketStatus = activeSectorTab.phase.label
+      section.marketTone = activeSectorTab.phase.tone
+      section.tip = industryBoardTip()
+      section.activeTab = activeSectorTab.key
+      // 双 Tab 数据（A股 / 美股）：每个 Tab 携带该市场的条目与展示元信息，页面按当前选中
+      // Tab 重新投影上面的字段（用户手动切换，见 utils/market-page-factory.ts sections）。
+      // 每个 Tab 还带**自己的**盘面状态（含短文案）：Tab 上直接展示该市场此刻在盘中/休市，
+      // 两个市场的状态一眼可比（渲染层不再需要标题右侧的单个状态胶囊，见 components/section-card）。
+      // 指标 id 与投影结果同源（offset + index），保证 wx:key / 跳动动画定位到同一张卡片
+      section.tabs = sectorTabs.map((tab) => ({
+        key: tab.key,
+        label: tab.label,
+        metrics: tab.items.map((item, index) =>
+          metricOf(item, offset + index, { hideFlatChange: group.hideFlatChange }),
+        ),
+        marketStatus: tab.phase.label,
+        marketStatusShort: industryPhaseShort(tab.phase),
+        marketTone: tab.phase.tone,
+        minuteCorner: tab.minuteCorner,
+      }))
     }
     sections.push(section)
     offset += group.items.length

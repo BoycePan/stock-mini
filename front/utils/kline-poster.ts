@@ -2,8 +2,8 @@
  * K 线分享海报：在海报画布上直接绘制 K 线走势图（深色海报配色）。
  *
  * 与 share-poster.ts 共用设计坐标系（宽 750）。绘制逻辑复用 utils/kline.ts 的纯计算
- * （纵轴范围 / 坐标映射 / 蜡烛几何 / 均线 / 刻度），保证与屏幕 K 线组件（kline-chart）
- * 视觉一致：红涨绿跌、MA5/10/20、成交量柱、最新价虚线标签。
+ * （纵轴范围 / 坐标映射 / 蜡烛几何 / 均线 / 刻度），保证与屏幕 K 线图表视觉一致：
+ * 红涨绿跌、MA5/MA20/MA30/MA60（与屏幕同一套周期，见 KLINE_MA_PERIODS）、成交量柱、最新价虚线标签。
  *
  * 用法：页面把 K 线数据交给 buildKlinePosterChart 生成 PosterChart，
  * 再通过 renderSharePoster(target, data, { chart }) 渲染。
@@ -17,6 +17,7 @@ import {
   formatKlineTime,
   indexToX,
   isUpKline,
+  KLINE_MA_PERIODS,
   priceGridLabels,
   priceToY,
   timeLabelIndexes,
@@ -28,10 +29,10 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
-/** 均线配色（深色海报底，与 kline-chart 深色主题一致） */
-const MA_COLORS = ['#f5b94a', '#c08ff0', '#6fa3ff']
-const MA_LABELS = ['MA5', 'MA10', 'MA20'] as const
-const MA_PERIODS = [5, 10, 20] as const
+/** 均线配色（深色海报底，与 quote-chart 深色主题一致；下标与 KLINE_MA_PERIODS 对齐） */
+const MA_COLORS = ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5']
+const MA_PERIODS = KLINE_MA_PERIODS
+const MA_LABELS = MA_PERIODS.map((period) => `MA${period}`)
 const GRID_COLOR = 'rgba(255,255,255,0.10)'
 const TEXT_COLOR = '#8b93a7'
 

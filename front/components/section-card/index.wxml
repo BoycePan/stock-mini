@@ -8,7 +8,12 @@
     <view class="title-accent"></view>
     <text class="section-title">{{ section.title }}</text>
 
-    <view wx:if="{{ section.marketStatus }}" class="market-status {{ section.marketTone }}">
+    <!-- 盘面状态胶囊：无 Tab 的面板（如指数区）在标题右侧展示；
+         有 Tab 的面板（行业板块）改为每个 Tab 自带状态，避免与选中 Tab 重复 -->
+    <view
+      wx:if="{{ section.marketStatus && !section.tabs.length }}"
+      class="market-status {{ section.marketTone }}"
+    >
       <view class="market-status-dot"></view>
       <text>{{ section.marketStatus }}</text>
     </view>
@@ -26,6 +31,33 @@
 
     <text wx:if="{{ section.badge }}" class="section-badge">{{ section.badge }}</text>
   </view>
+
+  <!-- 面板内 Tab 切换条（如「行业板块」的 A股 / 美股）：两个市场的数据已同时备好，
+       点 Tab 即时切换；每个 Tab 自带该市场的盘面状态（色调语义与状态胶囊一致：
+       绿=盘中 / 蓝=盘前盘后午休竞价 / 灰=休市），两个市场此刻的状态一眼可比。
+       选中态由页面 / store 持有并投影数据（见 index.ts onTabTap） -->
+  <view wx:if="{{ section.tabs.length }}" class="section-tabs">
+    <view
+      wx:for="{{ section.tabs }}"
+      wx:key="key"
+      class="section-tab {{ section.activeTab === item.key ? 'section-tab-active' : '' }}"
+      data-key="{{ item.key }}"
+      hover-class="section-tab-hover"
+      hover-stay-time="80"
+      catchtap="onTabTap"
+      aria-role="button"
+      aria-label="{{ item.label }}{{ item.marketStatusShort ? '，' + item.marketStatusShort : '' }}{{
+        section.activeTab === item.key ? '，当前选中' : ''
+      }}"
+    >
+      <text class="section-tab-label">{{ item.label }}</text>
+      <view wx:if="{{ item.marketStatusShort }}" class="section-tab-status {{ item.marketTone }}">
+        <view class="section-tab-status-dot"></view>
+        <text class="section-tab-status-text">{{ item.marketStatusShort }}</text>
+      </view>
+    </view>
+  </view>
+
   <view class="metric-grid">
     <block wx:for="{{ section.metrics }}" wx:key="id">
       <!-- 特殊入口卡（如 美股指数区「市值TOP100」）：整行渐变横幅，区别于普通行情卡片 -->

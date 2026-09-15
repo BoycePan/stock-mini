@@ -45,7 +45,11 @@ import {
   fetchUsProxyChangeMap,
 } from '../utils/quote'
 import { resolveGlobalMarketSession, resolveNonferrousMarketSession } from '../utils/market-session'
-import { resolveIndustryPhase, resolveIndustrySource } from '../utils/market-clock'
+import {
+  resolveIndustryBoardTab,
+  resolveIndustryPhase,
+  resolveIndustrySource,
+} from '../utils/market-clock'
 import { displayName, isAbnormalPct, parseSinaQuote, validateQuote } from '../utils/quote-parser'
 import { formatDateTime, formatItemUpdatedAt } from '../utils/formatter'
 import {
@@ -53,6 +57,7 @@ import {
   buildQuoteGlobalPage,
   buildQuoteMetalsPage,
   hasLiveQuote,
+  type QuoteGlobalSectorTab,
   type QuoteGroup,
   type QuoteItem,
 } from '../utils/quote-pages'
@@ -189,49 +194,24 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     })
   }
 
-  // ④ 行业板块：数据源随市场时段三态切换（utils/market-clock.ts resolveIndustrySource）：
-  //    - 'a'（A股时段 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 东财 A 股板块涨跌幅；
-  //    - 'us-pre'（美股盘前 美东 04:00–09:30，夏令时/冬令时对应北京 16:00–21:30 / 17:00–22:30）
-  //      → 新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径，仅参考涨跌幅、无分时图）；
-  //    - 'us'（美股盘中/盘后、周末）→ 美股代理股涨跌幅均值（既有逻辑）。
+  // ④ 行业板块：A股与美股**两份数据并行取数**（面板分「A股 / 美股」两个 Tab，用户可手动切换，
+  //    见 utils/quote-pages.ts buildQuoteGlobalPage 的 sectorTabs）：
+  //    - A股：东财 A 股行业板块涨跌幅（90.BKxxxx 批量 1 次）；
+  //    - 美股：美股代理股涨跌幅均值——美股盘前（美东 04:00–09:30，夏令时/冬令时对应北京
+  //      16:00–21:30 / 17:00–22:30）取新浪 gb_ 盘前参考涨跌幅（us-sector-premarket.js 口径，
+  //      仅参考涨跌幅、无分时图），其余时段取当日涨跌幅。
+  //    默认选中的 Tab 仍由既有时间段规则判定（utils/market-clock.ts resolveIndustrySource：
+  //    A股时段 09:15–15:00 含午休 + 待盘前窗口 → 'a'；美股盘前/盘中/盘后及夜间、周末 → 'us'），
+  //    进入页面即选中与当前时段一致的市场；另一市场的数据同时备好，切 Tab 无需再等请求。
   const industrySource = resolveIndustrySource(session)
-  const boardPct: Record<string, number> = {}
-  if (industrySource === 'a') {
-    const boardMap = await fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code))
-    for (const board of INDUSTRY_BOARDS) {
-      const pct = boardMap[board.code] ?? boardMap[`90.${board.code}`]
-      if (pct !== undefined) boardPct[board.code] = pct
-    }
-  } else {
-    const proxyMap =
-      industrySource === 'us-pre'
-        ? await fetchUsProxyPremarketMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
-        : await fetchUsProxyChangeMap(INDUSTRY_BOARDS.flatMap((board) => board.proxies))
-    for (const board of INDUSTRY_BOARDS) {
-      const avg = averageBoardPcts(board.proxies, proxyMap)
-      if (avg !== null) boardPct[board.code] = avg
-    }
-  }
-  const sectors: QuoteItem[] = INDUSTRY_BOARDS.map((board) => {
-    const item: QuoteItem = {
-      code: board.code,
-      name: board.name,
-      price: null,
-      pct: boardPct[board.code] ?? null,
-    }
-    if (industrySource === 'us') {
-      // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
-      // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
-      item.minuteCode = `us-${board.code}`
-    } else if (industrySource === 'us-pre') {
-      // 盘前仅支持查看参考涨跌幅、不支持分时图：minuteCode 置为无源占位（MINUTE_SOURCES 无
-      // 此 key → hasMinuteSources=false），点击卡片 toast 提示（见 market-page-factory onMetricTap
-      // 的 minuteUnavailableTip 分支），绝不跳转分时页。
-      item.minuteCode = `us-pre-${board.code}`
-      item.minuteUnavailableTip = '盘前仅支持查看参考涨跌幅，暂不支持分时图'
-    }
-    return item
-  })
+  const now = new Date()
+  const usProxyPcts = INDUSTRY_BOARDS.flatMap((board) => board.proxies)
+  const [ashareBoardMap, usProxyMap] = await Promise.all([
+    fetchAShareBoardChangeMap(INDUSTRY_BOARDS.map((board) => board.code)),
+    industrySource === 'us-pre'
+      ? fetchUsProxyPremarketMap(usProxyPcts)
+      : fetchUsProxyChangeMap(usProxyPcts),
+  ])
   // 行业板块区末尾的整行入口卡：进入「全部板块」列表页（A股概念 + A股行业 全量，
   // 覆盖 华为/机器人/低空经济 等概念与 石油石化/煤炭/钢铁/化工/农林牧渔/影视院线 等行业细分，
   // 另含 美股概念 + 美股行业 精选，见 api/industry-boards.ts / config/us-board-catalog.ts
@@ -240,7 +220,9 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
   // 纯数据入口，无行情涨跌语义：hideChange + 不出现在分享海报（hideFromPoster）。
   // 是否展示与「美股市值TOP100」入口共用同一开关（homeShowTop100 / Dev，视图层过滤，
   // 见 market-page-factory.ts isHomeEntryCode），数据层恒构建。
-  sectors.push({
+  // 两个 Tab 各带一份，initialTab 与所在 Tab 的市场口径一致（A股 Tab → 概念板块；
+  // 美股 Tab → 美股概念），保证从首页进入列表页时默认选中与首页当前展示状态一致的 tab。
+  const allBoardsEntry = (initialTab: string): QuoteItem => ({
     code: 'industry-all',
     name: '全部板块',
     price: null,
@@ -251,29 +233,73 @@ async function getGlobalMarketPage(): Promise<MarketPageData> {
     featured: true,
     featuredDesc: 'A股概念与行业全量 · 美股概念与行业精选',
     icon: '🗂️',
-    // 与首页板块区当前展示口径一致的初始 tab（industry-all 页 onLoad 按此预选默认 tab）：
-    // A股时段（首页板块区展示 A股板块涨跌，标题「中国行业板块」）→ A股概念板块；
-    // 美股盘前/盘中/盘后（首页板块区展示美股代理股口径，标题「美股行业板块」）→ 美股概念，
-    // 保证从首页进入时默认选中与首页展示状态一致的 tab，避免美股时段落回 A股概念 tab。
-    initialTab: industrySource === 'a' ? 'concept' : 'us-concept',
+    initialTab,
   })
+  // A股 Tab 条目：东财 A 股行业板块涨跌幅。不设 minuteCode → 分时按 code 取 90.BKxxxx 板块分时
+  const aSectorItems: QuoteItem[] = INDUSTRY_BOARDS.map((board) => ({
+    code: board.code,
+    name: board.name,
+    price: null,
+    pct: ashareBoardMap[board.code] ?? ashareBoardMap[`90.${board.code}`] ?? null,
+  }))
+  aSectorItems.push(allBoardsEntry('concept'))
+  // 美股 Tab 条目：板块涨跌幅 = 成分美股代理股涨跌幅等权均值（休市时段为上一交易日数据）
+  const usSectorItems: QuoteItem[] = INDUSTRY_BOARDS.map((board) => {
+    const item: QuoteItem = {
+      code: board.code,
+      name: board.name,
+      price: null,
+      pct: averageBoardPcts(board.proxies, usProxyMap),
+    }
+    if (industrySource === 'us-pre') {
+      // 盘前仅支持查看参考涨跌幅、不支持分时图：minuteCode 置为无源占位（MINUTE_SOURCES 无
+      // 此 key → hasMinuteSources=false），点击卡片 toast 提示（见 market-page-factory onMetricTap
+      // 的 minuteUnavailableTip 分支），绝不跳转分时页。
+      item.minuteCode = `us-pre-${board.code}`
+      item.minuteUnavailableTip = '盘前仅支持查看参考涨跌幅，暂不支持分时图'
+    } else {
+      // 美股时段：卡片展示的是美股代理股涨跌幅均值，分时同样取代理股均值合成（us-BKxxxx，
+      // 见 config/minute.ts 的 emProxies），口径一致；不再指向 A 股板块（90.BKxxxx）分时。
+      item.minuteCode = `us-${board.code}`
+    }
+    return item
+  })
+  usSectorItems.push(allBoardsEntry('us-concept'))
+  // 面板双 Tab：每个 Tab 带该市场的条目 + 阶段化胶囊（与该市场数据源口径一致，
+  // resolveIndustryPhase 显式传入 source：A股 Tab 恒按 A股阶段，美股 Tab 视盘前/盘中/盘后判定）
+  const sectorTabs: QuoteGlobalSectorTab[] = [
+    {
+      key: 'a',
+      label: 'A股',
+      items: aSectorItems,
+      phase: resolveIndustryPhase(session, now, 'a'),
+      minuteCorner: true,
+    },
+    {
+      key: 'us',
+      label: '美股',
+      items: usSectorItems,
+      // 盘前 → 「美股盘前」胶囊（quiet 蓝）；盘中/盘后/休市按美股阶段
+      phase: resolveIndustryPhase(session, now, industrySource === 'us-pre' ? 'us-pre' : 'us'),
+      // 盘前仅支持参考涨跌幅：不展示「分时」角标（美股代理与 A 股板块照常）
+      minuteCorner: industrySource !== 'us-pre',
+    },
+  ]
 
-  if (!cnIndices.length && !usIndices.length && !macro.length && !sectors.length) {
+  if (!cnIndices.length && !usIndices.length && !macro.length && !sectorTabs.length) {
     throw new Error('暂无行情数据')
   }
   return buildQuoteGlobalPage({
     cnIndices,
     usIndices,
     macro,
-    sectors,
+    sectorTabs,
+    // 进入页面默认选中的 Tab 用既有时间段规则方法判定（utils/market-clock.ts
+    // resolveIndustryBoardTab）：A股时段 → A股 Tab；美股盘前/盘中/盘后及夜间、周末 → 美股 Tab。
+    // 用户手动切换由页面层覆盖（stores/market.store.ts pickSectionTab）。
+    sectorActiveTab: resolveIndustryBoardTab(session, now),
     statusLabel: '全球市场',
     statusTone: session.statusTone,
-    sectorTitle: industrySource === 'a' ? '中国行业板块' : '美股行业板块',
-    // 阶段化胶囊与数据源一致：A股板块 → 大A盘中/午间休市/集合竞价/休市（含待盘前窗口）；
-    // 美股盘前 → 「美股盘前」（quiet 蓝）；美股代理 → 美股盘中/盘后/休市
-    sectorPhase: resolveIndustryPhase(session, new Date(), industrySource),
-    // 盘前仅支持参考涨跌幅：不展示「分时」角标（美股代理与 A 股板块照常）
-    sectorMinuteCorner: industrySource !== 'us-pre',
   })
 }
 

@@ -2,7 +2,7 @@
      根节点必须是带 width:100% 的 view（与 kline-chart / 原 minute-chart 一致）：
      若把 canvas 直接作为组件根节点，它的 width:100% 就只能靠宿主节点撑开，
      父容器一旦是行向 flex（宿主按内容收缩）画布宽度即塌成 0，整块图空白。 -->
-<view class="quote-chart">
+<view class="quote-chart {{theme === 'dark' ? 'dark' : ''}}">
   <canvas
     type="2d"
     id="quote-chart-canvas"
@@ -12,4 +12,18 @@
     bindtouchend="onTouchEnd"
     bindtouchcancel="onTouchEnd"
   ></canvas>
+  <!-- K 线缩放 / 平移：− + 缩放，‹ › 左右平移（组件见 ../chart-controls） -->
+  <chart-controls
+    theme="{{theme}}"
+    show="{{showControls}}"
+    range-text="{{rangeText}}"
+    zoomInDisabled="{{zoomInDisabled}}"
+    zoomOutDisabled="{{zoomOutDisabled}}"
+    panLeftDisabled="{{panLeftDisabled}}"
+    panRightDisabled="{{panRightDisabled}}"
+    bind:zoomin="onZoomIn"
+    bind:zoomout="onZoomOut"
+    bind:panleft="onPanLeft"
+    bind:panright="onPanRight"
+  ></chart-controls>
 </view>

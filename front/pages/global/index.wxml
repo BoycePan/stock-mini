@@ -15,6 +15,7 @@
     adAfterSection="cn-index"
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
+    bind:tabtap="onSectionTabTap"
   ></market-page>
 
   <!-- 首页弹窗公告（通用组件 components/popup-notice）：notice 由服务端 notices 接口

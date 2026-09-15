@@ -45,6 +45,18 @@ export class MarketStore {
   inFlight: Partial<Record<MarketPageKey, Promise<MarketPageData>>> = {}
 
   /**
+   * 行情面板内 Tab 的**手动选择**（如首页「行业板块」面板的 A股 / 美股 切换）：
+   * key = 面板标识（分区 id，如 industry-board），value = { tab: 选中 Tab 键, sessionDefault: 选择时的时段默认键 }。
+   *
+   * 只存「用户手动选了什么」，选中态的投影与数据计算由页面层的 sections 绑定完成
+   * （见 utils/market-page-factory.ts）——卡片、阶段胶囊与分享海报因此共用同一份口径。
+   * 同时记录选择时的时段默认值（数据层按时段规则判定的 activeTab），用于 resolveSectionTab 判定：
+   * 时段口径翻转后（如 A股时段 → 美股时段）手动选择自动失效、面板回到新的时段默认，
+   * 避免用户长时间离开后停在过期的市场口径上。
+   */
+  sectionTabPicked: Record<string, { tab: string; sessionDefault: string }> = {}
+
+  /**
    * 各页「已发起请求」的递增序号：只有序号等于最新值的请求可以落库。
    * force（用户主动刷新）与在途静默轮询会并行存在（见 loadPage 的 force 例外），
    * 无序号保护时后返回的旧响应会覆盖新数据；这里保证「最新一次发起者胜出」。
@@ -65,6 +77,29 @@ export class MarketStore {
     this.pages[key] = data
     this.loading[key] = false
     this.errors[key] = ''
+  }
+
+  /**
+   * 面板当前应展示的 Tab 键：用户手动选择优先，但**仅在与选择时的时段默认一致时有效**
+   * （时段口径已翻转 → 手动选择过期，回落到新的时段默认）。
+   *
+   * @param sectionId 面板标识（分区 id，如 industry-board）
+   * @param sessionDefault 数据层按时段规则判定的默认 Tab 键（缺省 / 无 Tab 面板传空串）
+   */
+  resolveSectionTab(sectionId: string, sessionDefault: string): string {
+    const picked = this.sectionTabPicked[sectionId]
+    if (picked && sessionDefault && picked.sessionDefault === sessionDefault) return picked.tab
+    return sessionDefault
+  }
+
+  /**
+   * 记录面板 Tab 的手动选择（components/section-card 点 Tab → 页面 handler → 这里）。
+   * sessionDefault 传本次数据里该面板的时段默认 Tab 键（不存在则空串，此时选择不生效、
+   * 面板仍按时段默认展示）。
+   * 整份替换（而非就地加键）：不依赖运行时是否代理解析对象，变更同样能被 MobX 追踪到。
+   */
+  pickSectionTab(sectionId: string, tab: string, sessionDefault: string): void {
+    this.sectionTabPicked = { ...this.sectionTabPicked, [sectionId]: { tab, sessionDefault } }
   }
 
   async loadPage(key: MarketPageKey, options: LoadPageOptions = {}) {

@@ -1,0 +1,62 @@
+/* 缩放 / 平移控件条：浅色为默认配色，深色在下方覆盖（组件样式隔离，深色规则必须写在这里） */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 4rpx 0;
+}
+
+.chart-range {
+  font-size: 22rpx;
+  color: #99a6b7;
+}
+
+.chart-ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.chart-ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 14rpx;
+  background: #f2f6fa;
+  color: #152338;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.chart-ctrl-hover {
+  background: #e4ecf7;
+}
+
+.chart-ctrl.is-disabled {
+  border-color: #eef3f8;
+  background: #f7fafd;
+  color: #c2cbd8;
+}
+
+.chart-controls.dark .chart-range {
+  color: #9cacc0;
+}
+
+.chart-controls.dark .chart-ctrl {
+  border-color: #2a394e;
+  background: #223248;
+  color: #f5f7fb;
+}
+
+.chart-controls.dark .chart-ctrl-hover {
+  background: #2f4055;
+}
+
+.chart-controls.dark .chart-ctrl.is-disabled {
+  border-color: #223248;
+  background: #1a2637;
+  color: #5c6b7f;
+}

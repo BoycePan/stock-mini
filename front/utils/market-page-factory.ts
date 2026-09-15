@@ -15,6 +15,7 @@ import type { PopupNotice } from '../types/system'
 import { metricViewModel } from './market'
 import { hasMinuteSources } from '../config/minute'
 import { registerStoreBinding, releaseStoreBindings } from './store-bindings'
+import { projectSectionTab } from './section-tabs'
 import { isMinuteEnabled } from './system-config'
 import { bindTheme, unbindTheme } from './theme'
 import { trackEvent } from './tracker'
@@ -174,21 +175,34 @@ export function createMarketPage(opts: MarketPageOptions) {
               // utils/system-config.ts）：关闭时隐藏「分时」角标，
               // 避免展示一个点进去会被拦截的入口；纯读 store，配置到达即时生效。
               const minuteEnabled = isMinuteEnabled()
-              return (rootStore.market.pages[pageKey]?.sections ?? [])
-                .filter((section) => !isMainEntranceSection(section.id) || showMainEntrance)
-                .map((section) => ({
-                  ...section,
-                  metrics: section.metrics
-                    .filter((metric) => !isHomeEntryCode(metric.code ?? '') || showHomeEntries)
-                    .map((metric) => ({
-                      ...metricViewModel(metric),
-                      // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
-                      // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code；
-                      // 分时入口开关关闭时整体置 false（角标隐藏）。
-                      minuteAvailable:
-                        hasMinuteSources(metric.minuteCode ?? metric.code ?? '') && minuteEnabled,
-                    })),
-                }))
+              return (
+                (rootStore.market.pages[pageKey]?.sections ?? [])
+                  .filter((section) => !isMainEntranceSection(section.id) || showMainEntrance)
+                  // 面板内 Tab（如「行业板块」的 A股 / 美股，见 types/market.ts MarketSectionTab）：
+                  // 按**当前选中 Tab** 把该市场的指标与展示元信息投影到分区字段上——
+                  // 选中键 = 用户手动选择优先（rootStore.market.resolveSectionTab，读的是可观察
+                  // 字段，切 Tab 即时重算，无需等下一次轮询），缺省用数据层按时段规则判定的默认值
+                  // （section.activeTab，见 api/market.ts resolveIndustrySource），因此「进入页面
+                  // 默认选中美股 / A股」由时段规则决定，用户手动切换后立即生效。
+                  .map((section) =>
+                    projectSectionTab(section, (sectionId, sessionDefault) =>
+                      rootStore.market.resolveSectionTab(sectionId, sessionDefault),
+                    ),
+                  )
+                  .map((section) => ({
+                    ...section,
+                    metrics: section.metrics
+                      .filter((metric) => !isHomeEntryCode(metric.code ?? '') || showHomeEntries)
+                      .map((metric) => ({
+                        ...metricViewModel(metric),
+                        // 标记该卡片是否支持点击查看当日分时（用于「分时」角标与点击行为）。
+                        // 取数代码优先 minuteCode（会话切换口径，如外盘 GOLD→GOLD-US），缺省用展示 code；
+                        // 分时入口开关关闭时整体置 false（角标隐藏）。
+                        minuteAvailable:
+                          hasMinuteSources(metric.minuteCode ?? metric.code ?? '') && minuteEnabled,
+                      })),
+                  }))
+              )
             },
           },
           actions: [],
@@ -270,6 +284,28 @@ export function createMarketPage(opts: MarketPageOptions) {
     },
 
     /**
+     * 行情面板内 Tab 切换（components/section-card 点 Tab → 冒泡 event → 这里）：
+     * 只把「用户选了什么」写进 store（rootStore.market.pickSectionTab），选中态的投影与
+     * 展示数据由 sections 绑定重算——切 Tab 即时生效，且卡片 / 阶段胶囊 / 分享海报口径一致。
+     * sessionDefault 取数据层按时段规则判定的默认 Tab（见 api/market.ts resolveIndustrySource），
+     * 供「时段口径翻转后手动选择自动失效」判定，避免长时间离开后停在过期市场口径。
+     */
+    onSectionTabTap(event: WechatMiniprogram.CustomEvent<{ sectionId?: string; key?: string }>) {
+      const { sectionId, key } = event.detail ?? {}
+      if (!sectionId || !key) return
+      const section = rootStore.market.pages[pageKey]?.sections.find(
+        (item) => item.id === sectionId,
+      )
+      const tabs = section?.tabs ?? []
+      if (!section || !tabs.some((tab) => tab.key === key)) return
+      // 埋点：面板内切换市场（如首页行业板块 A股 ⇄ 美股），上报面板 id + 目标 Tab
+      trackEvent('section.tab.switch', { section: sectionId, tab: key })
+      // sessionDefault 取数据层本次给出的时段默认 Tab（见 api/market.ts）：
+      // 时段口径翻转后该手动选择自动失效，面板回到新的时段默认（stores/market.store.ts）
+      rootStore.market.pickSectionTab(sectionId, key, section.activeTab ?? '')
+    },
+
+    /**
      * 点击行情卡片 → 查看当日分时图（纯前端，直连外部接口）。
      * 取数代码 = minuteCode ?? code（随会话切换口径，如外盘 GOLD → GOLD-US 取现货 XAUUSD 分时）；
      * 无分时源的卡片（美股时段板块 / 外盘无分时金属 / 金店金价 / 财经新闻）提示后忽略，
@@ -287,9 +323,10 @@ export function createMarketPage(opts: MarketPageOptions) {
         return
       }
       // 行业板块区入口卡（全部板块，见 api/market.ts）：跳转全部板块列表页，不走分时逻辑。
-      // 入口卡携带与首页板块区当前展示口径一致的 initialTab（A股板块 → 概念板块；
-      // 美股 → 美股概念，见 api/market.ts industry-all 入口构建）：以 URL ?tab= 透传给
-      // industry-all 页，页面 onLoad 按此预选默认 tab，与首页展示状态保持一致。
+      // 入口卡携带与**首页当前选中 Tab** 口径一致的 initialTab（A股 Tab → 概念板块；
+      // 美股 Tab → 美股概念，见 api/market.ts 的 allBoardsEntry 构建，两个 Tab 各带一份）：
+      // 以 URL ?tab= 透传给 industry-all 页，页面 onLoad 按此预选默认 tab，
+      // 与首页看到的市场口径保持一致（切 Tab 后点入口，落到的也是该市场的板块列表）。
       if (code === 'industry-all') {
         trackEvent('industry.all.enter')
         const tab = metric?.initialTab

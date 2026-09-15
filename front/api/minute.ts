@@ -17,8 +17,9 @@ const HOSTS = {
   /** 东财分时（与首页报价同域 push2delay，已在小程序合法域名内）*/
   emTrends: 'https://push2delay.eastmoney.com',
   /**
-   * 东财分时非延迟节点：**只有它才可能支持 `ndays>1`（五日）**——
-   * 实测延迟节点会静默忽略 ndays（ndays=5 与 1 返回完全相同的当日 241 行）。
+   * 东财分时非延迟节点：**实测与延迟节点一样会忽略 `ndays`**（ndays=5 与 1 返回同一天的
+   * 241 / 391 行），故它不再是五日的主源，只作五日兜底链的最后一路尝试
+   * （板块 / 期货 / 外汇等无腾讯五日源的标的），见 utils/minute.ts fetchFiveDayData。
    * 该域名（push2.eastmoney.com）已因「A股平均股价全市场快照」在合法域名内。
    */
   emTrendsPush2: 'https://push2.eastmoney.com',
@@ -54,9 +55,9 @@ export async function fetchEastmoneyMinute(
   secid: string,
   opts?: { keepFullTime?: boolean; ndays?: number; host?: 'delay' | 'push2' },
 ): Promise<MinuteResult | null> {
-  // ndays=1 当日分时；2..5 为多日分时（分时页「五日」TAB），上游上限 5，超出按 5 处理。
-  // 注意：延迟节点会静默忽略 ndays（实测 ndays=5 与 1 返回完全相同的当日行数），
-  // 多日场景由调用方校验「是否真的跨日」并回退其他源（utils/minute.ts fetchFiveDayData）。
+  // ndays=1 当日分时；2..5 为多日分时（分时页「五日」TAB 的兜底尝试），上游上限 5，超出按 5 处理。
+  // 注意：delay 与 push2 两个节点都实测**忽略 ndays**（ndays=5 与 1 返回同一天的行数），
+  // 多日数据由调用方校验「是否真的跨日」并回退其他源（utils/minute.ts fetchFiveDayData）。
   const ndays = opts?.ndays && opts.ndays > 1 ? Math.min(5, Math.floor(opts.ndays)) : 1
   const params = [
     `secid=${encodeURIComponent(secid)}`,

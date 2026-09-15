@@ -42,6 +42,35 @@ export interface MarketMetric {
   detail?: Record<string, string | undefined>
 }
 
+/**
+ * 面板内 Tab（如首页「行业板块」按市场分 A股 / 美股）：数据层为每个 Tab 备好该市场的指标
+ * 与展示元信息，页面按当前选中 Tab 把它们投影到分区字段（metrics / marketStatus /
+ * minuteCorner 等），渲染层只需渲染 Tab 条 + 投影结果。
+ */
+export interface MarketSectionTab {
+  /** Tab 键（如 'a' / 'us'）：时段默认选中与用户手动切换都以此标识 */
+  key: string
+  /** Tab 标签（如 A股 / 美股） */
+  label: string
+  /**
+   * 该 Tab 的指标列表（数据层构建）。页面投影到 section.metrics 后不再下发渲染层
+   * （避免另一市场的整份数据重复 setData），故渲染数据里缺省。
+   */
+  metrics?: MarketMetric[]
+  /** 该 Tab 的盘面状态文案（A股 → 大A盘中/午间休市/休市；美股 → 美股盘前/盘中/盘后/休市） */
+  marketStatus?: string
+  /**
+   * 该 Tab 的盘面状态**短文案**（盘中 / 午休 / 盘前 / 盘后 / 集合竞价 / 休市）：
+   * 展示在 Tab 上（Tab 标签已写明市场名，不必再重复「大A盘中 / 美股盘中」里的市场前缀）；
+   * 由 utils/market-clock.ts industryPhaseShort 从市场阶段推导，与阶段胶囊同源、同色调。
+   */
+  marketStatusShort?: string
+  /** 该 Tab 的盘面状态色调 */
+  marketTone?: 'active' | 'quiet' | 'rest'
+  /** 该 Tab 是否以面板右上角单个「分时」角标提示（美股盘前无分时图 → false） */
+  minuteCorner?: boolean
+}
+
 export interface MarketSection {
   id: string
   title: string
@@ -62,6 +91,17 @@ export interface MarketSection {
   marketStatus?: string
   /** 盘面状态色调：active=盘中 / quiet=盘后午休集合竞价等 / rest=休市 */
   marketTone?: 'active' | 'quiet' | 'rest'
+  /**
+   * 面板内 Tab 列表（如行业板块的 A股 / 美股）：有值时标题下方渲染切换条，
+   * 上面的 metrics / marketStatus / minuteCorner 等字段恒为**当前选中 Tab** 的投影结果。
+   */
+  tabs?: MarketSectionTab[]
+  /**
+   * 当前选中 Tab 键（与 tabs 配对）：数据层给的是**按时段规则判定的默认值**
+   * （如首页行业板块见 api/market.ts resolveIndustrySource），用户手动切换由
+   * stores/market.store.ts 的 pickSectionTab 覆盖后投影回来。
+   */
+  activeTab?: string
 }
 
 export interface MarketPageData {

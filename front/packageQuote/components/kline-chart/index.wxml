@@ -1,3 +1,5 @@
+<!-- 板块 / 个股详情页的 K 线图（默认只画最近 30 根，窗口靠下方控件与手势调整）。
+     根节点必须是带 width:100% 的 view：canvas 的 width:100% 需要确定的包含块宽度。 -->
 <view class="kline-chart {{ theme === 'dark' ? 'theme-dark' : '' }}">
   <canvas
     type="2d"
@@ -8,4 +10,18 @@
     bindtouchend="onTouchEnd"
     bindtouchcancel="onTouchEnd"
   ></canvas>
+  <!-- 缩放 / 平移控件（组件见 ../chart-controls）；也可直接单指拖动 / 双指捏合 -->
+  <chart-controls
+    theme="{{theme}}"
+    show="{{showControls}}"
+    range-text="{{rangeText}}"
+    zoomInDisabled="{{zoomInDisabled}}"
+    zoomOutDisabled="{{zoomOutDisabled}}"
+    panLeftDisabled="{{panLeftDisabled}}"
+    panRightDisabled="{{panRightDisabled}}"
+    bind:zoomin="onZoomIn"
+    bind:zoomout="onZoomOut"
+    bind:panleft="onPanLeft"
+    bind:panright="onPanRight"
+  ></chart-controls>
 </view>

@@ -38,6 +38,26 @@ test('computeKlineRange：单值（min === max）上下各扩 1，再留 8% 边�
   assert.equal(maxP, 11 + 2 * 0.08)
 })
 
+test('computeKlineRange：并入均线等叠加序列的上下界（窗口内 MA60 可能落在 K 线高低点之外）', () => {
+  const klines = [k({ high: 100, low: 90 }), k({ high: 102, low: 95 })]
+  const withoutMa = computeKlineRange(klines, 0)
+  assert.deepEqual(withoutMa, { minP: 90, maxP: 102 })
+  const withMa = computeKlineRange(klines, 0, [[null, 80]])
+  assert.deepEqual(withMa, { minP: 80, maxP: 102 }, '低于 K 线低点的均线要撑开下界')
+  const withMaHigh = computeKlineRange(klines, 0, [[110, null]])
+  assert.deepEqual(withMaHigh, { minP: 90, maxP: 110 }, '高于 K 线高点的均线要撑开上界')
+  assert.deepEqual(computeKlineRange(klines, 0, [[Number.NaN, Infinity]]), withoutMa)
+})
+
+test('computeKlineRange：全为正价时下界不越过 0（长期前复权序列不再出现负价格刻度）', () => {
+  const { minP, maxP } = computeKlineRange([k({ high: 2385, low: 6.9 })], 0.06)
+  assert.equal(minP, 0, '边距把下界压成负数时夹到 0')
+  assert.ok(maxP > 2385)
+  // 数据本身可能为负（如 2020 年负油价）时不做夹紧
+  const negative = computeKlineRange([k({ high: 10, low: -40 })], 0.06)
+  assert.ok(negative.minP < -40)
+})
+
 test('computeKlineRange：空数据 / 非有限值返回 [0, 1] 兜底', () => {
   assert.deepEqual(computeKlineRange([]), { minP: 0, maxP: 1 })
   assert.deepEqual(computeKlineRange([k({ high: Number.NaN, low: Number.NaN })]), {

@@ -110,6 +110,17 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
   /** 首页行业板块区点「全部板块」入口：trackEvent('industry.all.enter') */
   'industry.all.enter': { name: 'industry.all.enter', type: TrackEventType.Tap },
 
+  /**
+   * 行情面板内切换 Tab（如首页「行业板块」面板 A股 ⇄ 美股）：
+   * trackEvent('section.tab.switch', { section: 'industry-board', tab: 'us' }) → target=us
+   */
+  'section.tab.switch': {
+    name: 'section.tab.switch',
+    type: TrackEventType.Tap,
+    target: 'tab',
+    props: { section: 'section' },
+  },
+
   /** 点美股TOP100行进入分时：trackEvent('us.top100.tap', { code, name, secid }) → target=code */
   'us.top100.tap': {
     name: 'us.top100.tap',

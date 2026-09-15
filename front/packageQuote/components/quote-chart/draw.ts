@@ -26,11 +26,13 @@ import {
   formatKlineAxisLabel,
   hasMacdData,
   isUpKline,
+  KLINE_MA_PERIODS,
   priceToY,
   volumeBarHeight,
   type KlinePeriod,
   type MacdSeries,
 } from '../../../utils/kline'
+import { fitMaLegend } from '../../../utils/kline-legend'
 import { computeMinuteVolumeDirections } from '../../../utils/minute'
 import {
   buildMinuteGrid,
@@ -52,6 +54,14 @@ const KLINE_MODES: readonly QuoteChartMode[] = ['day', 'week', 'month', 'year']
 export function isKlineMode(mode: QuoteChartMode): boolean {
   return KLINE_MODES.includes(mode)
 }
+
+/**
+ * K 线均线周期（MA5 / MA20 / MA30 / MA60）：单一数据源见 utils/kline.ts 的 KLINE_MA_PERIODS，
+ * 屏幕 K 线图与分享海报共用。均线一律在**全量** K 线上计算，再按可见窗口切片
+ * （见 utils/kline-viewport.ts 的 buildKlineView）：分片视图若只在窗口内算 MA，
+ * 窗口越小均线越短、MA60 直接画不出来。
+ */
+export const MA_PERIODS: readonly number[] = [...KLINE_MA_PERIODS]
 
 /** K 线模式 → 周期（用于横轴刻度文案） */
 export function klinePeriodOf(mode: QuoteChartMode): KlinePeriod {
@@ -93,10 +103,22 @@ export interface QuoteChartData {
   preClose: number
   /** 分时交易时段模型（五日与 K 线不按时段铺点） */
   session: MinuteSessionKind
-  /** K 线数据（日/周/月/年模式） */
+  /**
+   * K 线数据（日/周/月/年模式）。
+   * 分片视图（见 buildKlineView）传入的是**可见窗口**内的 K 线，
+   * 因此均线 / MACD 必须由 maSeries / macd 一并传入，否则会在窗口内重算、缺失预热历史。
+   */
   klines: KlinePoint[]
   /** 十字光标选中下标（null = 不显示） */
   activeIndex: number | null
+  /** 预先算好的均线（与 klines 等长；缺省按 MA_PERIODS 在 klines 上现算） */
+  maSeries?: Array<Array<number | null>>
+  /** 均线周期（与 maSeries 一一对应；缺省 MA_PERIODS） */
+  maPeriods?: number[]
+  /** 预先算好的 MACD（与 klines 等长；缺省在 klines 上现算） */
+  macd?: MacdSeries | null
+  /** 是否展示 MACD 面板：分片视图按「全量根数」判定（30 根窗口不应隐藏 MACD） */
+  showMacdPanel?: boolean
 }
 
 /** 分时完整时段铺点结果 */
@@ -146,8 +168,10 @@ export interface QuoteChartLayout {
   xTicks: Array<{ x: number; text: string }>
   /** 成交量柱方向（分时/五日按分钟涨跌，K线按当根涨跌） */
   volDirs: Array<'up' | 'down' | 'flat'>
-  /** MA5/10/20（仅 K 线模式） */
+  /** 均线序列（仅 K 线模式；长度与 data.klines 一致） */
   maSeries: Array<Array<number | null>>
+  /** 均线周期（与 maSeries 一一对应，用于图例文案） */
+  maPeriods: number[]
 }
 
 interface Palette {
@@ -183,7 +207,7 @@ function palette(isDark: boolean): Palette {
         avg: '#f5b94a',
         dif: '#6fa3ff',
         dea: '#f5b94a',
-        ma: ['#f5b94a', '#c08ff0', '#6fa3ff'],
+        ma: ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5'],
         flatVol: 'rgba(195,206,222,0.5)',
         upVol: 'rgba(235,81,77,0.5)',
         downVol: 'rgba(32,166,106,0.5)',
@@ -200,7 +224,7 @@ function palette(isDark: boolean): Palette {
         avg: '#f0a020',
         dif: '#4278ed',
         dea: '#f0a020',
-        ma: ['#f0a020', '#a06ee0', '#4278ed'],
+        ma: ['#f0a020', '#a06ee0', '#4278ed', '#0f9b8e'],
         flatVol: 'rgba(154,167,184,0.65)',
         upVol: 'rgba(235,81,77,0.5)',
         downVol: 'rgba(32,166,106,0.5)',
@@ -232,7 +256,9 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
   const showVolume = isKline
     ? d.klines.some((k) => (k.volume || 0) > 0)
     : d.points.some((p) => (p.volume || 0) > 0)
-  const showMacd = isKline && hasMacdData(d.klines)
+  // 分片视图（可见窗口）下 MACD 是否可画按全量根数判定：由调用方经 showMacdPanel 传入
+  const showMacd = isKline && (d.showMacdPanel ?? hasMacdData(d.klines))
+  const maPeriods = d.maPeriods ? [...d.maPeriods] : [...MA_PERIODS]
 
   const volH = showVolume
     ? Math.max(isKline ? VOL_MIN_H + 28 : VOL_MIN_H, Math.round(d.height * (isKline ? 0.17 : 0.22)))
@@ -254,7 +280,9 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
   let maxP: number
   const preClose = Number.isFinite(d.preClose) && d.preClose > 0 ? d.preClose : 0
   if (isKline) {
-    const range = computeKlineRange(d.klines, 0.06)
+    // 均线一并纳入上下界：30 根窗口内 MA60 可能落在 K 线高低点之外（强趋势段），
+    // 不并入会被画到价格面板外（压住成交量面板）
+    const range = computeKlineRange(d.klines, 0.06, d.maSeries ?? [])
     minP = range.minP
     maxP = range.maxP
   } else if (preClose > 0) {
@@ -347,8 +375,8 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     for (const p of d.points) volMax = Math.max(volMax, p.volume || 0)
   }
 
-  // MACD
-  const macd = showMacd ? computeMACD(d.klines) : null
+  // MACD（分片视图由调用方传入已算好的窗口切片）
+  const macd = showMacd ? (d.macd ?? computeMACD(d.klines)) : null
   let macdMax = 0
   if (macd) {
     for (let i = 0; i < macd.dif.length; i += 1) {
@@ -362,7 +390,10 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     macdMax = macdMax > 0 ? macdMax * 1.08 : 0.01
   }
 
-  const maSeries = isKline ? [5, 10, 20].map((period) => computeMA(d.klines, period)) : []
+  // 均线：分片视图直接用调用方传入的窗口切片（在全量上算过），否则按 MA_PERIODS 现算
+  const maSeries = isKline
+    ? (d.maSeries ?? maPeriods.map((period) => computeMA(d.klines, period)))
+    : []
 
   // 柱宽：K线较粗，分钟级（五日 ~1200 根）压到细柱避免糊成一片
   const slotWidth = n > 0 ? plotW / n : plotW
@@ -404,6 +435,7 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     xTicks,
     volDirs,
     maSeries,
+    maPeriods,
   }
 }
 
@@ -668,10 +700,13 @@ function drawCandles(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
   }
 }
 
-/** MA5 / MA10 / MA20 均线 + 左上角图例（有十字光标时显示该根数值） */
+/**
+ * MA5 / MA20 / MA30 / MA60 均线 + 左上角图例（有十字光标时显示该根数值）。
+ * 图例排版走 utils/kline-legend.ts 的 fitMaLegend（放不下自动降级字号 / 去掉数值），
+ * 与 kline-chart 组件共用同一套排版规则。
+ */
 function drawMaLines(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout, c: Palette): void {
-  const labels = ['MA5', 'MA10', 'MA20']
-  const active = d.activeIndex !== null ? d.activeIndex : d.klines.length - 1
+  const active = d.activeIndex !== null ? d.activeIndex : Math.max(0, layout.n - 1)
   ctx.lineWidth = 1
   for (let m = 0; m < layout.maSeries.length; m += 1) {
     const values = layout.maSeries[m]
@@ -696,15 +731,19 @@ function drawMaLines(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
     }
     if (started) ctx.stroke()
   }
-  // 图例：MA5:xx MA10:xx MA20:xx（顶行，颜色与曲线一致）
+
+  // 图例：MA5:xx MA20:xx MA30:xx MA60:xx（顶行，颜色与曲线一致）
+  const legend = fitMaLegend(ctx, {
+    periods: layout.maPeriods,
+    padL: layout.padL,
+    plotW: layout.plotW,
+    valueOf: (index) => layout.maSeries[index]?.[active],
+  })
   ctx.textAlign = 'left'
-  let legendX = layout.padL
-  for (let m = 0; m < layout.maSeries.length; m += 1) {
-    const value = layout.maSeries[m]?.[active]
-    const text = `${labels[m]}:${value === null || value === undefined ? '--' : value.toFixed(2)}`
-    ctx.fillStyle = c.ma[m] ?? c.text
-    ctx.fillText(text, legendX, layout.priceTop - 8)
-    legendX += ctx.measureText(text).width + 10
+  for (const item of legend.items) {
+    ctx.font = legend.font
+    ctx.fillStyle = c.ma[item.colorIndex] ?? c.text
+    ctx.fillText(item.text, item.x, layout.priceTop - 8)
   }
 }
 

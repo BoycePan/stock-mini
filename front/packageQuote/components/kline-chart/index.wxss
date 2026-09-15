@@ -1,8 +1,10 @@
+/* 组件根节点：显式铺满宿主节点宽度，让内部 canvas 的 width:100% 有确定的包含块 */
 .kline-chart {
   width: 100%;
 }
 
 .kline-canvas {
+  display: block;
   width: 100%;
   height: 400rpx;
 }

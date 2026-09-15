@@ -246,7 +246,7 @@ export interface MinuteDaySlice {
 /**
  * 从数据点的日期部分切分出自然日区间（五日分时按日分段画分隔线与日期刻度）。
  * 依赖 point.timeFull（"YYYY-MM-DD HH:mm"）或本身带日期的 time；无日期信息时返回空数组，
- * 调用方据此退化为不分段的拉伸绘制（正常五日数据由东财 trends2 带完整时间戳，不会走到这里）。
+ * 调用方据此退化为不分段的拉伸绘制（正常五日数据由腾讯 day / dayus 与东财 trends2 带完整时间戳，不会走到这里）。
  */
 export function splitMinuteDays(
   points: Array<{ time: string; timeFull?: string }>,

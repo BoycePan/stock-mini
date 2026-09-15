@@ -87,6 +87,10 @@ Component({
     onMetricTap(event: WechatMiniprogram.CustomEvent) {
       this.triggerEvent('metrictap', event.detail)
     },
+    /** 面板内 Tab 切换（section-card 冒泡）：透传给页面处理（选中态由页面 / store 持有） */
+    onSectionTabTap(event: WechatMiniprogram.CustomEvent) {
+      this.triggerEvent('tabtap', event.detail)
+    },
     noop() {},
     /** 组装海报数据（实时行情来自 sections 属性） */
     buildShareData(): PosterData {

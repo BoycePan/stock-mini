@@ -226,6 +226,25 @@ export function usEtParts(now: Date = new Date()): { month: number; day: number 
   return { month: parts.month + 1, day: parts.day }
 }
 
+/** 首页「行业板块」面板的 Tab 键：'a' = A股板块口径，'us' = 美股代理股口径 */
+export type IndustryBoardTab = 'a' | 'us'
+
+/**
+ * 首页「行业板块」面板**进入页面时默认选中**的 Tab（与板块数据源口径严格一致，
+ * 见上方 resolveIndustrySource）：
+ * - 'a'：A股时段（工作日 09:15–15:00 含午休 + 待盘前窗口 15:00–盘前开始前）→ 默认看 A股板块；
+ * - 'us'：美股盘前 / 盘中 / 盘后、美股节假日、夜间空档与周末 → 默认看美股代理股口径。
+ *
+ * 用户手动切换不在此判定（面板会把手动选择覆盖在默认值上，见 stores/market.store.ts
+ * resolveSectionTab：时段口径翻转后手动选择自动失效、回到本函数的默认值）。
+ */
+export function resolveIndustryBoardTab(
+  session: Pick<MarketSession, 'useA' | 'useUs' | 'usMode'> | null,
+  now: Date = new Date(),
+): IndustryBoardTab {
+  return resolveIndustrySource(session, now) === 'a' ? 'a' : 'us'
+}
+
 /**
  * 行业板块盘面阶段（与数据源口径一致：A 股板块 → A 股阶段；美股代理 → 美股阶段；
  * 美股盘前 → 「美股盘前」，docs/美股盘前板块展示分析与改造方案.md 改动 5）。
@@ -268,6 +287,27 @@ export function resolveIndustryPhase(
       // 盘前阶段已被 resolveIndustrySource 路由为 'us-pre'，此处兜底不出现「美股盘前」
       return { label: '休市', tone: 'rest' }
   }
+}
+
+/**
+ * 阶段短文案（面板 Tab 上跟随市场名一起展示时用，去掉与 Tab 标签重复的市场前缀）：
+ * Tab 已经写着「A股 / 美股」，再跟一个「大A盘中 / 美股盘中」会重复市场名，
+ * 短文案只保留阶段本身（盘中 / 午休 / 盘前 / 盘后 / 集合竞价 / 休市）。
+ * 未登记的新文案原样返回（不影响展示，只是可能带上市场前缀）。
+ */
+const INDUSTRY_PHASE_SHORT: Record<string, string> = {
+  大A盘中: '盘中',
+  午间休市: '午休',
+  集合竞价: '集合竞价',
+  美股盘前: '盘前',
+  美股盘中: '盘中',
+  美股盘后: '盘后',
+  休市: '休市',
+}
+
+/** 阶段短文案（见 INDUSTRY_PHASE_SHORT）；Tab 上的状态点 + 短文案与阶段胶囊同源、同色调 */
+export function industryPhaseShort(phase: IndustryPhase): string {
+  return INDUSTRY_PHASE_SHORT[phase.label] ?? phase.label
 }
 
 // ---------------------------------------------------------------------------

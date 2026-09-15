@@ -1,0 +1,38 @@
+<!-- 图表缩放 / 平移控件条：− + 缩放（根数少 = 放大），‹ › 左右平移；禁用态置灰且不触发事件 -->
+<view wx:if="{{show}}" class="chart-controls {{theme === 'dark' ? 'dark' : ''}}">
+  <text class="chart-range">{{rangeText}}</text>
+  <view class="chart-ctrl-group">
+    <view
+      class="chart-ctrl {{zoomInDisabled ? 'is-disabled' : ''}}"
+      hover-class="chart-ctrl-hover"
+      data-action="zoomin"
+      data-disabled="{{zoomInDisabled}}"
+      bindtap="onTap"
+      >+</view
+    >
+    <view
+      class="chart-ctrl {{zoomOutDisabled ? 'is-disabled' : ''}}"
+      hover-class="chart-ctrl-hover"
+      data-action="zoomout"
+      data-disabled="{{zoomOutDisabled}}"
+      bindtap="onTap"
+      >−</view
+    >
+    <view
+      class="chart-ctrl {{panLeftDisabled ? 'is-disabled' : ''}}"
+      hover-class="chart-ctrl-hover"
+      data-action="panleft"
+      data-disabled="{{panLeftDisabled}}"
+      bindtap="onTap"
+      >‹</view
+    >
+    <view
+      class="chart-ctrl {{panRightDisabled ? 'is-disabled' : ''}}"
+      hover-class="chart-ctrl-hover"
+      data-action="panright"
+      data-disabled="{{panRightDisabled}}"
+      bindtap="onTap"
+      >›</view
+    >
+  </view>
+</view>

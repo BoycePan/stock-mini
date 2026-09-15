@@ -152,6 +152,118 @@
   opacity: 0.75;
 }
 
+/* 面板内 Tab 切换条（如「行业板块」的 A股 / 美股）：分段控件——浅色轨道 + 白色药丸选中态，
+   与 industry-all 页的板块 tab 视觉语言一致（选中项用主题蓝文字） */
+.section-tabs {
+  display: flex;
+  gap: 6rpx;
+  margin: 0 6rpx 16rpx;
+  padding: 6rpx;
+  border: 1rpx solid #e2eaf3;
+  border-radius: 999rpx;
+  background: #f2f6fa;
+}
+
+.section-tab {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
+  color: #718096;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.section-tab-label {
+  line-height: 1;
+}
+
+/* Tab 自带的盘面状态（点 + 短文案）：**点**承担色调语义（与标题右侧状态胶囊用同一组颜色：
+   active=盘中绿 / quiet=盘前盘后午休竞价蓝 / rest=休市灰），**文案**用常规次级文字色保证可读性
+   （22rpx 小字在浅色轨道/白色药丸上，状态色文字只有约 3:1 对比度）。
+   未选中的 Tab 也照常上色——状态描述的是那个市场，不是「是否选中」 */
+.section-tab-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  color: #5b6b80;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.section-tab-status-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.section-tab-status.active .section-tab-status-dot {
+  background: #20a66a;
+  box-shadow: 0 0 0 4rpx rgba(32, 166, 106, 0.12);
+}
+
+.section-tab-status.quiet .section-tab-status-dot {
+  background: #4278ed;
+}
+
+.section-tab-status.rest .section-tab-status-dot {
+  background: #c3ccd8;
+}
+
+.section-tab-active {
+  background: #fff;
+  color: #4278ed;
+  font-weight: 700;
+  box-shadow: 0 2rpx 8rpx rgba(30, 60, 110, 0.08);
+}
+
+.section-tab-hover {
+  opacity: 0.72;
+}
+
+.section-card.theme-dark .section-tabs {
+  border-color: #2a394e;
+  background: #223248;
+}
+
+.section-card.theme-dark .section-tab {
+  color: #9cacc0;
+}
+
+.section-card.theme-dark .section-tab-active {
+  background: #33465e;
+  /* 深色选中态用比全局强调蓝（#6fa3ff）稍亮的一档：药丸底 #33465e 比常见的
+     页面 / 卡片底色浅，沿用 #6fa3ff 只有 3.8:1，提亮后为 4.9:1（同色系，非新色） */
+  color: #8fbaff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.28);
+}
+
+.section-card.theme-dark .section-tab-status {
+  color: #a8b6c8;
+}
+
+.section-card.theme-dark .section-tab-status.active .section-tab-status-dot {
+  background: #3fbf7f;
+  box-shadow: 0 0 0 4rpx rgba(63, 191, 127, 0.16);
+}
+
+.section-card.theme-dark .section-tab-status.quiet .section-tab-status-dot {
+  background: #6fa3ff;
+}
+
+.section-card.theme-dark .section-tab-status.rest .section-tab-status-dot {
+  background: #8695a8;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

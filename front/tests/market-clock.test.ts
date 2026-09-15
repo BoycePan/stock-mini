@@ -4,8 +4,10 @@ import test from 'node:test'
 import {
   getRegionStatus,
   getUsPhase,
+  industryPhaseShort,
   isMarketHoliday,
   isMarketTradingDay,
+  resolveIndustryBoardTab,
   resolveIndustryPhase,
   resolveIndustrySource,
   resolveIndustryUseA,
@@ -381,6 +383,93 @@ test('resolveIndustrySource：盘前（EDT/EST 边界）/ A股时段 / 待盘前
     resolveIndustrySource(session({ useA: true, useUs: false }), at('2026-08-20T09:00:00Z')),
     'us-pre',
   )
+})
+
+test('resolveIndustryBoardTab：进入首页时行业板块默认选中的 Tab 按时段规则判定', () => {
+  // A股时段（工作日 09:15–15:00 含午休）→ 默认 A股 Tab
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T01:20:00Z')), 'a') // 北京 09:20 集合竞价
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T02:00:00Z')), 'a') // 北京 10:00 盘中
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T04:00:00Z')), 'a') // 北京 12:00 午休
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T07:30:00Z')), 'a') // 北京 15:30 待盘前窗口
+  // 美股盘前 / 盘中 / 盘后、夜间与周末 → 默认美股 Tab
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T08:00:00Z')), 'us') // 北京 16:00 美股盘前
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T14:30:00Z')), 'us') // 美东 10:30 盘中
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T21:00:00Z')), 'us') // 美东 17:00 盘后
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-20T00:00:00Z')), 'us') // 北京 08:00 盘前夜
+  assert.equal(resolveIndustryBoardTab(null, at('2026-08-22T02:00:00Z')), 'us') // 周六
+  // 冬令时盘前（北京 17:00–22:30）同样默认美股
+  assert.equal(resolveIndustryBoardTab(null, at('2026-11-02T09:00:00Z')), 'us')
+  // 显式会话与数据源口径严格一致（resolveIndustryBoardTab ⇄ resolveIndustrySource）
+  for (const iso of [
+    '2026-08-20T02:00:00Z',
+    '2026-08-20T08:00:00Z',
+    '2026-08-20T14:30:00Z',
+    '2026-08-22T02:00:00Z',
+  ]) {
+    const source = resolveIndustrySource(null, at(iso))
+    assert.equal(
+      resolveIndustryBoardTab(null, at(iso)),
+      source === 'a' ? 'a' : 'us',
+      `默认 Tab 必须与数据源口径一致（${iso} → ${source}）`,
+    )
+  }
+})
+
+test('industryPhaseShort：Tab 上的阶段短文案去掉与 Tab 标签重复的市场前缀', () => {
+  // A股各阶段（Tab 标签已写「A股」，短文案不再重复 market 前缀）
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T02:00:00Z'), 'a')),
+    '盘中',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T04:00:00Z'), 'a')),
+    '午休',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T01:20:00Z'), 'a')),
+    '集合竞价',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T07:30:00Z'), 'a')),
+    '休市',
+  )
+  // 美股各阶段
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T08:00:00Z'), 'us-pre')),
+    '盘前',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T14:30:00Z'), 'us')),
+    '盘中',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-20T21:00:00Z'), 'us')),
+    '盘后',
+  )
+  assert.equal(
+    industryPhaseShort(resolveIndustryPhase(null, at('2026-08-22T02:00:00Z'), 'us')),
+    '休市',
+  )
+
+  // 不变式：短文案不再带市场前缀（Tab 标签已写明 A股 / 美股），且长度可控
+  for (const iso of [
+    '2026-08-20T01:20:00Z',
+    '2026-08-20T02:00:00Z',
+    '2026-08-20T04:00:00Z',
+    '2026-08-20T08:00:00Z',
+    '2026-08-20T14:30:00Z',
+    '2026-08-20T21:00:00Z',
+    '2026-08-22T02:00:00Z',
+  ]) {
+    const phase = resolveIndustryPhase(null, at(iso))
+    const short = industryPhaseShort(phase)
+    assert.ok(short.length > 0, `短文案不得为空（${iso}）`)
+    assert.ok(!short.includes('股'), `短文案不应重复市场名（${iso} → ${short}）`)
+    assert.ok(
+      phase.label.endsWith(short) || short === '午休',
+      `短文案应是阶段文案的后缀或约定改写（${iso}：${phase.label} → ${short}）`,
+    )
+  }
 })
 
 test('行业板块：美股休市日（劳动节 2026-09-07）状态与美股指数同步为「休市」，不再出现盘前/盘中', () => {

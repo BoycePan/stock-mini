@@ -20,12 +20,25 @@ export interface KlineRange {
  * - 空数据或非有限值：返回 [0, 1] 兜底
  * - 单值（min === max）：上下各扩 1，避免 0 范围除零
  */
-export function computeKlineRange(klines: KlinePoint[], padRatio = 0.08): KlineRange {
+export function computeKlineRange(
+  klines: KlinePoint[],
+  padRatio = 0.08,
+  extras: ReadonlyArray<Array<number | null>> = [],
+): KlineRange {
   let min = Infinity
   let max = -Infinity
   for (const k of klines) {
     if (Number.isFinite(k.high)) max = Math.max(max, k.high)
     if (Number.isFinite(k.low)) min = Math.min(min, k.low)
+  }
+  // 均线等叠加序列一并纳入上下界：可见窗口只有几十根时，MA60 这类长周期均线会落在
+  // 窗口内 K 线的高低点之外（强趋势段），不并入就会被画到价格面板外（压住成交量面板）。
+  for (const extra of extras) {
+    for (const value of extra) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) continue
+      max = Math.max(max, value)
+      min = Math.min(min, value)
+    }
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) {
     return { minP: 0, maxP: 1 }
@@ -35,7 +48,10 @@ export function computeKlineRange(klines: KlinePoint[], padRatio = 0.08): KlineR
     max += 1
   }
   const range = max - min
-  return { minP: min - range * padRatio, maxP: max + range * padRatio }
+  // 全为正价时下界不再留到 0 以下：长期前复权序列（年 K 由月 K 聚合，跨度可达数百倍）
+  // 的 6% 边距会把刻度压成负数，出现「-135.80」这类不存在的价格刻度
+  const minP = min - range * padRatio
+  return { minP: min > 0 ? Math.max(0, minP) : minP, maxP: max + range * padRatio }
 }
 
 /** 价格 → 画布 y（价格越高 y 越小；maxP → padT，minP → padT + priceH） */
@@ -69,6 +85,12 @@ export function candleBody(
   const bottom = Math.max(yOpen, yClose)
   return { top, bottom, height: Math.max(1, bottom - top) }
 }
+
+/**
+ * 图表均线周期（MA5 / MA20 / MA30 / MA60）：行情页 K 线图与分享海报共用同一套参数，
+ * 避免「屏幕上是 MA5/20/30/60、海报上是 MA5/10/20」这种口径不一致。
+ */
+export const KLINE_MA_PERIODS: readonly number[] = [5, 20, 30, 60]
 
 /**
  * 简单移动平均：前 period-1 个索引为 null，第 i 个 = (i-period+1 .. i) 收盘均值。

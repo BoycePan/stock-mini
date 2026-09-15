@@ -164,7 +164,9 @@ function cacheOf(target: object): PageCache {
 /**
  * 行情详情页（原「当日分时」页）：分时 / 五日 / 日K / 周K / 月K / 年K 六个周期 TAB。
  *
- * - 分时 / 五日：东财 trends2（ndays=1 / 5），代理合成与交叉合成口径与首页卡片一致，8s/20s 轮询；
+ * - 分时：东财 trends2（ndays=1），代理合成与交叉合成口径与首页卡片一致，8s 轮询；
+ * - 五日：腾讯 dayus（美股）/ day（A股 / 港股）多日分钟线，20s 轮询（东财 ndays=5 实测失效，
+ *   仅作兜底，见 utils/minute.ts fetchFiveDayData）；
  * - 日/周/月/年 K：腾讯 K 线为主、新浪兜底，年 K 由月 K 聚合（见 utils/kline-source.ts），不做轮询；
  * - 无对应周期数据源的标的，TAB 置灰并给出提示（板块指数、日韩指数等，见 config/kline.ts）；
  * - 图表绘制统一由 packageQuote/components/quote-chart 承担（价格 + 成交量 + MACD 三块面板）。
@@ -285,7 +287,7 @@ Page({
       wx.stopPullDownRefresh()
     }
   },
-  /** 各周期可用性：分时（东财/腾讯/Yahoo）、五日（东财多日）、日/周/月/年 K（腾讯/新浪） */
+  /** 各周期可用性：分时（东财/腾讯/Yahoo）、五日（腾讯美股 / 腾讯 A股港股 / 东财兜底）、日/周/月/年 K（腾讯/新浪） */
   buildTabs(mcode: string): TabItem[] {
     const klineAvailable = hasKlineSources(mcode)
     const minuteAvailable = hasMinuteSources(mcode)
@@ -429,7 +431,7 @@ Page({
       }
     }
   },
-  /** 五日 TAB：东财 trends2 ndays=5（代理合成 / 交叉合成同口径） */
+  /** 五日 TAB：腾讯 dayus（美股）/ day（A股 / 港股）多日分钟线，东财 ndays=5 兜底（实测失效） */
   async loadFiveDay(options?: { silent?: boolean }) {
     const mode: TabKey = 'fiveDay'
     if (cacheOf(this).loading[mode]) return

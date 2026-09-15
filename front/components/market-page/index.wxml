@@ -27,6 +27,7 @@
           section="{{ item }}"
           first="{{ index === 0 }}"
           bind:metrictap="onMetricTap"
+          bind:tabtap="onSectionTabTap"
         ></section-card>
         <!-- 广告位：渲染在指定分区卡片之后（adAfterSection），location 由页面传入 -->
         <ad-banner
