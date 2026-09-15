@@ -5,7 +5,6 @@ import {
   beginGesture,
   endGesture,
   moveGesture,
-  PAN_TRIGGER_PX,
   type GestureConfig,
   type GestureState,
   type GestureTouch,
@@ -53,66 +52,20 @@ function drag(x0: number, x1: number, y0 = 100, y1 = 100, cfg = config()): strin
   return kinds
 }
 
-test('单指轻点 / 小幅移动：只更新十字光标，不改窗口', () => {
+test('单指只查看数据：按下 / 拖动都只移动十字光标，不改窗口', () => {
   const cfg = config()
   const start = beginGesture([at(PAD_L + 100)], cfg)
   assert.equal(start.action?.kind, 'crosshair', '按下即显示十字光标')
   assert.equal(start.state?.mode, 'single')
 
-  const small = moveGesture(start.state, [at(PAD_L + 100 + PAN_TRIGGER_PX - 1)], cfg)
-  assert.equal(small.action?.kind, 'crosshair', `位移小于 ${PAN_TRIGGER_PX}px 仍是十字光标`)
-  assert.equal(small.state?.panned, false)
+  // 大幅横向拖动（旧版会进入平移）：现在仍然只是读数
+  const far = moveGesture(start.state, [at(PAD_L + 260)], cfg)
+  assert.equal(far.action?.kind, 'crosshair', '单指横向拖动不改窗口')
+  if (far.action?.kind === 'crosshair') assert.equal(far.action.x, PAD_L + 260)
 
-  // 垂直为主的拖动（页面滚动场景）不抢窗口
-  const vertical = moveGesture(start.state, [at(PAD_L + 100 + 40, 100 + 80)], cfg)
-  assert.equal(vertical.action?.kind, 'crosshair', '竖向拖动不改窗口')
-})
-
-test('单指横向拖动：交出窗口按位移换算（整根吸附），抬起后收起十字光标', () => {
-  const cfg = config()
-  const kinds = drag(PAD_L + 200, PAD_L + 140, 100, 100, cfg)
-  assert.equal(kinds[0], 'crosshair')
-  assert.ok(kinds.includes('clear'), '进入平移时先收起十字光标')
-  assert.equal(kinds[kinds.length - 1], 'clear', '抬起后收起十字光标')
-
-  // 位移换算：窗口 30 根 → 每根 280/29 px；手指右移 ≈ 看更早的 K 线（内容跟手）
-  const start = beginGesture([at(PAD_L + 200)], cfg)
-  const pxPerBar = PLOT_W / (DEFAULT_VIEW_BARS - 1)
-  const moved = moveGesture(start.state, [at(PAD_L + 200 + pxPerBar * 6)], cfg)
-  assert.equal(moved.action?.kind, 'viewport')
-  if (moved.action?.kind === 'viewport') {
-    assert.equal(moved.action.viewport.viewBars, DEFAULT_VIEW_BARS, '拖动不改变根数')
-    assert.equal(moved.action.viewport.viewEnd, TOTAL - 1 - 6, '向右拖动 = 看更早的 K 线')
-  }
-})
-
-test('滑动换算以手势起点为基准：来回拖动不会累积漂移', () => {
-  const cfg = config()
-  const start = beginGesture([at(PAD_L + 200)], cfg)
-  const pxPerBar = PLOT_W / (DEFAULT_VIEW_BARS - 1)
-  const forward = moveGesture(start.state, [at(PAD_L + 200 + pxPerBar * 4)], cfg)
-  const back = moveGesture(forward.state, [at(PAD_L + 200)], cfg)
-  assert.equal(back.action?.kind, 'viewport')
-  if (back.action?.kind === 'viewport') {
-    assert.equal(back.action.viewport.viewEnd, TOTAL - 1, '拖回起点 → 窗口回到原位')
-  }
-})
-
-test('拖动到首尾会被夹紧（不会拖出数据范围）', () => {
-  const cfg = config()
-  const start = beginGesture([at(PAD_L + 140)], cfg)
-  // 一直往右拖（内容跟手）= 一直看更早的历史 → 最多到窗口 0~29
-  const toOldest = moveGesture(start.state, [at(PAD_L + 5000)], cfg)
-  assert.equal(toOldest.action?.kind, 'viewport')
-  if (toOldest.action?.kind === 'viewport') {
-    assert.equal(toOldest.action.viewport.viewEnd, DEFAULT_VIEW_BARS - 1, '最多拖到窗口 0~29')
-  }
-  // 一直往左拖 = 看更新的 K 线 → 最多到最新一根
-  const toLatest = moveGesture(start.state, [at(PAD_L - 5000)], cfg)
-  assert.equal(toLatest.action?.kind, 'viewport')
-  if (toLatest.action?.kind === 'viewport') {
-    assert.equal(toLatest.action.viewport.viewEnd, TOTAL - 1, '最多拖到最新一根')
-  }
+  // 竖向拖动（页面滚动场景）同样是读数
+  const vertical = moveGesture(start.state, [at(PAD_L + 100, 220)], cfg)
+  assert.equal(vertical.action?.kind, 'crosshair')
 })
 
 test('双指捏合：指距放大 → 根数变少、锚点那根停在原位；上下限夹紧', () => {
@@ -152,12 +105,12 @@ test('双指捏合：指距放大 → 根数变少、锚点那根停在原位；
   assert.equal(dead.action, null, '指距抖动在死区内 → 不重绘')
 })
 
-test('拖动途中落下第二根手指：切换为捏合（用当前窗口重新起算）', () => {
+test('查看数据途中落下第二根手指：切换为捏合（用当前窗口重新起算）', () => {
   const cfg = config()
   const start = beginGesture([at(PAD_L + 200)], cfg)
-  const dragged = moveGesture(start.state, [at(PAD_L + 150)], cfg)
-  assert.equal(dragged.action?.kind, 'viewport')
-  const twoFingers = moveGesture(dragged.state, [at(PAD_L + 140, 100), at(PAD_L + 240, 100)], cfg)
+  const moved = moveGesture(start.state, [at(PAD_L + 150)], cfg)
+  assert.equal(moved.action?.kind, 'crosshair', '单指阶段只是读数')
+  const twoFingers = moveGesture(moved.state, [at(PAD_L + 140, 100), at(PAD_L + 240, 100)], cfg)
   assert.equal(twoFingers.action?.kind, 'clear')
   assert.equal(twoFingers.state?.mode, 'pinch')
   assert.equal(
@@ -167,20 +120,19 @@ test('拖动途中落下第二根手指：切换为捏合（用当前窗口重�
   )
 })
 
-test('分时 / 五日（zoomable=false）：拖动与捏合都不改窗口，只出十字光标', () => {
+test('分时 / 五日（zoomable=false）：捏合不改窗口，只出十字光标', () => {
   const cfg = config({ zoomable: false })
   assert.equal(beginGesture([at(PAD_L + 100), at(PAD_L + 200)], cfg).action?.kind, 'crosshair')
   const start = beginGesture([at(PAD_L + 200)], cfg)
   const moved = moveGesture(start.state, [at(PAD_L + 20)], cfg)
-  assert.equal(moved.action?.kind, 'crosshair', '不可缩放时横向拖动仍是十字光标')
-  assert.equal(moved.state?.panned, false)
+  assert.equal(moved.action?.kind, 'crosshair')
 })
 
-test('数据太短（根数 ≤ 最小窗口）：不进入平移 / 缩放', () => {
+test('数据太短（根数 ≤ 最小窗口）：捏合不改窗口', () => {
   const cfg = config({ total: MIN_VIEW_BARS, viewport: defaultViewport(MIN_VIEW_BARS) })
-  const start = beginGesture([at(PAD_L + 200)], cfg)
-  const moved = moveGesture(start.state, [at(PAD_L + 20)], cfg)
-  assert.equal(moved.action?.kind, 'crosshair')
+  const start = beginGesture([at(PAD_L + 100, 100), at(PAD_L + 200, 100)], cfg)
+  const moved = moveGesture(start.state, [at(PAD_L + 50, 100), at(PAD_L + 250, 100)], cfg)
+  assert.equal(moved.action, null, '根数已是最小窗口 → 不再缩放')
 })
 
 test('手势结束：捏合途中松开一根手指作废本次手势，全部抬起才收起十字光标', () => {

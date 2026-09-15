@@ -1,7 +1,9 @@
 /**
- * 图表触摸手势状态机（纯函数，可单测）：**单指横向拖动 = 平移，双指捏合 = 缩放**，
- * 单指轻点 / 小幅移动 = 十字光标。两个 K 线图表组件（quote-chart / kline-chart）共用，
- * 保证两处识别阈值与手感完全一致。
+ * 图表触摸手势状态机（纯函数，可单测）：**单指 = 查看 K 线数据（十字光标），双指 = 缩放**。
+ *
+ * 单指拖动**不会**移动 K 线（避免「想读数却把图拖走」）：手指按在哪里、划到哪里，
+ * 十字光标就跟着走到哪一根；窗口只能靠 `‹` / `›`（长按连发）、`+` / `−` 与双指捏合改变。
+ * 两个 K 线图表组件（quote-chart / kline-chart）共用同一套识别逻辑。
  *
  * 用法（组件侧只负责把返回的动作映射到自己的绘制 / 窗口状态）：
  * ```ts
@@ -9,13 +11,10 @@
  * onTouchMove(e)  { const u = moveGesture(this.gesture, e.touches ?? [], cfg()); this.gesture = u.state; this.run(u.action) }
  * onTouchEnd(e)   { const u = endGesture(e.touches?.length ?? 0); this.gesture = u.state; this.run(u.action) }
  * ```
- * 几何换算（根数吸附、缩放锚点、上下限夹紧）全部复用 utils/kline-viewport.ts。
+ * 缩放换算（锚点、上下限夹紧）复用 utils/kline-viewport.ts 的 pinchViewport。
  */
 
-import { dragViewport, MIN_VIEW_BARS, pinchViewport, type ViewportState } from './kline-viewport'
-
-/** 单指横向拖动进入平移模式的阈值（px）：小于它视为轻点查看十字光标 */
-export const PAN_TRIGGER_PX = 8
+import { MIN_VIEW_BARS, pinchViewport, type ViewportState } from './kline-viewport'
 
 /**
  * 触摸点结构：canvas 触摸事件的 touches[i] 运行时自带相对画布的 x/y，
@@ -48,25 +47,20 @@ export interface GestureConfig {
 export type GestureAction =
   /** 把十字光标移到该画布 x 坐标对应的那根 */
   | { kind: 'crosshair'; x: number }
-  /** 收起十字光标（进入平移 / 缩放） */
+  /** 收起十字光标（进入双指缩放） */
   | { kind: 'clear' }
-  /** 应用新的可见窗口（平移 / 缩放结果） */
+  /** 应用新的可见窗口（双指缩放结果） */
   | { kind: 'viewport'; viewport: ViewportState }
 
 /** 手势状态（由组件持有，事件之间透传） */
 export interface GestureState {
   mode: 'single' | 'pinch'
-  /** 手势起点（画布坐标） */
-  startX: number
-  startY: number
-  /** 手势起点时的窗口：拖动 / 缩放都以它为基准换算，避免逐帧累加漂移 */
+  /** 手势起点时的窗口：捏合以它为基准换算，避免逐帧累加漂移 */
   base: ViewportState
   /** 捏合起始指距（px） */
   pinchDist: number
   /** 捏合锚点在手势起点窗口内的相对位置（0=窗口最左，1=最右） */
   anchorRatio: number
-  /** 单指手势是否已进入平移模式（进入后不再更新十字光标） */
-  panned: boolean
 }
 
 /** 一次手势事件的返回：新的状态 + 需要执行的动作（null = 不做事） */
@@ -105,7 +99,7 @@ function pinchAnchor(touches: ReadonlyArray<GestureTouch>, config: GestureConfig
   return Math.max(0, Math.min(1, (midX - config.padL) / config.plotW))
 }
 
-/** 可否缩放 / 平移：调用方声明可缩放，且根数确实超过最小窗口 */
+/** 可否缩放：调用方声明可缩放，且根数确实超过最小窗口 */
 function canViewport(config: GestureConfig): boolean {
   return config.zoomable && config.total > MIN_VIEW_BARS
 }
@@ -119,12 +113,9 @@ export function beginGesture(
     return {
       state: {
         mode: 'pinch',
-        startX: 0,
-        startY: 0,
         base: config.viewport,
         pinchDist: pinchDistance(touches, config.rectLeft),
         anchorRatio: pinchAnchor(touches, config),
-        panned: false,
       },
       action: { kind: 'clear' },
     }
@@ -133,18 +124,15 @@ export function beginGesture(
   return {
     state: {
       mode: 'single',
-      startX: point?.x ?? 0,
-      startY: point?.y ?? 0,
       base: config.viewport,
       pinchDist: 0,
       anchorRatio: 1,
-      panned: false,
     },
     action: point ? { kind: 'crosshair', x: point.x } : null,
   }
 }
 
-/** 触摸移动：按模式给出平移 / 缩放 / 十字光标动作 */
+/** 触摸移动：双指给出缩放动作，单指只移动十字光标（不改窗口） */
 export function moveGesture(
   state: GestureState | null,
   touches: ReadonlyArray<GestureTouch>,
@@ -159,12 +147,9 @@ export function moveGesture(
       return {
         state: {
           mode: 'pinch',
-          startX: 0,
-          startY: 0,
           base: config.viewport,
           pinchDist: pinchDistance(touches, config.rectLeft),
           anchorRatio: pinchAnchor(touches, config),
-          panned: false,
         },
         action: { kind: 'clear' },
       }
@@ -185,28 +170,7 @@ export function moveGesture(
 
   const point = gesturePoint(touches[0], config.rectLeft)
   if (!point) return { state, action: null }
-  const dx = point.x - state.startX
-  const dy = point.y - state.startY
-
-  if (state.panned) {
-    return {
-      state,
-      action: {
-        kind: 'viewport',
-        viewport: dragViewport(config.total, state.base, dx, config.plotW),
-      },
-    }
-  }
-  // 横向位移超过阈值且占优 → 进入平移；否则维持十字光标
-  if (canViewport(config) && Math.abs(dx) > PAN_TRIGGER_PX && Math.abs(dx) > Math.abs(dy)) {
-    return {
-      state: { ...state, panned: true },
-      action: {
-        kind: 'viewport',
-        viewport: dragViewport(config.total, state.base, dx, config.plotW),
-      },
-    }
-  }
+  // 单指只读数：手指到哪读到哪，窗口交给按钮（‹ › 长按连发）与双指缩放
   return { state, action: { kind: 'crosshair', x: point.x } }
 }
 

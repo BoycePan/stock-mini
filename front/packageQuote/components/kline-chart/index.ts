@@ -33,6 +33,15 @@ import {
 } from '../../../utils/kline-viewport'
 
 type CanvasNode = WechatMiniprogram.Canvas
+
+/** chart-controls 控件事件：detail.step = 本次移动根数（轻点 1，长按连发逐步加大） */
+type ChartControlEvent = WechatMiniprogram.CustomEvent<{ step?: number }>
+
+/** 从控件事件里取移动根数（缺省 1 根，非法值同样按 1 根） */
+function stepOf(event: ChartControlEvent): number {
+  const step = event?.detail?.step
+  return typeof step === 'number' && Number.isFinite(step) && step > 0 ? Math.round(step) : 1
+}
 type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D
 
 const UP_COLOR = '#eb514d'
@@ -58,10 +67,10 @@ const detachedInstances = new WeakSet<object>()
  * - MA5 / MA20 / MA30 / MA60 均线 + 左上角图例（数值取窗口最后一根 / 十字光标选中那根，
  *   图例排版与行情页图表共用 utils/kline-legend.ts，放不下自动降级）；
  * - **可见窗口**：默认只画最近 30 根（整段几百根既卡又糊），三种改窗口方式：
- *   下方 − + ‹ › 控件、单指左右拖动平移、双指捏合缩放（锚点为两指中点）；
+ *   `‹` / `›` 轻点移动 1 根、长按连发（步长逐步加大）、`+` / `−` 缩放、双指捏合缩放（锚点为两指中点）；
  *   根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）；
  *   均线在全量 K 线上计算后按窗口切片，所以窗口再小 MA60 也不会失真；
- * - 触摸分工：单指轻点 / 小幅移动 = 十字光标；单指横向拖动 = 平移（超过阈值后接管）；
+ * - 触摸分工：**单指只用于查看 K 线数据**（按下 / 滑动都只移动十字光标，不会把图拖走），
  *   双指 = 缩放；全部手指抬起后收起十字光标；
  * - 左侧价格刻度 + 底部日期刻度 + 网格（含纵向时间分隔线）；
  * - 下方成交量柱按当根涨跌分色（同花顺风格），左上角标注窗口内最大量；
@@ -561,22 +570,22 @@ Component({
     onZoomOut() {
       this.stepViewport('zoom', 'out')
     },
-    /** 控件：左移（回看更早的 K 线） */
-    onPanLeft() {
-      this.stepViewport('pan', 'left')
+    /** 控件：左移（轻点 1 根，长按连发按 detail.step 批量移动） */
+    onPanLeft(event: ChartControlEvent) {
+      this.stepViewport('pan', 'left', stepOf(event))
     },
-    /** 控件：右移（看更新的 K 线） */
-    onPanRight() {
-      this.stepViewport('pan', 'right')
+    /** 控件：右移（轻点 1 根，长按连发按 detail.step 批量移动） */
+    onPanRight(event: ChartControlEvent) {
+      this.stepViewport('pan', 'right', stepOf(event))
     },
-    stepViewport(kind: 'zoom' | 'pan', dir: 'in' | 'out' | 'left' | 'right') {
+    stepViewport(kind: 'zoom' | 'pan', dir: 'in' | 'out' | 'left' | 'right', step = 1) {
       const total = ((this.data.klines as KlinePoint[]) ?? []).length
       if (total <= MIN_VIEW_BARS) return
       const current: ViewportState = { viewBars: this.data.viewBars, viewEnd: this.data.viewEnd }
       this.applyViewportState(
         kind === 'zoom'
           ? zoomViewport(total, current, dir === 'in' ? 'in' : 'out')
-          : panViewport(total, current, dir === 'left' ? 'left' : 'right'),
+          : panViewport(total, current, dir === 'left' ? 'left' : 'right', step),
       )
     },
     /** 十字光标：命中窗口内的最近一根并重绘 */

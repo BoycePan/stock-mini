@@ -15,8 +15,8 @@ import {
   clampViewport,
   DEFAULT_VIEW_BARS,
   defaultViewport,
-  dragViewport,
   MIN_VIEW_BARS,
+  panRepeatStep,
   panViewport,
   pinchViewport,
   zoomViewport,
@@ -268,7 +268,7 @@ test('buildKlineView：根数少于窗口 / 空数据都不越界', () => {
   assert.equal(empty.showMacdPanel, false)
 })
 
-test('zoomViewport / panViewport：缩放夹在 [10, 全量]，平移夹在首尾且窗口宽度不变', () => {
+test('zoomViewport：缩放夹在 [10, 全量]，右端锚定；窗口宽度不因平移变化', () => {
   const total = 200
   let state = clampViewport(total, DEFAULT_VIEW_BARS, total - 1)
   assert.deepEqual(state, { viewBars: 30, viewEnd: 199 })
@@ -286,11 +286,11 @@ test('zoomViewport / panViewport：缩放夹在 [10, 全量]，平移夹在首�
 
   let pan = clampViewport(total, 30, 199)
   pan = panViewport(total, pan, 'left')
-  assert.equal(pan.viewEnd, 199 - 18, '左移步长 = 窗口宽度 60%')
+  assert.equal(pan.viewEnd, 198, '左移一次 = 1 根 K 线')
   assert.equal(pan.viewBars, 30, '平移不改变窗口宽度')
-  for (let i = 0; i < 20; i += 1) pan = panViewport(total, pan, 'left')
+  for (let i = 0; i < 200; i += 1) pan = panViewport(total, pan, 'left')
   assert.equal(pan.viewEnd, 29, '贴到历史起点（窗口 0~29）')
-  for (let i = 0; i < 30; i += 1) pan = panViewport(total, pan, 'right')
+  for (let i = 0; i < 200; i += 1) pan = panViewport(total, pan, 'right')
   assert.equal(pan.viewEnd, total - 1, '回到最新一根')
 })
 
@@ -361,19 +361,22 @@ test('fitMaLegend：放得下带数值，放不下自动降级为只有周期名
   )
 })
 
-test('dragViewport：按手指位移换算根数（整根吸附），左右都夹在首尾', () => {
+test('panViewport：每次移动 1 根（默认），首尾夹紧；长按连发步长逐步加速', () => {
   const total = 200
   const base = defaultViewport(total)
   assert.deepEqual(base, { viewBars: 30, viewEnd: 199 })
-  const plotW = 290
-  const pxPerBar = plotW / (30 - 1)
-  // 手指右移 = 看更早的 K 线
-  assert.equal(dragViewport(total, base, pxPerBar * 5, plotW).viewEnd, 194)
-  assert.equal(dragViewport(total, base, -pxPerBar * 5, plotW).viewEnd, 199, '右移已在最新处，夹住')
-  assert.equal(dragViewport(total, base, 0, plotW).viewEnd, 199, '微小抖动不产生位移')
-  assert.equal(dragViewport(total, base, 99999, plotW).viewEnd, 29, '拖到历史起点即停')
-  assert.equal(dragViewport(total, base, -99999, plotW).viewEnd, 199, '拖到最新一根即停')
-  assert.equal(dragViewport(total, base, 0, 0).viewEnd, 199, 'plotW 非法时不位移')
+  assert.equal(panViewport(total, base, 'left').viewEnd, 198, '左移一次 = 1 根')
+  assert.equal(panViewport(total, base, 'right').viewEnd, 199, '已在最新一根 → 夹住')
+  assert.equal(panViewport(total, base, 'left', 25).viewEnd, 174, '可指定移动根数（连发用）')
+  assert.equal(panViewport(total, base, 'left', 9999).viewEnd, 29, '移到历史起点即停')
+  assert.equal(panViewport(total, base, 'left', 0).viewEnd, 198, '非法根数按 1 根处理')
+
+  // 长按连发：起步 1 根/次，每 10 次（约 0.8s）加 1 根，快速按住即可翻长历史
+  assert.equal(panRepeatStep(0), 1)
+  assert.equal(panRepeatStep(9), 1)
+  assert.equal(panRepeatStep(10), 2)
+  assert.equal(panRepeatStep(25), 3)
+  assert.equal(panRepeatStep(Number.NaN), 1)
 })
 
 test('pinchViewport：指距放大 → 根数变少、锚点那根停在原位，且受 [10, 全量] 限制', () => {

@@ -1,19 +1,7 @@
 {
   "libVersion": "3.17.1",
-  "projectname": "stock-mini",
-  "condition": {
-    "miniprogram": {
-      "list": [
-        {
-          "name": "pages/premarket/index",
-          "pathName": "pages/premarket/index",
-          "query": "",
-          "scene": null,
-          "launchMode": "default"
-        }
-      ]
-    }
-  },
+  "projectname": "front",
+  "condition": {},
   "setting": {
     "urlCheck": false,
     "coverView": false,
@@ -26,7 +14,7 @@
     "useStaticServer": false,
     "useLanDebug": false,
     "showES6CompileOption": false,
-    "compileHotReLoad": false,
+    "compileHotReLoad": true,
     "checkInvalidKey": true,
     "ignoreDevUnusedFiles": true,
     "bigPackageSizeSupport": true

@@ -10,7 +10,7 @@
     bindtouchend="onTouchEnd"
     bindtouchcancel="onTouchEnd"
   ></canvas>
-  <!-- 缩放 / 平移控件（组件见 ../chart-controls）；也可直接单指拖动 / 双指捏合 -->
+  <!-- 缩放 / 平移控件（组件见 ../chart-controls）：‹ › 轻点 1 根、长按连发；单指在图上滑动只查看数据 -->
   <chart-controls
     theme="{{theme}}"
     show="{{showControls}}"

@@ -6,13 +6,20 @@
  * - `packageQuote/components/kline-chart`（板块 / 个股详情页的 K 线卡片）。
  *
  * 窗口模型：`{ viewBars, viewEnd }`
- * - `viewBars` = 可见根数（默认 30，松开手指后永远是整数根，缩放 / 平移都按整根吸附）；
+ * - `viewBars` = 可见根数（默认 30，永远是整数根，缩放 / 平移都按整根吸附）；
  * - `viewEnd` = 窗口最后一根的**全量下标**（含），窗口左端 = `viewEnd - viewBars + 1`。
+ *
+ * 改窗口的三条路径：
+ * 1. `‹` / `›` 按钮：**每次移动 1 根**，长按连发（连发节奏见 `panRepeatStep`）；
+ * 2. 双指捏合 `pinchViewport`：以两指中点为锚点缩放；
+ * 3. `+` / `−` 按钮：`zoomViewport` 按 0.7 倍率缩放（右端锚定）。
+ * **单指拖动不改窗口**（只用于查看 K 线数据 / 十字光标），见 utils/chart-gesture.ts。
  *
  * 缩放的上下限（「缩放和放大要有限制」）：
  * - 放大上限：`MIN_VIEW_BARS`（10 根，再放大没有意义且蜡烛会糊）；
- * - 缩小上限：全量根数（一次看完全部历史，不会出现窗口比数据还长的空图）。
- * 触摸手势（单指拖动平移 / 双指捏合缩放）一律经 `clampViewport` 收口，越界会被夹回。
+ * - 缩小上限：全量根数（一次看完全部历史，不会出现窗口比数据还长的空图）；
+ * - 平移上限：窗口左端 ≥ 0、右端 ≤ 总数-1（拖到首尾即停）。
+ * 任何路径都经 `clampViewport` 收口，越界一律夹回。
  */
 
 import type { KlinePoint } from '../types/stock'
@@ -24,10 +31,22 @@ export const DEFAULT_VIEW_BARS = 30
 export const MIN_VIEW_BARS = 10
 /** 点击 − + 缩放的比例：放大 = ×0.7 根数，缩小 = ÷0.7 根数 */
 const ZOOM_RATIO = 0.7
-/** 点击 ‹ › 平移的步长（可见根数的比例） */
-const PAN_RATIO = 0.6
 /** 双指缩放的死区：指距变化小于该比例时忽略，避免手指抖动把窗口来回抖 */
 const PINCH_DEAD_ZONE = 0.02
+
+/** 长按多久开始连发（ms）：小于它算一次轻点（只移动 1 根） */
+export const PAN_LONG_PRESS_MS = 400
+/** 连发间隔（ms）：约 12 根/秒 起步 */
+export const PAN_REPEAT_MS = 80
+
+/**
+ * 长按连发的第 tick 次步长（根）：起步 1 根，每 10 个 tick（约 0.8s）加 1 根，
+ * 让「按住不放」先精调、再快速滑动，长历史也能几秒内翻到头。
+ */
+export function panRepeatStep(tick: number): number {
+  const n = Math.max(0, Math.floor(Number.isFinite(tick) ? tick : 0))
+  return 1 + Math.floor(n / 10)
+}
 
 /** K 线可见窗口状态 */
 export interface ViewportState {
@@ -72,33 +91,19 @@ export function zoomViewport(
   return clampViewport(total, next, current.viewEnd)
 }
 
-/** 左右平移窗口（step = 可见根数的 60%，最少 1 根） */
+/**
+ * 左右平移窗口：`bars` = 本次移动根数（默认 1 —— 按钮一次挪一根 K 线，长按连发由调用方累加）。
+ */
 export function panViewport(
   total: number,
   state: ViewportState,
   dir: 'left' | 'right',
+  bars = 1,
 ): ViewportState {
   const current = clampViewport(total, state.viewBars, state.viewEnd)
-  const step = Math.max(1, Math.round(current.viewBars * PAN_RATIO))
+  const step = Math.max(1, Math.round(Number.isFinite(bars) ? bars : 1))
   const end = dir === 'left' ? current.viewEnd - step : current.viewEnd + step
   return clampViewport(total, current.viewBars, end)
-}
-
-/**
- * 单指拖动平移：`dxPx` 为相对手势起点的水平位移（手指右移为正 = 看更早的 K 线）。
- * 以**手势起点窗口**（base）为基准换算，避免逐帧累加带来的漂移；按整根吸附。
- */
-export function dragViewport(
-  total: number,
-  base: ViewportState,
-  dxPx: number,
-  plotW: number,
-): ViewportState {
-  const current = clampViewport(total, base.viewBars, base.viewEnd)
-  if (!Number.isFinite(dxPx) || !(plotW > 0) || current.viewBars <= 1) return current
-  const pxPerBar = plotW / (current.viewBars - 1)
-  const delta = Math.round(dxPx / pxPerBar)
-  return clampViewport(total, current.viewBars, current.viewEnd - delta)
 }
 
 /**

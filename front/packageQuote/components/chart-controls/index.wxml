@@ -1,4 +1,5 @@
-<!-- 图表缩放 / 平移控件条：− + 缩放（根数少 = 放大），‹ › 左右平移；禁用态置灰且不触发事件 -->
+<!-- 图表缩放 / 平移控件条：− + 缩放（根数少 = 放大），‹ › 左右平移（轻点 1 根，长按连发）。
+     禁用态置灰且不触发事件；按压用 touch 事件处理，以便长按连发。 -->
 <view wx:if="{{show}}" class="chart-controls {{theme === 'dark' ? 'dark' : ''}}">
   <text class="chart-range">{{rangeText}}</text>
   <view class="chart-ctrl-group">
@@ -7,7 +8,9 @@
       hover-class="chart-ctrl-hover"
       data-action="zoomin"
       data-disabled="{{zoomInDisabled}}"
-      bindtap="onTap"
+      bindtouchstart="onPressStart"
+      bindtouchend="onPressEnd"
+      bindtouchcancel="onPressCancel"
       >+</view
     >
     <view
@@ -15,7 +18,9 @@
       hover-class="chart-ctrl-hover"
       data-action="zoomout"
       data-disabled="{{zoomOutDisabled}}"
-      bindtap="onTap"
+      bindtouchstart="onPressStart"
+      bindtouchend="onPressEnd"
+      bindtouchcancel="onPressCancel"
       >−</view
     >
     <view
@@ -23,7 +28,9 @@
       hover-class="chart-ctrl-hover"
       data-action="panleft"
       data-disabled="{{panLeftDisabled}}"
-      bindtap="onTap"
+      bindtouchstart="onPressStart"
+      bindtouchend="onPressEnd"
+      bindtouchcancel="onPressCancel"
       >‹</view
     >
     <view
@@ -31,7 +38,9 @@
       hover-class="chart-ctrl-hover"
       data-action="panright"
       data-disabled="{{panRightDisabled}}"
-      bindtap="onTap"
+      bindtouchstart="onPressStart"
+      bindtouchend="onPressEnd"
+      bindtouchcancel="onPressCancel"
       >›</view
     >
   </view>

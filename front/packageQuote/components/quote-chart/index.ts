@@ -33,6 +33,15 @@ import {
 
 type CanvasNode = WechatMiniprogram.Canvas
 
+/** chart-controls 控件事件：detail.step = 本次移动根数（轻点 1，长按连发逐步加大） */
+type ChartControlEvent = WechatMiniprogram.CustomEvent<{ step?: number }>
+
+/** 从控件事件里取移动根数（缺省 1 根，非法值同样按 1 根） */
+function stepOf(event: ChartControlEvent): number {
+  const step = event?.detail?.step
+  return typeof step === 'number' && Number.isFinite(step) && step > 0 ? Math.round(step) : 1
+}
+
 /**
  * 行情图表组件（canvas 2d）：分时 / 五日 / 日K / 周K / 月K / 年K 六种模式共用一张画布。
  *
@@ -43,11 +52,12 @@ type CanvasNode = WechatMiniprogram.Canvas
  * - 画布高度随模式切换（wxss 按 mode 类名给定），K 线模式更高以容纳 MACD 面板；
  * - 十字光标：竖线贯穿三块面板、横线在价格面板，信息框按模式给出不同字段；
  * - **K 线可见窗口**：默认只画最近 30 根（整段几百根既卡又糊），三种改窗口的方式：
- *   下方 − + ‹ › 按钮、单指左右拖动平移、双指捏合缩放（锚点为两指中点）；
- *   窗口根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）；
+ *   1. 下方 `‹` / `›`：轻点移动 **1 根**，长按约 0.4s 起连发（步长逐次加大），`+` / `−` 缩放；
+ *   2. 双指捏合缩放（锚点为两指中点）；
+ *   3. 窗口根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）。
  *   均线与 MACD 仍在全量数据上计算后按窗口切片，窗口再小 MA60 / MACD 预热也不会失真。
- * - 触摸分工：单指轻点 / 小幅移动 = 十字光标；单指横向拖动 = 平移（超过阈值后接管，
- *   十字光标随之收起）；双指 = 缩放。分时 / 五日没有窗口，触摸行为保持原样（只有十字光标）。
+ * - 触摸分工：**单指只用于查看 K 线数据**（按下 / 滑动都只移动十字光标，不会把图拖走）；
+ *   双指 = 缩放。分时 / 五日没有窗口，触摸行为同样只有十字光标。
  */
 Component({
   properties: {
@@ -224,19 +234,19 @@ Component({
     onZoomOut() {
       this.applyViewport('zoom', 'out')
     },
-    /** 左移（回看更早的 K 线） */
-    onPanLeft() {
-      this.applyViewport('pan', 'left')
+    /** 左移：轻点 1 根，长按连发按 detail.step 批量移动 */
+    onPanLeft(event: ChartControlEvent) {
+      this.applyViewport('pan', 'left', stepOf(event))
     },
-    /** 右移（看更新的 K 线） */
-    onPanRight() {
-      this.applyViewport('pan', 'right')
+    /** 右移：轻点 1 根，长按连发按 detail.step 批量移动 */
+    onPanRight(event: ChartControlEvent) {
+      this.applyViewport('pan', 'right', stepOf(event))
     },
     /**
-     * 缩放 / 平移统一入口：K 线模式下把窗口推进一格并重建布局。
+     * 缩放 / 平移统一入口：K 线模式下把窗口推进若干根并重建布局。
      * 窗口变化会清掉十字光标（选中下标是窗口内下标，换窗口后含义已变）。
      */
-    applyViewport(kind: 'zoom' | 'pan', dir: 'in' | 'out' | 'left' | 'right') {
+    applyViewport(kind: 'zoom' | 'pan', dir: 'in' | 'out' | 'left' | 'right', step = 1) {
       if (!isKlineMode(this.data.mode as QuoteChartMode)) return
       const total = ((this.data.klines as KlinePoint[]) ?? []).length
       if (total <= MIN_VIEW_BARS) return
@@ -244,7 +254,7 @@ Component({
       const next =
         kind === 'zoom'
           ? zoomViewport(total, current, dir === 'in' ? 'in' : 'out')
-          : panViewport(total, current, dir === 'left' ? 'left' : 'right')
+          : panViewport(total, current, dir === 'left' ? 'left' : 'right', step)
       this.applyViewportState(next)
     },
     onTouchStart(event: WechatMiniprogram.TouchEvent) {
@@ -345,7 +355,7 @@ interface ChartState {
 /** 组件实例 → 画布状态（避免把非响应式对象放进 data） */
 const canvasStates = new WeakMap<object, CanvasState>()
 const chartStates = new WeakMap<object, ChartState>()
-/** 组件实例 → 当前手势状态（单指拖动平移 / 双指捏合缩放） */
+/** 组件实例 → 当前手势状态（单指查看数据 / 双指捏合缩放） */
 const gestureStates = new WeakMap<object, GestureState | null>()
 
 /** 组件实例 → 上一次的 K 线数组引用（判断是否换了周期，决定要不要复位窗口） */
