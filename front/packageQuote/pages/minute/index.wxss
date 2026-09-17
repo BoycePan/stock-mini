@@ -72,10 +72,20 @@
   color: #d9c9a3;
 }
 
-.panel,
 .quote-card {
   margin-top: 18rpx;
   padding: 28rpx 24rpx;
+  border: 1rpx solid #d4dfec;
+  border-radius: 28rpx;
+  background: linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+  box-shadow:
+    0 2rpx 8rpx rgba(30, 60, 110, 0.1),
+    0 12rpx 32rpx rgba(30, 60, 110, 0.14);
+}
+
+.panel {
+  margin-top: 18rpx;
+  padding: 28rpx 0;
   border: 1rpx solid #d4dfec;
   border-radius: 28rpx;
   background: #fff;
@@ -84,8 +94,8 @@
     0 12rpx 32rpx rgba(30, 60, 110, 0.14);
 }
 
-.quote-card {
-  background: linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+.panel-head {
+  padding: 0 24rpx;
 }
 
 .quote-head {
@@ -249,7 +259,8 @@
    注意必须是「纵向 flex + 交叉轴 stretch（默认）」：行向 flex 的交叉轴是纵向，
    <quote-chart> 宿主节点会按内容（max-content）收缩宽度，画布 width:100% 失去可解析的
    包含块宽度、最终塌成 0 宽 → 画布有高度但整块空白（历史缺陷：分时图不出图）。
-   纵向主轴 + justifyContent:center 保留加载 / 空态的水平居中与垂直居中。 */
+   纵向主轴 + justifyContent:center 保留加载 / 空态的水平居中与垂直居中。
+   canvas 区域左右无外边距，直接撑满 panel 宽度。 */
 .chart-wrap {
   display: flex;
   flex-direction: column;
@@ -364,6 +375,17 @@
 /* ---------------------------------------------------------------------------
    深色主题
    --------------------------------------------------------------------------- */
+.page.theme-dark .panel {
+  border-color: #2a394e;
+  background: #1a2637;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.25);
+}
+
+.page.theme-dark .quote-card {
+  border-color: #2a394e;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.25);
+}
+
 .page.theme-dark .panel-title {
   color: #f5f7fb;
 }
@@ -427,9 +449,8 @@
   color: #9cacc0;
 }
 
-/* 深色主题 · 基本信息卡片 */
+/* 深色主题 · 基本信息卡片（渐变覆盖公共 panel 背景） */
 .page.theme-dark .quote-card {
-  border-color: #2a394e;
   background: linear-gradient(145deg, #1a2637 0%, #1e2c40 100%);
 }
 

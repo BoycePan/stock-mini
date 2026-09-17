@@ -135,7 +135,7 @@ test('K 线布局：K 线不足 MACD 根数时隐藏 MACD，价格面板吃掉�
   const withoutMacd = buildQuoteChartLayout(few, ctx)
   assert.equal(withoutMacd.showMacd, false)
   assert.equal(withoutMacd.macdH, 0)
-  assert.equal(withoutMacd.macdTop, withoutMacd.volTop + withoutMacd.volH + 15)
+  assert.equal(withoutMacd.macdTop, withoutMacd.volTop + withoutMacd.volH + 22)
   assert.ok(
     withoutMacd.priceH > withMacd.priceH + 80,
     `隐藏 MACD 后价格面板应显著变高（${withoutMacd.priceH} vs ${withMacd.priceH}）`,

@@ -185,15 +185,12 @@
   line-height: 1;
 }
 
-/* Tab 自带的盘面状态（点 + 短文案）：**点**承担色调语义（与标题右侧状态胶囊用同一组颜色：
-   active=盘中绿 / quiet=盘前盘后午休竞价蓝 / rest=休市灰），**文案**用常规次级文字色保证可读性
-   （22rpx 小字在浅色轨道/白色药丸上，状态色文字只有约 3:1 对比度）。
-   未选中的 Tab 也照常上色——状态描述的是那个市场，不是「是否选中」 */
+/* Tab 自带的盘面状态（点 + 短文案）：**点 + 文案**共同承担色调语义（与标题右侧状态胶囊用同一组颜色：
+   active=盘中绿 / quiet=盘前盘后午休竞价蓝 / rest=休市灰），文字跟随点色，强化状态辨识度 */
 .section-tab-status {
   display: inline-flex;
   align-items: center;
   gap: 6rpx;
-  color: #5b6b80;
   font-size: 22rpx;
   font-weight: 600;
   line-height: 1;
@@ -206,13 +203,25 @@
   flex-shrink: 0;
 }
 
+.section-tab-status.active {
+  color: #1f9a61;
+}
+
 .section-tab-status.active .section-tab-status-dot {
   background: #20a66a;
   box-shadow: 0 0 0 4rpx rgba(32, 166, 106, 0.12);
 }
 
+.section-tab-status.quiet {
+  color: #4278ed;
+}
+
 .section-tab-status.quiet .section-tab-status-dot {
   background: #4278ed;
+}
+
+.section-tab-status.rest {
+  color: #8492a5;
 }
 
 .section-tab-status.rest .section-tab-status-dot {
@@ -247,8 +256,8 @@
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.28);
 }
 
-.section-card.theme-dark .section-tab-status {
-  color: #a8b6c8;
+.section-card.theme-dark .section-tab-status.active {
+  color: #3fbf7f;
 }
 
 .section-card.theme-dark .section-tab-status.active .section-tab-status-dot {
@@ -256,8 +265,16 @@
   box-shadow: 0 0 0 4rpx rgba(63, 191, 127, 0.16);
 }
 
+.section-card.theme-dark .section-tab-status.quiet {
+  color: #6fa3ff;
+}
+
 .section-card.theme-dark .section-tab-status.quiet .section-tab-status-dot {
   background: #6fa3ff;
+}
+
+.section-card.theme-dark .section-tab-status.rest {
+  color: #9cacc0;
 }
 
 .section-card.theme-dark .section-tab-status.rest .section-tab-status-dot {
@@ -348,7 +365,7 @@
 
 .metric-card {
   position: relative;
-  min-height: 140rpx;
+  /* min-height: 140rpx; */
   display: flex;
   flex-direction: column;
   justify-content: center;

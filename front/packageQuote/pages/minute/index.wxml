@@ -72,23 +72,25 @@
       </view>
 
       <view class="panel">
-        <!-- 周期 TAB：分时 / 日K / 周K / 月K / 年K（无数据源的周期置灰并提示） -->
-        <view class="tab-bar">
-          <view
-            wx:for="{{ tabs }}"
-            wx:key="key"
-            class="tab {{ item.enabled ? '' : 'tab-disabled' }} {{ mode === item.key ? 'tab-active' : '' }}"
-            data-key="{{ item.key }}"
-            bindtap="onTabTap"
-            >{{ item.label }}</view
-          >
-        </view>
+        <view class="panel-head">
+          <!-- 周期 TAB：分时 / 日K / 周K / 月K / 年K（无数据源的周期置灰并提示） -->
+          <view class="tab-bar">
+            <view
+              wx:for="{{ tabs }}"
+              wx:key="key"
+              class="tab {{ item.enabled ? '' : 'tab-disabled' }} {{ mode === item.key ? 'tab-active' : '' }}"
+              data-key="{{ item.key }}"
+              bindtap="onTabTap"
+              >{{ item.label }}</view
+            >
+          </view>
 
-        <view class="panel-title-row">
-          <text class="panel-title">{{ panelTitle }}</text>
-          <text class="panel-source" wx:if="{{ sourceLabel }}">{{ sourceLabel }}</text>
+          <view class="panel-title-row">
+            <text class="panel-title">{{ panelTitle }}</text>
+            <text class="panel-source" wx:if="{{ sourceLabel }}">{{ sourceLabel }}</text>
+          </view>
+          <view wx:if="{{ chartNote }}" class="minute-note">{{ chartNote }}</view>
         </view>
-        <view wx:if="{{ chartNote }}" class="minute-note">{{ chartNote }}</view>
 
         <view class="chart-wrap {{ klineMode ? 'is-kline' : '' }}">
           <quote-chart

@@ -228,12 +228,12 @@ function palette(isDark: boolean): Palette {
 
 /** 价格面板横向网格条数（含首尾） */
 const PRICE_GRID_LINES = 5
-/** 面板间距 */
-const PANEL_GAP = 15
+/** 面板间距（需 ≥ 18px：留出成交量/MACD 顶部标签文字的绘制空间，避免被上方面板内容遮挡） */
+const PANEL_GAP = 22
 /** MACD 面板最小高度 */
-const MACD_MIN_H = 96
+const MACD_MIN_H = 84
 /** 成交量面板最小高度 */
-const VOL_MIN_H = 56
+const VOL_MIN_H = 50
 
 /**
  * 计算图表布局（几何 + 数据映射），供绘制与触摸命中复用。
@@ -255,9 +255,9 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
   const maPeriods = d.maPeriods ? [...d.maPeriods] : [...MA_PERIODS]
 
   const volH = showVolume
-    ? Math.max(isKline ? VOL_MIN_H + 28 : VOL_MIN_H, Math.round(d.height * (isKline ? 0.17 : 0.22)))
+    ? Math.max(isKline ? VOL_MIN_H + 20 : VOL_MIN_H, Math.round(d.height * (isKline ? 0.15 : 0.17)))
     : 0
-  const macdH = showMacd ? Math.max(MACD_MIN_H, Math.round(d.height * 0.24)) : 0
+  const macdH = showMacd ? Math.max(MACD_MIN_H, Math.round(d.height * 0.18)) : 0
   const priceH = Math.max(
     60,
     d.height - padT - padB - (volH ? volH + PANEL_GAP : 0) - (macdH ? macdH + PANEL_GAP : 0),
@@ -809,14 +809,7 @@ function drawMacdPanel(
   if (!macd) return
   const yOf = (v: number) => macdTop + macdH / 2 - (v / macdMax) * (macdH / 2)
 
-  ctx.strokeStyle = c.grid
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(padL, macdTop - 6)
-  ctx.lineTo(padL + plotW, macdTop - 6)
-  ctx.stroke()
-
-  // 上边界 / 零轴 / 下边界 + 左侧刻度（零轴高亮）
+  // 上边界 / 零轴 / 下边界 + 左侧刻度（零轴高亮），上边界线本身就是面板顶部分隔线，无需额外重复绘制
   const gridValues = [macdMax, 0, -macdMax]
   ctx.textAlign = 'right'
   for (const value of gridValues) {
@@ -895,7 +888,7 @@ function drawMacdPanel(
   ctx.fillStyle = c.text
   let headX = padL + 2
   const head = 'MACD(12,26,9)'
-  ctx.fillText(head, headX, macdTop - 10)
+  ctx.fillText(head, headX, macdTop - 4)
   headX += ctx.measureText(head).width + 8
   const items: Array<{ text: string; color: string }> = [
     { text: `DIF:${fmtMacd(dif)}`, color: c.dif },
@@ -904,7 +897,7 @@ function drawMacdPanel(
   ]
   for (const item of items) {
     ctx.fillStyle = item.color
-    ctx.fillText(item.text, headX, macdTop - 10)
+    ctx.fillText(item.text, headX, macdTop - 4)
     headX += ctx.measureText(item.text).width + 8
   }
 }
