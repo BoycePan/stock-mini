@@ -1,7 +1,8 @@
 # 首页卡片当日分时图（纯前端直连）方案与验证
 
 > 需求：**纯前端**，与首页行情**同源外部接口**，支持点击行情卡片查看**当日分时图**，并验证每个卡片都能拿到数据。
-> 落地：卡片点击 → 跳转 `pages/minute/index`（分时查看页）→ 东财 → 腾讯 → Yahoo 多源兜底拉取。
+> 落地：卡片点击 → 跳转 `pages/minute/index`（分时查看页）→ 按**每 code 可配的源优先级**依次兜底
+> （缺省 腾讯 → 东财 → Yahoo；基础信息缺省 腾讯 qt.gtimg.cn → 东财 ulist），失败自动切下一个源。
 >
 > 该页面后续扩展为**五周期图表**（分时 / 日K / 周K / 月K / 年K + 成交量 + MACD），
 > 另见 [`行情页多周期图表.md`](./行情页多周期图表.md)：本文档描述的分时链路（东财 trends2 / 腾讯 / Yahoo）
@@ -29,30 +30,43 @@
 
 ### 1.2 数据源（与首页同族外部接口）
 
+**分时序列**（`computed by config/minute.ts` 的 `priority` 顺序，缺省 腾讯 → 东财 → Yahoo）：
+
 | 源 | URL | 覆盖 | 说明 |
 | --- | --- | --- | --- |
-| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14&fields2=f51,f53,f56,f58&ndays=1&iscr=0&iscca=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.) | **首选源**，覆盖绝大多数卡片；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,成交量,均价`（分钟级，现价取 **f53 收盘价**，与真实最新价一致） |
+| 腾讯分时 | `https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=<code>` | A股指数/个股、港股（**多点**）；美股指数/个股/ETF 只返回最新 1 点 | **缺省首选**；行格式为空格分隔字符串 `"HHmm 现价 累计成交量 [累计成交额]"`（**累计口径**，解析器差分成每分钟；A股量为手，均价 = 累计额 ÷ 累计量 ÷ 100） |
+| 东财分时 | `https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=<secid>&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14&fields2=f51,f53,f56,f58&ndays=1&iscr=0&iscca=0` | A股指数/个股、美股ETF/指数、板块(90.BKxxxx)、沪主连(113.xm)、上金所(118.)、COMEX/ICE(101./102./112.)、亚欧指数(100.)、日韩个股(176./177.)、汇率(119./133.) | **缺省备用源**（腾讯不覆盖的标的它就是首选）；`data.preClose` 昨收 + `data.trends` 每行 `时间,现价,成交量,均价`（现价取 **f53 收盘价**，f56 为**每分钟**量） |
+| Yahoo 1分钟 | `https://query1.finance.yahoo.com/v8/finance/chart/<symbol>?range=1d&interval=1m` | 东财/腾讯分时均不覆盖的标的 | 兜底源（**中国大陆访问被墙，仅作大陆外/兜底**）；`chart.result[0].timestamp` + `indicators.quote[0]`，昨收取 `meta.chartPreviousClose` |
+| 代理股均值合成 | 东财 trends2 × N（`emProxies`） | 美股时段行业板块 `us-BKxxxx` | 每只代理归一化昨收 100 后逐分钟等权均值，与卡片涨跌幅同口径 |
+| 交叉汇率合成 | 东财 trends2 ÷ 东财 trends2（`emCross`） | `CNYKRW` | 美元/韩元 ÷ 美元/离岸人民币 逐分钟相除 |
+
+**基础信息报价**（今开 / 最高 / 最低 / 昨收 / 成交量，`quotePriority`，缺省 腾讯 → 东财）：
+
+| 源 | URL | 说明 |
+| --- | --- | --- |
+| 腾讯快照 | `https://qt.gtimg.cn/q=<code>` | 缺省首选：`[5]今开 [33]最高 [34]最低 [36]成交量 [4]昨收`；覆盖 A股/港股/日韩股/美股，**期货、贵金属、外汇、板块不覆盖**（字段不足 → 自动切东财） |
+| 东财 ulist | `https://push2delay.eastmoney.com/api/qt/ulist.np/get?...&secids=<secid>` | 备用：与东财分时同 secid，字段 `f17 今开 / f15 最高 / f16 最低 / f18 昨收 / f5 成交量` |
 
 > **为什么只取 f51,f53,f56,f58 四个字段**：全字段版（`fields2=f51..f58`）行结构为
 > `时间,开盘,现价,最高,最低,成交量,成交额,均价`，**现价在 `f[2]`、`f[1]` 是该分钟开盘价**——
 > 若按「现价在 f[1]」解析会把每分钟的开盘价当成现价（开盘价≈上一分钟收盘价，整条曲线滞后 1 分钟，
 > 最新价落后一档；道琼斯实测单分钟开盘/现价可差数百点）。精简版把现价对齐到 `f[1]`，解析无歧义。
 > 成交额（f57）分时侧无消费方，一并省去以减小 8s 自动刷新带宽。
-| 腾讯分时 | `https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=<code>` | A股、港股 | 兜底；`data.<code>.data.data` 每行 `[HHmm,现价,成交量,成交额]`，均价由累计额/累计量推算 |
-| Yahoo 1分钟 | `https://query1.finance.yahoo.com/v8/finance/chart/<symbol>?range=1d&interval=1m` | 东财/腾讯分时均不覆盖的标的：KOSDAQ、VIX | 兜底源（**中国大陆访问被墙，仅作大陆外/兜底**）；`chart.result[0].timestamp` + `indicators.quote[0]`，昨收取 `meta.chartPreviousClose` |
 
-> 取数优先级 **东财 → 腾讯 → Yahoo**，与首页「新浪 → 腾讯 → 东财」兜底链同一思路。
+> 取数优先级**由每个 code 配置**（`priority` / `quotePriority`，见 2.2），缺省
+> 「腾讯 → 东财 → Yahoo」；任一源请求失败 / 无数据 / 有效点数不足时**自动切下一个源**。
 > 注：新浪仅有行情报价（`hq.sinajs.cn`），无公开分时接口；新浪 K 线接口也仅限 A 股，故未纳入。
 
 ### 1.3 代码结构（新增/改动文件）
 
 | 文件 | 说明 |
 | --- | --- |
-| `config/minute.ts` **新增** | 首页卡片 code → `{em?, tc?, yahoo?, note?}` 映射表（唯一需要维护的地方）+ `hasMinuteSources` / `resolveMinuteSources` |
+| `config/minute.ts` **新增** | 卡片 code → `{em?, tc?, yahoo?, emProxies?, emCross?, note?, priority?, quotePriority?}` 映射表（唯一需要维护的地方）+ `hasMinuteSources` / `resolveMinuteSources` / **`resolveMinutePlan`** / **`resolveMinuteQuotePlan`**（多源优先级，见 2.1） |
 | `api/minute.ts` **新增** | 三个单接口封装（`fetchEastmoneyMinute` / `fetchTencentMinute` / `fetchYahooMinute`），失败降级 null，复用 `api/external.ts` 的 `requestExternal` |
-| `utils/minute-parser.ts` **新增** | 三个源响应的纯解析函数（含均价推算、时间归一 `shortTime`） |
-| `utils/minute.ts` **新增** | `fetchMinuteData(code)` 多源兜底链，返回 `{preClose, points, source, sourceLabel, note}`；`mergeMinuteQuoteInfo` 合并 ulist 报价与分时推算值（基础信息） |
-| `api/quote.ts` **改** | 新增 `fetchEastmoneyUlistQuote(secid)`（ulist.np/get，今开/最高/最低/昨收/成交量，与分时同 secid）；`EM_AVG_PRICE_FIELDS` 更名 `EM_ULIST_FIELDS` 共用 |
+| `utils/minute-parser.ts` **新增** | 三个源响应的纯解析函数（含均价推算、时间归一 `shortTime`）；腾讯行为**累计量差分**成每分钟（见 2.1 实测矩阵） |
+| `utils/minute.ts` **新增** | **按优先级从前到后的执行器** `fetchMinuteData(code)`（命中即返回、失败自动切下一个 + 5 分钟源级熔断 + 时段网格裁剪）、**基础信息多源** `fetchMinuteBasicQuote(code)`、`mergeMinuteQuoteInfo` 合并报价与分时推算值 |
+| `api/quote.ts` **改** | 新增 `fetchEastmoneyUlistQuote(secid)`（ulist.np/get，今开/最高/最低/昨收/成交量，与分时同 secid）；**新增 `fetchTencentQuote(code)`**（qt.gtimg.cn 快照，基础信息缺省首选）；`EM_AVG_PRICE_FIELDS` 更名 `EM_ULIST_FIELDS` 共用 |
+| `utils/quote-parser.ts` **改** | `tencentQuoteOf` 字段索引按 2026-09-17 实测校正（最高 `[33]` / 最低 `[34]` / 成交量 `[36]` / 成交额 `[37]`） |
 | `components/minute-chart/*` **新增** | 分时图组件（canvas 2d：价格线 + 均价线 + 昨收虚线 + 成交量柱，深浅主题） |
 | `pages/minute/index.*` **新增** | 分时查看页（4 个文件，主题/刷新/加载态齐全） |
 | `types/stock.ts` **改** | 新增 `MinutePoint` / `MinuteResult` 类型 |
@@ -73,34 +87,85 @@
 | --- | --- | --- | --- | --- |
 | 全球·指数 | sh000001 / sz399001 / sz399006 / sh000688 | 1.000001 / 0.399001 / 0.399006 / 1.000688 | sh000001 / sz399001 / sz399006 / sh000688 | — |
 | 全球·指数 | AVG（A股平均股价） | 47.800005（东财官方平均股价指数） | — | — |
-| 全球·指数 | usDJI / usINX / usIXIC | 100.DJIA / 100.SPX / 100.NDX | — | — |
-| 全球·宏观 | BRT / UDI / TLT | 112.B00Y / 100.UDI / 105.TLT | — | — |
-| 全球·宏观 | GC / SI / HG / NG | 122.XAU / 122.XAG / 101.HG00Y / 102.NG00Y | — | — |
+| 全球·指数 | usDJI / usINX / usIXIC | 100.DJIA / 100.SPX / 100.NDX | **usDJI / usINX / usIXIC**（腾讯分时只回 1 点 → 由点数门限自动落到东财） | — |
+| 全球·宏观 | BRT / UDI / TLT | 112.B00Y / 100.UDI / 105.TLT | TLT → **usTLT**（同上，实测腾讯美股分时只 1 点，实际命中东财） | — |
+| 全球·宏观 | GC / SI / HG / NG | 122.XAU / 122.XAG / 101.HG00Y / 102.NG00Y | —（腾讯不覆盖期货/现货贵金属） | — |
 | 全球·宏观 | SOX | 251.SOX | — | — |
-| 全球·宏观 | VIX | —（东财无此标的） | — | ^VIX |
+| 全球·宏观 | VIX | — | — | —（**无分时源**：仅 Yahoo ^VIX 且大陆被墙，已有意不配） |
 | 全球·板块 | BK1134 … BK1301（30个，含 2026-09-07 扩充、09-08 收敛保留 6 项） | 90.BKxxxx | — | — |
-| 全球·板块（美股时段） | us-BK1134 … us-BK1301（30个） | 代理股分时均值合成（emProxies，见 2.1） | — | — |
-| 日韩·指数 | KS11 / N225 / VNINDEX / SENSEX | 100.KS11 / 100.N225 / 100.VNINDEX / 100.SENSEX | — | — |
-| 日韩·指数 | KQ11 | —（东财无） | — | ^KQ11 |
-| 日韩·指数 | TPX | 1.513800（东证ETF代理） | sh513800 | — |
+| 全球·板块（美股时段） | us-BK1134 … us-BK1301（30个） | 代理股分时均值合成（emProxies，见 2.2） | — | — |
+| 日韩·指数 | KS11 / N225 / VNINDEX / SENSEX | 100.KS11 / 100.N225 / 100.VNINDEX / 100.SENSEX | —（腾讯对日韩只回收盘 1 点） | — |
+| 日韩·指数 | KQ11 | — | — | —（**无分时源**，已有意不配） |
+| 日韩·指数 | TPX | — | — | —（**无分时源**：东财/腾讯/Yahoo 均无东证指数分时，已有意不配） |
 | 日韩·个股 | 005930…051910（韩8） | 177.005930 … 177.051910 | — | <code>.KS（兜底） |
 | 日韩·个股 | 8035…7974（日8） | 176.8035 … 176.7974 | — | <code>.T（兜底） |
 | 日韩·汇率 | USDKRW / USDJPY | 119.USDKRW / 119.USDJPY | — | KRW=X / JPY=X（兜底） |
-| 日韩·汇率 | CNYKRW / CNYJPY / USDCNY | CNYJPY→133.CNHJPY、USDCNY→133.USDCNH（离岸）；CNYKRW→119.USDKRW ÷ 133.USDCNH（交叉合成） | — | CNYKRW=X / CNYJPY=X / CNY=X（兜底） |
-| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 122.XAU 现货 XAUUSD；SILVER | 113.aum / 113.agm | 122.XAU（外盘卡）/ 122.XAG | — |
+| 日韩·汇率 | CNYKRW / CNYJPY / USDCNY | CNYJPY→133.CNHJPY、USDCNY→133.USDCNH（离岸）；CNYKRW→119.USDKRW ÷ 133.USDCNH（交叉合成，priority 显式排在 Yahoo 前） | — | CNYKRW=X / CNYJPY=X / CNY=X（兜底） |
+| 有色·金银 | GOLD（内盘卡）→ 113.aum 沪金主连；GOLD-US（外盘卡）→ 122.XAU 现货 XAUUSD；SILVER | 113.aum / 113.agm | —（腾讯不覆盖期货/现货贵金属） | — |
 | 有色·工业金属 | COPPER / ALUMINUM / ZINC / NICKEL / TIN | 113.cum / 113.alm / 113.znm / 113.nim / 113.snm | — | — |
 | 有色·其他金属 | TUNGSTEN / MOLY / GERMANIUM / INDIUM / ANTIMONY | 1.600549 / 1.603993 / 0.002428 / 1.600961 / 1.601020 | sh600549 / sh603993 / sz002428 / sh600961 / sh601020 | — |
+| 美股个股（未登记兜底） | 105.NVDA / 106.BRK_B … | `<secid>` 原样 | **usNVDA / usBRK.B**（secid → 腾讯代码，下划线还原为点；实测美股分时只 1 点，实际命中东财） | — |
 
 > 说明：
+> - 「腾讯」列**非空**表示该 code 的计划里含腾讯源且排在东财之前（缺省 priority）；实测腾讯美股/日韩分时只返回最新 1 点，
+>   会被 `MIN_MINUTE_POINTS`（2）门限拒绝并**自动切到东财**（同时记录 5 分钟源级熔断，避免每轮白打一次请求）。
 > - 金属「主连」= 东财 SHFE 连续合约（`<品种>m`），与首页国内价（`nf_*`）同口径，分时含夜盘；钨/钼/锗/铟/锑无现货/期货分时，取对应 A 股上市公司（与首页 tc 兜底同标的）。
-> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**，2026-08-20 起改为主源）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。KOSDAQ/VIX 东财无分时，仍仅 Yahoo。CNYKRW/CNYJPY/USDCNY 改用东财系主源：USDCNY→133.USDCNH（卡片已同步改为离岸、与分时同 secid，见 tabbar-api.md，无价差）、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
+> - 韩股/日股/汇率：东财分时（push2delay trends2）已实测覆盖（韩股市场号 **177**、日股 **176**、USDKRW/USDJPY **119**、离岸汇率 **133**）；Yahoo 1分钟保留为兜底（大陆访问 Yahoo 被墙，见第三节）。CNYKRW/CNYJPY/USDCNY 走东财系：USDCNY→133.USDCNH（卡片已同步改为离岸、与分时同 secid，见 tabbar-api.md，无价差）、CNYJPY→133.CNHJPY（离岸，与卡片在岸价略有价差，页面有 note 说明）；CNYKRW 东财无直盘，按「119.USDKRW ÷ 133.USDCNH」逐分钟交叉合成（合成序列无成交量/均价）。
 > - 市场号更正：旧配置 `116.005930`（韩股）/ `151.8035`（日股）在 delay 主机返回 `data:null`，并非「东财不覆盖」，而是**市场号错误**（116=港股、151 非日股）；东财真实市场号为韩股 177、日股 176（`searchapi.eastmoney.com/api/suggest/get` 实测确认）。
-> - TOPIX（东证指数）：东财 / 腾讯 / Yahoo 均无东证指数本身分时（Yahoo `^TPX` 实测为空），用「日本东证指数ETF南方(513800)」（跟踪 TOPIX，同东财/腾讯家族）代理，页面展示说明。
+> - **无分时源的标的（VIX / KQ11 / TPX）已有意不配**：卡片不显示「分时」角标、点击给提示（见 `utils/market-page-factory.ts` onMetricTap），避免大陆用户点进去只看空图。
 > - 金店金价（金投网零售价）**无分时**，不做角标、点击提示。
 > - 外汇等无成交量的标的：东财 trends2 的均价字段恒为 `0.00000`，解析器将其归一为 `null`（不画均价线、不参与纵轴计算）；价格为 `0` 的分钟行直接跳过——否则 `|0-昨收|` 会把纵轴对称撑到异常范围（实测复现 -1.88 ~ 48.87）。
 > - 现货贵金属 XAUUSD/XAGUSD（市场 122）：东财对非期货标的**冗余返回** `preSettlement` 字段且恒等于 `preClose`（非真实结算价）——`utils/minute.ts` 的 `mergeMinuteQuoteInfo` 按「`preSettlement ≠ preClose` 才算期货」判定，现货正确标注「昨收」；仅真期货（如沪银主连 16611 ≠ 昨收 16771）才用「昨结算」基准。
 
-### 2.1 会话切换（卡片展示什么，点进去就看什么）
+### 2.1 多源优先级（每个 code 可配，2026-09-17 改造）
+
+分时页的**分时序列**与**基础信息报价**各自是一条「按优先级从前到后尝试」的链，配置在
+`config/minute.ts` 的 `MINUTE_SOURCES[code]`：
+
+```ts
+sh000001: { tc: 'sh000001', em: '1.000001' }           // 缺省优先级：腾讯 → 东财
+us-BK1134: { emProxies: [...] }                        // 只有合成源 → 计划里就一步
+GOLD: { em: '113.aum' }                                // 腾讯不覆盖期货 → 只有东财
+CNYKRW: { emCross: {...}, yahoo: 'CNYKRW=X',
+          priority: ['emCross', 'yahoo'] }             // 按 code 覆盖顺序（合成优先于 Yahoo）
+```
+
+| 配置字段 | 作用 | 缺省 |
+| --- | --- | --- |
+| `priority` | 分时序列源顺序（`tencent / eastmoney / yahoo / emProxies / emCross`） | `DEFAULT_MINUTE_PRIORITY`：腾讯 → 东财 → Yahoo → 代理合成 → 交叉合成 |
+| `quotePriority` | 基础信息报价源顺序（`tencent` = qt.gtimg.cn 快照 / `eastmoney` = ulist） | `DEFAULT_MINUTE_QUOTE_PRIORITY`：腾讯 → 东财 |
+
+执行语义（`utils/minute.ts`）：
+
+1. `resolveMinutePlan(code)` / `resolveMinuteQuotePlan(code)` 把配置展开为**有序步骤**：
+   只包含该 code 真正配置了标识的源（没有 tc 的标的自然不会尝试腾讯）；
+2. `fetchMinuteData(code)` / `fetchMinuteBasicQuote(code)` 从前往后逐个尝试，
+   **命中即返回**；请求异常、空数据、有效点数 < `MIN_MINUTE_POINTS`(2)、报价无效（价格 ≤ 0 / 字段不足，
+   如腾讯外汇快照不足 35 字段）都视为失败，继续下一个源；
+3. **源级失败熔断**：某 code 的某个源失败后 5 分钟内不再重试（分时页 8s 轮询 + 微信 10 并发上限，
+   避免必失败的源每轮白打请求），到期自动重试；用户下拉刷新会清空熔断（`resetMinuteSourceBreaker`）；
+4. **时段网格裁剪**（`trimToMinuteGrid`）：腾讯 A股个股分时在 15:00 之后还挂着 15:06–15:30
+   盘后固定价格交易段（实测贵州茅台多 25 点），若不裁剪，图表 / 海报的铺格逻辑
+   （`draw.ts buildPadded`，任一点落到网格外即整条序列回退「拉伸绘制」）会让 A股的午休留白与真实时段轴失效；
+5. 命中源写入 `MinuteFetchResult.sourceLabel`（页面「数据来源」标签），便于线上核对走的是哪个源。
+
+**新增一个源需要改的地方**：① `MinuteSourceKind` 加 kind ② `api/` 加取数函数
+③ `utils/minute.ts` 的 `runPlanStep` 加分支 ④（可选）把新 kind 加进默认优先级。
+
+**实测覆盖矩阵（2026-09-17，`curl` 直连）**：
+
+| 标的类 | 腾讯分时 | 腾讯快照（基础信息） | 实际命中 |
+| --- | --- | --- | --- |
+| A股指数 / A股个股（sh/sz/bj） | ✅ 242 点（09:30–15:00，含个股 15:06–15:30 尾段→被裁剪） | ✅ 今开/最高/最低/量齐全 | **腾讯 → 腾讯**（价格/均价/每分钟量与东财逐分钟一致） |
+| 港股（hk） | ✅ 多点 | ✅ 齐全 | 腾讯 → 腾讯 |
+| 美股指数 / 个股 / ETF（us\*） | ❌ 只回最新 1 点 | ✅ 齐全 | 分时：**东财**（腾讯被点数门限拒绝）；基础信息：**腾讯** |
+| 日韩个股（kr\*/jp\*） | ❌ 只回收盘 1 点 | ✅ 齐全（未配 tc） | 东财 → 东财 |
+| 期货（113.xm）/ 现货贵金属（122.X）/ COMEX（101./102./112.） | ❌ 不覆盖 | ❌ 无 | 东财 |
+| 板块（90.BKxxxx） | ❌ 不覆盖 | ❌ 无 | 东财 |
+| 外汇（119./133.） | ❌ 不覆盖 | ❌ 字段不足（wh\* 布局不同） | 东财 |
+| 交叉汇率 / 美股代理合成 | — | ❌ 无单一 secid | 东财合成 |
+
+### 2.2 会话切换（卡片展示什么，点进去就看什么）
 
 首页卡片的分时取数代码随会话切换，保证「卡片展示的数据口径」与「点进去的分时口径」一致：
 

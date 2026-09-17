@@ -1,6 +1,15 @@
 /**
- * 当日分时多源兜底链（东财 → 腾讯 → Yahoo），与首页行情「新浪 → 腾讯 → 东财」同思路。
- * 页面层只依赖本模块：传入首页卡片 code，返回归一化的分时数据与命中的源。
+ * 当日分时多源执行器：**按 config/minute.ts 的每 code 优先级从前到后依次尝试**
+ * （缺省 腾讯分时 → 东财分时 → Yahoo，见 DEFAULT_MINUTE_PRIORITY），
+ * 任一源命中即返回；请求失败 / 无数据 / 有效点数不足 时自动切下一个源。
+ * 页面层只依赖本模块：传入卡片 code，返回归一化的分时数据与命中的源。
+ *
+ * 基础信息报价（今开/最高/最低/昨收/成交量）走独立的 quotePriority 链
+ * （缺省 腾讯快照 qt.gtimg.cn → 东财 ulist），见 fetchMinuteBasicQuote。
+ *
+ * 源级失败熔断：某 code 的某个源失败后，短时间内不再重复尝试（分时页 8s 轮询 +
+ * 微信 10 并发上限，避免一个必失败的源每轮都白打一次请求）；熔断到期后自动重试，
+ * 因此「数据源恢复」不需要重启小程序。
  *
  * 美股时段行业板块（us-BKxxxx）：走「代理股分时均值合成」——
  * 卡片展示的正是美股代理股涨跌幅均值，分时同样对每只代理取东财 trends2
@@ -9,10 +18,23 @@
  */
 
 import type { MinutePoint, MinuteResult } from '../types/stock'
-import type { EastmoneyUlistQuote } from '../types/quote'
+import type { EastmoneyUlistQuote, TencentQuote } from '../types/quote'
 import { minuteApi } from '../api/minute'
-import { US_PROXY_NAMES, resolveMinuteSources, type MinuteSources } from '../config/minute'
+import { fetchEastmoneyUlistQuote, fetchTencentQuote } from '../api/quote'
+import {
+  US_PROXY_NAMES,
+  resolveMinutePlan,
+  resolveMinuteQuotePlan,
+  type MinutePlanStep,
+  type MinuteSources,
+} from '../config/minute'
 import type { MinuteSessionKind } from './minute-session'
+import {
+  buildMinuteGrid,
+  minuteToSlot,
+  parseMinuteOfDay,
+  resolveMinuteSession,
+} from './minute-session'
 import { bareCode } from './quote-consensus'
 import {
   buildCompositePoints,
@@ -34,6 +56,15 @@ const SOURCE_LABELS: Record<MinuteFetchResult['source'], string> = {
   em: '东方财富分时',
   tc: '腾讯分时',
   yahoo: 'Yahoo 1分钟',
+}
+
+/** 分时源 kind → 归一化来源标记（合成类源均为东财口径合成，标记为 em） */
+const KIND_TO_SOURCE: Record<MinutePlanStep['kind'], MinuteFetchResult['source']> = {
+  tencent: 'tc',
+  eastmoney: 'em',
+  yahoo: 'yahoo',
+  emProxies: 'em',
+  emCross: 'em',
 }
 
 /** 代理股合成图的数据来源标签 */
@@ -69,6 +100,23 @@ export { hasMinuteSources } from '../config/minute'
 // 缺字段 / 无报价（代理合成、交叉汇率、Yahoo 兜底等无单一 secid）时回退分时推算
 // ---------------------------------------------------------------------------
 
+/**
+ * mergeMinuteQuoteInfo 消费的报价字段子集：腾讯快照（qt.gtimg.cn）与东财 ulist 都归一化成
+ * 这一组字段，因此基础信息取数可以按 quotePriority 在两者间无缝切换。
+ */
+export interface MinuteBasicQuoteFields {
+  /** 今开 */
+  open: number | null
+  /** 最高 */
+  high: number | null
+  /** 最低 */
+  low: number | null
+  /** 昨收 */
+  previousClose: number | null
+  /** 成交量（当日累计） */
+  volume: number | null
+}
+
 export interface MinuteQuoteInfo {
   /** 今开 */
   open: number | null
@@ -103,7 +151,7 @@ export interface MinuteQuoteInfo {
 export function mergeMinuteQuoteInfo(
   points: MinutePoint[],
   result: Pick<MinuteResult, 'preClose' | 'preSettlement'>,
-  quote: EastmoneyUlistQuote | null,
+  quote: MinuteBasicQuoteFields | null,
 ): MinuteQuoteInfo {
   const prices = points.map((p) => p.price).filter((v): v is number => Number.isFinite(v))
   const derivedOpen = points[0] && Number.isFinite(points[0].price) ? points[0].price : null
@@ -138,61 +186,236 @@ export function mergeMinuteQuoteInfo(
   }
 }
 
+// ---------------------------------------------------------------------------
+// 源级失败熔断（按 code + 源种类；避免必失败的源在 8s 轮询里反复白打请求）
+// ---------------------------------------------------------------------------
+
+/** 熔断时长：5 分钟。到期自动重试，因此上游恢复后最迟 5 分钟即自动回到首选源 */
+const BREAKER_TTL = 5 * 60 * 1000
+/** key = `${code}|${kind}` → 最近一次失败时间戳 */
+const sourceBreaker = new Map<string, number>()
+
+function breakerKey(code: string, kind: string): string {
+  return `${code}|${kind}`
+}
+
+function isBreakerOpen(code: string, kind: string, now = Date.now()): boolean {
+  const at = sourceBreaker.get(breakerKey(code, kind))
+  if (at === undefined) return false
+  if (now - at >= BREAKER_TTL) {
+    sourceBreaker.delete(breakerKey(code, kind))
+    return false
+  }
+  return true
+}
+
+function markSourceFailed(code: string, kind: string, now = Date.now()): void {
+  sourceBreaker.set(breakerKey(code, kind), now)
+}
+
+function markSourceOk(code: string, kind: string): void {
+  sourceBreaker.delete(breakerKey(code, kind))
+}
+
+/** 清空熔断记录（测试 / 用户主动下拉刷新强制重试全部源时调用） */
+export function resetMinuteSourceBreaker(): void {
+  sourceBreaker.clear()
+}
+
 /**
- * 依次尝试 东财 → 腾讯 → Yahoo 拉取当日分时，命中即返回。
- * 代理股合成源（emProxies）为独立分支：全部代理失败返回 null（由调用方展示错误/重试）。
- * 全部失败或该 code 无任何源时返回 null。
+ * 按 config/minute.ts 的每 code 优先级**从前到后**尝试：命中即返回，失败自动切下一个。
+ * 代理股合成源（emProxies）与交叉汇率合成（emCross）同为计划中的一步，失败继续尝试后续源。
+ * 全部源失败或该 code 无任何源时返回 null（调用方展示错误 / 重试）。
  */
 export async function fetchMinuteData(code: string): Promise<MinuteFetchResult | null> {
-  const sources = resolveMinuteSources(code)
-  if (!sources) return null
+  const plan = resolveMinutePlan(code)
+  if (!plan.steps.length) return null
+  // 时段（决定下面的网格裁剪）：A股固定 09:30-15:00，其余锚定首点
+  const session = resolveMinuteSession(code)
 
-  // 美股代理股分时均值合成（us-BKxxxx）
-  if (sources.emProxies?.length) {
-    const composite = await fetchCompositeMinute(sources.emProxies)
-    if (!composite) return null
-    return {
-      ...composite.result,
-      source: 'em',
-      sourceLabel: COMPOSITE_SOURCE_LABEL,
-      note: composite.note,
+  for (const step of plan.steps) {
+    // 熔断中的源直接跳过（记 debug 便于排查「为什么没走腾讯」）
+    if (isBreakerOpen(code, step.kind)) {
+      console.debug(`[minute] ${code} 跳过熔断中的源 ${step.kind}`)
+      continue
     }
-  }
-
-  // 交叉汇率合成（如 CNYKRW = 美元/韩元 ÷ 美元/离岸人民币，东财 119/133 大陆可访问）
-  if (sources.emCross) {
-    const cross = await fetchCrossMinute(sources.emCross)
-    if (!cross) return null
-    return {
-      ...cross,
-      source: 'em',
-      sourceLabel: CROSS_SOURCE_LABEL,
-      note: sources.note,
+    const hit = await runPlanStep(step, session, plan.note)
+    if (hit) {
+      markSourceOk(code, step.kind)
+      return hit
     }
-  }
-
-  const tries: Array<{ key: 'em' | 'tc' | 'yahoo'; run: () => Promise<MinuteResult | null> }> = []
-  if (sources.em) {
-    tries.push({
-      key: 'em',
-      run: () => minuteApi.eastmoney(sources.em as string),
-    })
-  }
-  if (sources.tc) {
-    tries.push({ key: 'tc', run: () => minuteApi.tencent(sources.tc as string) })
-  }
-  if (sources.yahoo) {
-    tries.push({ key: 'yahoo', run: () => minuteApi.yahoo(sources.yahoo as string) })
-  }
-
-  for (const { key, run } of tries) {
-    const result = await run()
-    // 点数过少视为无效（腾讯外股/空数据），继续下一源
-    if (result && result.points.length >= MIN_MINUTE_POINTS) {
-      return { ...result, source: key, sourceLabel: SOURCE_LABELS[key], note: sources.note }
-    }
+    markSourceFailed(code, step.kind)
   }
   return null
+}
+
+/**
+ * 裁掉落在交易时段网格之外的分钟点。
+ *
+ * 起因：腾讯 A股个股分时在 15:00 之后还挂着 15:06–15:30 的盘后固定价格交易段（实测贵州茅台
+ * 共 25 个点，价格恒为收盘价），东财只到 15:00。若不裁，quote-chart / 分享海报的铺格逻辑
+ * （draw.ts buildPadded：任一分钟落到网格外即整条序列回退「拉伸绘制」）会让 A股的午休留白与
+ * 真实时段轴全部失效，图被压成一条到尾的均分曲线。
+ *
+ * 时间格式不可解析（理论上合成源为完整时间戳）时原样保留，绝不因裁剪丢数据。
+ */
+export function trimToMinuteGrid(points: MinutePoint[], session: MinuteSessionKind): MinutePoint[] {
+  if (session === 'continuous' || !points.length) return points
+  const anchor = parseMinuteOfDay(points[0]?.time ?? '')
+  if (anchor === null) return points
+  const grid = buildMinuteGrid(session, anchor)
+  if (!grid) return points
+  const kept: MinutePoint[] = []
+  let dropped = false
+  for (const point of points) {
+    const minute = parseMinuteOfDay(point.time)
+    if (minute !== null && minuteToSlot(grid, minute) === null) {
+      dropped = true
+      continue
+    }
+    kept.push(point)
+  }
+  return dropped ? kept : points
+}
+
+/** 执行计划中的一步；失败（异常 / 空数据 / 有效点数不足）返回 null */
+async function runPlanStep(
+  step: MinutePlanStep,
+  session: MinuteSessionKind,
+  note?: string,
+): Promise<MinuteFetchResult | null> {
+  try {
+    if (step.kind === 'emProxies') {
+      const composite = await fetchCompositeMinute(step.proxies ?? [])
+      if (!composite) return null
+      const points = trimToMinuteGrid(composite.result.points, session)
+      if (points.length < MIN_MINUTE_POINTS) return null
+      return {
+        ...composite.result,
+        points,
+        source: KIND_TO_SOURCE.emProxies,
+        sourceLabel: COMPOSITE_SOURCE_LABEL,
+        note: composite.note,
+      }
+    }
+    if (step.kind === 'emCross') {
+      if (!step.cross) return null
+      const cross = await fetchCrossMinute(step.cross)
+      if (!cross) return null
+      const points = trimToMinuteGrid(cross.points, session)
+      if (points.length < MIN_MINUTE_POINTS) return null
+      return {
+        ...cross,
+        points,
+        source: KIND_TO_SOURCE.emCross,
+        sourceLabel: CROSS_SOURCE_LABEL,
+        note,
+      }
+    }
+
+    const result =
+      step.kind === 'tencent'
+        ? step.tc
+          ? await minuteApi.tencent(step.tc)
+          : null
+        : step.kind === 'eastmoney'
+          ? step.secid
+            ? await minuteApi.eastmoney(step.secid)
+            : null
+          : step.symbol
+            ? await minuteApi.yahoo(step.symbol)
+            : null
+    // 点数过少视为无效（腾讯境外股只返回收盘 1 点、空数据等），继续下一源
+    if (!result || result.points.length < MIN_MINUTE_POINTS) return null
+    const points = trimToMinuteGrid(result.points, session)
+    if (points.length < MIN_MINUTE_POINTS) return null
+    const source = KIND_TO_SOURCE[step.kind]
+    return { ...result, points, source, sourceLabel: SOURCE_LABELS[source], note }
+  } catch (error) {
+    console.warn(`[minute] 分时源 ${step.kind} 执行失败（${codeOf(step)}）:`, error)
+    return null
+  }
+}
+
+/** 计划步骤的可读标识（日志用） */
+function codeOf(step: MinutePlanStep): string {
+  return step.tc ?? step.secid ?? step.symbol ?? step.cross?.numerator ?? step.proxies?.[0] ?? '-'
+}
+
+// ---------------------------------------------------------------------------
+// 基础信息报价（今开 / 最高 / 最低 / 昨收 / 成交量）多源
+// 优先级由 config/minute.ts 的 quotePriority 决定，缺省「腾讯快照 → 东财 ulist」。
+// ---------------------------------------------------------------------------
+
+/** 归一化的基础信息报价（腾讯快照与东财 ulist 的同构视图，供 mergeMinuteQuoteInfo 消费） */
+export interface MinuteBasicQuote extends MinuteBasicQuoteFields {
+  /** 命中的源：腾讯快照 / 东财 ulist */
+  source: 'tencent' | 'eastmoney'
+  sourceLabel: string
+}
+
+const BASIC_QUOTE_LABELS: Record<MinuteBasicQuote['source'], string> = {
+  tencent: '腾讯行情',
+  eastmoney: '东方财富行情',
+}
+
+/**
+ * 依次尝试 quotePriority 中的源，返回第一个有效报价（全部失败返回 null，
+ * 调用方回退分时推算值）。腾讯快照与东财 ulist 都返回同一组字段，故对上层完全同构。
+ */
+export async function fetchMinuteBasicQuote(code: string): Promise<MinuteBasicQuote | null> {
+  const steps = resolveMinuteQuotePlan(code)
+  for (const step of steps) {
+    if (isBreakerOpen(code, `quote:${step.kind}`)) continue
+    let quote: MinuteBasicQuote | null = null
+    try {
+      quote =
+        step.kind === 'tencent'
+          ? step.tc
+            ? basicQuoteOfTencent(await fetchTencentQuote(step.tc))
+            : null
+          : step.secid
+            ? basicQuoteOfEastmoney(await fetchEastmoneyUlistQuote(step.secid))
+            : null
+    } catch (error) {
+      console.warn(`[minute] 基础信息报价源 ${step.kind} 失败（${code}）:`, error)
+      quote = null
+    }
+    if (quote) {
+      markSourceOk(code, `quote:${step.kind}`)
+      return quote
+    }
+    markSourceFailed(code, `quote:${step.kind}`)
+  }
+  return null
+}
+
+/** 腾讯快照 → 基础信息（字段已由 tencentQuoteOf 按实测索引归一化） */
+function basicQuoteOfTencent(quote: TencentQuote | null): MinuteBasicQuote | null {
+  if (!quote || !quote.valid || quote.latestPrice === null || quote.latestPrice <= 0) return null
+  return {
+    open: quote.open,
+    high: quote.high,
+    low: quote.low,
+    previousClose: quote.previousClose,
+    volume: quote.volume,
+    source: 'tencent',
+    sourceLabel: BASIC_QUOTE_LABELS.tencent,
+  }
+}
+
+/** 东财 ulist → 基础信息 */
+function basicQuoteOfEastmoney(quote: EastmoneyUlistQuote | null): MinuteBasicQuote | null {
+  if (!quote || quote.price === null || quote.price <= 0) return null
+  return {
+    open: quote.open,
+    high: quote.high,
+    low: quote.low,
+    previousClose: quote.previousClose,
+    volume: quote.volume,
+    source: 'eastmoney',
+    sourceLabel: BASIC_QUOTE_LABELS.eastmoney,
+  }
 }
 
 // ---------------------------------------------------------------------------

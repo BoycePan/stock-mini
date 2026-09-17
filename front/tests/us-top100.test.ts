@@ -239,9 +239,10 @@ test('EM_US_SECID_RE：仅匹配美股三大市场号 + 合法代码', () => {
   assert.equal(EM_US_SECID_RE.test('us-top100'), false)
 })
 
-test('resolveMinuteSources：美股 secid 兜底为东财分时源，未登记代码返回 null', () => {
-  assert.deepEqual(resolveMinuteSources('105.NVDA'), { em: '105.NVDA' })
-  assert.deepEqual(resolveMinuteSources('106.BRK_B'), { em: '106.BRK_B' })
+test('resolveMinuteSources：美股 secid 兜底为「东财 + 腾讯」双源，未登记代码返回 null', () => {
+  // 腾讯美股份时/快照代码为 us<代码> 且不带 .OQ/.N 后缀；BRK_B 的下划线需还原为点
+  assert.deepEqual(resolveMinuteSources('105.NVDA'), { em: '105.NVDA', tc: 'usNVDA' })
+  assert.deepEqual(resolveMinuteSources('106.BRK_B'), { em: '106.BRK_B', tc: 'usBRK.B' })
   assert.equal(resolveMinuteSources('NVDA'), null)
   assert.equal(resolveMinuteSources('us-top100'), null)
   assert.equal(resolveMinuteSources(''), null)

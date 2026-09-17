@@ -79,7 +79,8 @@ interface TencentMinuteBody {
   data?: Record<
     string,
     {
-      data?: { data?: string[][] }
+      /** 实测行情行为空格分隔的字符串（"HHmm 现价 累计成交量 [累计成交额]"），兼容二维数组形态 */
+      data?: { data?: Array<string | string[]> }
       qt?: Record<string, unknown[]>
     }
   >
@@ -89,7 +90,8 @@ export async function fetchTencentMinute(code: string): Promise<MinuteResult | n
   const url = `${HOSTS.tencentMinute}/appstock/app/minute/query?code=${encodeURIComponent(code)}`
   try {
     const body = await requestExternal<TencentMinuteBody>(url, { timeout: 10000 })
-    return parseTencentMinuteNode(body?.data?.[code])
+    // 传入 code：解析器需按市场判定成交量单位（A股为手、港股/美股为股）
+    return parseTencentMinuteNode(body?.data?.[code], code)
   } catch (error) {
     console.warn(`[minute] 腾讯分时失败 ${code}:`, error)
     return null

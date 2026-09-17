@@ -1,13 +1,13 @@
 import { rootStore } from '../../../stores/root.store'
 import { bindTheme, unbindTheme } from '../../../utils/theme'
 import { startAutoRefresh, stopAutoRefresh } from '../../../utils/auto-refresh'
-import { fetchEastmoneyUlistQuote } from '../../../api/quote'
 import { hasKlineSources } from '../../../config/kline'
-import { resolveMinuteSources } from '../../../config/minute'
 import {
+  fetchMinuteBasicQuote,
   fetchMinuteData,
   hasMinuteSources,
   mergeMinuteQuoteInfo,
+  resetMinuteSourceBreaker,
   sparseVolumeNote,
   type MinuteQuoteInfo,
 } from '../../../utils/minute'
@@ -270,14 +270,16 @@ Page({
   },
   async onPullDownRefresh() {
     try {
-      // 下拉刷新：强制取最新（清 K 线缓存 + 忽略新鲜度门闩）
+      // 下拉刷新：强制取最新（清 K 线缓存 + 清源级失败熔断 + 忽略新鲜度门闩）
+      // 清熔断让用户主动刷新时重新按优先级从头尝试（如刚恢复的腾讯源不必再等 5 分钟）
       clearKlineCache(this.data.mcode || this.data.code)
+      resetMinuteSourceBreaker()
       await this.loadData({ force: true })
     } finally {
       wx.stopPullDownRefresh()
     }
   },
-  /** 各周期可用性：分时（东财/腾讯/Yahoo）、日/周/月/年 K（腾讯/新浪） */
+  /** 各周期可用性：分时（按 code 优先级：腾讯 → 东财 → Yahoo）、日/周/月/年 K（腾讯/新浪） */
   buildTabs(mcode: string): TabItem[] {
     const klineAvailable = hasKlineSources(mcode)
     const minuteAvailable = hasMinuteSources(mcode)
@@ -362,11 +364,11 @@ Page({
     })
     try {
       const code = this.data.mcode || this.data.code
-      const sources = resolveMinuteSources(code)
-      const emSecid = sources?.em ?? null
+      // 分时序列与基础信息各自按 config/minute.ts 的每 code 优先级取数（缺省 腾讯 → 东财）：
+      // 两者并发发起，任一源失败自动切下一个源，互不阻塞。
       const [result, quote] = await Promise.all([
         fetchMinuteData(code),
-        emSecid ? fetchEastmoneyUlistQuote(emSecid) : Promise.resolve(null),
+        fetchMinuteBasicQuote(code),
       ])
       if (result) {
         const session = resolveMinuteSession(code)

@@ -14,7 +14,20 @@
  *   - emProxies 美股代理股分时均值合成（东财 trends2，每只代理归一化到昨收 100 后取均值，
  *     用于美股时段行业板块：卡片展示的正是代理股涨跌幅均值，合成图与之同口径）
  *
- * 取数优先级：em → tc → yahoo（与首页「新浪 → 腾讯 → 东财」兜底链同思路）。
+ * 取数优先级（**每个 code 可配**，从前到后依次尝试、请求失败/数据不合格自动切下一个源）：
+ *   ① 每个 code 用 `priority` 声明分时序列源的顺序，缺省 `DEFAULT_MINUTE_PRIORITY`
+ *      = 腾讯分时 → 东财分时 → Yahoo（腾讯可用优先用腾讯，东财作为备用方案）；
+ *   ② 基础信息报价（今开/最高/最低/昨收/成交量）用 `quotePriority` 声明顺序，缺省
+ *      `DEFAULT_MINUTE_QUOTE_PRIORITY` = 腾讯快照（qt.gtimg.cn）→ 东财 ulist；
+ *   ③ 只声明了标识（tc / em / yahoo）的源才会进入计划，未配置的源自动跳过——
+ *      如期货/商品/外汇/板块没有腾讯代码，计划里就只有东财。
+ *
+ * 腾讯可用性实测（2026-09-17，见 docs/minute-api.md「腾讯覆盖实测」）：
+ *   - 腾讯分时（web.ifzq.gtimg.cn/appstock/app/minute/query）覆盖 A股指数/个股、港股、
+ *     美股指数与个股（腾讯代码 `usDJI` / `usNVDA`，**不带 .OQ/.N 后缀**）；日韩股只返回收盘 1 点、
+ *     期货/商品/外汇/板块不覆盖 → 这些标的的配置里不写 tc，计划自然以东财为唯一源。
+ *   - 腾讯快照（qt.gtimg.cn/q=<code>）字段布局 [5]今开 [33]最高 [34]最低 [36]成交量 [4]昨收，
+ *     覆盖 A股/港股/日韩股/美股/美股指数；期货、贵金属、外汇、板块不覆盖（返回空或字段不足）。
  * 每个 secid / 代码均已实测可拿到当日分时数据（验证矩阵见 docs/minute-api.md「验证结果」）。
  *
  * 会话随卡片口径切换（见 api/market.ts）：
@@ -31,7 +44,7 @@ import { INDUSTRY_BOARDS } from './tabbar'
 export interface MinuteSources {
   /** 东财分时 secid（trends2/get，如 1.000001 / 113.aum / 90.BK1134） */
   em?: string
-  /** 腾讯分时行情代码（如 sh000001 / sh600549，A股/港股） */
+  /** 腾讯分时行情代码（如 sh000001 / usNVDA / hk00700，A股/港股/美股） */
   tc?: string
   /** Yahoo 1分钟 符号（如 ^VIX / 005930.KS / CNYKRW=X） */
   yahoo?: string
@@ -48,6 +61,82 @@ export interface MinuteSources {
   emCross?: { numerator: string; denominator: string }
   /** 展示提示（如 TOPIX 用 ETF 代理时说明图表标的），有值时在分时页面板标题下展示 */
   note?: string
+  /**
+   * 分时序列源优先级（从前到后依次尝试，命中即返回；失败/点数不足自动切下一个）。
+   * 缺省 DEFAULT_MINUTE_PRIORITY（腾讯 → 东财 → Yahoo）。
+   * 只有本条目实际配置了标识的源才会进入执行计划：
+   *   tencent 需 tc、eastmoney 需 em、yahoo 需 yahoo、emProxies / emCross 自成一路。
+   * 例：只想用东财并保留 Yahoo 兜底 → `priority: ['eastmoney', 'yahoo']`。
+   */
+  priority?: MinuteSourceKind[]
+  /**
+   * 基础信息报价源优先级（分时页「今开 / 最高 / 最低 / 昨收 / 成交量」）：
+   *   tencent   = 腾讯快照 qt.gtimg.cn（需 tc，字段完整时首选，与卡片报价同厂商）
+   *   eastmoney = 东财 ulist.np/get（需 em，与东财分时同 secid）
+   * 缺省 DEFAULT_MINUTE_QUOTE_PRIORITY（腾讯 → 东财）；某个源缺标识或返回无效时自动切下一个。
+   */
+  quotePriority?: MinuteQuoteKind[]
+}
+
+// ---------------------------------------------------------------------------
+// 多源优先级框架（分时序列 + 基础信息报价）
+//
+// 设计要点：配置只声明「标识 + 顺序」，执行层按顺序逐个尝试，任一源成功即停；
+// 失败（请求异常 / 无数据 / 有效点数不足 / 报价字段无效）自动落到下一个源。
+// 后期新增源只需：① 加一个 kind ② 在 api 层实现取数 ③ 在 utils/minute.ts 的执行器里登记。
+// ---------------------------------------------------------------------------
+
+/** 分时序列源种类 */
+export type MinuteSourceKind = 'tencent' | 'eastmoney' | 'yahoo' | 'emProxies' | 'emCross'
+
+/** 基础信息报价源种类 */
+export type MinuteQuoteKind = 'tencent' | 'eastmoney'
+
+/**
+ * 默认分时序列优先级：腾讯分时 → 东财分时 → Yahoo → 代理合成 → 交叉合成。
+ * 腾讯可用时优先腾讯（与卡片报价同厂商），东财作为失败时的自动备用方案。
+ * 合成源（emProxies / emCross）排在最后：它们自成一路（配置里通常只有这一个标识），
+ * 只有既配了普通源、又配了合成源的标的才会体现顺序差异，需要时用 priority 显式覆盖。
+ */
+export const DEFAULT_MINUTE_PRIORITY: readonly MinuteSourceKind[] = [
+  'tencent',
+  'eastmoney',
+  'yahoo',
+  'emProxies',
+  'emCross',
+]
+
+/** 默认基础信息报价优先级：腾讯快照 qt.gtimg.cn → 东财 ulist */
+export const DEFAULT_MINUTE_QUOTE_PRIORITY: readonly MinuteQuoteKind[] = ['tencent', 'eastmoney']
+
+/** 一个已解析出的分时执行步骤（只含该源需要的入参） */
+export interface MinutePlanStep {
+  kind: MinuteSourceKind
+  /** 腾讯分时代码（kind=tencent） */
+  tc?: string
+  /** 东财 secid（kind=eastmoney） */
+  secid?: string
+  /** Yahoo 符号（kind=yahoo） */
+  symbol?: string
+  /** 代理股 secid 数组（kind=emProxies） */
+  proxies?: string[]
+  /** 交叉汇率两腿（kind=emCross） */
+  cross?: { numerator: string; denominator: string }
+}
+
+/** 分时执行计划：有序步骤 + 展示提示 */
+export interface MinutePlan {
+  steps: MinutePlanStep[]
+  note?: string
+}
+
+/** 基础信息报价执行步骤 */
+export interface MinuteQuotePlanStep {
+  kind: MinuteQuoteKind
+  /** 腾讯行情代码（kind=tencent） */
+  tc?: string
+  /** 东财 secid（kind=eastmoney） */
+  secid?: string
 }
 
 /**
@@ -177,9 +266,13 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   sh000688: { em: '1.000688', tc: 'sh000688' }, // 科创50
   // A股平均股价：东财官方平均股价指数（市场号 47），与卡片报价同 secid，见 api/market.ts
   AVG: { em: '47.800005' },
-  usDJI: { em: '100.DJIA' }, // 道琼斯工业（东财指数）
-  usINX: { em: '100.SPX' }, // 标普500（S&P 500 指数，东财分时；与卡片 usINX 同口径）
-  usIXIC: { em: '100.NDX' }, // 纳斯达克（Nasdaq Composite 指数，东财 secid 用 NDX；与卡片 usIXIC 同口径）
+  // 美股三大指数：腾讯分时（web.ifzq.gtimg.cn）与东财分时（push2delay trends2）双源，
+  // 按默认优先级「腾讯 → 东财」从前到后尝试——腾讯代码 usDJI/usINX/usIXIC **不带 .OQ/.N 后缀**
+  // （实测带后缀返回 0 价无效数据），腾讯失败（如美股盘前/休市只返回 1 点、被点数门限拒绝）时
+  // 自动切到东财 100.DJIA/100.SPX/100.NDX。
+  usDJI: { tc: 'usDJI', em: '100.DJIA' }, // 道琼斯工业
+  usINX: { tc: 'usINX', em: '100.SPX' }, // 标普500（S&P 500 指数，与卡片 usINX 同口径）
+  usIXIC: { tc: 'usIXIC', em: '100.NDX' }, // 纳斯达克（Nasdaq Composite；与卡片 usIXIC 同口径）
 
   // -------------------------------------------------------------------------
   // 全球页 · 宏观经济
@@ -188,7 +281,7 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   // 恐慌指数 VIX：刻意不配置分时源（仅 Yahoo ^VIX 有分时但大陆被墙），
   // 卡片不显示「分时」角标，点击给出「该指标暂无分时数据」提示。
   UDI: { em: '100.UDI' }, // 美元指数（24h 行情，点较多）
-  TLT: { em: '105.TLT' }, // 美债长债
+  TLT: { tc: 'usTLT', em: '105.TLT' }, // 美债长债（腾讯 usTLT + 东财 105.TLT 双源，腾讯优先）
   GC: { em: '122.XAU' }, // 伦敦金 XAUUSD（现货黄金/美元，东财市场 122；与卡片同源）
   SI: { em: '122.XAG' }, // 伦敦银 XAGUSD（现货白银/美元，东财市场 122；与卡片同源）
   HG: { em: '101.HG00Y' }, // 铜（COMEX）
@@ -273,6 +366,9 @@ export const MINUTE_SOURCES: Record<string, MinuteSources> = {
   CNYKRW: {
     emCross: { numerator: '119.USDKRW', denominator: '133.USDCNH' },
     yahoo: 'CNYKRW=X',
+    // 交叉合成必须排在 Yahoo 之前：note 文案说明的是「按合成公式绘制」的口径，
+    // 若先命中 Yahoo 的直盘序列会与文案自相矛盾（这正是 priority 支持每 code 覆盖的场景）。
+    priority: ['emCross', 'yahoo'],
     note: '人民币/韩元无直盘分时，此图按「美元/韩元 ÷ 美元/离岸人民币」合成（离岸口径）',
   },
   CNYJPY: {
@@ -379,8 +475,8 @@ export function hasMinuteSources(code: string): boolean {
 
 /**
  * 取某卡片的分时源（无源返回 null）。
- * 美股个股 secid 未在 MINUTE_SOURCES 登记时直接按东财分时兜底（见 EM_US_SECID_RE）；
- * A股个股（sh/sz/bj 前缀 code 或 1./0. secid）未登记时按东财 → 腾讯双源兜底。
+ * 美股个股 secid 未在 MINUTE_SOURCES 登记时按东财 + 腾讯双源兜底（见 EM_US_SECID_RE）；
+ * A股个股（sh/sz/bj 前缀 code 或 1./0. secid）未登记时按东财 + 腾讯双源兜底。
  */
 export function resolveMinuteSources(code: string): MinuteSources | null {
   // 查表必须用自有属性判定：code 可能来自 URL query（分享链接可构造），
@@ -390,8 +486,80 @@ export function resolveMinuteSources(code: string): MinuteSources | null {
   if (Object.prototype.hasOwnProperty.call(MINUTE_SOURCES, code)) {
     return MINUTE_SOURCES[code] ?? null
   }
-  if (EM_US_SECID_RE.test(code)) return { em: code }
+  if (EM_US_SECID_RE.test(code)) return { em: code, tc: usTcCodeOfSecid(code) }
   if (TC_ASHARE_RE.test(code)) return { em: ashareEmSecid(code), tc: code }
   if (EM_ASHARE_SECID_RE.test(code)) return { em: code, tc: ashareTcCode(code.slice(2)) }
   return null
+}
+
+/**
+ * 东财美股 secid → 腾讯行情代码：`105.NVDA` → `usNVDA`、`106.BRK_B` → `usBRK.B`。
+ * 实测（2026-09-17）：腾讯美股份时/快照代码为 `us<股票代码>` 且**不带 .OQ/.N 后缀**
+ * （带后缀返回 0 价），下划线需还原为点（BRK_B → BRK.B）；个别未收录代码（如 usBRKB）
+ * 会取不到数据，由执行层的失败熔断跳过，不再重复请求。
+ * 注意与 K 线的差异：腾讯 K 线（config/kline.ts）的美股代码带 .OQ/.N/.A 后缀并按候选探测。
+ */
+export function usTcCodeOfSecid(secid: string): string {
+  const ticker = secid.includes('.') ? secid.slice(secid.indexOf('.') + 1) : secid
+  return `us${ticker.replace(/_/g, '.')}`
+}
+
+/** 优先级去重合并：配置值缺失时用默认值；返回的每个 kind 最多出现一次 */
+function orderKinds<T extends string>(configured: T[] | undefined, fallback: readonly T[]): T[] {
+  const source = configured?.length ? configured : fallback
+  const seen = new Set<T>()
+  const ordered: T[] = []
+  for (const kind of source) {
+    if (seen.has(kind)) continue
+    seen.add(kind)
+    ordered.push(kind)
+  }
+  return ordered
+}
+
+/**
+ * 解析某 code 的**分时序列执行计划**：按 priority（缺省 DEFAULT_MINUTE_PRIORITY）从前到后
+ * 展开为有序步骤；只有配置了对应标识的源才会进入计划（未配置＝该源不可用，自动跳过）。
+ * 无任何可用源时返回空 steps（调用方按「暂不支持分时图」处理）。
+ */
+export function resolveMinutePlan(code: string): MinutePlan {
+  const sources = resolveMinuteSources(code)
+  if (!sources) return { steps: [] }
+  const steps: MinutePlanStep[] = []
+  for (const kind of orderKinds(sources.priority, DEFAULT_MINUTE_PRIORITY)) {
+    switch (kind) {
+      case 'tencent':
+        if (sources.tc) steps.push({ kind, tc: sources.tc })
+        break
+      case 'eastmoney':
+        if (sources.em) steps.push({ kind, secid: sources.em })
+        break
+      case 'yahoo':
+        if (sources.yahoo) steps.push({ kind, symbol: sources.yahoo })
+        break
+      case 'emProxies':
+        if (sources.emProxies?.length) steps.push({ kind, proxies: [...sources.emProxies] })
+        break
+      case 'emCross':
+        if (sources.emCross) steps.push({ kind, cross: { ...sources.emCross } })
+        break
+    }
+  }
+  return { steps, note: sources.note }
+}
+
+/**
+ * 解析某 code 的**基础信息报价执行计划**（今开/最高/最低/昨收/成交量）：
+ * 按 quotePriority（缺省「腾讯 → 东财」）展开，腾讯优先用 qt.gtimg.cn 快照，
+ * 请求失败 / 字段不完整（如外汇快照字段不足、期货无腾讯代码）时自动切东财 ulist。
+ */
+export function resolveMinuteQuotePlan(code: string): MinuteQuotePlanStep[] {
+  const sources = resolveMinuteSources(code)
+  if (!sources) return []
+  const steps: MinuteQuotePlanStep[] = []
+  for (const kind of orderKinds(sources.quotePriority, DEFAULT_MINUTE_QUOTE_PRIORITY)) {
+    if (kind === 'tencent' && sources.tc) steps.push({ kind, tc: sources.tc })
+    if (kind === 'eastmoney' && sources.em) steps.push({ kind, secid: sources.em })
+  }
+  return steps
 }

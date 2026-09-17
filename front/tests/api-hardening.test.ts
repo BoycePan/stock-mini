@@ -173,7 +173,8 @@ test('I：hasMinuteSources 对原型链属性返回 false（分享链接可构�
 test('I：正常分时源与个股兜底规则不受加固影响', () => {
   assert.equal(hasMinuteSources('COPPER-US'), true)
   assert.deepEqual(resolveMinuteSources('sh600519'), { em: '1.600519', tc: 'sh600519' })
-  assert.deepEqual(resolveMinuteSources('105.NVDA'), { em: '105.NVDA' })
+  // 美股 secid 兜底：东财 secid + 腾讯代码（usNVDA，腾讯美股份时/快照不带 .OQ/.N 后缀）
+  assert.deepEqual(resolveMinuteSources('105.NVDA'), { em: '105.NVDA', tc: 'usNVDA' })
   assert.equal(hasMinuteSources(''), false)
 })
 

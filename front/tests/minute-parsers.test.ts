@@ -261,53 +261,108 @@ test('交叉汇率：任一腿为空返回空数组，分母为 0 跳过', () =>
 
 // ---------------------------------------------------------------------------
 // 腾讯分时（minute/query）
-// 每行 ["0930","现价","成交量","成交额"]；均价=累计成交额/累计成交量；昨收=qt.<code>[4]
+// 行格式（实测 2026-09-17）：空格分隔字符串 "HHmm 现价 累计成交量 [累计成交额]"，
+// 第 3/4 字段为当日累计值 → 解析器做差分成「每分钟」；A股成交量单位为手（均价需 ÷100）；
+// 昨收 = qt.<code>[4]。
 // ---------------------------------------------------------------------------
 
-test('腾讯：行解析 + 均价按累计成交额/成交量推算 + 昨收取 qt 数组[4]', () => {
+test('腾讯：字符串行解析（现价/每分钟量差分/均价按累计额÷累计量÷100）', () => {
+  // 真实响应片段（贵州茅台 2026-09-17）
   const node = {
     data: {
       data: [
-        ['0930', '56.20', '5847', '32860140.00'],
-        ['0931', '56.60', '20571', '115813645.00'],
+        '0930 1257.98 140 17611720.00',
+        '0931 1261.98 572 71968937.77',
+        '0932 1261.82 1052 132616485.58',
       ],
     },
-    qt: { v_ff_sh600549: [], sh600549: ['1', '厦门钨业', '600549', '56.20', '58.11'] },
+    qt: { v_ff_sh600519: [], sh600519: ['1', '贵州茅台', '600519', '1266.98', '1258.00'] },
   }
-  const result = parseTencentMinuteNode(node)
+  const result = parseTencentMinuteNode(node, 'sh600519')
   assert.ok(result)
-  assert.equal(result!.preClose, 58.11)
-  assert.equal(result!.points.length, 2)
+  assert.equal(result!.preClose, 1258, '昨收取 qt 数组 [4]')
+  assert.equal(result!.points.length, 3)
   assert.equal(result!.points[0]!.time, '09:30')
   // 腾讯行只有 "HHmm" 无日期信息 → timeFull 缺省（触摸浮层回退展示 HH:mm）
   assert.equal(result!.points[0]!.timeFull, undefined)
-  assert.equal(result!.points[0]!.price, 56.2)
-  // 均价 = 32860140 / 5847
-  assert.ok(Math.abs(result!.points[0]!.avg! - 32860140 / 5847) < 0.001)
-  // 第二点累计量：5847+20571，累计额：32860140+115813645
-  const cumVol = 5847 + 20571
-  const cumAmt = 32860140 + 115813645
-  assert.ok(Math.abs(result!.points[1]!.avg! - cumAmt / cumVol) < 0.001)
+  assert.equal(result!.points[0]!.price, 1257.98)
+  // 第 3 字段是**累计**量：首点 140 手、次点 572 手 → 每分钟增量 140 / 432
+  assert.equal(result!.points[0]!.volume, 140)
+  assert.equal(result!.points[1]!.volume, 432)
+  assert.equal(result!.points[2]!.volume, 480)
+  // 均价 = 累计额 ÷ (累计量 × 100)：09:30 = 17611720 / (140×100) = 1257.98
+  assert.ok(Math.abs(result!.points[0]!.avg! - 1257.98) < 0.001)
+  assert.ok(Math.abs(result!.points[1]!.avg! - 71968937.77 / (572 * 100)) < 0.001)
+  // 成交额为每分钟增量
+  assert.ok(Math.abs(result!.points[1]!.amount! - (71968937.77 - 17611720)) < 0.01)
 })
 
-test('腾讯：无 qt 时昨收为 null；点数不足返回 null', () => {
+test('腾讯：A股指数由成交额反推的「均价」与点位无关 → 护栏置 null（避免撑爆纵轴）', () => {
   const node = {
-    data: { data: [['0930', '56.20', '5847', '32860140.00']] },
-    qt: {},
-  }
-  const single = parseTencentMinuteNode(node)
-  assert.equal(single, null, '1 个点少于 MIN_MINUTE_POINTS')
-  const two = parseTencentMinuteNode({
     data: {
-      data: [
-        ['0930', '56.20', '5847', '32860140.00'],
-        ['0931', '56.60', '20571', '115813645.00'],
-      ],
+      data: ['0930 3877.00 3717122 6832820536.40', '0931 3889.75 15587808 30075274736.10'],
     },
-    qt: {},
-  })
+    qt: { sh000001: ['1', '上证指数', '000001', '3875.60', '3891.60'] },
+  }
+  const result = parseTencentMinuteNode(node, 'sh000001')
+  assert.ok(result)
+  for (const point of result!.points) {
+    assert.equal(point.avg, null, '指数均价偏离现价 >50% → 丢弃')
+  }
+  assert.equal(result!.points[0]!.volume, 3717122)
+  assert.equal(result!.points[1]!.volume, 15587808 - 3717122)
+})
+
+test('腾讯：美股行只有 3 个字段（无成交额）→ 均价 null，量为累计差分', () => {
+  const node = {
+    data: {
+      data: ['0930 218.405 4873037', '0931 217.810 5970889'],
+    },
+    qt: { usNVDA: ['200', '英伟达', 'NVDA', '217.96', '213.90'] },
+  }
+  const result = parseTencentMinuteNode(node, 'usNVDA')
+  assert.ok(result)
+  assert.equal(result!.preClose, 213.9)
+  assert.equal(result!.points[0]!.avg, null)
+  assert.equal(result!.points[1]!.avg, null)
+  assert.equal(result!.points[0]!.volume, 4873037)
+  // 美股按「股」计（不 ÷100），且差分为每分钟增量
+  assert.equal(result!.points[1]!.volume, 5970889 - 4873037)
+  assert.equal(result!.points[0]!.amount, undefined)
+})
+
+test('腾讯：累计量回退（源重置）时该分钟量按 0 兜底，不产生负值', () => {
+  const node = {
+    data: { data: ['0930 1257.98 140 17611720.00', '0931 1261.98 0 0.00'] },
+    qt: { sh600519: ['1', '贵州茅台', '600519', '1261.98', '1258.00'] },
+  }
+  const result = parseTencentMinuteNode(node, 'sh600519')
+  assert.ok(result)
+  assert.equal(result!.points[1]!.volume, 0)
+})
+
+test('腾讯：兼容旧的二维数组形态行；无 qt 时昨收为 null；点数不足返回 null', () => {
+  const single = parseTencentMinuteNode(
+    { data: { data: ['0930 56.20 5847 32860140.00'] }, qt: {} },
+    'sh600549',
+  )
+  assert.equal(single, null, '1 个点少于 MIN_MINUTE_POINTS')
+
+  const two = parseTencentMinuteNode(
+    {
+      data: {
+        data: [
+          ['0930', '56.20', '5847', '32860140.00'],
+          ['0931', '56.60', '20571', '115813645.00'],
+        ],
+      },
+      qt: {},
+    },
+    'sh600549',
+  )
   assert.ok(two)
   assert.equal(two!.preClose, null)
+  assert.equal(two!.points[1]!.volume, 20571 - 5847)
 })
 
 // ---------------------------------------------------------------------------

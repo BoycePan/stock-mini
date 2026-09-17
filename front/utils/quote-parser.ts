@@ -55,7 +55,16 @@ export function parseTencentText(text: string, codes: string[]): Map<string, str
 
 const TENCENT_REQUIRED_FIELDS = 35
 
-/** 腾讯字段 → 归一化报价（索引规则见 docs/tabbar-api.md ①） */
+/**
+ * 腾讯字段 → 归一化报价（索引规则见 docs/tabbar-api.md ①，2026-09-17 用 qt.gtimg.cn 实测校准）。
+ * 实测布局（`~` 分隔）：
+ *   [3] 现价 / [4] 昨收 / [5] 今开 / [6] 成交量（手）/ [7] 外盘 / [8] 内盘 /
+ *   [9]-[18] 买五档 / [19]-[28] 卖五档 / [30] 行情时间 / [31] 涨跌额 / [32] 涨跌幅% /
+ *   [33] 最高 / [34] 最低 / [36] 成交量（手）/ [37] 成交额
+ * 早期版本把 [6]/[7]/[8] 当作最高/最低/成交量（实为成交量/外盘/内盘），会让分时页「基础信息」
+ * 的最高、最低、成交量取到完全无关的数字（如贵州茅台最高被解析成 17554 手），故按实测修正。
+ * 注意：外汇（wh*）快照字段布局与 A股不同且不足 35 个字段 → valid=false，调用方回退其他源。
+ */
 export function tencentQuoteOf(code: string, fields: string[]): TencentQuote {
   const notMatched = fields[0] === 'pv_none_match' || fields.includes('pv_none_match')
   const valid = fields.length >= TENCENT_REQUIRED_FIELDS && !notMatched
@@ -74,10 +83,10 @@ export function tencentQuoteOf(code: string, fields: string[]): TencentQuote {
     latestPrice,
     previousClose,
     open: num(5),
-    high: num(6),
-    low: num(7),
-    volume: num(8),
-    amount: num(9),
+    high: num(33),
+    low: num(34),
+    volume: num(36),
+    amount: num(37),
     change,
     changePercent: num(32),
     quoteTime: valid ? parseQuoteTime(fields[30] ?? '') : '',

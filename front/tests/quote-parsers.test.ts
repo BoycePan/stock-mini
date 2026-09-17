@@ -36,6 +36,10 @@ function tencentLine(
   change: string,
   time = '20260817150000',
 ): string {
+  // 字段布局按 qt.gtimg.cn 实测（2026-09-17）：
+  // [3]现价 [4]昨收 [5]今开 [6]成交量(手) [7]外盘 [8]内盘 [30]时间 [31]涨跌额 [32]涨跌幅%
+  // [33]最高 [34]最低 [36]成交量(手) [37]成交额
+  // 注意 [6]/[7]/[8] 不是最高/最低/成交量——早期版本按错索引取值，会把成交量当最高价
   const fields = new Array(40).fill('0')
   fields[0] = '1'
   fields[1] = name
@@ -43,13 +47,16 @@ function tencentLine(
   fields[3] = String(price)
   fields[4] = String(prev)
   fields[5] = String(prev)
-  fields[6] = String(price + 10)
-  fields[7] = String(price - 10)
-  fields[8] = '1000000'
-  fields[9] = '200000000'
+  fields[6] = '1000000'
+  fields[7] = '500000'
+  fields[8] = '500000'
   fields[30] = time
   fields[31] = change
   fields[32] = String(pct)
+  fields[33] = String(price + 10)
+  fields[34] = String(price - 10)
+  fields[36] = '1000000'
+  fields[37] = '200000000'
   return `v_${code}="${fields.join('~')}";`
 }
 
@@ -68,6 +75,13 @@ test('腾讯：解析 v_<code> 文本并按固定索引取值', () => {
   assert.equal(quote.change, 21.5)
   assert.equal(quote.changePercent, 0.63)
   assert.equal(quote.quoteTime, '2026-08-17 15:00:00')
+  // 今开/最高/最低/成交量/成交额按实测索引取值（[5]/[33]/[34]/[36]/[37]），
+  // 不是 [6]/[7]/[8]（成交量/外盘/内盘）
+  assert.equal(quote.open, 3400)
+  assert.equal(quote.high, 3431.5)
+  assert.equal(quote.low, 3411.5)
+  assert.equal(quote.volume, 1000000)
+  assert.equal(quote.amount, 200000000)
 
   const us = tencentQuoteOf('usIXIC', map.get('usIXIC') ?? [])
   assert.equal(us.latestPrice, 29722.3)

@@ -51,6 +51,18 @@ export async function fetchTencentQuotes(codes: string[]): Promise<TencentQuote[
   }
 }
 
+/**
+ * 单只腾讯快照（分时页「基础信息」多源链的腾讯源；`fetchTencentQuotes` 的单代码便捷封装）。
+ * 无数据 / 字段不足（如外汇 wh* 布局）时返回 null，由调用方自动切下一个源。
+ */
+export async function fetchTencentQuote(code: string): Promise<TencentQuote | null> {
+  if (!code) return null
+  const rows = await fetchTencentQuotes([code])
+  const quote = rows[0]
+  if (!quote || !quote.valid || quote.latestPrice === null) return null
+  return quote
+}
+
 // ---------------------------------------------------------------------------
 // ② 新浪行情：GET https://hq.sinajs.cn/list=<keys>
 // ---------------------------------------------------------------------------
@@ -310,6 +322,7 @@ export async function fetchEastmoneyUlistQuote(secid: string): Promise<Eastmoney
 
 export const quoteApi = {
   tencent: fetchTencentQuotes,
+  tencentQuote: fetchTencentQuote,
   sina: fetchSinaQuotes,
   eastmoneyQuote: fetchEastmoneyQuote,
   eastmoneyList: fetchEastmoneyList,

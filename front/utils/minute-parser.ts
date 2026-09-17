@@ -85,39 +85,87 @@ export function parseEastmoneyTrends(
 // ---------------------------------------------------------------------------
 
 interface TencentMinuteNode {
-  data?: { data?: string[][] }
+  /** 实测（2026-09-17）为字符串数组：["0930 1257.98 140 17611720.00", …]；兼容旧的二维数组形态 */
+  data?: { data?: Array<string | string[]> }
   qt?: Record<string, unknown[]>
 }
 
 /**
+ * 腾讯分时行 → 字段数组。
+ * 实测行格式为**空格分隔的单字符串**：`"HHmm 现价 累计成交量 [累计成交额]"`；
+ * 早期版本按二维数组（row[0]/row[1]…）解析，实际拿到的是字符串下标（row[0]='0'、row[1]='9'），
+ * 会把「时间」解析成单个数字字符、把所有价格解析成个位数——因腾讯此前只是东财的兜底源，
+ * 该缺陷一直未被触发；2026-09-17 把腾讯提为首选源后才暴露，这里按实测格式修正。
+ */
+function tencentRowFields(row: string | string[]): string[] {
+  if (Array.isArray(row)) return row.map((item) => String(item ?? '').trim())
+  return String(row ?? '')
+    .trim()
+    .split(/\s+/)
+}
+
+/**
+ * 腾讯分时成交量单位换算：A股（sh/sz/bj，含指数）分时成交量单位为「手」，港股/美股/日韩为「股」。
+ * 均价 = 累计成交额 ÷ (累计成交量 × 该系数)（A股 1 手 = 100 股，实测贵州茅台
+ * 17611720.00 ÷ (140 × 100) = 1257.98 = 该分钟现价，与东财 f58 一致）。
+ */
+function tencentShareScale(code: string): number {
+  return /^(sh|sz|bj)/i.test(code) ? 100 : 1
+}
+
+/**
  * 解析腾讯分时响应节点。
- * 每行 ["0930","现价","成交量","成交额"]；均价按 累计成交额/累计成交量 推算；
+ *
+ * 行格式（实测）：`"HHmm 现价 累计成交量 [累计成交额]"` —— 第 3/4 字段为**当日累计值**
+ * （实测单调递增：贵州茅台 09:30 的 140 手 → 15:00 的 17554 手，与当日总量一致），
+ * 而图表与基础信息消费的是**每分钟**增量，故这里做差分：
+ *   volume(i) = cumVolume(i) − cumVolume(i−1)（首点 = cumVolume(0)，负值兜底 0）
+ * 均价按累计额 ÷ 累计量（× 单位系数）推算，并做合理性护栏：与现价偏离 >50% 时置 null。
+ * 护栏的必要性：A股指数（如上证指数）由「成交额 ÷ 成交量」反推得到的是全市场每股均价
+ * （实测 19.18 vs 指数 3875.60），与指数点位毫无关系，若不丢弃会把分时图纵轴撑爆。
+ * 美股/日韩行只有 3 个字段（无成交额）→ 均价为 null（不画均价线）。
+ *
  * 昨收取 qt.<code>[4]（腾讯报价数组索引）。
  */
-export function parseTencentMinuteNode(node?: TencentMinuteNode): MinuteResult | null {
+export function parseTencentMinuteNode(node?: TencentMinuteNode, code = ''): MinuteResult | null {
   const rows = node?.data?.data
   if (!rows?.length) return null
 
+  const shareScale = tencentShareScale(code)
   const points: MinutePoint[] = []
-  let cumVolume = 0
-  let cumAmount = 0
+  let prevCumVolume = 0
+  let prevCumAmount = 0
   for (const row of rows) {
-    const time = row[0] ?? ''
-    const price = Number(row[1])
-    const volume = Number(row[2])
-    const amount = Number(row[3])
+    const fields = tencentRowFields(row)
+    const time = fields[0] ?? ''
+    const price = Number(fields[1])
+    const cumVolume = Number(fields[2])
+    const cumAmount = fields.length > 3 ? Number(fields[3]) : Number.NaN
     // 价格 <= 0（含空字段 Number('')=0）视为该分钟无成交，跳过——与东财分支同口径。
     // 否则 0 价点会进入序列：被判为下跌、把图表纵轴撑到约 [-margin, 2×昨收]，
     // 分时线被压扁到上半区，价格线还会在底部拉出贯穿成交量区的假尖刺。
     if (!time || !Number.isFinite(price) || price <= 0) continue
-    cumVolume += Number.isFinite(volume) ? volume : 0
-    cumAmount += Number.isFinite(amount) ? amount : 0
+    const hasCumVolume = Number.isFinite(cumVolume) && cumVolume >= 0
+    // 每分钟增量（源为累计口径）；首点即累计值本身，回退（更小）按 0 处理
+    const volume = hasCumVolume ? Math.max(0, cumVolume - prevCumVolume) : 0
+    const amount =
+      Number.isFinite(cumAmount) && cumAmount >= 0
+        ? Math.max(0, cumAmount - prevCumAmount)
+        : undefined
+    if (hasCumVolume) prevCumVolume = cumVolume
+    if (Number.isFinite(cumAmount) && cumAmount >= 0) prevCumAmount = cumAmount
+    const derivedAvg =
+      hasCumVolume && cumVolume > 0 && Number.isFinite(cumAmount) && cumAmount > 0
+        ? cumAmount / (cumVolume * shareScale)
+        : null
+    const avg =
+      derivedAvg !== null && Math.abs(derivedAvg - price) / price <= 0.5 ? derivedAvg : null
     points.push({
       time: shortTime(time),
       price,
-      avg: cumVolume > 0 ? cumAmount / cumVolume : null,
-      volume: Number.isFinite(volume) ? volume : 0,
-      amount: Number.isFinite(amount) ? amount : undefined,
+      avg,
+      volume,
+      amount,
     })
   }
   if (points.length < MIN_MINUTE_POINTS) return null
