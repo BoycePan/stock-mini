@@ -5,7 +5,9 @@
  * 明确返回空 klines（`{"data":{"klines":[]}}`），而 push2his 在小程序客户端被反爬拦截
  * （实测连接重置，见 docs/魔方板块分析/魔方板块-接口文档.md）。因此 K 线走：
  *   1. 腾讯 web.ifzq.gtimg.cn（已在合法域名白名单内，与腾讯分时同域）
- *      覆盖 A股 / A股指数 / 港股 / 日股 / 韩股 / 美股个股 / 美股指数 / 外汇（wh）；
+ *      覆盖 A股 / A股指数 / 港股 / 美股个股 / 美股指数 / 外汇（wh）；
+ *      日股 / 韩股**不覆盖**：`kr005930` / `jp7203` 的 day/week/month 实测都只回当日 1 根
+ *      （低于 MIN_KLINE_BARS=2，恒判无效）→ 日韩个股改走东财 176./177. 分时同 secid；
  *   2. 新浪（期货、外盘期货、外汇、A股与美股备用）
  *      覆盖内盘期货主连（沪金/沪银/沪铜…）、外盘期货（COMEX 金/银/铜、NYMEX 天然气、布伦特原油）、
  *      美元指数与外汇日 K、A股/美股备用。
@@ -17,8 +19,11 @@
  *   - A股板块指数（东财 90.BKxxxx，与首页「行业板块」卡片同源同口径）；
  *   - 国际指数（100.KS11 / 100.N225 / 100.VNINDEX / 100.SENSEX）、费城半导体（251.SOX）；
  *   - A股平均股价（东财自编指数 47.800005）；
+ *   - **日韩个股（177=韩 / 176=日，与分时同一 secid）**：腾讯无可用日 K，只能走东财；
  *   - 美股时段板块（us-BKxxxx）由代理股日线归一化均值合成，与卡片 / 分时同口径；
  *   - 交叉汇率（CNYKRW / CNYJPY）由两腿日线逐日相除合成（新浪外汇）。
+ *   注意：push2his 对异常出口 IP / 高频请求会空响应或直接拒连（见 docs/行情页多周期图表.md
+ *   「上线注意事项」），故除上述标的外不登记东财源，避免可靠源标的白等一次往返。
  *
  * 无 K 线源的标的（不登记 → TAB 置灰并给出提示，分时不受影响）：
  *   目前仅剩「分时本身也没有源」的标的（KOSDAQ / TOPIX / VIX 等，本就不在 MINUTE_SOURCES 中）。
@@ -39,9 +44,11 @@ export interface KlineSources {
   /** 新浪 K 线（端点族 + 代码 + 支持的周期，缺省只支持日线） */
   sina?: { kind: SinaKlineKind; symbol: string; week?: boolean }
   /**
-   * 东财 K 线 secid（唯一来源的标的：板块指数 / 国际指数 / A股平均股价）。
-   * 只要标的有腾讯或新浪源就不登记此项——东财 push2his 对异常流量会空响应，
-   * 不应让可靠源标的每次白等一次往返（见 api/kline.ts 头部说明）。
+   * 东财 K 线 secid（腾讯 / 新浪都没有可用日线的标的）：
+   * - A股板块指数 `90.BKxxxx`、国际指数 `100.KS11` 等、A股平均股价 `47.800005`；
+   * - **日韩个股 `177.xxxxxx` / `176.xxxx`**（腾讯 fqkline 只回当日 1 根，见文件头说明）。
+   * 其余标的只要腾讯或新浪有可用日线就不登记此项——东财 push2his 对异常流量会空响应 /
+   * 拒连，不应让可靠源标的每次白等一次往返（见 api/kline.ts 头部说明）。
    */
   em?: string
   /**
@@ -219,7 +226,8 @@ const US_SUFFIXES = ['.OQ', '.N', '.A'] as const
  * 除显式登记外，以下形态走正则兜底，保证个股无需逐条登记：
  * - A股个股：`sh600519` / `sz000001` / `bj920010`（腾讯代码）或 `1.600519` / `0.000001`（东财 secid）；
  * - 美股个股：东财 secid `105.NVDA` / `106.BRK_B` / `107.BATT`（见 config/minute.ts EM_US_SECID_RE）；
- * - 韩股 / 日股个股：6 位裸代码，按 MINUTE_SOURCES 里的东财市场号（177=韩 / 176=日）判定腾讯前缀；
+ * - 韩股 / 日股个股：6 位裸代码，主源取 MINUTE_SOURCES 里的东财 secid（177=韩 / 176=日），
+ *   腾讯 `kr` / `jp` 前缀代码仅作兜底探测（实测其 day/week/month 只回当日 1 根，不能当主源）；
  * - A股板块指数：分时配置里 secid 为 `90.BKxxxx` 的标的（新增板块不必两处登记）。
  */
 export function resolveKlineSources(code: string): KlineSources | null {
@@ -249,13 +257,16 @@ export function resolveKlineSources(code: string): KlineSources | null {
       sina: { kind: 'us', symbol: ticker.toUpperCase() },
     }
   }
-  // 韩股 / 日股个股（裸代码：韩股 6 位、日股 4 位；市场号取自分时配置的东财 secid）
+  // 韩股 / 日股个股（裸代码：韩股 6 位、日股 4 位；东财市场号取自分时配置的 secid）
+  // **东财优先**：腾讯 fqkline 对日韩个股的 day/week/month 实测都只回「当日 1 根」
+  // （kr005930 / jp7203 三种周期均为 1 行，见 docs/行情页多周期图表.md 复验记录），
+  // 低于 MIN_KLINE_BARS=2 恒被判无效，故腾讯只能作为兜底探测、不能当主源（否则四个 TAB 永远空态）。
   if (/^\d{4,6}$/.test(code)) {
     const em = Object.prototype.hasOwnProperty.call(MINUTE_SOURCES, code)
       ? (MINUTE_SOURCES[code]?.em ?? '')
       : ''
-    if (em.startsWith('177.')) return { tc: [`kr${code}`] }
-    if (em.startsWith('176.')) return { tc: [`jp${code}`] }
+    if (em.startsWith('177.')) return { em, tc: [`kr${code}`] }
+    if (em.startsWith('176.')) return { em, tc: [`jp${code}`] }
     return null
   }
   // 卡片别名指向 A股个股（如钨/钼/锗/铟/锑 → 厦门钨业等，见 config/minute.ts）：

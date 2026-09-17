@@ -124,7 +124,7 @@ test('resolveKlineSources：显式登记标的（指数 / 期货 / 汇率 / 外�
   assert.deepEqual(resolveKlineSources('UDI')?.tc, ['whDINIW', 'usUDI'])
 })
 
-test('resolveKlineSources：个股走正则兜底（A股 / 美股后缀探测 / 日韩市场前缀）', () => {
+test('resolveKlineSources：个股走正则兜底（A股 / 美股后缀探测 / 日韩市场号）', () => {
   const aShare = resolveKlineSources('sh600519')
   assert.deepEqual(aShare?.tc, ['sh600519'])
   assert.equal(aShare?.sina?.week, true, 'A股支持新浪周线 scale=1680')
@@ -142,9 +142,12 @@ test('resolveKlineSources：个股走正则兜底（A股 / 美股后缀探测 / 
   )
   assert.equal(usStock?.sina?.symbol, 'NVDA')
 
-  // 日韩个股：按分时配置的东财市场号判定腾讯前缀（韩股 6 位、日股 4 位裸代码）
+  // 日韩个股：主源为东财 secid（腾讯 fqkline 对日韩只回当日 1 根，只能作兜底探测）
+  assert.equal(resolveKlineSources('005930')?.em, '177.005930')
   assert.deepEqual(resolveKlineSources('005930')?.tc, ['kr005930'])
+  assert.equal(resolveKlineSources('7203')?.em, '176.7203')
   assert.deepEqual(resolveKlineSources('7203')?.tc, ['jp7203'])
+  assert.equal(resolveKlineSources('8035')?.em, '176.8035')
   assert.deepEqual(resolveKlineSources('8035')?.tc, ['jp8035'])
 })
 
@@ -226,12 +229,41 @@ test('周 K：腾讯周线返回 1 根（不足）时回退日 K 聚合，并标
       return null
     },
   })
-  const result = await fetchKlineSeries('005930', 'week')
+  const result = await fetchKlineSeries('sh600519', 'week')
   assert.ok(result)
   assert.equal(result.aggregated, true)
   assert.ok(result.sourceLabel.includes('周K聚合'), result.sourceLabel)
   assert.ok(result.klines.length >= 2)
-  assert.deepEqual(log.tencent, ['kr005930:week', 'kr005930:day'])
+  assert.deepEqual(log.tencent, ['sh600519:week', 'sh600519:day'])
+})
+
+test('日韩个股：东财 K 线优先（腾讯 day/week/month 只回当日 1 根，作不了主源）', async (t) => {
+  t.after(restore)
+  const log = newLog()
+  installStub(log, {
+    eastmoney: (_secid, unit) => bars(unit === 'day' ? 120 : 60),
+    // 腾讯对日韩个股只回当日 1 根（低于 MIN_KLINE_BARS=2）：命中东财时不应被请求
+    tencent: () => bars(1),
+  })
+  const day = await fetchKlineSeries('005930', 'day')
+  assert.ok(day)
+  assert.equal(day.sourceLabel, '东方财富K线')
+  assert.equal(day.klines.length, 120)
+  assert.deepEqual(log.eastmoney, ['177.005930:day'])
+  assert.deepEqual(log.tencent, [], '东财已命中，不再探测腾讯')
+
+  // 东财失败（push2his 风控）时才回落腾讯兜底探测；腾讯只回 1 根 → 仍为空的兜底语义
+  clearKlineCache('8035')
+  log.eastmoney.length = 0
+  log.tencent.length = 0
+  installStub(log, {
+    eastmoney: () => null,
+    tencent: (_code, unit) => (unit === 'day' ? bars(1) : null),
+  })
+  const fallback = await fetchKlineSeries('8035', 'day')
+  assert.equal(fallback, null, '腾讯日线只有当日 1 根，仍判空')
+  assert.deepEqual(log.eastmoney, ['176.8035:day'])
+  assert.deepEqual(log.tencent, ['jp8035:day'])
 })
 
 test('月 K：腾讯月线缺失 → 周线聚合；周线也缺失 → 日线聚合', async (t) => {
