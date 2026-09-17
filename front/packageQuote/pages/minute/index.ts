@@ -5,9 +5,7 @@ import { fetchEastmoneyUlistQuote } from '../../../api/quote'
 import { hasKlineSources } from '../../../config/kline'
 import { resolveMinuteSources } from '../../../config/minute'
 import {
-  fetchFiveDayData,
   fetchMinuteData,
-  hasFiveDaySource,
   hasMinuteSources,
   mergeMinuteQuoteInfo,
   sparseVolumeNote,
@@ -29,8 +27,8 @@ import {
 } from '../../../utils/share-poster'
 import type { MinutePosterChartData } from '../../../utils/minute-poster'
 
-/** TAB：分时 / 五日 / 日K / 周K / 月K / 年K */
-type TabKey = 'minute' | 'fiveDay' | KlineTab
+/** TAB：分时 / 日K / 周K / 月K / 年K */
+type TabKey = 'minute' | KlineTab
 
 interface TabItem {
   key: TabKey
@@ -41,7 +39,6 @@ interface TabItem {
 const KLINE_TAB_KEYS: KlineTab[] = ['day', 'week', 'month', 'year']
 const TAB_LABELS: Record<TabKey, string> = {
   minute: '分时',
-  fiveDay: '五日',
   day: '日K',
   week: '周K',
   month: '月K',
@@ -50,7 +47,6 @@ const TAB_LABELS: Record<TabKey, string> = {
 /** 图表面板标题（与 TAB 配合说明当前周期） */
 const TAB_TITLES: Record<TabKey, string> = {
   minute: '当日分时',
-  fiveDay: '五日分时',
   day: '日K',
   week: '周K',
   month: '月K',
@@ -77,7 +73,7 @@ interface MinuteQuoteView {
   preCloseLabel: '昨收' | '昨结算'
 }
 
-/** 分时 / 五日缓存项 */
+/** 分时缓存项 */
 interface MinuteEntry {
   points: MinutePoint[]
   preClose: number
@@ -101,7 +97,6 @@ interface KlineEntry {
 /** 页面实例缓存（非响应式，避免大数据集反复进出 setData；WeakMap 随实例回收） */
 interface PageCache {
   minute: MinuteEntry | null
-  fiveDay: MinuteEntry | null
   kline: Partial<Record<KlineTab, KlineEntry>>
   /** 各 TAB 连续失败次数（≥2 展示「暂无数据」引导态） */
   fail: Partial<Record<TabKey, number>>
@@ -118,8 +113,6 @@ const pageCache = new WeakMap<object, PageCache>()
 
 /** 分时数据自动刷新间隔：8s（与 utils/auto-refresh.ts 的 startAutoRefresh intervalMs 参数配合） */
 const MINUTE_REFRESH_INTERVAL = 8000
-/** 五日数据量约为当日分时的 5 倍，降低轮询频率（20s） */
-const FIVE_DAY_REFRESH_INTERVAL = 20000
 /** TAB 数据新鲜度门闩：距上次请求不足 5s 时不重复请求 */
 const SERIES_FRESH_GAP = 5000
 /** 模块级共享（跨页面实例），用于 onShow 立即刷新门闩：距上次请求不足 5s 不补刷 */
@@ -148,7 +141,6 @@ function cacheOf(target: object): PageCache {
   if (!cache) {
     cache = {
       minute: null,
-      fiveDay: null,
       kline: {},
       fail: {},
       loading: {},
@@ -162,11 +154,9 @@ function cacheOf(target: object): PageCache {
 }
 
 /**
- * 行情详情页（原「当日分时」页）：分时 / 五日 / 日K / 周K / 月K / 年K 六个周期 TAB。
+ * 行情详情页（原「当日分时」页）：分时 / 日K / 周K / 月K / 年K 五个周期 TAB。
  *
  * - 分时：东财 trends2（ndays=1），代理合成与交叉合成口径与首页卡片一致，8s 轮询；
- * - 五日：腾讯 dayus（美股）/ day（A股 / 港股）多日分钟线，20s 轮询（东财 ndays=5 实测失效，
- *   仅作兜底，见 utils/minute.ts fetchFiveDayData）；
  * - 日/周/月/年 K：腾讯 K 线为主、新浪兜底，年 K 由月 K 聚合（见 utils/kline-source.ts），不做轮询；
  * - 无对应周期数据源的标的，TAB 置灰并给出提示（板块指数、日韩指数等，见 config/kline.ts）；
  * - 图表绘制统一由 packageQuote/components/quote-chart 承担（价格 + 成交量 + MACD 三块面板）。
@@ -194,7 +184,7 @@ Page({
     loading: true,
     /** 是否有请求进行中（含静默刷新），供自动刷新跳过并发 */
     requesting: false,
-    /** 图表数据（分时/五日 → points + preClose + session；K线 → klines） */
+    /** 图表数据（分时 → points + preClose + session；K线 → klines） */
     chartPoints: [] as MinutePoint[],
     chartPreClose: 0,
     chartKlines: [] as KlinePoint[],
@@ -264,7 +254,7 @@ Page({
       })
       return
     }
-    // 默认 TAB：分时优先，其次五日，再次首个可用的 K 线周期
+    // 默认 TAB：分时优先，其次首个可用的 K 线周期
     const initial = enabled[0]?.key ?? 'minute'
     await this.activate(initial, { silent: false })
     this.setData({ loading: false })
@@ -287,20 +277,18 @@ Page({
       wx.stopPullDownRefresh()
     }
   },
-  /** 各周期可用性：分时（东财/腾讯/Yahoo）、五日（腾讯美股 / 腾讯 A股港股 / 东财兜底）、日/周/月/年 K（腾讯/新浪） */
+  /** 各周期可用性：分时（东财/腾讯/Yahoo）、日/周/月/年 K（腾讯/新浪） */
   buildTabs(mcode: string): TabItem[] {
     const klineAvailable = hasKlineSources(mcode)
     const minuteAvailable = hasMinuteSources(mcode)
-    const fiveDayAvailable = hasFiveDaySource(mcode)
     const enabledOf: Record<TabKey, boolean> = {
       minute: minuteAvailable,
-      fiveDay: fiveDayAvailable,
       day: klineAvailable,
       week: klineAvailable,
       month: klineAvailable,
       year: klineAvailable,
     }
-    return (['minute', 'fiveDay', ...KLINE_TAB_KEYS] as TabKey[]).map((key) => ({
+    return (['minute', ...KLINE_TAB_KEYS] as TabKey[]).map((key) => ({
       key,
       label: TAB_LABELS[key],
       enabled: enabledOf[key],
@@ -331,12 +319,7 @@ Page({
   /** 该 TAB 是否已有新鲜缓存（避免同一 TAB 反复请求 / 切回时重复请求） */
   isFresh(mode: TabKey): boolean {
     const cache = cacheOf(this)
-    const at =
-      mode === 'minute'
-        ? cache.minute?.at
-        : mode === 'fiveDay'
-          ? cache.fiveDay?.at
-          : cache.kline[mode]?.at
+    const at = mode === 'minute' ? cache.minute?.at : cache.kline[mode]?.at
     return typeof at === 'number' && Date.now() - at < SERIES_FRESH_GAP
   },
   /** 按需取数：已有新鲜缓存且非强制刷新时直接返回 */
@@ -347,19 +330,15 @@ Page({
       await this.loadMinute({ silent })
       return
     }
-    if (mode === 'fiveDay') {
-      await this.loadFiveDay({ silent })
-      return
-    }
     await this.loadKline(mode, { silent, force })
   },
   /**
    * 取数统一入口（自动刷新 / 下拉刷新 / 重试都走这里）：
-   * 分时与五日为轮询周期；K 线周期不做轮询（历史数据日内变化不大，切 TAB 时按需拉取）。
+   * 分时为轮询周期；K 线周期不做轮询（历史数据日内变化不大，切 TAB 时按需拉取）。
    */
   async loadData(options?: { silent?: boolean; force?: boolean }) {
     const mode = this.data.mode
-    if (mode === 'minute' || mode === 'fiveDay') {
+    if (mode === 'minute') {
       await this.ensureData(mode, options)
       return
     }
@@ -429,43 +408,6 @@ Page({
         pendingUserRefresh.delete(this)
         void this.loadData()
       }
-    }
-  },
-  /** 五日 TAB：腾讯 dayus（美股）/ day（A股 / 港股）多日分钟线，东财 ndays=5 兜底（实测失效） */
-  async loadFiveDay(options?: { silent?: boolean }) {
-    const mode: TabKey = 'fiveDay'
-    if (cacheOf(this).loading[mode]) return
-    const cache = cacheOf(this)
-    cache.loading[mode] = true
-    if (!options?.silent && this.data.mode === mode) this.setData(this.loadingView(mode))
-    lastMinuteRequestAt = Date.now()
-    try {
-      const code = this.data.mcode || this.data.code
-      const result = await fetchFiveDayData(code)
-      if (result) {
-        // 五日以「区间首点」为 0% 基准（三个数据源的昨收口径不同，统一按首点对齐，
-        // 保证曲线从 0% 起步、跨源表现一致），基础信息卡仍以当日分时口径为准
-        const preClose = result.points[0]?.price ?? 0
-        const info = mergeMinuteQuoteInfo(result.points, { ...result, preClose }, null)
-        cache.fiveDay = {
-          points: result.points,
-          preClose,
-          // 五日按自然日分段绘制，不按时段铺点（图表内部对 fiveDay 忽略 session）
-          session: 'continuous',
-          sourceLabel: `数据来源：${result.sourceLabel}`,
-          note: result.note || '五日分时按最近 5 个交易日绘制（以区间首点为 0% 基准）',
-          info,
-          hasVolume: info.hasVolume,
-          at: Date.now(),
-        }
-        cache.fail[mode] = 0
-        this.applyKlineFallbackQuote()
-      } else if (!options?.silent) {
-        cache.fail[mode] = (cache.fail[mode] ?? 0) + 1
-      }
-    } finally {
-      cache.loading[mode] = false
-      if (this.data.mode === mode) this.setData(this.buildView(mode))
     }
   },
   /** K 线 TAB：腾讯 K 线（新浪兜底；年 K 由月 K 聚合），结果在 utils/kline-source.ts 内做 60s 缓存 */
@@ -543,7 +485,7 @@ Page({
         chartNote: entry?.note ?? '',
       }
     }
-    const entry = mode === 'minute' ? cache.minute : cache.fiveDay
+    const entry = cache.minute
     const hasData = !!entry && entry.points.length >= 2
     return {
       ...base,
@@ -600,18 +542,14 @@ Page({
     ]
     cache.quote = this.buildQuote(points, info)
     cache.poster = this.buildPosterData(points, info)
-    if (this.data.mode === 'minute' || this.data.mode === 'fiveDay') return
+    if (this.data.mode === 'minute') return
     this.setData({ quote: cache.quote, posterData: cache.poster })
   },
-  /** 轮询开关：仅分时 / 五日需要（K 线周期不轮询），间隔按当前 TAB 取 8s / 20s */
+  /** 轮询开关：仅分时需要（K 线周期不轮询），间隔 8s */
   syncAutoRefresh() {
     const mode = this.data.mode
     if (mode === 'minute') {
       startAutoRefresh(this, lastMinuteRequestAt, MINUTE_REFRESH_INTERVAL)
-      return
-    }
-    if (mode === 'fiveDay') {
-      startAutoRefresh(this, lastMinuteRequestAt, FIVE_DAY_REFRESH_INTERVAL)
       return
     }
     stopAutoRefresh(this)
@@ -733,7 +671,7 @@ Page({
   },
   /**
    * 组装海报内嵌图表数据，仅在用户打开海报时调用（见 onSharePoster）：
-   * - 分时 / 五日：传 minuteChart（分时走势图，五日按拉伸绘制）；
+   * - 分时：传 minuteChart（分时走势图）；
    * - K 线周期：不传 minuteChart，由 share-poster 按 klines 绘制 K 线走势图。
    */
   buildPosterChart(): { minutePoster: MinutePosterChartData | null } {
@@ -744,7 +682,7 @@ Page({
       minutePoster: {
         points: this.data.chartPoints,
         preClose: this.data.chartPreClose,
-        session: mode === 'fiveDay' ? 'continuous' : this.data.session,
+        session: this.data.session,
         title: `${this.data.name} · ${TAB_TITLES[mode]}`,
       },
     }

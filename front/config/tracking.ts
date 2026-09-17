@@ -150,7 +150,7 @@ export const TRACK_EVENT_DEFS: Record<string, TrackEventDef> = {
 
   /**
    * 行情页切换周期 TAB：trackEvent('quote.period.switch', { period, code })
-   * → target=code，props.period 取 minute / fiveDay / day / week / month / year
+   * → target=code，props.period 取 minute / day / week / month / year
    */
   'quote.period.switch': {
     name: 'quote.period.switch',

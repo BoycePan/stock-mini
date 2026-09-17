@@ -22,7 +22,6 @@ import {
   zoomViewport,
 } from '../utils/kline-viewport.ts'
 import { fitMaLegend } from '../utils/kline-legend.ts'
-import { minuteDayLabel, minutePointDate, splitMinuteDays } from '../utils/minute-session.ts'
 import type { KlinePoint, MinutePoint } from '../types/stock.ts'
 
 /** 最小 canvas 2d 替身：只统计 measureText（布局用它决定左侧留白） */
@@ -99,9 +98,8 @@ function baseData(over: Partial<QuoteChartData> = {}): QuoteChartData {
 // 模式判定
 // ---------------------------------------------------------------------------
 
-test('isKlineMode / klinePeriodOf：只有日周月年走 K 线，分时与五日走分时链路', () => {
+test('isKlineMode / klinePeriodOf：只有日周月年走 K 线，分时走分时链路', () => {
   assert.equal(isKlineMode('minute'), false)
-  assert.equal(isKlineMode('fiveDay'), false)
   assert.equal(isKlineMode('day'), true)
   assert.equal(isKlineMode('year'), true)
   assert.equal(klinePeriodOf('month'), 'month')
@@ -191,26 +189,6 @@ test('分时布局：A股时段按真实时钟铺点，未收盘时右侧留白'
     lastX < layout.padL + layout.plotW * 0.2,
     `09:30-10:00 只占全时段约 6%，末点 x=${lastX} 应贴近左侧`,
   )
-})
-
-test('五日布局：按自然日分段（5 段）并给出 5 个日期刻度，且不按时段铺点', () => {
-  const ctx = fakeCtx()
-  const dates = ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11', '2026-09-14']
-  const points = dates.flatMap((date) => dayPoints(date, 60))
-  const layout = buildQuoteChartLayout(
-    baseData({ mode: 'fiveDay', points, preClose: 10, session: 'continuous' }),
-    ctx,
-  )
-  assert.equal(layout.padded, null, '五日不做时段铺点')
-  assert.equal(layout.days.length, 5)
-  assert.deepEqual(
-    layout.xTicks.map((tick) => tick.text),
-    dates.map((date) => minuteDayLabel(date)),
-  )
-  assert.ok(layout.showMacd === false, '五日不出 MACD')
-  for (let i = 1; i < layout.xs.length; i += 1) {
-    assert.ok((layout.xs[i] ?? 0) >= (layout.xs[i - 1] ?? 0), 'x 坐标必须单调不减')
-  }
 })
 
 // ---------------------------------------------------------------------------
@@ -430,35 +408,6 @@ test('hitTestIndex：数据不足（n < 2）返回 null，调用方不画十字�
   const ctx = fakeCtx()
   const layout = buildQuoteChartLayout(baseData({ klines: [] }), ctx)
   assert.equal(hitTestIndex(layout, 100), null)
-})
-
-// ---------------------------------------------------------------------------
-// 五日分日切分纯函数
-// ---------------------------------------------------------------------------
-
-test('splitMinuteDays：按 timeFull 的自然日切段，返回每段的起止下标', () => {
-  const points = [
-    minutePoint('09:30', 10, '2026-09-11 09:30'),
-    minutePoint('09:31', 10, '2026-09-11 09:31'),
-    minutePoint('09:30', 11, '2026-09-14 09:30'),
-  ]
-  const days = splitMinuteDays(points)
-  assert.deepEqual(days, [
-    { date: '2026-09-11', start: 0, end: 1 },
-    { date: '2026-09-14', start: 2, end: 2 },
-  ])
-})
-
-test('splitMinuteDays：无日期信息返回空数组（调用方退化为不分段绘制）', () => {
-  assert.deepEqual(splitMinuteDays([minutePoint('09:30', 10)]), [])
-  assert.deepEqual(splitMinuteDays([]), [])
-  assert.equal(minutePointDate(minutePoint('09:30', 10)), null)
-  assert.equal(minutePointDate(minutePoint('2026-09-14 09:30', 10)), '2026-09-14')
-})
-
-test('minuteDayLabel：日期取 MM-DD；非日期原样返回', () => {
-  assert.equal(minuteDayLabel('2026-09-09'), '09-09')
-  assert.equal(minuteDayLabel('bad'), 'bad')
 })
 
 // ---------------------------------------------------------------------------

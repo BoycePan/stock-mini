@@ -72,7 +72,7 @@
       </view>
 
       <view class="panel">
-        <!-- 周期 TAB：分时 / 五日 / 日K / 周K / 月K / 年K（无数据源的周期置灰并提示） -->
+        <!-- 周期 TAB：分时 / 日K / 周K / 月K / 年K（无数据源的周期置灰并提示） -->
         <view class="tab-bar">
           <view
             wx:for="{{ tabs }}"
@@ -121,7 +121,7 @@
     <view class="bottom-space"></view>
   </view>
 
-  <!-- 分享海报（隐藏画布 + 预览弹窗；分时/五日按 minutePoster 绘制，K 线按 posterKlines 绘制） -->
+  <!-- 分享海报（隐藏画布 + 预览弹窗；分时按 minutePoster 绘制，K 线按 posterKlines 绘制） -->
   <share-poster
     id="sharePoster"
     posterData="{{ posterData }}"

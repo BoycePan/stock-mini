@@ -120,7 +120,7 @@ test('查看数据途中落下第二根手指：切换为捏合（用当前窗�
   )
 })
 
-test('分时 / 五日（zoomable=false）：捏合不改窗口，只出十字光标', () => {
+test('分时（zoomable=false）：捏合不改窗口，只出十字光标', () => {
   const cfg = config({ zoomable: false })
   assert.equal(beginGesture([at(PAD_L + 100), at(PAD_L + 200)], cfg).action?.kind, 'crosshair')
   const start = beginGesture([at(PAD_L + 200)], cfg)

@@ -11,9 +11,8 @@
   height: 620rpx;
 }
 
-/* 分时 / 五日：价格主图 + 成交量 */
-.quote-canvas.mode-minute,
-.quote-canvas.mode-fiveDay {
+/* 分时：价格主图 + 成交量 */
+.quote-canvas.mode-minute {
   height: 620rpx;
 }
 

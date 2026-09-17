@@ -1,5 +1,5 @@
 /**
- * K 线外部接口统一封装（纯前端直连国内公开行情，见 docs/minute-api.md「K 线 / 五日」小节）。
+ * K 线外部接口统一封装（纯前端直连国内公开行情，见 docs/minute-api.md「K 线」小节）。
  *
  * 与 api/minute.ts 同风格：单接口失败「降级为 null」而非抛错，由 utils/kline-source.ts
  * 按 东财 → 腾讯 → 新浪 兜底链补齐；年 K 无任何直连源，统一由月/周/日 K 聚合（utils/kline.ts）。

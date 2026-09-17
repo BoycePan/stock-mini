@@ -1,4 +1,4 @@
-<!-- 行情图表：分时 / 五日 / 日K / 周K / 月K / 年K（高度随 mode 变化，见 index.wxss）。
+<!-- 行情图表：分时 / 日K / 周K / 月K / 年K（高度随 mode 变化，见 index.wxss）。
      根节点必须是带 width:100% 的 view（与 kline-chart / 原 minute-chart 一致）：
      若把 canvas 直接作为组件根节点，它的 width:100% 就只能靠宿主节点撑开，
      父容器一旦是行向 flex（宿主按内容收缩）画布宽度即塌成 0，整块图空白。 -->

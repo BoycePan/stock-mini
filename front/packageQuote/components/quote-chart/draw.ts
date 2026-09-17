@@ -1,5 +1,5 @@
 /**
- * 行情图表绘制（分时 / 五日 / 日K / 周K / 月K / 年K）纯绘制模块。
+ * 行情图表绘制（分时 / 日K / 周K / 月K / 年K）纯绘制模块。
  *
  * 设计原则：
  * - **不依赖小程序运行时**（只用结构化 canvas 2d 接口 ChartCtx），因此可在浏览器里用同一份
@@ -36,18 +36,15 @@ import { fitMaLegend } from '../../../utils/kline-legend'
 import { computeMinuteVolumeDirections } from '../../../utils/minute'
 import {
   buildMinuteGrid,
-  minuteDayLabel,
   minuteToSlot,
   parseMinuteOfDay,
   sessionTimeLabels,
-  splitMinuteDays,
-  type MinuteDaySlice,
   type MinuteGrid,
   type MinuteSessionKind,
 } from '../../../utils/minute-session'
 
-/** 图表模式：分时 / 五日 / 日K / 周K / 月K / 年K */
-export type QuoteChartMode = 'minute' | 'fiveDay' | 'day' | 'week' | 'month' | 'year'
+/** 图表模式：分时 / 日K / 周K / 月K / 年K */
+export type QuoteChartMode = 'minute' | 'day' | 'week' | 'month' | 'year'
 
 const KLINE_MODES: readonly QuoteChartMode[] = ['day', 'week', 'month', 'year']
 
@@ -97,11 +94,11 @@ export interface QuoteChartData {
   width: number
   height: number
   isDark: boolean
-  /** 分时 / 五日数据点 */
+  /** 分时数据点 */
   points: MinutePoint[]
   /** 分时基准价（昨收 / 昨结算），<=0 表示无基准 */
   preClose: number
-  /** 分时交易时段模型（五日与 K 线不按时段铺点） */
+  /** 分时交易时段模型（K 线不按时段铺点） */
   session: MinuteSessionKind
   /**
    * K 线数据（日/周/月/年模式）。
@@ -162,11 +159,9 @@ export interface QuoteChartLayout {
   candleW: number
   /** 分时完整时段铺点（连续交易标的为 null） */
   padded: PaddedLayout | null
-  /** 五日自然日分段（无日期信息时为空数组） */
-  days: MinuteDaySlice[]
   /** 横轴刻度 */
   xTicks: Array<{ x: number; text: string }>
-  /** 成交量柱方向（分时/五日按分钟涨跌，K线按当根涨跌） */
+  /** 成交量柱方向（分时按分钟涨跌，K线按当根涨跌） */
   volDirs: Array<'up' | 'down' | 'flat'>
   /** 均线序列（仅 K 线模式；长度与 data.klines 一致） */
   maSeries: Array<Array<number | null>>
@@ -247,7 +242,6 @@ const VOL_MIN_H = 56
 export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteChartLayout {
   const isKline = isKlineMode(d.mode)
   const n = isKline ? d.klines.length : d.points.length
-  const isFiveDay = d.mode === 'fiveDay'
   const padR = 12
   const padB = 16
   const padT = isKline ? 24 : 18
@@ -286,7 +280,7 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     minP = range.minP
     maxP = range.maxP
   } else if (preClose > 0) {
-    // 分时 / 五日：以基准价（昨收）为 0% 中线，上下等幅，避免视觉上「涨跌不对称」
+    // 分时：以基准价（昨收）为 0% 中线，上下等幅，避免视觉上「涨跌不对称」
     let dev = 0
     for (const p of d.points) {
       if (Number.isFinite(p.price) && p.price > 0) dev = Math.max(dev, Math.abs(p.price - preClose))
@@ -336,7 +330,7 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
   const plotW = d.width - padL - padR
 
   // 分时完整时段铺点（连续交易标的 / 时间无法对齐时退化为等分拉伸）
-  const padded = isKline || isFiveDay ? null : buildPadded(d.points, d.session)
+  const padded = isKline ? null : buildPadded(d.points, d.session)
   const xs: number[] = []
   let step: number
   if (padded) {
@@ -351,13 +345,11 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     for (let i = 0; i < n; i += 1) xs.push(padL + i * step)
   }
 
-  const days = isFiveDay ? splitMinuteDays(d.points) : []
   const xTicks = buildXTicks({
     mode: d.mode,
     points: d.points,
     klines: d.klines,
     xs,
-    days,
     padded,
     padL,
     plotW,
@@ -395,7 +387,7 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     ? (d.maSeries ?? maPeriods.map((period) => computeMA(d.klines, period)))
     : []
 
-  // 柱宽：K线较粗，分钟级（五日 ~1200 根）压到细柱避免糊成一片
+  // 柱宽：K线较粗，分钟级（分时 240+ 根）压到细柱避免糊成一片
   const slotWidth = n > 0 ? plotW / n : plotW
   const candleW = isKline
     ? Math.max(1, Math.min(11, slotWidth * 0.68))
@@ -431,7 +423,6 @@ export function buildQuoteChartLayout(d: QuoteChartData, ctx: ChartCtx): QuoteCh
     step,
     candleW,
     padded,
-    days,
     xTicks,
     volDirs,
     maSeries,
@@ -462,16 +453,15 @@ interface XTickInput {
   points: MinutePoint[]
   klines: KlinePoint[]
   xs: number[]
-  days: MinuteDaySlice[]
   padded: PaddedLayout | null
   padL: number
   plotW: number
   n: number
 }
 
-/** 横轴刻度：K线取 5 等分（按周期格式化）、五日按自然日取段中点、分时取时段标签或 5 等分时间 */
+/** 横轴刻度：K线取 5 等分（按周期格式化）、分时取时段标签或 5 等分时间 */
 function buildXTicks(input: XTickInput): Array<{ x: number; text: string }> {
-  const { mode, points, klines, xs, days, padded, padL, plotW, n } = input
+  const { mode, points, klines, xs, padded, padL, plotW, n } = input
   if (n === 0) return []
   if (isKlineMode(mode)) {
     const period = klinePeriodOf(mode)
@@ -485,22 +475,6 @@ function buildXTicks(input: XTickInput): Array<{ x: number; text: string }> {
       const bar = klines[idx]
       if (!bar) continue
       ticks.push({ x: xs[idx] ?? padL, text: formatKlineAxisLabel(bar.time, period) })
-    }
-    return ticks
-  }
-  if (mode === 'fiveDay' && days.length > 0) {
-    return days.map((day) => {
-      const start = xs[day.start] ?? padL
-      const end = xs[day.end] ?? start
-      return { x: (start + end) / 2, text: minuteDayLabel(day.date) }
-    })
-  }
-  if (mode === 'fiveDay') {
-    // 无日期信息（异常兜底）：退化为 5 等分时间标签
-    const ticks: Array<{ x: number; text: string }> = []
-    for (let i = 0; i < 5; i += 1) {
-      const idx = n === 1 ? 0 : Math.min(n - 1, Math.round((i / 4) * (n - 1)))
-      ticks.push({ x: xs[idx] ?? padL, text: points[idx]?.time ?? '' })
     }
     return ticks
   }
@@ -519,7 +493,7 @@ function buildXTicks(input: XTickInput): Array<{ x: number; text: string }> {
   return ticks
 }
 
-/** 价格刻度文案：分时/五日的中间线为相对基准的 0%（其余显示价格） */
+/** 价格刻度文案：分时的中间线为相对基准的 0%（其余显示价格） */
 function priceGridTexts(minP: number, maxP: number, isKline: boolean): string[] {
   const texts: string[] = []
   for (let i = 0; i < PRICE_GRID_LINES; i += 1) {
@@ -559,7 +533,7 @@ export function emptyText(mode: QuoteChartMode): string {
   return isKlineMode(mode) ? '暂无K线数据' : '暂无分时数据'
 }
 
-/** 价格面板：网格 + 刻度 + （分时/五日）价格线与均价线 / （K线）蜡烛与均线 */
+/** 价格面板：网格 + 刻度 + （分时）价格线与均价线 / （K线）蜡烛与均线 */
 function drawPricePanel(
   ctx: ChartCtx,
   d: QuoteChartData,
@@ -570,7 +544,7 @@ function drawPricePanel(
   const priceTexts = priceGridTexts(minP, maxP, layout.isKline)
   const preClose = Number.isFinite(d.preClose) && d.preClose > 0 ? d.preClose : 0
 
-  // 横向网格 + 左侧刻度（分时/五日的中间线是 0% 基准：实线高亮）
+  // 横向网格 + 左侧刻度（分时的中间线是 0% 基准：实线高亮）
   ctx.lineWidth = 1
   ctx.textAlign = 'right'
   for (let i = 0; i < PRICE_GRID_LINES; i += 1) {
@@ -585,26 +559,13 @@ function drawPricePanel(
     ctx.fillText(priceTexts[i] ?? '', padL - 7, y + 3)
   }
 
-  // 纵向网格：五日画自然日分隔（虚线，说明「跨日」），其余按横轴刻度轻描
+  // 纵向网格：按横轴刻度轻描
   ctx.strokeStyle = c.grid
-  if (d.mode === 'fiveDay' && layout.days.length > 1) {
-    ctx.setLineDash([3, 4])
-    for (const day of layout.days.slice(1)) {
-      const x = layout.xs[day.start]
-      if (x === undefined) continue
-      ctx.beginPath()
-      ctx.moveTo(x, priceTop)
-      ctx.lineTo(x, layout.plotBottom)
-      ctx.stroke()
-    }
-    ctx.setLineDash([])
-  } else {
-    for (const tick of layout.xTicks) {
-      ctx.beginPath()
-      ctx.moveTo(tick.x, priceTop)
-      ctx.lineTo(tick.x, layout.plotBottom)
-      ctx.stroke()
-    }
+  for (const tick of layout.xTicks) {
+    ctx.beginPath()
+    ctx.moveTo(tick.x, priceTop)
+    ctx.lineTo(tick.x, layout.plotBottom)
+    ctx.stroke()
   }
 
   if (layout.isKline) {
@@ -614,7 +575,7 @@ function drawPricePanel(
     return
   }
 
-  // 分时 / 五日：价格线按基准价上下分段着色（红上绿下），均价线橙色
+  // 分时：价格线按基准价上下分段着色（红上绿下），均价线橙色
   const baseY = preClose > 0 ? layoutPriceY(layout, preClose) : null
   const linePts: Array<{ x: number; y: number } | null> = d.points.map((p, i) =>
     Number.isFinite(p.price) && p.price > 0
@@ -747,7 +708,7 @@ function drawMaLines(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
   }
 }
 
-/** 最新价虚线 + 右侧圆角标签（K 线模式；分时/五日不常驻价格标签，最新价在基本信息卡） */
+/** 最新价虚线 + 右侧圆角标签（K 线模式；分时不常驻价格标签，最新价在基本信息卡） */
 function drawLastPriceTag(
   ctx: ChartCtx,
   d: QuoteChartData,
@@ -948,7 +909,7 @@ function drawMacdPanel(
   }
 }
 
-/** 底部横轴刻度（K线/五日/分时共用；首尾标签内收避免出界） */
+/** 底部横轴刻度（K线/分时共用；首尾标签内收避免出界） */
 function drawXTicks(ctx: ChartCtx, layout: QuoteChartLayout, c: Palette): void {
   ctx.fillStyle = c.text
   ctx.font = '10px sans-serif'
@@ -1086,7 +1047,7 @@ export function renderCrosshair(ctx: ChartCtx, d: QuoteChartData, layout: QuoteC
 /**
  * 触摸 x → 数据下标：
  * - 分时完整时段模式：先换算到时段槽位，再取最近的真实数据点（未来空白区不会命中右侧空点）；
- * - 其余模式（K线 / 五日 / 连续分时）：按等分步长直接反算。
+ * - 其余模式（K线 / 连续分时）：按等分步长直接反算。
  */
 export function hitTestIndex(layout: QuoteChartLayout, x: number): number | null {
   if (layout.n < 2) return null

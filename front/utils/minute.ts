@@ -11,22 +11,8 @@
 import type { MinutePoint, MinuteResult } from '../types/stock'
 import type { EastmoneyUlistQuote } from '../types/quote'
 import { minuteApi } from '../api/minute'
-import { fiveDayApi } from '../api/five-day'
-import {
-  ashareTcCode,
-  EM_US_SECID_RE,
-  US_PROXY_NAMES,
-  resolveMinuteSources,
-  type MinuteSources,
-} from '../config/minute'
-import {
-  buildMinuteGrid,
-  minuteToSlot,
-  parseMinuteOfDay,
-  resolveMinuteSession,
-  type MinuteSessionKind,
-} from './minute-session'
-import { countPointDays } from './five-day-parser'
+import { US_PROXY_NAMES, resolveMinuteSources, type MinuteSources } from '../config/minute'
+import type { MinuteSessionKind } from './minute-session'
 import { bareCode } from './quote-consensus'
 import {
   buildCompositePoints,
@@ -54,11 +40,6 @@ const SOURCE_LABELS: Record<MinuteFetchResult['source'], string> = {
 const COMPOSITE_SOURCE_LABEL = '东方财富分时（美股代理合成）'
 /** 交叉汇率合成图的数据来源标签 */
 const CROSS_SOURCE_LABEL = '东方财富分时（交叉汇率合成）'
-/**
- * 五日均价线口径提示：A股 / 港股按真实累计成交额推算，指数与美股 dayus（无成交额列）
- * 退化为「分钟价 × 分钟量」的成交重心近似值，避免用户把它当成官方均价。
- */
-const FIVE_DAY_AVG_NOTE = '；均价线为成交量加权推算（指数等无成交额口径的标的为近似值）'
 
 /**
  * 东财境外市场（韩股/日股）分钟量稀疏口径提示：
@@ -161,23 +142,14 @@ export function mergeMinuteQuoteInfo(
  * 依次尝试 东财 → 腾讯 → Yahoo 拉取当日分时，命中即返回。
  * 代理股合成源（emProxies）为独立分支：全部代理失败返回 null（由调用方展示错误/重试）。
  * 全部失败或该 code 无任何源时返回 null。
- * @param opts.ndays 1 = 当日分时（默认）；2..5 = 多日分时（东财 push2 / push2delay 实测均忽略该参数，
- *   只回当日，故五日主链已改为腾讯 dayus / day 与新浪 5 分钟，本参数仅作兜底尝试，见 fetchFiveDayData）。
- *   多日模式下不尝试 tc / yahoo 兜底源（它们只有当日数据，混用会得到「只有 1 天」的假五日）。
- * @param opts.host 东财节点：delay（默认，当日分时）/ push2（多日分时兜底）
  */
-export async function fetchMinuteData(
-  code: string,
-  opts?: { ndays?: number; host?: 'delay' | 'push2' },
-): Promise<MinuteFetchResult | null> {
+export async function fetchMinuteData(code: string): Promise<MinuteFetchResult | null> {
   const sources = resolveMinuteSources(code)
   if (!sources) return null
-  const days = opts?.ndays && opts.ndays > 1 ? Math.min(5, Math.floor(opts.ndays)) : 1
-  const host = opts?.host ?? 'delay'
 
   // 美股代理股分时均值合成（us-BKxxxx）
   if (sources.emProxies?.length) {
-    const composite = await fetchCompositeMinute(sources.emProxies, days, host)
+    const composite = await fetchCompositeMinute(sources.emProxies)
     if (!composite) return null
     return {
       ...composite.result,
@@ -189,7 +161,7 @@ export async function fetchMinuteData(
 
   // 交叉汇率合成（如 CNYKRW = 美元/韩元 ÷ 美元/离岸人民币，东财 119/133 大陆可访问）
   if (sources.emCross) {
-    const cross = await fetchCrossMinute(sources.emCross, days, host)
+    const cross = await fetchCrossMinute(sources.emCross)
     if (!cross) return null
     return {
       ...cross,
@@ -203,16 +175,14 @@ export async function fetchMinuteData(
   if (sources.em) {
     tries.push({
       key: 'em',
-      run: () => minuteApi.eastmoney(sources.em as string, { ndays: days, host }),
+      run: () => minuteApi.eastmoney(sources.em as string),
     })
   }
-  if (days === 1) {
-    if (sources.tc) {
-      tries.push({ key: 'tc', run: () => minuteApi.tencent(sources.tc as string) })
-    }
-    if (sources.yahoo) {
-      tries.push({ key: 'yahoo', run: () => minuteApi.yahoo(sources.yahoo as string) })
-    }
+  if (sources.tc) {
+    tries.push({ key: 'tc', run: () => minuteApi.tencent(sources.tc as string) })
+  }
+  if (sources.yahoo) {
+    tries.push({ key: 'yahoo', run: () => minuteApi.yahoo(sources.yahoo as string) })
   }
 
   for (const { key, run } of tries) {
@@ -223,154 +193,6 @@ export async function fetchMinuteData(
     }
   }
   return null
-}
-
-/**
- * 该标的是否可能支持「五日」分时（多日分钟线），控制五日 TAB 是否可用。
- * 由于东财 push2 的 `ndays=5` 实测失效（只回当日），这里只按「有分时源」判定，不再细分
- * 是否有真正可用的美股 / A股五日源：无腾讯源的标的（板块 / 期货 / 外汇 / 日韩指数）
- * 点进五日会得到「该周期暂无数据」的引导态，比置灰 TAB 更容易让用户理解「是数据没有，不是功能没有」。
- */
-export function hasFiveDaySource(code: string): boolean {
-  return !!resolveMinuteSources(code)
-}
-
-/**
- * 五日兜底链（每个源都必须先校验「是否真的跨日」，东财延迟 / push2 节点会静默忽略 ndays）：
- *   1. 腾讯 `appstock/app/dayus/query` 美股五日（usDJI / usINX / usIXIC / us<TICKER>，
- *      实测 5 个交易日 × 1 分钟）；
- *   2. 腾讯 `appstock/app/day/query`（A股 / 港股 / A股指数，实测 5 个交易日 × 1 分钟）；
- *   3. 新浪 A股 5 分钟 K 线（240 根 ≈ 5 个交易日）；
- *   4. 东财 push2 trends2 `ndays=5`（兜底：板块 / 期货 / 外汇 / 日韩指数等无腾讯源的标的）。
- * 均不命中返回 null（页面展示「该周期暂无数据」，五日 TAB 仍可切换）。
- *
- * 顺序说明：东财 push2 排在最后而不是最前——实测 push2 与 push2delay 都会**忽略 ndays**
- * （ndays=5 与 1 返回同一天的数据，countPointDays 校验必然拦下），先请求它只会让 A股 / 港股 /
- * 美股的五日白白多等一次往返（该节点还常被反爬重置，最坏要等到超时）；
- * 保留该请求是为了东财放开多日后自动生效，且它仍是板块 / 期货等标的的唯一候选。
- */
-export async function fetchFiveDayData(code: string): Promise<MinuteFetchResult | null> {
-  if (!hasFiveDaySource(code)) return null
-
-  // 1) 腾讯美股五日（美股指数 / 美股个股 ETF）
-  const usCode = fiveDayTencentUsCode(code)
-  if (usCode) {
-    const us = await fiveDayApi.tencentUs(usCode)
-    if (us && countPointDays(us.points) >= 2) {
-      const points = filterToSession(us.points, resolveMinuteSession(code))
-      if (points.length >= MIN_MINUTE_POINTS) {
-        return {
-          preClose: us.preClose,
-          points,
-          source: 'tc',
-          sourceLabel: '腾讯美股五日',
-          note: `腾讯美股五日：最近 5 个交易日 1 分钟数据（以区间首点为 0% 基准）${FIVE_DAY_AVG_NOTE}`,
-        }
-      }
-    }
-  }
-
-  // 2) 腾讯五日（A股 / 港股 / A股指数）
-  const tcCode = fiveDayTencentCode(code)
-  if (tcCode) {
-    const tencent = await fiveDayApi.tencent(tcCode)
-    if (tencent && tencent.points.length >= MIN_MINUTE_POINTS) {
-      const points = filterToSession(tencent.points, resolveMinuteSession(code))
-      if (points.length >= MIN_MINUTE_POINTS) {
-        return {
-          preClose: tencent.preClose,
-          points,
-          source: 'tc',
-          sourceLabel: '腾讯五日分时',
-          note: `腾讯五日：最近 5 个交易日 1 分钟数据（以区间首点为 0% 基准）${FIVE_DAY_AVG_NOTE}`,
-        }
-      }
-    }
-  }
-
-  // 3) 新浪 A股 5 分钟 K 线
-  const sinaCode = fiveDaySinaCode(code)
-  if (sinaCode) {
-    const sina = await fiveDayApi.sina(sinaCode)
-    if (sina && sina.points.length >= MIN_MINUTE_POINTS) {
-      const points = filterToSession(sina.points, resolveMinuteSession(code))
-      if (points.length >= MIN_MINUTE_POINTS) {
-        return {
-          preClose: sina.preClose,
-          points,
-          source: 'tc',
-          sourceLabel: '新浪五日（5分钟）',
-          note: '新浪五日：最近 5 个交易日 5 分钟数据（以区间首点为 0% 基准）',
-        }
-      }
-    }
-  }
-
-  // 4) 东财 push2 多日分时（实测忽略 ndays，通常被 countPointDays 拦下）
-  const em = await fetchMinuteData(code, { ndays: 5, host: 'push2' })
-  if (em && countPointDays(em.points) >= 2) {
-    return { ...em, sourceLabel: '东方财富五日分时', note: em.note }
-  }
-
-  return null
-}
-
-/**
- * 五日数据源代码推导（A股 / 港股 / A股指数，美股见下方 fiveDayTencentUsCode）：
- * - A股 / 港股 / A股指数：腾讯 day/query 的行情代码（sh600519 / hk00700 / sh000001）；
- * - 东财 secid（1.600519 / 0.000001）还原成腾讯代码；
- * - 其余（美股 / 日韩 / 期货 / 外汇 / 板块）返回空串：day/query 不支持，走 dayus 或东财兜底。
- */
-export function fiveDayTencentCode(code: string): string {
-  if (/^(sh|sz|bj)\d{6}$/.test(code)) return code
-  if (/^hk\d{5}$/.test(code)) return code
-  if (/^[01]\.\d{6}$/.test(code)) return ashareTcCode(code.slice(2))
-  return ''
-}
-
-/** 新浪 5 分钟 K 线代码：仅 A股 / A股指数（sh / sz / bj 前缀） */
-export function fiveDaySinaCode(code: string): string {
-  if (/^(sh|sz|bj)\d{6}$/.test(code)) return code
-  if (/^[01]\.\d{6}$/.test(code)) return ashareTcCode(code.slice(2))
-  return ''
-}
-
-/**
- * 腾讯**美股**五日（`appstock/app/dayus/query`）代码推导，无对应源返回空串：
- * - 美股指数卡片：业务 code 与腾讯代码同名（usDJI 道琼斯 / usINX 标普500 / usIXIC 纳斯达克）；
- * - 美股 ETF 卡片：TLT（美债长债）→ usTLT（实测 5 日数据可用）；
- *    SOX（费城半导体指数）刻意返回空串：腾讯无该指数数据（见 config/kline.ts 的 K 线覆盖说明），
- *    发请求只会拿到空 data，交给页面直接走空态；
- * - 东财美股 secid（105.NVDA / 106.BRK_B / 107.BATT）→ us<TICKER>（实测裸代码即可命中）；
- *   东财用下划线表示类别股（106.BRK_B），腾讯用点号（usBRK.B），此处做一次还原。
- * 美股代理合成板块（us-BKxxxx）返回空串：无单一腾讯标的，逐只代理取五日请求量过大。
- */
-export function fiveDayTencentUsCode(code: string): string {
-  if (code === 'usDJI' || code === 'usINX' || code === 'usIXIC') return code
-  if (code === 'TLT') return 'usTLT'
-  if (EM_US_SECID_RE.test(code)) {
-    const ticker = (code.split('.')[1] ?? '').toUpperCase().replace(/_/g, '.')
-    return ticker ? `us${ticker}` : ''
-  }
-  return ''
-}
-
-/**
- * 只保留落在该标的正规交易时段内的分钟点：
- * 腾讯 day/query 每根含收盘后 15:01-15:30 的固定价（实测 267 行/日），
- * 若原样绘制会让五日线多出一段平尾；用既有交易时段模型过滤（无法对齐时段时原样返回）。
- */
-export function filterToSession(points: MinutePoint[], session: MinuteSessionKind): MinutePoint[] {
-  if (!points.length || !session || session === 'continuous') return points
-  const anchor = parseMinuteOfDay(points[0]?.time ?? '')
-  if (anchor === null) return points
-  const grid = buildMinuteGrid(session, anchor)
-  if (!grid) return points
-  const kept = points.filter((point) => {
-    const minute = parseMinuteOfDay(point.time)
-    return minute !== null && minuteToSlot(grid, minute) !== null
-  })
-  return kept.length >= MIN_MINUTE_POINTS ? kept : points
 }
 
 // ---------------------------------------------------------------------------
@@ -386,15 +208,10 @@ interface CompositeMinuteData {
 /**
  * 并发拉取每只代理股分时（保留完整时间戳），归一化到昨收 100 后合成均值。
  * 单只代理失败/点数不足自动跳过（部分可用即合成），全部失败返回 null。
- * @param days 1 = 当日；2..5 = 多日（五日 TAB，仅 push2 节点可能支持）
  */
-async function fetchCompositeMinute(
-  secids: string[],
-  days = 1,
-  host: 'delay' | 'push2' = 'delay',
-): Promise<CompositeMinuteData | null> {
+async function fetchCompositeMinute(secids: string[]): Promise<CompositeMinuteData | null> {
   const results = await Promise.all(
-    secids.map((secid) => minuteApi.eastmoney(secid, { keepFullTime: true, ndays: days, host })),
+    secids.map((secid) => minuteApi.eastmoney(secid, { keepFullTime: true })),
   )
   const valid: Array<{
     secid: string
@@ -466,19 +283,14 @@ export type { MinuteSources }
  * 交叉汇率分时合成：并发拉取两腿东财 trends2（keepFullTime 完整时间戳），
  * 分子 ÷ 分母 逐分钟相除；昨收 = 两腿昨收相除（与首点大致衔接）。
  * 任一条腿失败/点数不足返回 null（由调用方展示错误/重试）。
- * @param days 1 = 当日；2..5 = 多日（五日 TAB，仅 push2 节点可能支持）
  */
-async function fetchCrossMinute(
-  cross: {
-    numerator: string
-    denominator: string
-  },
-  days = 1,
-  host: 'delay' | 'push2' = 'delay',
-): Promise<MinuteResult | null> {
+async function fetchCrossMinute(cross: {
+  numerator: string
+  denominator: string
+}): Promise<MinuteResult | null> {
   const [num, den] = await Promise.all([
-    minuteApi.eastmoney(cross.numerator, { keepFullTime: true, ndays: days, host }),
-    minuteApi.eastmoney(cross.denominator, { keepFullTime: true, ndays: days, host }),
+    minuteApi.eastmoney(cross.numerator, { keepFullTime: true }),
+    minuteApi.eastmoney(cross.denominator, { keepFullTime: true }),
   ])
   if (!num || !den) return null
   const points = buildCrossPoints(

@@ -43,7 +43,7 @@ function stepOf(event: ChartControlEvent): number {
 }
 
 /**
- * 行情图表组件（canvas 2d）：分时 / 五日 / 日K / 周K / 月K / 年K 六种模式共用一张画布。
+ * 行情图表组件（canvas 2d）：分时 / 日K / 周K / 月K / 年K 五种模式共用一张画布。
  *
  * - 绘制逻辑全在 ./draw.ts（纯函数、不依赖 wx，可单测与浏览器预览）；
  *   本文件只负责画布生命周期（查询尺寸、dpr、主题、触摸命中、缩放/平移控件、销毁保护）；
@@ -57,13 +57,13 @@ function stepOf(event: ChartControlEvent): number {
  *   3. 窗口根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）。
  *   均线与 MACD 仍在全量数据上计算后按窗口切片，窗口再小 MA60 / MACD 预热也不会失真。
  * - 触摸分工：**单指只用于查看 K 线数据**（按下 / 滑动都只移动十字光标，不会把图拖走）；
- *   双指 = 缩放。分时 / 五日没有窗口，触摸行为同样只有十字光标。
+ *   双指 = 缩放。分时没有窗口，触摸行为同样只有十字光标。
  */
 Component({
   properties: {
-    /** 图表模式：minute / fiveDay / day / week / month / year */
+    /** 图表模式：minute / day / week / month / year */
     mode: { type: String, value: 'minute' },
-    /** 分时 / 五日数据点 */
+    /** 分时数据点 */
     points: { type: Array, value: [] as MinutePoint[] },
     /** 分时涨跌基准（昨收 / 昨结算） */
     preClose: { type: Number, value: 0 },
