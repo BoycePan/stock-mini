@@ -151,6 +151,36 @@ test('resolveKlineSources：个股走正则兜底（A股 / 美股后缀探测 / 
   assert.deepEqual(resolveKlineSources('8035')?.tc, ['jp8035'])
 })
 
+test('resolveKlineSources：美股后缀按东财市场号映射（105 纳指 / 106 纽交所 / 107 美交所）', () => {
+  assert.deepEqual(
+    resolveKlineSources('105.NVDA')?.tc,
+    ['usNVDA.OQ', 'usNVDA.N', 'usNVDA.A'],
+    '105 纳斯达克：.OQ 优先',
+  )
+  // 106 纽交所必须 .N 优先：腾讯对错误后缀会回「最早 N 根 + 最新 1 根」的补丁式序列，
+  // 一旦被固定使用，美股板块代理合成的公共交易日交集会塌缩成 1 天（CPO / 证券 / 消费电子曾整板空态）
+  assert.deepEqual(resolveKlineSources('106.COHR')?.tc, ['usCOHR.N', 'usCOHR.OQ', 'usCOHR.A'])
+  assert.deepEqual(resolveKlineSources('106.CIEN')?.tc, ['usCIEN.N', 'usCIEN.OQ', 'usCIEN.A'])
+  assert.deepEqual(resolveKlineSources('106.SCHW')?.tc, ['usSCHW.N', 'usSCHW.OQ', 'usSCHW.A'])
+  // 107 美交所及部分 ETF：实测在腾讯是 .N，故 .N 优先
+  assert.deepEqual(resolveKlineSources('107.ROBO')?.tc, ['usROBO.N', 'usROBO.A', 'usROBO.OQ'])
+})
+
+test('resolveKlineSources：类别股下划线还原为点号（东财 BRK_A → 腾讯 usBRK.A.N / 新浪 BRK.A）', () => {
+  const brkA = resolveKlineSources('106.BRK_A')
+  assert.deepEqual(brkA?.tc, ['usBRK.A.N', 'usBRK.A.OQ', 'usBRK.A.A'])
+  assert.equal(brkA?.sina?.symbol, 'BRK.A')
+  const brkB = resolveKlineSources('106.BRK_B')
+  assert.deepEqual(brkB?.tc, ['usBRK.B.N', 'usBRK.B.OQ', 'usBRK.B.A'])
+  assert.equal(brkB?.sina?.symbol, 'BRK.B')
+})
+
+test('resolveKlineSources：费半 SOX 以新浪为主源（sourceOrder），东财作兜底', () => {
+  const sox = resolveKlineSources('SOX')
+  assert.equal(sox?.sina?.symbol, '.SOX')
+  assert.equal(sox?.em, '251.SOX')
+  assert.deepEqual(sox?.sourceOrder, ['sina', 'em'])
+})
 test('resolveKlineSources：东财源覆盖腾讯 / 新浪都没有的标的（板块指数 / 国际指数 / 平均股价）', () => {
   // A股板块指数：东财 90.BKxxxx（与卡片报价、分时同一 secid）
   assert.equal(resolveKlineSources('BK1134')?.em, '90.BK1134')
@@ -275,7 +305,8 @@ test('月 K：腾讯月线缺失 → 周线聚合；周线也缺失 → 日线�
   const monthly = await fetchKlineSeries('sh600519', 'month')
   assert.ok(monthly)
   assert.ok(monthly.sourceLabel.includes('月K聚合'))
-  assert.deepEqual(log.tencent, ['sh600519:month', 'sh600519:week'])
+  // 周线聚合仅 3 根（短序列）→ 继续向下探测日线，取更长的那条
+  assert.deepEqual(log.tencent, ['sh600519:month', 'sh600519:week', 'sh600519:day'])
 })
 
 test('年 K：恒为聚合结果（无直连源），失败链按 月→周→日 顺序回退', async (t) => {
@@ -320,6 +351,42 @@ test('新浪日线（期货 / 外汇仅有日线）：周 / 月 / 年全部由�
     log.sina.every((call) => call.includes(':day')),
     '新浪期货源只请求日线',
   )
+})
+
+test('补丁式序列（错误交易后缀的返回）不被固定：跳过它继续换源', async (t) => {
+  t.after(restore)
+  const log = newLog()
+  /** 腾讯对错误后缀的坏返回形态：最早 30 根 + 最新 1 根（根数够、近一年只有 1 根） */
+  const patch: KlinePoint[] = [
+    ...bars(30),
+    { time: '2026-09-17', open: 1, close: 1, high: 1, low: 1, volume: 1 },
+  ]
+  installStub(log, {
+    tencent: (code) => (code === 'usNVDA.OQ' ? patch : code === 'usNVDA.N' ? bars(40) : null),
+  })
+  // 105.* 按 .OQ 优先，先命中坏序列 → 必须继续换到 .N
+  const result = await fetchKlineSeries('105.NVDA', 'day')
+  assert.ok(result)
+  assert.equal(result.klines.length, 40, '应换到正常序列，而不是用补丁式序列')
+  assert.deepEqual(log.tencent, ['usNVDA.OQ:day', 'usNVDA.N:day'])
+
+  // 命中正常序列后固定该代码：换周期不再回落到坏候选
+  log.tencent.length = 0
+  await fetchKlineSeries('105.NVDA', 'month')
+  assert.deepEqual(log.tencent, ['usNVDA.N:month'])
+})
+
+test('只有补丁式序列可用时仍返回它（换源不把「有数据」变成空态）', async (t) => {
+  t.after(restore)
+  const log = newLog()
+  const patch: KlinePoint[] = [
+    ...bars(30),
+    { time: '2026-09-17', open: 1, close: 1, high: 1, low: 1, volume: 1 },
+  ]
+  installStub(log, { tencent: (code) => (code === 'usNVDA.OQ' ? patch : null) })
+  const result = await fetchKlineSeries('105.NVDA', 'day')
+  assert.ok(result, '全网只有补丁式序列时仍返回数据（宁可展示旧历史，也不空态）')
+  assert.equal(result.klines.length, patch.length)
 })
 
 test('美股后缀探测：首个候选失败后命中第二个，且后续请求只打命中代码（含缓存）', async (t) => {
@@ -398,24 +465,58 @@ test('东财日 K：命中即返回，不再请求腾讯 / 新浪', async (t) =>
   assert.deepEqual(log.sina, [])
 })
 
-test('东财失败：有新浪兜底的标的（费半 SOX）自动降级，无兜底的（板块）返回空态', async (t) => {
+test('费半 SOX：新浪为主源，东财失败才回落（251.SOX 仅 53 根日线，年 K 聚合不出来）', async (t) => {
   t.after(restore)
   const log = newLog()
   installStub(log, {
-    eastmoney: () => null,
+    eastmoney: (secid, unit) => (secid === '251.SOX' && unit === 'day' ? bars(40) : null),
     sina: (kind, symbol) => (kind === 'us' && symbol === '.SOX' ? bars(40) : null),
   })
   const sox = await fetchKlineSeries('SOX', 'day')
   assert.ok(sox)
   assert.equal(sox.sourceLabel, '新浪K线')
-  assert.deepEqual(log.eastmoney, ['251.SOX:day'])
   assert.deepEqual(log.sina, ['us:.SOX:day'])
+  assert.deepEqual(log.eastmoney, [], '新浪已是主源，不再先打东财')
+
+  // 新浪失败时回落东财兜底
+  clearKlineCache('SOX')
+  log.sina.length = 0
+  log.eastmoney.length = 0
+  installStub(log, { eastmoney: () => bars(40) })
+  const fallback = await fetchKlineSeries('SOX', 'day')
+  assert.ok(fallback)
+  assert.equal(fallback.sourceLabel, '东方财富K线')
+  assert.deepEqual(log.sina, ['us:.SOX:day'])
+  assert.deepEqual(log.eastmoney, ['251.SOX:day'])
 
   log.eastmoney.length = 0
   log.sina.length = 0
+  installStub(log, { eastmoney: () => null })
   assert.equal(await fetchKlineSeries('KS11', 'day'), null)
   assert.deepEqual(log.eastmoney, ['100.KS11:day'])
   assert.deepEqual(log.sina, [])
+})
+
+test('费半 SOX：月 K 直取只有 3 根时，用新浪日线聚合出更长历史', async (t) => {
+  t.after(restore)
+  const log = newLog()
+  installStub(log, {
+    eastmoney: (secid, unit) =>
+      secid === '251.SOX' ? (unit === 'month' ? monthlyBars(3) : bars(53)) : null,
+    sina: (kind, symbol, unit) =>
+      kind === 'us' && symbol === '.SOX' && unit === 'day' ? bars(900) : null,
+  })
+  const monthly = await fetchKlineSeries('SOX', 'month')
+  assert.ok(monthly)
+  assert.equal(monthly.aggregated, true)
+  assert.ok(monthly.klines.length >= 12, `应聚合出更长月线，实际 ${monthly.klines.length} 根`)
+  assert.ok(monthly.sourceLabel.includes('新浪K线'))
+
+  clearKlineCache('SOX')
+  const yearly = await fetchKlineSeries('SOX', 'year')
+  assert.ok(yearly, '年 K 必须由新浪日线聚合出来（东财月/周线聚合不足 2 根）')
+  assert.equal(yearly.aggregated, true)
+  assert.ok(yearly.klines.length >= 2)
 })
 
 test('东财周 / 月线直取，年 K 由月线聚合（与腾讯链路一致）', async (t) => {
@@ -470,6 +571,37 @@ test('美股板块日 K：代理股按基准日归一化到 100 后取等权均�
   assert.ok(log.tencent.includes('usNVDA.OQ:day'))
   assert.ok(log.tencent.includes('usAMD.OQ:day'))
   assert.deepEqual(log.eastmoney, [])
+})
+
+test('美股板块：代理腿命中补丁式序列时换到正确后缀，公共交易日交集不再塌缩（CPO 场景）', async (t) => {
+  t.after(restore)
+  const log = newLog()
+  const patch: KlinePoint[] = [
+    ...monthlyBars(24),
+    { time: '2026-09-17', open: 1, close: 1, high: 1, low: 1, volume: 1 },
+  ]
+  // 纽交所代理腿（106.COHR / 106.CIEN / 106.FN）用错误后缀 .OQ 会拿到补丁式序列；
+  // 正确后缀 .N 才是正常序列；纳指腿（105.LITE / 105.AAOI）仍走 .OQ
+  installStub(log, {
+    tencent: (code) => {
+      if (code.endsWith('.N')) return rampedBars(40, 10, 1)
+      if (code.endsWith('.OQ'))
+        return code.startsWith('usLITE') || code.startsWith('usAAOI')
+          ? rampedBars(40, 10, 1)
+          : patch
+      return null
+    },
+  })
+  const result = await fetchKlineSeries('us-BK1128', 'day')
+  assert.ok(result, '五条代理腿都应有正常序列 → 合成不应为空')
+  assert.equal(result.klines.length, 40)
+  assert.ok(log.tencent.includes('usCOHR.N:day'), '纽交所腿走 .N')
+  assert.ok(log.tencent.includes('usCIEN.N:day'))
+  assert.ok(
+    !log.tencent.some((call) => /^us(COHR|CIEN|FN)\.OQ/.test(call)),
+    `纽交所腿不应再探测错误后缀 .OQ：${log.tencent.join(', ')}`,
+  )
+  assert.ok(log.tencent.includes('usLITE.OQ:day'), '纳指腿仍走 .OQ')
 })
 
 test('美股板块周 K：由代理股日线均值聚合（合成标的只有日线）', async (t) => {

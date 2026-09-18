@@ -175,7 +175,7 @@ CNYKRW: { emCross: {...}, yahoo: 'CNYKRW=X',
 | 有色页 黄金·内盘卡（恒展示） | 沪金主连（元/克） | 既有源 `113.aum`（沪金主连） |
 | 有色页 外盘时段 SILVER/COPPER | SILVER 现货 XAGUSD、COPPER COMEX 报价（美元/盎司、美元/磅） | `SILVER-US` → `122.XAG`（与全球页 SI 同源）；`COPPER-US` → `101.HG00Y`（COMEX 铜） |
 | 有色页 国内盘（其余时段） | 沪主连 / A股个股 | 既有源（`113.xm` / `shxxxxxx`） |
-| 有色页 外盘时段 铝/锌/镍/锡/钨 | 外盘报价（`hf_*`） | **无分时源**（`us-ALUMINUM` 等占位），点击给出提示 |
+| 有色页 外盘时段 铝/锌/镍/锡/钨 | 外盘报价（`hf_AL` / `hf_ZN` / `hf_NI` / `hf_SN` / `hf_W`） | **无分时源**（`us-ALUMINUM` / `us-ZINC` / `us-NICKEL` / `us-TIN` / `us-TUNGSTEN` 占位），点击给出提示 |
 | 全球页 行业板块 A股时段 | 东财板块涨跌幅 | `90.BKxxxx`（东财板块分时） |
 | 全球页 行业板块 美股时段 | 美股代理股涨跌幅均值 | `us-BKxxxx` → **代理股分时均值合成**（见下） |
 

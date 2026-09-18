@@ -37,10 +37,17 @@ import type { SinaKlineKind } from '../api/kline'
 export interface KlineSources {
   /**
    * 腾讯 K 线代码候选（按序尝试，命中一个即固定使用）：
-   * 美股后缀（.OQ 纳斯达克 / .N 纽交所 / .A 美交所）在腾讯侧与东财市场号并非一一对应
-   * （实测东财 107 的美交所 ETF 在腾讯是 .N），所以按候选顺序探测而非硬映射。
+   * 美股后缀按**东财市场号映射**（105 纳指 → `.OQ` / 106 纽交所 → `.N` / 107 美交所 → `.N`）
+   * 之后再挂其余后缀兜底，见 US_SUFFIX_ORDER 的实测说明。
    */
   tc?: string[]
+  /**
+   * 源优先级（缺省 `em → tc → sina`）：
+   * 仅用于「东财 secid 历史过短、但另有更长历史的兜底源」的标的——费城半导体 `SOX` 的东财
+   * `251.SOX` 是 2026 年新上的口径（仅 53 根日线 / 3 根月线），年 K 根本聚合不出来，
+   * 因此把新浪 `.SOX`（2014 年起 3185 根）提到前面，见 docs/行情页多周期图表.md。
+   */
+  sourceOrder?: Array<'em' | 'tc' | 'sina'>
   /** 新浪 K 线（端点族 + 代码 + 支持的周期，缺省只支持日线） */
   sina?: { kind: SinaKlineKind; symbol: string; week?: boolean }
   /**
@@ -109,8 +116,13 @@ export const KLINE_SOURCES: Record<string, KlineSources> = {
     sina: { kind: 'futuresGlobal', symbol: 'NG' },
     note: 'K线为 NYMEX 天然气期货连续（新浪外盘 NG）',
   },
-  // SOX（费城半导体指数）：腾讯 usSOX 无数据 → 东财 251.SOX 为主，新浪美股 .SOX 兜底
-  SOX: { em: '251.SOX', sina: { kind: 'us', symbol: '.SOX' } },
+  // SOX（费城半导体指数）：东财 251.SOX 是 2026 年新口径（仅 53 根日线 / 3 根月线，年 K 聚合不出来），
+  // 故把新浪美股 .SOX（2014-01-16 起 3185 根日线）提到主源；东财保留为兜底。
+  SOX: {
+    sina: { kind: 'us', symbol: '.SOX' },
+    em: '251.SOX',
+    sourceOrder: ['sina', 'em'],
+  },
 
   // -------------------------------------------------------------------------
   // 日韩页 · 指数（腾讯 krKOSPI / jpN225 均 param error → 只有东财覆盖）
@@ -218,8 +230,28 @@ function buildIndustryBoardKlineSources(): Record<string, KlineSources> {
   return entries
 }
 
-/** 美股市场后缀候选（腾讯侧按序探测：纳斯达克 / 纽交所 / 美交所） */
-const US_SUFFIXES = ['.OQ', '.N', '.A'] as const
+/**
+ * 美股腾讯后缀候选顺序（按东财市场号映射）：
+ * - 105 纳斯达克 → `.OQ` 优先；
+ * - 106 纽交所 → `.N` 优先。**必须 `.N` 在前**：腾讯对错误后缀并不总是只回 1 根（会被
+ *   MIN_KLINE_BARS 拦掉），部分标的会回「最早 500 根 + 最新 1 根」的补丁式序列（根数够、但近一年
+ *   只有 1 根），命中后就会被固定使用，导致 CPO/证券/消费电子三个美股板块的代理腿公共交易日
+ *   交集塌缩成 1 天、整板 K 线全空（详见 docs/tabbar卡片分时与K线取数核查.md §4.1）；
+ * - 107 美交所及部分 ETF → 实测在腾讯是 `.N`，故 `.N` 优先，`.A` 次之。
+ */
+const US_SUFFIX_ORDER: Record<string, readonly string[]> = {
+  '105': ['.OQ', '.N', '.A'],
+  '106': ['.N', '.OQ', '.A'],
+  '107': ['.N', '.A', '.OQ'],
+}
+
+/**
+ * 东财美股 ticker → 腾讯 / 新浪代码片段。
+ * 东财把类别股写成 `BRK_A`，腾讯与新浪都用 `BRK.A`（腾讯侧再拼交易所后缀，即 `usBRK.A.N`）。
+ */
+function usTickerSymbol(ticker: string): string {
+  return ticker.replace(/_/g, '.').toUpperCase()
+}
 
 /**
  * 取某标的的 K 线源（无源返回 null）。
@@ -248,13 +280,15 @@ export function resolveKlineSources(code: string): KlineSources | null {
     const tc = ashareTcCode(code.slice(2))
     return { tc: [tc], sina: { kind: 'ashare', symbol: tc, week: true } }
   }
-  // 美股个股/ADR（东财 secid → 腾讯 us<TICKER>.<后缀>，后缀按序探测）
+  // 美股个股/ADR（东财 secid → 腾讯 us<TICKER>.<后缀>，后缀按东财市场号映射后逐个探测）
   if (EM_US_SECID_RE.test(code)) {
-    const ticker = code.split('.')[1] ?? ''
-    if (!ticker) return null
+    const raw = code.split('.')[1] ?? ''
+    if (!raw) return null
+    const ticker = usTickerSymbol(raw)
+    const suffixes = US_SUFFIX_ORDER[code.split('.')[0] ?? ''] ?? ['.OQ', '.N', '.A']
     return {
-      tc: US_SUFFIXES.map((suffix) => `us${ticker.toUpperCase()}${suffix}`),
-      sina: { kind: 'us', symbol: ticker.toUpperCase() },
+      tc: suffixes.map((suffix) => `us${ticker}${suffix}`),
+      sina: { kind: 'us', symbol: ticker },
     }
   }
   // 韩股 / 日股个股（裸代码：韩股 6 位、日股 4 位；东财市场号取自分时配置的 secid）

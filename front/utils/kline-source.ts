@@ -3,9 +3,16 @@
  *
  * 链路（近周期优先，命中即返回；单源失败自动降级，不抛错）：
  *   日 K：东财（仅无腾讯/新浪源的标的）→ 腾讯 day → 新浪 day
- *   周 K：同上 week 源 → 日 K 聚合
- *   月 K：同上 month 源 → 周 K 聚合 → 日 K 聚合
+ *   周 K：同上 week 源（直取过短时改用日 K 聚合）→ 日 K 聚合
+ *   月 K：同上 month 源（直取过短时改用周 / 日 K 聚合）→ 周 K 聚合 → 日 K 聚合
  *   年 K：月 K 聚合 → 周 K 聚合 → 日 K 聚合（年 K 无任何国内直连源，必须聚合）
+ * 源优先级可用 config 的 `sourceOrder` 覆盖（如费半 SOX 用新浪主源，见 config/kline.ts）。
+ *
+ * 数据质量校验（避免「有数据但数据是错的」）：
+ *   腾讯对**错误的交易后缀**（如把纽交所标的当 `.OQ` 查）不只返回空，部分标的会返回
+ *   「最早 500 根 + 最新 1 根」的补丁式序列——根数够、但近一年只有 1 根。命中后若被固定使用，
+ *   美股板块代理合成会因公共交易日交集塌缩成 1 天而整板空态。故 hasPatchTail 命中时继续换源，
+ *   但保留为最后兜底（换源不把原本有数据的标的变成空态）。
  *
  * 合成标的（与首页卡片、分时同口径，只有日线，周/月/年由日线聚合）：
  *   - 美股时段板块 us-BKxxxx：各代理股日线按基准日归一化到 100 后逐日取等权均值；
@@ -48,6 +55,21 @@ const MONTH_COUNT = 300
 const SYNTH_DAY_COUNT = 500
 /** 缓存有效期：TAB 来回切换 / 下拉刷新之间的复用窗口 */
 const CACHE_TTL = 60_000
+/**
+ * 「直接取到的序列偏短」的判定根数：周 / 月 TAB 直取结果短于此值时，改为比较「由更细周期聚合」
+ * 的结果并用更长的那条（如东财新 secid `251.SOX` 只有 3 根月线，而新浪日线能聚合出 153 根月线）。
+ */
+const SHORT_SERIES_BARS = 12
+/**
+ * 相邻两根最大允许间隔（自然日）：用于识别腾讯对**错误交易后缀**返回的「最早 N 根 + 最新 1 根」
+ * 补丁式序列（实测 usCOHR.OQ 500 根横跨 2021→2026、近一年仅 1 根）。正常日线间隔 ≤ 10 天左右，
+ * 停牌股也只影响中段，末段间隔不会到几十天。
+ */
+const MAX_LAST_GAP_DAYS: Record<'day' | 'week' | 'month', number> = {
+  day: 45,
+  week: 120,
+  month: 400,
+}
 
 interface RawSeries {
   klines: KlinePoint[]
@@ -95,6 +117,7 @@ export function clearKlineCache(code?: string): void {
   if (!code) {
     seriesCache.clear()
     rawCache.clear()
+    tcCodeCache.clear()
     return
   }
   for (const key of Array.from(seriesCache.keys())) {
@@ -125,7 +148,9 @@ async function loadSeries(
 
   if (tab === 'week') {
     const raw = await direct('week', WEEK_COUNT)
-    if (raw && raw.klines.length >= MIN_KLINE_BARS) {
+    const directOk = !!raw && raw.klines.length >= MIN_KLINE_BARS
+    // 直取序列够长（正常情况下腾讯 / 东财周线都是几百根）→ 直接用，不多发请求
+    if (directOk && raw.klines.length >= SHORT_SERIES_BARS) {
       return {
         klines: raw.klines,
         sourceLabel: raw.sourceLabel,
@@ -133,12 +158,28 @@ async function loadSeries(
         aggregated: false,
       }
     }
-    return aggregateFrom(code, sources, 'week', [{ unit: 'day', count: DAY_COUNT }], note)
+    // 直取失败或过短（东财新 secid / 日韩个股历史短）→ 换成由日线聚合的更长序列
+    const aggregated = await aggregateFrom(
+      code,
+      sources,
+      'week',
+      [{ unit: 'day', count: DAY_COUNT }],
+      note,
+    )
+    if (aggregated && (!directOk || aggregated.klines.length > raw.klines.length)) return aggregated
+    if (!directOk) return null
+    return {
+      klines: raw.klines,
+      sourceLabel: raw.sourceLabel,
+      note: noteOf(raw),
+      aggregated: false,
+    }
   }
 
   if (tab === 'month') {
     const raw = await direct('month', MONTH_COUNT)
-    if (raw && raw.klines.length >= MIN_KLINE_BARS) {
+    const directOk = !!raw && raw.klines.length >= MIN_KLINE_BARS
+    if (directOk && raw.klines.length >= SHORT_SERIES_BARS) {
       return {
         klines: raw.klines,
         sourceLabel: raw.sourceLabel,
@@ -146,7 +187,7 @@ async function loadSeries(
         aggregated: false,
       }
     }
-    return aggregateFrom(
+    const aggregated = await aggregateFrom(
       code,
       sources,
       'month',
@@ -156,6 +197,14 @@ async function loadSeries(
       ],
       note,
     )
+    if (aggregated && (!directOk || aggregated.klines.length > raw.klines.length)) return aggregated
+    if (!directOk) return null
+    return {
+      klines: raw.klines,
+      sourceLabel: raw.sourceLabel,
+      note: noteOf(raw),
+      aggregated: false,
+    }
   }
 
   // 年 K：无直连源，一律聚合
@@ -172,7 +221,12 @@ async function loadSeries(
   )
 }
 
-/** 依次尝试「取细周期 → 聚合到目标周期」，聚合结果不足 2 根时继续下一个细周期 */
+/**
+ * 依次尝试「取细周期 → 聚合到目标周期」。
+ * 目标周期为年时取首个聚合出 ≥2 根的细周期（与历史行为一致，避免为短历史标的额外多发请求）；
+ * 周 / 月则继续向下比较：直取只有几根时（东财新 secid、日韩个股小盘标的等）用更细周期聚合出
+ * 更长的历史，聚合根数达到 SHORT_SERIES_BARS 即提前结束。
+ */
 async function aggregateFrom(
   code: string,
   sources: KlineSources,
@@ -180,20 +234,25 @@ async function aggregateFrom(
   bases: Array<{ unit: 'day' | 'week' | 'month'; count: number }>,
   note?: string,
 ): Promise<KlineSeriesResult | null> {
+  const enough = target === 'year' ? MIN_KLINE_BARS : SHORT_SERIES_BARS
+  let best: KlineSeriesResult | null = null
   for (const base of bases) {
     if (base.unit === target) continue
     const raw = await fetchRawCached(code, sources, base.unit, base.count)
     if (!raw) continue
     const klines = aggregateKlines(raw.klines, target)
     if (klines.length < MIN_KLINE_BARS) continue
-    return {
-      klines,
-      sourceLabel: `${raw.sourceLabel}（${periodLabel(target)}聚合）`,
-      note: raw.note ?? note,
-      aggregated: true,
+    if (!best || klines.length > best.klines.length) {
+      best = {
+        klines,
+        sourceLabel: `${raw.sourceLabel}（${periodLabel(target)}聚合）`,
+        note: raw.note ?? note,
+        aggregated: true,
+      }
     }
+    if (best.klines.length >= enough) break
   }
-  return null
+  return best
 }
 
 /** 是否合成标的（代理股均值 / 交叉汇率）：只有日线，且多腿请求的数据量与请求根数无关 */
@@ -231,33 +290,79 @@ async function fetchRaw(
   if (sources.cross) {
     return unit === 'day' ? fetchCrossComposite(sources.cross, count) : null
   }
-  // 东财（仅登记了东财源的标的：板块指数 / 国际指数 / A股平均股价）
-  if (sources.em) {
-    const klines = await klineApi.eastmoney(sources.em, unit, count)
-    if (klines && klines.length >= MIN_KLINE_BARS) {
-      return { klines, sourceLabel: '东方财富K线' }
+
+  /**
+   * 形态可疑（补丁式序列）/ 历史偏短的备选结果：所有源都拿不到更好结果时用它，
+   * 保证「换源」不会把原本有数据的标的变成空态（例如停牌股的短序列）。
+   */
+  let fallback: RawSeries | null = null
+  const keepFallback = (raw: RawSeries) => {
+    if (!fallback || raw.klines.length > fallback.klines.length) fallback = raw
+  }
+
+  for (const kind of sourceOrder(sources)) {
+    // 东财（板块指数 / 国际指数 / A股平均股价 / 日韩个股）
+    if (kind === 'em' && sources.em) {
+      const klines = await klineApi.eastmoney(sources.em, unit, count)
+      if (klines && klines.length >= MIN_KLINE_BARS) {
+        const raw: RawSeries = { klines, sourceLabel: '东方财富K线' }
+        if (!hasPatchTail(klines, unit)) return raw
+        keepFallback(raw)
+      }
+      continue
+    }
+    // 腾讯（A股 / 港股 / 美股 / 外汇）：候选按序探测，命中即固定（仅限形态正常的序列）
+    if (kind === 'tc') {
+      for (const candidate of orderTencentCandidates(sources.tc)) {
+        const klines = await klineApi.tencent(candidate, unit, count)
+        if (!klines || klines.length < MIN_KLINE_BARS) continue
+        const raw: RawSeries = { klines, sourceLabel: '腾讯K线' }
+        // 补丁式序列（错误交易后缀的典型返回）不得固定为该代码：继续试下一候选 / 新浪
+        if (hasPatchTail(klines, unit)) {
+          keepFallback(raw)
+          continue
+        }
+        if (sources.tc?.length) tcCodeCache.set(sources.tc.join(','), candidate)
+        return raw
+      }
+      continue
+    }
+    // 新浪（期货 / 外盘 / 外汇 / A股与美股备用）：仅支持日线（A股另有周线 scale=1680）
+    const sina = sources.sina
+    if (kind === 'sina' && sina && (unit === 'day' || (unit === 'week' && sina.week))) {
+      const klines = await klineApi.sina(
+        sina.kind as SinaKlineKind,
+        sina.symbol,
+        unit === 'week' ? 'week' : 'day',
+      )
+      if (klines && klines.length >= MIN_KLINE_BARS) {
+        const raw: RawSeries = { klines, sourceLabel: '新浪K线' }
+        if (!hasPatchTail(klines, unit)) return raw
+        keepFallback(raw)
+      }
     }
   }
-  const candidates = orderTencentCandidates(sources.tc)
-  for (const candidate of candidates) {
-    const klines = await klineApi.tencent(candidate, unit, count)
-    if (klines && klines.length >= MIN_KLINE_BARS) {
-      if (sources.tc?.length) tcCodeCache.set(sources.tc.join(','), candidate)
-      return { klines, sourceLabel: '腾讯K线' }
-    }
-  }
-  const sina = sources.sina
-  if (sina && (unit === 'day' || (unit === 'week' && sina.week))) {
-    const klines = await klineApi.sina(
-      sina.kind as SinaKlineKind,
-      sina.symbol,
-      unit === 'week' ? 'week' : 'day',
-    )
-    if (klines && klines.length >= MIN_KLINE_BARS) {
-      return { klines, sourceLabel: '新浪K线' }
-    }
-  }
-  return null
+  return fallback
+}
+
+/** 源优先级（默认 东财 → 腾讯 → 新浪；config 可用 sourceOrder 覆盖，如 SOX 把新浪提到主源） */
+function sourceOrder(sources: KlineSources): Array<'em' | 'tc' | 'sina'> {
+  return sources.sourceOrder?.length ? sources.sourceOrder : ['em', 'tc', 'sina']
+}
+
+/**
+ * 是否是「最早 N 根 + 最新 1 根」的补丁式序列（腾讯对错误交易后缀的返回形态）。
+ * 判据：最后一根与倒数第二根的间隔超过该周期的合理上限（日线 45 天 / 周线 120 天 / 月线 400 天）。
+ * 停牌只会拉大中段间隔，末段不会到几十天，因此不影响正常停牌股。
+ */
+function hasPatchTail(klines: KlinePoint[], unit: 'day' | 'week' | 'month'): boolean {
+  if (klines.length < MIN_KLINE_BARS) return false
+  const last = klines[klines.length - 1]
+  const prev = klines[klines.length - 2]
+  if (!last || !prev) return false
+  const gap = (Date.parse(last.time) - Date.parse(prev.time)) / 86_400_000
+  if (!Number.isFinite(gap)) return false
+  return gap > MAX_LAST_GAP_DAYS[unit]
 }
 
 // ---------------------------------------------------------------------------
