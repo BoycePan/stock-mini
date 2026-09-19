@@ -28,6 +28,20 @@ Component({
     panLeftDisabled: { type: Boolean, value: false },
     panRightDisabled: { type: Boolean, value: false },
   },
+  lifetimes: {
+    /**
+     * 销毁时清理长按连发定时器（泄漏兜底）：
+     * 连发期间组件被移出页面（切 TAB / 下拉刷新把 chartReady 置 false 重建图表 / 退出页面）时，
+     * 触摸节点已不存在、**不会再有 touchend / touchcancel 回调**，而连发是 setInterval ——
+     * 不清理就会每 80ms 对已销毁组件 triggerEvent，且定时器闭包持有组件实例使其无法回收。
+     */
+    detached() {
+      const state = pressStates.get(this)
+      if (!state) return
+      clearTimers(state)
+      pressStates.delete(this)
+    },
+  },
   methods: {
     /** 按下：记录动作并起长按计时（只有平移支持连发） */
     onPressStart(event: WechatMiniprogram.TouchEvent) {
