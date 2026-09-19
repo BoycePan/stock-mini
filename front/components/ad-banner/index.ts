@@ -20,8 +20,9 @@ import { resolveAdUnitId } from '../../utils/ad-config'
  * <ad-banner location="homeTop" placement="card" />
  * ```
  *
- * - location：广告位标识（homeTop / asiaTop / matalsTop / finance /
- *   minute-detail / finance-detail），决定查找哪个 unit-id；
+ * - location：广告位标识（homeTop / homeIndustry / asiaTop / matalsTop / finance /
+ *   minute-detail / finance-detail / us-top100 / industry-all），决定查找哪个 unit-id；
+ *   同一页面可挂多个广告位（不同 location），见 components/market-page 的 adLocation / adLocation2；
  * - placement：外边距布局——
  *   - card：行情页分区卡片之间（与 section-card 对齐，左右 20rpx）；
  *   - inline：内容卡片内部（如财经页新闻列表第二条之后，上下留白）；

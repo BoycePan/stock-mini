@@ -9,10 +9,10 @@
  * - `viewBars` = 可见根数（默认 30，永远是整数根，缩放 / 平移都按整根吸附）；
  * - `viewEnd` = 窗口最后一根的**全量下标**（含），窗口左端 = `viewEnd - viewBars + 1`。
  *
- * 改窗口的三条路径：
+ * 改窗口的三条路径（**三条路径的缩放锚点统一为「可见窗口最右侧那根 K 线」**，右端不动）：
  * 1. `‹` / `›` 按钮：**每次移动 1 根**，长按连发（连发节奏见 `panRepeatStep`）；
- * 2. 双指捏合 `pinchViewport`：以两指中点为锚点缩放；
- * 3. `+` / `−` 按钮：`zoomViewport` 按 0.7 倍率缩放（右端锚定）。
+ * 2. 双指捏合 `scaleViewport`：按指距比例连续缩放；
+ * 3. `+` / `−` 按钮：`zoomViewport` 按 0.7 倍率缩放。
  * **单指拖动不改窗口**（只用于查看 K 线数据 / 十字光标），见 utils/chart-gesture.ts。
  *
  * 缩放的上下限（「缩放和放大要有限制」）：
@@ -107,25 +107,16 @@ export function panViewport(
 }
 
 /**
- * 双指捏合缩放：`scale` = 当前指距 / 手势起始指距（>1 = 放大 = 更少根数），
- * `anchorRatio` = 锚点在手势起点窗口内的相对位置（0 = 窗口最左，1 = 最右，通常取两指中点）。
- * 锚点处的那根 K 线缩放前后停在同一横坐标，手感与原生缩放一致；结果同样受 MIN/全量限制。
+ * 双指捏合缩放：`scale` = 当前指距 / 手势起始指距（>1 = 放大 = 更少根数）。
+ * **锚点固定为可见窗口最右侧那根 K 线**（`viewEnd` 不变，只改根数），与 `+` / `−`
+ * 按钮同一套手感：无论两指落在画面哪里，缩放时最右侧那根都停在原地，
+ * 不会因为两指中点偏左 / 偏右把窗口推离最新一根。结果同样受 MIN / 全量限制。
  */
-export function pinchViewport(
-  total: number,
-  base: ViewportState,
-  scale: number,
-  anchorRatio: number,
-): ViewportState {
-  const current = clampViewport(total, base.viewBars, base.viewEnd)
+export function scaleViewport(total: number, state: ViewportState, scale: number): ViewportState {
+  const current = clampViewport(total, state.viewBars, state.viewEnd)
   if (!Number.isFinite(scale) || scale <= 0) return current
   if (Math.abs(scale - 1) < PINCH_DEAD_ZONE) return current
-  const nextBars = Math.round(current.viewBars / scale)
-  const start = current.viewEnd - current.viewBars + 1
-  const ratio = Math.max(0, Math.min(1, Number.isFinite(anchorRatio) ? anchorRatio : 1))
-  const anchorIndex = start + ratio * (current.viewBars - 1)
-  const nextStart = anchorIndex - ratio * (Math.max(1, nextBars) - 1)
-  return clampViewport(total, nextBars, Math.round(nextStart + Math.max(1, nextBars) - 1))
+  return clampViewport(total, Math.round(current.viewBars / scale), current.viewEnd)
 }
 
 /** K 线分片视图：窗口内的 K 线 + 对齐窗口的均线 / MACD（后两者在全量上计算后切片） */
@@ -145,7 +136,7 @@ export interface KlineView {
   /** 窗口起止（全量下标，闭区间；空数据时 start=0 / end=-1） */
   start: number
   end: number
-  /** 窗口是否已贴到最新一根（只有贴住时才展示「最新价」虚线标签） */
+  /** 窗口是否已贴到最新一根（贴住后「右移」按钮禁用） */
   atLatest: boolean
 }
 

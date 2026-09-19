@@ -78,7 +78,9 @@
             <view
               wx:for="{{ tabs }}"
               wx:key="key"
-              class="tab {{ item.enabled ? '' : 'tab-disabled' }} {{ mode === item.key ? 'tab-active' : '' }}"
+              class="tab {{ item.enabled ? '' : 'tab-disabled' }} {{
+                mode === item.key ? 'tab-active' : ''
+              }}"
               data-key="{{ item.key }}"
               bindtap="onTabTap"
               >{{ item.label }}</view
@@ -87,7 +89,7 @@
 
           <view class="panel-title-row">
             <text class="panel-title">{{ panelTitle }}</text>
-            <text class="panel-source" wx:if="{{ sourceLabel }}">{{ sourceLabel }}</text>
+            <!-- <text class="panel-source" wx:if="{{ sourceLabel }}">{{ sourceLabel }}</text> -->
           </view>
           <view wx:if="{{ chartNote }}" class="minute-note">{{ chartNote }}</view>
         </view>
@@ -108,9 +110,9 @@
           </view>
           <view wx:else class="chart-state">
             <text class="chart-state-text">{{ chartError }}</text>
-            <button wx:if="{{ chartRetryable }}" class="chart-retry" bindtap="onRetry"
-              >重新加载</button
-            >
+            <button wx:if="{{ chartRetryable }}" class="chart-retry" bindtap="onRetry">
+              重新加载
+            </button>
           </view>
         </view>
       </view>

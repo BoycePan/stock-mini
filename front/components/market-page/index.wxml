@@ -35,6 +35,13 @@
           location="{{ adLocation }}"
           placement="card"
         ></ad-banner>
+        <!-- 第二个广告位：首页「行业板块」卡片底部（adAfterSection2，如 industry-board）；
+             两个槽位互不排斥，配成同一分区时可同屏出现（默认各自指向不同分区） -->
+        <ad-banner
+          wx:if="{{ adLocation2 && item.id === adAfterSection2 }}"
+          location="{{ adLocation2 }}"
+          placement="card"
+        ></ad-banner>
       </block>
     </block>
     <disclaimer-footer></disclaimer-footer>

@@ -11,10 +11,14 @@
  *
  * 布局（自上而下）：
  *   padT（K线放 MA 图例 / 分时留白）
- *   价格面板（横向网格 + 左侧价格刻度；分时以昨收为 0% 中线）
+ *   价格面板（横向网格 + 左侧价格刻度；分时以昨收为 0% 中线；
+ *             K线另标出可见窗口内的最高 / 最低价：短箭头 + 价格文字）
  *   成交量面板（柱：K线按涨跌分色，分时按该分钟相对上一分钟涨跌分色）
  *   MACD 面板（DIF / DEA 双线 + 红绿柱，零轴居中）
  *   底部时间 / 日期刻度
+ *
+ * 注：不再绘制「最新价」常驻虚线标签（K线最新一根的价由十字光标触摸查看），
+ * 以免压住最右侧 K 线。
  */
 
 import type { KlinePoint, MinutePoint } from '../../../types/stock'
@@ -53,7 +57,7 @@ export function isKlineMode(mode: QuoteChartMode): boolean {
 }
 
 /**
- * K 线均线周期（MA5 / MA20 / MA30 / MA60）：单一数据源见 utils/kline.ts 的 KLINE_MA_PERIODS，
+ * K 线均线周期（MA5 / MA10 / MA20 / MA30 / MA60）：单一数据源见 utils/kline.ts 的 KLINE_MA_PERIODS，
  * 屏幕 K 线图与分享海报共用。均线一律在**全量** K 线上计算，再按可见窗口切片
  * （见 utils/kline-viewport.ts 的 buildKlineView）：分片视图若只在窗口内算 MA，
  * 窗口越小均线越短、MA60 直接画不出来。
@@ -202,7 +206,7 @@ function palette(isDark: boolean): Palette {
         avg: '#f5b94a',
         dif: '#6fa3ff',
         dea: '#f5b94a',
-        ma: ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5'],
+        ma: ['#f5b94a', '#ff8fc0', '#c08ff0', '#6fa3ff', '#4fd1c5'],
         flatVol: 'rgba(195,206,222,0.5)',
         upVol: 'rgba(235,81,77,0.5)',
         downVol: 'rgba(32,166,106,0.5)',
@@ -219,7 +223,7 @@ function palette(isDark: boolean): Palette {
         avg: '#f0a020',
         dif: '#4278ed',
         dea: '#f0a020',
-        ma: ['#f0a020', '#a06ee0', '#4278ed', '#0f9b8e'],
+        ma: ['#f0a020', '#d1499a', '#a06ee0', '#4278ed', '#0f9b8e'],
         flatVol: 'rgba(154,167,184,0.65)',
         upVol: 'rgba(235,81,77,0.5)',
         downVol: 'rgba(32,166,106,0.5)',
@@ -571,7 +575,8 @@ function drawPricePanel(
   if (layout.isKline) {
     drawCandles(ctx, d, layout, c)
     drawMaLines(ctx, d, layout, c)
-    drawLastPriceTag(ctx, d, layout, c)
+    // 极值标注最后画（压在蜡烛 / 均线之上）：只标可见窗口内的最高 / 最低点
+    drawExtremeTags(ctx, d, layout, c)
     return
   }
 
@@ -662,7 +667,7 @@ function drawCandles(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
 }
 
 /**
- * MA5 / MA20 / MA30 / MA60 均线 + 左上角图例（有十字光标时显示该根数值）。
+ * MA5 / MA10 / MA20 / MA30 / MA60 均线 + 左上角图例（有十字光标时显示该根数值）。
  * 图例排版走 utils/kline-legend.ts 的 fitMaLegend（放不下自动降级字号 / 去掉数值），
  * 与 kline-chart 组件共用同一套排版规则。
  */
@@ -693,7 +698,7 @@ function drawMaLines(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
     if (started) ctx.stroke()
   }
 
-  // 图例：MA5:xx MA20:xx MA30:xx MA60:xx（顶行，颜色与曲线一致）
+  // 图例：MA5:xx MA10:xx MA20:xx MA30:xx MA60:xx（顶行，颜色与曲线一致）
   const legend = fitMaLegend(ctx, {
     periods: layout.maPeriods,
     padL: layout.padL,
@@ -708,35 +713,89 @@ function drawMaLines(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout,
   }
 }
 
-/** 最新价虚线 + 右侧圆角标签（K 线模式；分时不常驻价格标签，最新价在基本信息卡） */
-function drawLastPriceTag(
+/**
+ * 区间极值标注（仅 K 线）：把可见窗口内的**最高价 / 最低价**用短箭头 + 价格文字标出来。
+ *
+ * - 分时不标：分钟走势密集、极值意义弱，读数交给十字光标触摸查看；
+ * - 最新一根也不标常驻价格（右侧虚线 + 圆角标签已移除）：它会压住最右侧的 K 线，
+ *   且用户触摸即可看到该根的开高低收，无需常驻。
+ */
+function drawExtremeTags(
   ctx: ChartCtx,
   d: QuoteChartData,
   layout: QuoteChartLayout,
   c: Palette,
 ): void {
-  const last = d.klines[layout.n - 1]
-  if (!last) return
-  const y = layoutPriceY(layout, last.close)
-  const color = isUpKline(last) ? c.up : c.down
-  ctx.strokeStyle = c.zero
-  ctx.setLineDash([4, 4])
-  ctx.beginPath()
-  ctx.moveTo(layout.padL, y)
-  ctx.lineTo(layout.padL + layout.plotW, y)
-  ctx.stroke()
-  ctx.setLineDash([])
-  const text = last.close.toFixed(2)
+  let hi = -1
+  let lo = -1
+  let hiVal = -Infinity
+  let loVal = Infinity
+  for (let i = 0; i < layout.n; i += 1) {
+    const k = d.klines[i]
+    if (!k) continue
+    if (k.high > hiVal) {
+      hiVal = k.high
+      hi = i
+    }
+    if (k.low < loVal) {
+      loVal = k.low
+      lo = i
+    }
+  }
+  const highBar = hi >= 0 ? d.klines[hi] : undefined
+  const lowBar = lo >= 0 ? d.klines[lo] : undefined
+  if (highBar) {
+    drawExtremeTag(
+      ctx,
+      layout,
+      highBar.high.toFixed(2),
+      layout.xs[hi] ?? layout.padL,
+      layoutPriceY(layout, highBar.high),
+      c.up,
+    )
+  }
+  if (lowBar) {
+    drawExtremeTag(
+      ctx,
+      layout,
+      lowBar.low.toFixed(2),
+      layout.xs[lo] ?? layout.padL,
+      layoutPriceY(layout, lowBar.low),
+      c.down,
+    )
+  }
+}
+
+/**
+ * 单个极值标签：短箭头（尖端指向该根的最高 / 最低价）+ 价格文字，横向贴在极值点一侧。
+ * 标签一律摆向**空间更大的一侧**（极值靠左 → 标签在右，靠右 → 标签在左），
+ * 这样箭头顺手指向绘图区内部，文字也不会被画布边缘裁掉。
+ */
+function drawExtremeTag(
+  ctx: ChartCtx,
+  layout: QuoteChartLayout,
+  text: string,
+  x: number,
+  y: number,
+  color: string,
+): void {
   ctx.font = '10px sans-serif'
-  const w = ctx.measureText(text).width + 10
-  const tagX = layout.padL + layout.plotW - w
-  const tagY = y - 8
+  const arrowW = 5
+  const gap = 2
+  const toLeft = x - layout.padL >= layout.padL + layout.plotW - x
+  const dir = toLeft ? -1 : 1
+  const baseX = x + dir * (2 + arrowW)
+
   ctx.fillStyle = color
-  roundRectPath(ctx, tagX, tagY, w, 16, 3)
+  ctx.beginPath()
+  ctx.moveTo(x + dir * 2, y)
+  ctx.lineTo(baseX, y - 3.5)
+  ctx.lineTo(baseX, y + 3.5)
+  ctx.closePath()
   ctx.fill()
-  ctx.fillStyle = '#ffffff'
-  ctx.textAlign = 'center'
-  ctx.fillText(text, tagX + w / 2, tagY + 11.5)
+
+  ctx.textAlign = toLeft ? 'right' : 'left'
+  ctx.fillText(text, baseX + dir * gap, y + 3.5)
 }
 
 /** 成交量面板：分隔线 + 顶行标注（有十字光标时显示该根成交量）+ 柱 */
@@ -921,7 +980,10 @@ function drawXTicks(ctx: ChartCtx, layout: QuoteChartLayout, c: Palette): void {
   void first
 }
 
-/** 十字光标 + 信息框（同花顺式）：竖线贯穿三块面板，横线在价格面板 */
+/**
+ * 十字光标 + 信息框（同花顺式）：竖线贯穿三块面板，横线在价格面板。
+ * 交点圆点只在分时画（定位读数），K 线不画（蜡烛已经标出收盘位置）。
+ */
 export function renderCrosshair(ctx: ChartCtx, d: QuoteChartData, layout: QuoteChartLayout): void {
   const idx = d.activeIndex
   if (idx === null || layout.n < 2) return
@@ -957,10 +1019,14 @@ export function renderCrosshair(ctx: ChartCtx, d: QuoteChartData, layout: QuoteC
   ctx.stroke()
   ctx.setLineDash([])
 
-  ctx.fillStyle = mainColor
-  ctx.beginPath()
-  ctx.arc(x, y, 3.5, 0, Math.PI * 2)
-  ctx.fill()
+  // 交点圆点只在分时画：走势线上没有蜡烛，圆点用来定位当前读数；
+  // K 线不画——蜡烛本身已标出该根的收盘位置，再叠一个圆点只是噪声
+  if (!isKline) {
+    ctx.fillStyle = mainColor
+    ctx.beginPath()
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
   // 信息框内容按模式区分
   const rows: Array<{ text: string; color: string }> = []

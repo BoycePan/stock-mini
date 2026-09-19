@@ -47,10 +47,10 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
 
-/** 均线配色（浅 / 深各一套，下标与 KLINE_MA_PERIODS 对齐），保证双主题可读 */
+/** 均线配色（浅 / 深各一套，下标与 KLINE_MA_PERIODS 对齐；MA10 = 品红），保证双主题可读 */
 const MA_COLORS: Record<'light' | 'dark', string[]> = {
-  light: ['#f0a020', '#a06ee0', '#4278ed', '#0f9b8e'],
-  dark: ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5'],
+  light: ['#f0a020', '#d1499a', '#a06ee0', '#4278ed', '#0f9b8e'],
+  dark: ['#f5b94a', '#ff8fc0', '#c08ff0', '#6fa3ff', '#4fd1c5'],
 }
 
 /**
@@ -64,17 +64,19 @@ const detachedInstances = new WeakSet<object>()
 /**
  * 板块 / 个股详情页的 K 线图（canvas 2d）：
  * - 蜡烛图：影线 + 圆角实体，红涨绿跌（与全局涨跌色一致）；
- * - MA5 / MA20 / MA30 / MA60 均线 + 左上角图例（数值取窗口最后一根 / 十字光标选中那根，
+ * - MA5 / MA10 / MA20 / MA30 / MA60 均线 + 左上角图例（数值取窗口最后一根 / 十字光标选中那根，
  *   图例排版与行情页图表共用 utils/kline-legend.ts，放不下自动降级）；
  * - **可见窗口**：默认只画最近 30 根（整段几百根既卡又糊），三种改窗口方式：
- *   `‹` / `›` 轻点移动 1 根、长按连发（步长逐步加大）、`+` / `−` 缩放、双指捏合缩放（锚点为两指中点）；
+ *   `‹` / `›` 轻点移动 1 根、长按连发（步长逐步加大）、`+` / `−` 缩放、双指捏合缩放（一律以窗口最右侧那根为基准）；
  *   根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）；
  *   均线在全量 K 线上计算后按窗口切片，所以窗口再小 MA60 也不会失真；
  * - 触摸分工：**单指只用于查看 K 线数据**（按下 / 滑动都只移动十字光标，不会把图拖走），
  *   双指 = 缩放；全部手指抬起后收起十字光标；
+ *   十字光标只有虚线十字 + 信息框，**不在交点画实心圆点**（蜡烛已标出该根收盘位置）；
  * - 左侧价格刻度 + 底部日期刻度 + 网格（含纵向时间分隔线）；
  * - 下方成交量柱按当根涨跌分色（同花顺风格），左上角标注窗口内最大量；
- * - 最新价虚线 + 右侧圆角标签：仅当窗口停在最新一根时展示（翻看历史时不误导）；
+ * - 区间极值标注：窗口内最高 / 最低价各一个（短箭头 + 价格文字，箭头指向该根影线端点）；
+ *   不画「最新价」常驻标签——它会压住最右侧 K 线，读数交给十字光标触摸查看；
  * - 深浅主题配色跟随 theme（含缩放控件）。
  */
 Component({
@@ -226,13 +228,12 @@ Component({
       this.renderChart(st, canvasState)
       if (st.activeIndex !== null) this.renderCrosshair(st, canvasState)
     },
-    /** 绘制基础图（网格 / 刻度 / 蜡烛 / 均线 / 成交量 / 最新价标签），并把布局参数写回 state */
+    /** 绘制基础图（网格 / 刻度 / 蜡烛 / 均线 / 成交量 / 极值标注），并把布局参数写回 state */
     renderChart(st: KlineChartState, canvasState: CanvasState) {
       const { ctx, width, height } = canvasState
       const isDark = st.isDark
       const gridColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(20,32,51,0.12)'
       const textColor = isDark ? '#8a97a8' : '#718096'
-      const baseColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(20,32,51,0.3)'
       const maColors = isDark ? MA_COLORS.dark : MA_COLORS.light
 
       // 只画可见窗口内的 K 线（默认 30 根）：均线 / 窗口都在 utils/kline-viewport.ts 里算好
@@ -397,30 +398,9 @@ Component({
         ctx.fillText(formatKlineTime(k.time), indexToX(idx, n, padL, plotW), height - 4)
       }
 
-      // 最新价虚线 + 右侧圆角标签：仅在窗口停在最新一根时展示（翻看历史时展示会误导）
-      const last = klines[n - 1]
-      if (last && st.view.atLatest) {
-        const lastY = priceToY(last.close, minP, maxP, padT, priceH)
-        const color = isUpKline(last) ? UP_COLOR : DOWN_COLOR
-        ctx.strokeStyle = baseColor
-        ctx.setLineDash([4, 4])
-        ctx.beginPath()
-        ctx.moveTo(padL, lastY)
-        ctx.lineTo(width - padR, lastY)
-        ctx.stroke()
-        ctx.setLineDash([])
-        const label = last.close.toFixed(2)
-        ctx.font = '10px sans-serif'
-        const labelW = ctx.measureText(label).width + 10
-        const tagX = width - padR - labelW
-        const tagY = lastY - 9
-        ctx.fillStyle = color
-        roundRectPath(ctx, tagX, tagY, labelW, 16, 3)
-        ctx.fill()
-        ctx.fillStyle = '#ffffff'
-        ctx.textAlign = 'center'
-        ctx.fillText(label, tagX + labelW / 2, tagY + 11.5)
-      }
+      // 极值标注：窗口内最高 / 最低价各一个（短箭头 + 价格文字，箭头指向该根影线端点）。
+      // 不画「最新价」虚线标签：常驻标签会压住最右侧 K 线，用户触摸即可查看该根开高低收。
+      drawExtremeTags(ctx, klines, n, padL, plotW, padT, priceH, minP, maxP)
     },
     /** 十字光标 + 信息框（同花顺式）；下标是窗口内下标 */
     renderCrosshair(st: KlineChartState, canvasState: CanvasState) {
@@ -452,11 +432,8 @@ Component({
       ctx.stroke()
       ctx.setLineDash([])
 
-      // 收盘价标记点
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.arc(x, y, 3.5, 0, Math.PI * 2)
-      ctx.fill()
+      // 不在交点画实心圆点：K 线蜡烛本身已标出该根收盘位置，再叠一个点只是噪声
+      // （分时图保留圆点——走势线上没有蜡烛，圆点用来定位当前读数）
 
       // 信息框内容
       const prevClose = idx > 0 ? klines[idx - 1]?.close : undefined
@@ -525,20 +502,14 @@ Component({
       gestureStates.set(this, update.state)
       this.runGestureAction(update.action)
     },
-    /** 手势识别所需的当前配置（窗口 / 绘图区几何随缩放与平移实时变化） */
+    /** 手势识别所需的当前配置（窗口随缩放 / 平移实时变化） */
     gestureConfig(): GestureConfig {
-      const st = chartStates.get(this)
       const canvasState = canvasStates.get(this)
+      const total = ((this.data.klines as KlinePoint[]) ?? []).length
       return {
         zoomable: true,
-        total: ((this.data.klines as KlinePoint[]) ?? []).length,
-        viewport: clampViewport(
-          ((this.data.klines as KlinePoint[]) ?? []).length,
-          this.data.viewBars,
-          this.data.viewEnd,
-        ),
-        padL: st?.padL ?? 0,
-        plotW: st?.plotW ?? 0,
+        total,
+        viewport: clampViewport(total, this.data.viewBars, this.data.viewEnd),
         rectLeft: canvasState?.rectLeft ?? 0,
       }
     },
@@ -642,6 +613,97 @@ const gestureStates = new WeakMap<object, GestureState | null>()
 
 /** 组件实例 → 上一次的 K 线数组引用（判断是否换了周期，决定要不要复位窗口） */
 const lastKlineSeries = new WeakMap<object, unknown>()
+
+/**
+ * 区间极值标注：把可见窗口内的最高价 / 最低价用短箭头 + 价格文字标出来
+ * （与行情页 K 线图 packageQuote/components/quote-chart/draw.ts 同一套画法）。
+ * 不再画「最新价」常驻标签：它会压住最右侧 K 线，用户触摸即可查看该根开高低收。
+ */
+function drawExtremeTags(
+  ctx: CanvasCtx,
+  klines: KlinePoint[],
+  n: number,
+  padL: number,
+  plotW: number,
+  padT: number,
+  priceH: number,
+  minP: number,
+  maxP: number,
+): void {
+  let hi = -1
+  let lo = -1
+  let hiVal = -Infinity
+  let loVal = Infinity
+  for (let i = 0; i < n; i += 1) {
+    const k = klines[i]
+    if (!k) continue
+    if (k.high > hiVal) {
+      hiVal = k.high
+      hi = i
+    }
+    if (k.low < loVal) {
+      loVal = k.low
+      lo = i
+    }
+  }
+  const highBar = hi >= 0 ? klines[hi] : undefined
+  const lowBar = lo >= 0 ? klines[lo] : undefined
+  if (highBar) {
+    drawExtremeTag(
+      ctx,
+      highBar.high.toFixed(2),
+      indexToX(hi, n, padL, plotW),
+      priceToY(highBar.high, minP, maxP, padT, priceH),
+      padL,
+      padL + plotW,
+      UP_COLOR,
+    )
+  }
+  if (lowBar) {
+    drawExtremeTag(
+      ctx,
+      lowBar.low.toFixed(2),
+      indexToX(lo, n, padL, plotW),
+      priceToY(lowBar.low, minP, maxP, padT, priceH),
+      padL,
+      padL + plotW,
+      DOWN_COLOR,
+    )
+  }
+}
+
+/**
+ * 单个极值标签：短箭头（尖端指向该根的最高 / 最低价）+ 价格文字，横向贴在极值点一侧。
+ * 标签一律摆向**空间更大的一侧**（极值靠左 → 标签在右，靠右 → 标签在左），
+ * 这样箭头顺手指向绘图区内部，文字也不会被画布边缘裁掉。
+ */
+function drawExtremeTag(
+  ctx: CanvasCtx,
+  text: string,
+  x: number,
+  y: number,
+  plotL: number,
+  plotR: number,
+  color: string,
+): void {
+  ctx.font = '10px sans-serif'
+  const arrowW = 5
+  const gap = 2
+  const toLeft = x - plotL >= plotR - x
+  const dir = toLeft ? -1 : 1
+  const baseX = x + dir * (2 + arrowW)
+
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(x + dir * 2, y)
+  ctx.lineTo(baseX, y - 3.5)
+  ctx.lineTo(baseX, y + 3.5)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.textAlign = toLeft ? 'right' : 'left'
+  ctx.fillText(text, baseX + dir * gap, y + 3.5)
+}
 
 /** 批量绘制矩形（rect 数组：x,y,w,h 依次排列；同色合并提升性能） */
 function paintRects(ctx: CanvasCtx, rects: number[], color: string): void {

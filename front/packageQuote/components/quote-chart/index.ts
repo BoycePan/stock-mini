@@ -51,9 +51,10 @@ function stepOf(event: ChartControlEvent): number {
  *   即「有则展示、没有就不展示」；
  * - 画布高度随模式切换（wxss 按 mode 类名给定），K 线模式更高以容纳 MACD 面板；
  * - 十字光标：竖线贯穿三块面板、横线在价格面板，信息框按模式给出不同字段；
+ *   交点圆点只在分时画（走势线定位），K 线不画（蜡烛已标出该根收盘位置）；
  * - **K 线可见窗口**：默认只画最近 30 根（整段几百根既卡又糊），三种改窗口的方式：
  *   1. 下方 `‹` / `›`：轻点移动 **1 根**，长按约 0.4s 起连发（步长逐次加大），`+` / `−` 缩放；
- *   2. 双指捏合缩放（锚点为两指中点）；
+ *   2. 双指捏合缩放（锚点为可见窗口最右侧那根，与 `+` / `−` 一致）；
  *   3. 窗口根数被夹在 [MIN_VIEW_BARS=10, 全量] 之间（见 utils/kline-viewport.ts）。
  *   均线与 MACD 仍在全量数据上计算后按窗口切片，窗口再小 MA60 / MACD 预热也不会失真。
  * - 触摸分工：**单指只用于查看 K 线数据**（按下 / 滑动都只移动十字光标，不会把图拖走）；
@@ -274,17 +275,13 @@ Component({
       gestureStates.set(this, update.state)
       this.runGestureAction(update.action)
     },
-    /** 手势识别所需的当前配置（窗口 / 绘图区几何随缩放与平移实时变化） */
+    /** 手势识别所需的当前配置（窗口随缩放 / 平移实时变化） */
     gestureConfig(): GestureConfig {
-      const chart = chartStates.get(this)
       const canvasState = canvasStates.get(this)
-      const layout = chart?.layout
       return {
         zoomable: isKlineMode(this.data.mode as QuoteChartMode),
         total: this.klineTotal(),
         viewport: this.currentViewport(),
-        padL: layout?.padL ?? 0,
-        plotW: layout?.plotW ?? 0,
         rectLeft: canvasState?.rectLeft ?? 0,
       }
     },

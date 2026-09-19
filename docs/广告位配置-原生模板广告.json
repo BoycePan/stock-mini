@@ -1,28 +1,55 @@
-本文件由微信公众平台「流量主 → 广告位管理 → 原生模板广告」后台截图整理，
+本文件由微信公众平台「流量主 → 广告位管理 → 原生模板广告」后台整理，
 供后台（管理端 `app_config`，`cfg_type='display'`）配置**原生模板广告位**使用；
 前端消费链路：`front/components/ad-banner`（`<ad-custom>`）→ `front/utils/ad-config.ts`
 `resolveAdUnitId(adConfig, location)` 按 `location` 查 `unit-id` + 校验 `status`。
 
-一、广告位映射（后台名称 → 前端 location → 展示页面）
+一、广告位映射（后台名称 → 前端 location → 展示页面 → 两端 unit-id）
 =====================================================
-| 后台广告位名称  | 广告位 ID               | 前端 location  | 展示页面（页面路径）                           |
-| --------------- | ----------------------- | -------------- | ---------------------------------------------- |
-| 首页            | adunit-fafc7c94cf049e40 | homeTop        | 首页 Tab（pages/global/index）                 |
-| 日韩            | adunit-abfe0d5537aafb8f | asiaTop        | 日韩 Tab（pages/asia/index）                   |
-| 有色            | adunit-5a1f105d67988c28 | matalsTop      | 有色 Tab（pages/metals/index）                 |
-| 分时页-首页进入 | adunit-86361502368fd4fe | minute-detail  | 分时页（packageQuote/pages/minute/index）      |
-| 财经详情页      | adunit-60a2a9c21bba69b5 | finance-detail | 财经详情（packageNews/pages/news-detail）      |
-| 美股Top100      | adunit-1e4a964ca13d80ce | us-top100      | 美股市值TOP100（packageQuote/pages/us-top100） |
-| 板块页          | adunit-3ac739e65fbb1f29 | industry-all   | 板块列表页（packageQuote/pages/industry-all）  |
-| 财经页          | adunit-5dcc3ffaeffc61dd | finance        | 财经 Tab 新闻列表第二条之后（pages/finance）   |
+| 后台广告位名称  | 前端 location  | 展示页面（页面路径）                                | 市场追踪助手（shiChang-tracker） | 行情追踪助手（hangQing-tracker） |
+| --------------- | -------------- | --------------------------------------------------- | -------------------------------- | -------------------------------- |
+| 首页            | homeTop        | 首页 Tab（pages/global/index）A股指数卡之后          | adunit-e505d007e26c162c          | adunit-fafc7c94cf049e40          |
+| 首页_行业板块   | homeIndustry   | 首页 Tab「行业板块」卡片底部（2026-09-19 新增）      | adunit-cdee0fa0df5c49ad          | adunit-08072b2a4ca17cb7          |
+| 日韩            | asiaTop        | 日韩 Tab（pages/asia/index）韩国指数卡之后           | adunit-9dc3e8e0cf3205e7          | adunit-abfe0d5537aafb8f          |
+| 有色            | matalsTop      | 有色 Tab（pages/metals/index）金银分区之后           | adunit-a0507a63618e2c03          | adunit-5a1f105d67988c28          |
+| 分时页-首页进入 | minute-detail  | 分时页（packageQuote/pages/minute/index）            | adunit-e7b1fafe5b96275a          | adunit-86361502368fd4fe          |
+| 财经详情页      | finance-detail | 财经详情（packageNews/pages/news-detail）            | adunit-9a0e8c7c42f7bc0c          | adunit-60a2a9c21bba69b5          |
+| 美股Top100      | us-top100      | 美股市值TOP100（packageQuote/pages/us-top100）       | adunit-4f78745c43276a75          | adunit-1e4a964ca13d80ce          |
+| 板块页          | industry-all   | 板块列表页（packageQuote/pages/industry-all）        | adunit-d84f01454f894b6d          | adunit-3ac739e65fbb1f29          |
+| 财经页          | finance        | 财经 Tab 新闻列表第二条之后（pages/finance）         | adunit-cbf9e1de339f30a6          | adunit-5dcc3ffaeffc61dd          |
+
+> **一页两个广告位**：首页同时挂了 `homeTop`（A股指数卡之后）与 `homeIndustry`（行业板块卡底部），
+> 由 `components/market-page` 的 `adLocation` / `adAfterSection` 与
+> `adLocation2` / `adAfterSection2` 两个槽位渲染（页面 WXML 传 location + 分区 id）。
+> 两个槽位用**不同 location**（可以是同一 unit-id），便于按位置分别看数据。
 
 二、配置项 cfgValue（item `bannerAd` 的值，单行数组，直接整行粘贴）
 ================================================================
-[{"unit-id":"adunit-fafc7c94cf049e40","location":"homeTop","status":true},{"unit-id":"adunit-abfe0d5537aafb8f","location":"asiaTop","status":true},{"unit-id":"adunit-5a1f105d67988c28","location":"matalsTop","status":true},{"unit-id":"adunit-86361502368fd4fe","location":"minute-detail","status":true},{"unit-id":"adunit-60a2a9c21bba69b5","location":"finance-detail","status":true},{"unit-id":"adunit-1e4a964ca13d80ce","location":"us-top100","status":true},{"unit-id":"adunit-3ac739e65fbb1f29","location":"industry-all","status":true},{"unit-id":"adunit-5dcc3ffaeffc61dd","location":"finance","status":true}]
+**注意 unit-id 按端独立**：管理端 `adConfig` 分组下有**两条** `bannerAd`（`target` 不同），
+前端按登录 source（`front/config/app.ts` 的 `LOGIN_SOURCE`）取各自那条。
+
+A. target = `shiChang-tracker`（市场追踪助手，wx2cfd1556edf21a24；管理端 id=21）
+[{"unit-id":"adunit-e505d007e26c162c","location":"homeTop","status":true},{"unit-id":"adunit-cdee0fa0df5c49ad","location":"homeIndustry","status":true},{"unit-id":"adunit-9dc3e8e0cf3205e7","location":"asiaTop","status":true},{"unit-id":"adunit-a0507a63618e2c03","location":"matalsTop","status":true},{"unit-id":"adunit-cbf9e1de339f30a6","location":"finance","status":true},{"unit-id":"adunit-e7b1fafe5b96275a","location":"minute-detail","status":true},{"unit-id":"adunit-9a0e8c7c42f7bc0c","location":"finance-detail","status":true},{"unit-id":"adunit-4f78745c43276a75","location":"us-top100","status":true},{"unit-id":"adunit-d84f01454f894b6d","location":"industry-all","status":true}]
+
+展开版（同一份配置，便于核对）：
+[
+  {"unit-id":"adunit-e505d007e26c162c","location":"homeTop","status":true},
+  {"unit-id":"adunit-cdee0fa0df5c49ad","location":"homeIndustry","status":true},
+  {"unit-id":"adunit-9dc3e8e0cf3205e7","location":"asiaTop","status":true},
+  {"unit-id":"adunit-a0507a63618e2c03","location":"matalsTop","status":true},
+  {"unit-id":"adunit-cbf9e1de339f30a6","location":"finance","status":true},
+  {"unit-id":"adunit-e7b1fafe5b96275a","location":"minute-detail","status":true},
+  {"unit-id":"adunit-9a0e8c7c42f7bc0c","location":"finance-detail","status":true},
+  {"unit-id":"adunit-4f78745c43276a75","location":"us-top100","status":true},
+  {"unit-id":"adunit-d84f01454f894b6d","location":"industry-all","status":true}
+]
+
+B. target = `hangQing-tracker`（行情追踪助手，wx0ecd2049e54fbca8；管理端 id=31）
+[{"unit-id":"adunit-fafc7c94cf049e40","location":"homeTop","status":true},{"unit-id":"adunit-08072b2a4ca17cb7","location":"homeIndustry","status":true},{"unit-id":"adunit-abfe0d5537aafb8f","location":"asiaTop","status":true},{"unit-id":"adunit-5a1f105d67988c28","location":"matalsTop","status":true},{"unit-id":"adunit-86361502368fd4fe","location":"minute-detail","status":true},{"unit-id":"adunit-60a2a9c21bba69b5","location":"finance-detail","status":true},{"unit-id":"adunit-1e4a964ca13d80ce","location":"us-top100","status":true},{"unit-id":"adunit-3ac739e65fbb1f29","location":"industry-all","status":true},{"unit-id":"adunit-5dcc3ffaeffc61dd","location":"finance","status":true}]
 
 展开版（同一份配置，便于核对）：
 [
   {"unit-id":"adunit-fafc7c94cf049e40","location":"homeTop","status":true},
+  {"unit-id":"adunit-08072b2a4ca17cb7","location":"homeIndustry","status":true},
   {"unit-id":"adunit-abfe0d5537aafb8f","location":"asiaTop","status":true},
   {"unit-id":"adunit-5a1f105d67988c28","location":"matalsTop","status":true},
   {"unit-id":"adunit-86361502368fd4fe","location":"minute-detail","status":true},
@@ -35,25 +62,38 @@
 三、下发形态（校验用：GET /api/v1/configs?cfgType=display → data）
 =================================================================
 前端读 `rootStore.system.configs.adConfig`（`front/types/system.ts` AdConfig），
-即 `adConfig` 为分组、`bannerAd` 为配置项，树形摊平后形态：
+即 `adConfig` 为分组、`bannerAd` 为配置项，树形摊平后形态（下面以市场追踪助手为例，
+行情追踪助手只有 unit-id 不同）：
 {
   "adConfig": {
     "bannerAd": [
-      { "unit-id": "adunit-fafc7c94cf049e40", "location": "homeTop", "status": true },
-      { "unit-id": "adunit-abfe0d5537aafb8f", "location": "asiaTop", "status": true },
-      { "unit-id": "adunit-5a1f105d67988c28", "location": "matalsTop", "status": true },
-      { "unit-id": "adunit-86361502368fd4fe", "location": "minute-detail", "status": true },
-      { "unit-id": "adunit-60a2a9c21bba69b5", "location": "finance-detail", "status": true },
-      { "unit-id": "adunit-1e4a964ca13d80ce", "location": "us-top100", "status": true },
-      { "unit-id": "adunit-3ac739e65fbb1f29", "location": "industry-all", "status": true },
-      { "unit-id": "adunit-5dcc3ffaeffc61dd", "location": "finance", "status": true }
+      { "unit-id": "adunit-e505d007e26c162c", "location": "homeTop", "status": true },
+      { "unit-id": "adunit-cdee0fa0df5c49ad", "location": "homeIndustry", "status": true },
+      { "unit-id": "adunit-9dc3e8e0cf3205e7", "location": "asiaTop", "status": true },
+      { "unit-id": "adunit-a0507a63618e2c03", "location": "matalsTop", "status": true },
+      { "unit-id": "adunit-cbf9e1de339f30a6", "location": "finance", "status": true },
+      { "unit-id": "adunit-e7b1fafe5b96275a", "location": "minute-detail", "status": true },
+      { "unit-id": "adunit-9a0e8c7c42f7bc0c", "location": "finance-detail", "status": true },
+      { "unit-id": "adunit-4f78745c43276a75", "location": "us-top100", "status": true },
+      { "unit-id": "adunit-d84f01454f894b6d", "location": "industry-all", "status": true }
     ]
   }
 }
 
-四、管理端 POST /api/mgr/configs（首次建配置：两步）
-==================================================
-第 1 步：建分组 adConfig（记下响应里的 id）
+四、管理端写入
+==============
+配置项已存在时（当前线上就是这种状态）：**只改 cfgValue**，用 PUT 部分更新
+（`Authorization: Bearer {admin-token}`，见 docs/API.md 8.4；admin-token 的 base64 见
+`backend-java/src/main/resources/application.yml` 的 `app.mgr.admin-token`）：
+
+PUT /api/mgr/configs/21   ← 市场追踪助手 bannerAd
+PUT /api/mgr/configs/31   ← 行情追踪助手 bannerAd
+{
+  "cfgValue": "第二节对应端的单行数组"
+}
+
+首次建配置（两步）：
+第 1 步：建分组 adConfig（线上已存在，id=20；新环境记下响应里的 id）
 {
   "nodeType": "group",
   "cfgType": "display",
@@ -65,36 +105,31 @@
   "parentId": null
 }
 
-第 2 步：在 adConfig 下建配置项 bannerAd（cfgValue = 第二节单行数组的 JSON 文本）
+第 2 步：在 adConfig 下按端各建一条配置项 bannerAd（cfgValue = 第二节单行数组的 JSON 文本）
 {
   "nodeType": "item",
   "cfgType": "display",
   "cfgKey": "bannerAd",
-  "cfgValue": "[{\"unit-id\":\"adunit-fafc7c94cf049e40\",\"location\":\"homeTop\",\"status\":true},{\"unit-id\":\"adunit-abfe0d5537aafb8f\",\"location\":\"asiaTop\",\"status\":true},{\"unit-id\":\"adunit-5a1f105d67988c28\",\"location\":\"matalsTop\",\"status\":true},{\"unit-id\":\"adunit-86361502368fd4fe\",\"location\":\"minute-detail\",\"status\":true},{\"unit-id\":\"adunit-60a2a9c21bba69b5\",\"location\":\"finance-detail\",\"status\":true},{\"unit-id\":\"adunit-1e4a964ca13d80ce\",\"location\":\"us-top100\",\"status\":true},{\"unit-id\":\"adunit-3ac739e65fbb1f29\",\"location\":\"industry-all\",\"status\":true},{\"unit-id\":\"adunit-5dcc3ffaeffc61dd\",\"location\":\"finance\",\"status\":true}]",
-  "remark": "原生模板广告位列表（unit-id + location + status）",
-  "target": "all",
+  "cfgValue": "[{\"unit-id\":\"adunit-e505d007e26c162c\",\"location\":\"homeTop\",\"status\":true},{\"unit-id\":\"adunit-cdee0fa0df5c49ad\",\"location\":\"homeIndustry\",\"status\":true},{\"unit-id\":\"adunit-9dc3e8e0cf3205e7\",\"location\":\"asiaTop\",\"status\":true},{\"unit-id\":\"adunit-a0507a63618e2c03\",\"location\":\"matalsTop\",\"status\":true},{\"unit-id\":\"adunit-cbf9e1de339f30a6\",\"location\":\"finance\",\"status\":true},{\"unit-id\":\"adunit-e7b1fafe5b96275a\",\"location\":\"minute-detail\",\"status\":true},{\"unit-id\":\"adunit-9a0e8c7c42f7bc0c\",\"location\":\"finance-detail\",\"status\":true},{\"unit-id\":\"adunit-4f78745c43276a75\",\"location\":\"us-top100\",\"status\":true},{\"unit-id\":\"adunit-d84f01454f894b6d\",\"location\":\"industry-all\",\"status\":true}]",
+  "remark": "banner广告",
+  "target": "shiChang-tracker",
   "sort": 0,
   "enabled": true,
-  "parentId": 12
+  "parentId": 20
 }
-（`parentId` 填第 1 步返回的分组 id；配置项已存在时用 PUT /api/mgr/configs/{id} 只改 cfgValue。）
+（`parentId` 填第 1 步返回的分组 id，线上为 20；`target` 另一端填 `hangQing-tracker`。）
 
 备注
 ====
-- 全量口径：**只使用新广告位 ID**（旧配置里的 unit-id 一律作废），共 8 条 =
-  截图 7 个广告位（旧配置 6 条按名称对应位置换新 + 新增 `industry-all` 板块页）
-  + 新补 `finance` 财经页（`adunit-5dcc3ffaeffc61dd`）。
-- `finance`（财经 Tab 新闻列表第二条之后，`pages/finance/index.wxml`）：已配
-  `adunit-5dcc3ffaeffc61dd`；8 个 location 至此**全部有广告位**，前端 8 处广告位全亮。
-- 前提核对：`板块页` 按「板块列表页」`packageQuote/pages/industry-all` 映射（截图 7 位中只有它能
-  对上该页）；若该广告位实际是给财经 Tab 那条广告准备的，把数组里它的 `location` 由
-  `industry-all` 改成 `finance` 即可（其余不动）。
+- 前端全部 location 枚举（9 个）：`homeTop / homeIndustry / asiaTop / matalsTop / finance /
+  minute-detail / finance-detail / us-top100 / industry-all`；同一 unit-id 可被多个 location
+  复用（微信广告位支持跨页面复用）。
+- 2026-09-19 新增 `homeIndustry`：首页「行业板块」卡片（section id `industry-board`，
+  首页最后一个分区）**底部**的第二个 banner，前端槽位见 `components/market-page`
+  的 `adLocation2` / `adAfterSection2`，两端各新建一个「原生模板广告」广告位并已写入管理端。
 - `status: false` 时前端不渲染该广告位（`resolveAdUnitId` 返回空串，不占位、不影响布局）；
   临时下线优先改 `status`，不用从数组里删。
-- 前端全部 location 枚举（8 个）：`homeTop / asiaTop / matalsTop / finance /
-  minute-detail / finance-detail / us-top100 / industry-all`；同一 unit-id 可被多个
-  location 复用（微信广告位支持跨页面复用）。
-- 广告位 ID 来自后台截图逐字符转写 + 财经页为新补 ID，配置前建议核对一次（重点核对
-  `adunit-60a2a9c21bba69b5`、`adunit-abfe0d5537aafb8f`、`adunit-5dcc3ffaeffc61dd`）。
+- 广告位 ID 唯一来源是流量主后台「广告位管理」（两端 AppID 不同，unit-id 不通用）；
+  修改前建议在后台核对一次 ID 逐字符一致。
 - 插屏广告**不在本文件范围**：它在同一个 `adConfig` 分组下另有一个配置项 `interstitialAd`
   （2026-09-13 起由远端下发，前端不再硬编码 unit-id），见 `docs/广告位配置-插屏广告.json`。

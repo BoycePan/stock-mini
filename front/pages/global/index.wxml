@@ -13,6 +13,8 @@
     entrancePath="pages/global/index"
     adLocation="homeTop"
     adAfterSection="cn-index"
+    adLocation2="homeIndustry"
+    adAfterSection2="industry-board"
     bind:retry="onRetry"
     bind:metrictap="onMetricTap"
     bind:tabtap="onSectionTabTap"

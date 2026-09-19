@@ -56,6 +56,14 @@ Component({
     adLocation: { type: String, value: '' },
     /** 广告插入位置：渲染在 id 等于该值的分区卡片之后（如 cn-index / asia-kr-index / metal-precious） */
     adAfterSection: { type: String, value: '' },
+    /**
+     * 第二个广告位 location（首页「行业板块」卡片底部 homeIndustry 等）。
+     * 空串不展示；非空时在 adAfterSection2 指定分区卡片之后渲染第二个 <ad-banner>。
+     * 一个页面分区较多时可挂第二个广告位，配置与第一个同构（adConfig.bannerAd 按 location 解析）。
+     */
+    adLocation2: { type: String, value: '' },
+    /** 第二个广告位的插入位置：渲染在 id 等于该值的分区卡片之后（如 industry-board） */
+    adAfterSection2: { type: String, value: '' },
   },
   data: {
     theme: 'light',

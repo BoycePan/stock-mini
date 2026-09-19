@@ -6,7 +6,10 @@ import {
   hitTestIndex,
   isKlineMode,
   klinePeriodOf,
+  layoutPriceY,
   MA_PERIODS,
+  renderChart,
+  renderCrosshair,
   type ChartCtx,
   type QuoteChartData,
 } from '../packageQuote/components/quote-chart/draw.ts'
@@ -18,7 +21,7 @@ import {
   MIN_VIEW_BARS,
   panRepeatStep,
   panViewport,
-  pinchViewport,
+  scaleViewport,
   zoomViewport,
 } from '../utils/kline-viewport.ts'
 import { fitMaLegend } from '../utils/kline-legend.ts'
@@ -122,8 +125,8 @@ test('K 线布局：价格 / 成交量 / MACD 三块面板自上而下排列且�
   assert.ok(layout.padL >= 54 && layout.padL <= 120)
   assert.equal(layout.volMax, 1000)
   assert.ok(layout.macdMax > 0)
-  assert.equal(layout.maSeries.length, 4, 'MA5 / MA20 / MA30 / MA60 四条')
-  assert.deepEqual(layout.maPeriods, [5, 20, 30, 60])
+  assert.equal(layout.maSeries.length, 5, 'MA5 / MA10 / MA20 / MA30 / MA60 五条')
+  assert.deepEqual(layout.maPeriods, [5, 10, 20, 30, 60])
 })
 
 test('K 线布局：K 线不足 MACD 根数时隐藏 MACD，价格面板吃掉这块高度（不留空白）', () => {
@@ -212,10 +215,11 @@ test('buildKlineView：默认只取最近 30 根，均线在全量上算完再�
   assert.equal(view.start, 200 - DEFAULT_VIEW_BARS)
   assert.equal(view.end, 199)
   assert.deepEqual(view.maPeriods, [...MA_PERIODS])
-  assert.equal(view.maSeries.length, 4)
+  assert.equal(view.maSeries.length, 5)
   for (const series of view.maSeries) assert.equal(series.length, view.klines.length)
+  const ma60 = view.maSeries[view.maPeriods.indexOf(60)] ?? []
   assert.ok(
-    view.maSeries[3]?.every((v) => v !== null),
+    ma60.every((v) => v !== null),
     'MA60 在窗口内每根都有值：预热来自窗口外的历史',
   )
   assert.equal(view.klines[0]?.time, all[170]?.time, '窗口第一根 = 全量第 170 根')
@@ -229,8 +233,9 @@ test('buildKlineView：窗口贴到历史起点时自动右移（始终有 30 �
   assert.equal(view.start, 0)
   assert.equal(view.end, DEFAULT_VIEW_BARS - 1)
   assert.equal(view.klines.length, DEFAULT_VIEW_BARS)
+  const ma60AtStart = view.maSeries[view.maPeriods.indexOf(60)] ?? []
   assert.ok(
-    view.maSeries[3]?.every((v) => v === null),
+    ma60AtStart.every((v) => v === null),
     '第 1~30 根历史不足 → MA60 全 null',
   )
 })
@@ -305,37 +310,45 @@ test('fitMaLegend：放得下带数值，放不下自动降级为只有周期名
   const wide = buildQuoteChartLayout(baseData(), ctx)
   const legendOf = (plotW: number, value: number) =>
     fitMaLegend(ctx, { periods: MA_PERIODS, padL: wide.padL, plotW, valueOf: () => value })
-  // 替身 measureText 按字符数估算（与字号无关），因此只能验证「带数值 / 不带数值」这一级降级
-  const fits = legendOf(wide.plotW, 123.45)
+  // 替身 measureText 按字符数估算（与字号无关），因此只能验证「完整数值 / 缩写数值 / 不带数值」
+  // 这三档；字号档（10px → 9px）在替身上量不出差别，这里靠放宽绘图区宽度来验证第一档。
+  const fits = legendOf(wide.plotW + 80, 123.45)
   assert.ok(
     fits.items.every((item) => item.text.includes(':')),
     '宽图例带数值',
   )
   assert.deepEqual(
     fits.items.map((item) => item.text.slice(0, 3)),
-    ['MA5', 'MA2', 'MA3', 'MA6'],
+    ['MA5', 'MA1', 'MA2', 'MA3', 'MA6'],
   )
   assert.deepEqual(
     fits.items.map((item) => item.colorIndex),
-    [0, 1, 2, 3],
+    [0, 1, 2, 3, 4],
     'colorIndex 与均线下标一一对应（配色由调用方决定）',
   )
 
-  // 指数量级的长数值（如 12345.68）在同一宽度下放不下 → 只留周期名
-  const long = legendOf(wide.plotW, 12345.678)
-  assert.ok(
-    long.items.every((item) => !item.text.includes(':')),
-    '长数值放不下 → 只留周期名',
+  // 指数量级的长数值（如 12345.68）：完整两位小数整行 332px、缩写档 277px（替身按 5px/字符），
+  // 取 294px 正好卡在两档之间 → 降级为缩写（≥1000 取整），仍看得到均线数值
+  const long = legendOf(wide.plotW + 20, 12345.678)
+  assert.deepEqual(
+    long.items.map((item) => item.text),
+    ['MA5:12346', 'MA10:12346', 'MA20:12346', 'MA30:12346', 'MA60:12346'],
+  )
+  // 三位数价格（如 123.456）的缩写档留 1 位小数
+  assert.deepEqual(
+    legendOf(wide.plotW + 20, 123.456).items.map((item) => item.text),
+    ['MA5:123.5', 'MA10:123.5', 'MA20:123.5', 'MA30:123.5', 'MA60:123.5'],
+    '三位数缩写为 1 位小数',
   )
 
   const narrow = legendOf(54, 123.45)
   assert.ok(
     narrow.items.every((item) => !item.text.includes(':')),
-    '窄图例只剩周期名',
+    '连缩写都放不下 → 只剩周期名',
   )
   assert.deepEqual(
     narrow.items.map((item) => item.text),
-    ['MA5', 'MA20', 'MA30', 'MA60'],
+    ['MA5', 'MA10', 'MA20', 'MA30', 'MA60'],
   )
 })
 
@@ -357,21 +370,24 @@ test('panViewport：每次移动 1 根（默认），首尾夹紧；长按连发
   assert.equal(panRepeatStep(Number.NaN), 1)
 })
 
-test('pinchViewport：指距放大 → 根数变少、锚点那根停在原位，且受 [10, 全量] 限制', () => {
+test('scaleViewport：指距缩放只改根数、最右侧那根始终不动，且受 [10, 全量] 限制', () => {
   const total = 200
   const base = defaultViewport(total) // 窗口 170~199
-  const zoomed = pinchViewport(total, base, 2, 0.5)
+  const zoomed = scaleViewport(total, base, 2)
   assert.equal(zoomed.viewBars, 15, '指距放大两倍 → 根数减半')
-  const anchorBefore = 170 + 0.5 * 29
-  const anchorAfter = zoomed.viewEnd - 15 + 1 + 0.5 * (15 - 1)
-  assert.ok(
-    Math.abs(anchorAfter - anchorBefore) <= 1,
-    `锚点那根应基本停在原位：${anchorAfter} vs ${anchorBefore}`,
-  )
-  assert.equal(pinchViewport(total, base, 0.01, 0.5).viewBars, total, '捏合到极限 = 全量')
-  assert.equal(pinchViewport(total, base, 100, 0.5).viewBars, MIN_VIEW_BARS, '撑开到极限 = 10 根')
-  assert.deepEqual(pinchViewport(total, base, 1.01, 0.5), base, '死区内不动（防手指抖动）')
-  assert.deepEqual(pinchViewport(total, base, Number.NaN, 0.5), base)
+  assert.equal(zoomed.viewEnd, base.viewEnd, '锚点 = 最右侧那根，缩放前后不动')
+  assert.deepEqual(scaleViewport(total, base, 0.5), clampViewport(total, 60, base.viewEnd))
+
+  // 已翻到历史（窗口右端不是最新一根）时同样以窗口最右侧为基准，锚点不因两指落点漂移
+  const panned = { viewBars: DEFAULT_VIEW_BARS, viewEnd: 120 }
+  assert.equal(scaleViewport(total, panned, 2).viewEnd, 120)
+  assert.equal(scaleViewport(total, panned, 0.5).viewEnd, 120)
+
+  assert.equal(scaleViewport(total, base, 0.01).viewBars, total, '捏合到极限 = 全量')
+  assert.equal(scaleViewport(total, base, 100).viewBars, MIN_VIEW_BARS, '撑开到极限 = 10 根')
+  assert.deepEqual(scaleViewport(total, base, 1.01), base, '死区内不动（防手指抖动）')
+  assert.deepEqual(scaleViewport(total, base, Number.NaN), base)
+  assert.deepEqual(scaleViewport(total, base, 0), base, '非法指距按不动处理')
 })
 
 // ---------------------------------------------------------------------------
@@ -435,4 +451,134 @@ test('布局健壮性：数据为 0 价 / 极值 / 平盘时纵轴仍是有限�
   const empty = buildQuoteChartLayout(baseData({ klines: [] }), ctx)
   assert.equal(empty.n, 0)
   assert.ok(empty.xs.length === 0)
+})
+
+// ---------------------------------------------------------------------------
+// 极值标注：K 线标出区间最高 / 最低价（箭头 + 价格），分时不标；不再常驻最新价标签
+// ---------------------------------------------------------------------------
+
+/** 记录 fillText / 填充三角形 / 圆点的 canvas 替身：断言图上写了哪些文字、箭头与圆点画在哪 */
+function recordingCtx(): ChartCtx & {
+  drawn: Array<{ text: string; x: number; y: number }>
+  polys: Array<{ points: Array<{ x: number; y: number }>; fillStyle: string }>
+  arcs: Array<{ x: number; y: number; r: number }>
+} {
+  const drawn: Array<{ text: string; x: number; y: number }> = []
+  const polys: Array<{ points: Array<{ x: number; y: number }>; fillStyle: string }> = []
+  const arcs: Array<{ x: number; y: number; r: number }> = []
+  let current: Array<{ x: number; y: number }> = []
+  const ctx = {
+    ...fakeCtx(),
+    drawn,
+    polys,
+    arcs,
+    beginPath: () => {
+      current = []
+    },
+    moveTo: (x: number, y: number) => {
+      current.push({ x, y })
+    },
+    lineTo: (x: number, y: number) => {
+      current.push({ x, y })
+    },
+    arc: (x: number, y: number, r: number) => {
+      arcs.push({ x, y, r })
+    },
+    fill: () => {
+      if (current.length) polys.push({ points: [...current], fillStyle: String(ctx.fillStyle) })
+    },
+    fillText: (text: string, x: number, y: number) => {
+      drawn.push({ text, x, y })
+    },
+  }
+  return ctx
+}
+
+/** 取填充色为 color 的三角形（极值标注的箭头）：返回尖端 / 底边两端 */
+function arrowOf(
+  ctx: ReturnType<typeof recordingCtx>,
+  color: string,
+): { apex: { x: number; y: number }; base: Array<{ x: number; y: number }> } | null {
+  const tri = ctx.polys.find((poly) => poly.fillStyle === color && poly.points.length === 3)
+  if (!tri) return null
+  const sorted = [...tri.points].sort((a, b) => a.x - b.x)
+  // 尖端是横向最靠内（独一份 x）的那个顶点：三点里 x 相同的两个是底边
+  const apex = sorted[1]!.x === sorted[0]!.x ? sorted[2]! : sorted[0]!
+  return { apex, base: tri.points.filter((point) => point !== apex) }
+}
+
+test('K 线渲染：区间最高 / 最低价各标一个（箭头指向极值点 + 价格文字），且不再常驻最新价', () => {
+  const klines = Array.from({ length: 30 }, (_, i) => kline('2026-01-01', 30 + i * 0.1))
+  // 第 5 根同时是区间最高（88.88）与最低（11.11），两个标注都贴在它旁边
+  klines[5] = { time: '2026-01-06', open: 50, close: 50, high: 88.88, low: 11.11, volume: 1000 }
+  const data = baseData({ klines })
+  const ctx = recordingCtx()
+  const layout = buildQuoteChartLayout(data, ctx)
+  renderChart(ctx, data, layout)
+
+  const hi = ctx.drawn.find((item) => item.text === '88.88')
+  const lo = ctx.drawn.find((item) => item.text === '11.11')
+  assert.ok(hi, `应标出最高价 88.88：${ctx.drawn.map((item) => item.text).join(' ')}`)
+  assert.ok(lo, '应标出最低价 11.11')
+  const x = layout.xs[5] ?? 0
+  const hiY = layoutPriceY(layout, 88.88)
+  const loY = layoutPriceY(layout, 11.11)
+  // 文字基线比极值点低 3.5px（10px 字号的垂直居中），即视觉上与极值点同一水平
+  assert.ok(Math.abs(hi.y - (hiY + 3.5)) < 1e-9, '最高价文字与最高点同一水平')
+  assert.ok(Math.abs(lo.y - (loY + 3.5)) < 1e-9, '最低价文字与最低点同一水平')
+  // 极值在窗口左端 → 标签摆右侧，箭头尖端（红）反向指回最高点
+  assert.ok(hi.x > x && hi.x - x <= 12, `最高价文字贴在最高点右侧（${hi.x} vs ${x}）`)
+  const hiArrow = arrowOf(ctx, '#eb514d')
+  assert.ok(hiArrow, '最高价旁应画红色箭头三角')
+  assert.ok(Math.abs(hiArrow.apex.x - (x + 2)) < 1e-9, '箭头尖端朝左指向最高点')
+  assert.ok(Math.abs(hiArrow.apex.y - hiY) < 1e-9, '箭头与最高点同一高度')
+  const loArrow = arrowOf(ctx, '#20a66a')
+  assert.ok(loArrow, '最低价旁应画绿色箭头三角')
+  assert.ok(Math.abs(loArrow.apex.y - loY) < 1e-9, '箭头与最低点同一高度')
+
+  const lastClose = (klines[klines.length - 1] as KlinePoint).close.toFixed(2)
+  assert.ok(
+    !ctx.drawn.some((item) => item.text === lastClose),
+    `不应再常驻最新价标签（${lastClose}）`,
+  )
+})
+
+test('分时渲染：不标区间极值（读数交给十字光标触摸查看），但仍保留 0% 基准刻度', () => {
+  const points = [
+    minutePoint('09:30', 11),
+    minutePoint('09:31', 12.34),
+    minutePoint('09:32', 9.87),
+    minutePoint('09:33', 11.2),
+  ]
+  const data = baseData({ mode: 'minute', points, preClose: 11, session: 'continuous' })
+  const ctx = recordingCtx()
+  const layout = buildQuoteChartLayout(data, ctx)
+  renderChart(ctx, data, layout)
+  const texts = ctx.drawn.map((item) => item.text)
+  assert.ok(!texts.includes('12.34'), `分时不标最高价：${texts.join(' ')}`)
+  assert.ok(!texts.includes('9.87'), '分时不标最低价')
+  assert.ok(texts.includes('0%'), '分时仍保留 0% 基准刻度')
+})
+
+test('十字光标：K 线不在交点画实心圆点，分时保留圆点', () => {
+  // K 线（日/周/月/年共用同一套绘制）：蜡烛已标出收盘位置，交点再叠圆点只是噪声
+  const klines = Array.from({ length: 30 }, (_, i) => kline('2026-01-01', 10 + i * 0.1))
+  const klineData = baseData({ klines, activeIndex: 3 })
+  const klineCtx = recordingCtx()
+  renderCrosshair(klineCtx, klineData, buildQuoteChartLayout(klineData, klineCtx))
+  assert.equal(klineCtx.arcs.length, 0, 'K 线十字光标不画交点圆点')
+  assert.ok(
+    klineCtx.drawn.some((item) => item.text.startsWith('收 ')),
+    '信息框照常给出该根读数',
+  )
+
+  // 分时：走势线上没有蜡烛，圆点用来定位当前读数 → 保留（价格点 + 均价点）
+  const points = [minutePoint('09:30', 10), minutePoint('09:31', 10.2), minutePoint('09:32', 9.9)]
+  const minuteData = baseData({ mode: 'minute', points, preClose: 10, activeIndex: 1 })
+  const minuteCtx = recordingCtx()
+  renderCrosshair(minuteCtx, minuteData, buildQuoteChartLayout(minuteData, minuteCtx))
+  assert.ok(
+    minuteCtx.arcs.some((arc) => arc.r === 3.5),
+    '分时十字光标仍画价格圆点',
+  )
 })

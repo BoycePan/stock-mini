@@ -1,9 +1,12 @@
 /**
  * 均线图例排版纯函数（仅依赖 ctx 的 measureText）：两个 K 线图表组件共用。
  *
- * 四条均线（MA5/20/30/60）都带数值时文案很长（指数上万点：`MA60:52421.20`），
- * 窄屏 / 大数字下会互相叠压，因此按三级自适应降级：
- *   1. 10px 带数值 → 2. 9px 带数值 → 3. 9px 只留周期名（MA5 MA20 MA30 MA60）。
+ * 五条均线（MA5/10/20/30/60）都带数值时文案很长（指数上万点：`MA60:52421.20`），
+ * 窄屏 / 大数字下会互相叠压，因此按四级自适应降级：
+ *   1. 10px 带完整数值 → 2. 9px 带完整数值 → 3. 9px 带缩写数值（≥1000 取整、≥100 留 1 位小数）
+ *   → 4. 9px 只留周期名（MA5 MA10 MA20 MA30 MA60）。
+ * 第 3 档存在的意义：指数（上证 / 纳指 / 道指）点位大，完整两位小数在手机宽度下塞不下，
+ * 若直接跳到第 4 档，指数 K 线就只剩周期名、看不到均线数值了。
  * 颜色由调用方按 `colorIndex` 从自己的主题色板取（浅 / 深各一套），本模块不掺和配色。
  */
 
@@ -23,12 +26,28 @@ export interface MaLegend {
 /** 图例项间距（px） */
 const LEGEND_GAP = 8
 
-/** 三级降级候选（先大字号带数值，最后只留周期名） */
-const LEGEND_ATTEMPTS: Array<{ font: string; withValue: boolean }> = [
-  { font: '10px sans-serif', withValue: true },
-  { font: '9px sans-serif', withValue: true },
-  { font: '9px sans-serif', withValue: false },
+/** 数值展示档位：完整两位小数 / 缩写（大数取整或留 1 位小数）/ 不带数值 */
+type LegendValueMode = 'full' | 'short' | 'none'
+
+/** 四级降级候选（先大字号带完整数值，最后只留周期名） */
+const LEGEND_ATTEMPTS: Array<{ font: string; mode: LegendValueMode }> = [
+  { font: '10px sans-serif', mode: 'full' },
+  { font: '9px sans-serif', mode: 'full' },
+  { font: '9px sans-serif', mode: 'short' },
+  { font: '9px sans-serif', mode: 'none' },
 ]
+
+/**
+ * 缩写均线数值（仅在「9px 带完整数值」都放不下时启用）：
+ * ≥1000 取整（指数点位 3519.63 → 3520）、≥100 留 1 位小数、更小的价格保持两位小数。
+ * 只影响图例这一处展示，不改动曲线与 `computeMA` 的计算精度。
+ */
+function shortenMaValue(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 1000) return value.toFixed(0)
+  if (abs >= 100) return value.toFixed(1)
+  return value.toFixed(2)
+}
 
 /**
  * 排布均线图例。
@@ -47,13 +66,14 @@ export function fitMaLegend(
   },
 ): MaLegend {
   const { periods, padL, plotW, valueOf } = options
-  const textsOf = (withValue: boolean): string[] =>
+  const textsOf = (mode: LegendValueMode): string[] =>
     periods.map((period, index) => {
-      if (!withValue) return `MA${period}`
+      if (mode === 'none') return `MA${period}`
       const value = valueOf(index)
-      const text =
-        value === null || value === undefined || !Number.isFinite(value) ? '--' : value.toFixed(2)
-      return `MA${period}:${text}`
+      if (value === null || value === undefined || !Number.isFinite(value)) {
+        return `MA${period}:--`
+      }
+      return `MA${period}:${mode === 'short' ? shortenMaValue(value) : value.toFixed(2)}`
     })
   const widthOf = (font: string, texts: string[]): number => {
     ctx.font = font
@@ -64,11 +84,11 @@ export function fitMaLegend(
 
   let chosen = LEGEND_ATTEMPTS[LEGEND_ATTEMPTS.length - 1] as {
     font: string
-    withValue: boolean
+    mode: LegendValueMode
   }
-  let texts = textsOf(chosen.withValue)
+  let texts = textsOf(chosen.mode)
   for (const attempt of LEGEND_ATTEMPTS) {
-    const candidate = textsOf(attempt.withValue)
+    const candidate = textsOf(attempt.mode)
     if (widthOf(attempt.font, candidate) <= plotW) {
       chosen = attempt
       texts = candidate

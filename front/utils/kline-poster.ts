@@ -3,7 +3,8 @@
  *
  * 与 share-poster.ts 共用设计坐标系（宽 750）。绘制逻辑复用 utils/kline.ts 的纯计算
  * （纵轴范围 / 坐标映射 / 蜡烛几何 / 均线 / 刻度），保证与屏幕 K 线图表视觉一致：
- * 红涨绿跌、MA5/MA20/MA30/MA60（与屏幕同一套周期，见 KLINE_MA_PERIODS）、成交量柱、最新价虚线标签。
+ * 红涨绿跌、MA5/MA10/MA20/MA30/MA60（与屏幕同一套周期，见 KLINE_MA_PERIODS）、成交量柱、
+ * 区间最高 / 最低价箭头标注；不再画「最新价」虚线标签（触摸查看即可，见 quote-chart/draw.ts）。
  *
  * 用法：页面把 K 线数据交给 buildKlinePosterChart 生成 PosterChart，
  * 再通过 renderSharePoster(target, data, { chart }) 渲染。
@@ -29,8 +30,8 @@ type CanvasCtx = WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext
 
 const UP_COLOR = '#eb514d'
 const DOWN_COLOR = '#20a66a'
-/** 均线配色（深色海报底，与 quote-chart 深色主题一致；下标与 KLINE_MA_PERIODS 对齐） */
-const MA_COLORS = ['#f5b94a', '#c08ff0', '#6fa3ff', '#4fd1c5']
+/** 均线配色（深色海报底，与 quote-chart 深色主题一致；下标与 KLINE_MA_PERIODS 对齐，MA10 = 品红） */
+const MA_COLORS = ['#f5b94a', '#ff8fc0', '#c08ff0', '#6fa3ff', '#4fd1c5']
 const MA_PERIODS = KLINE_MA_PERIODS
 const MA_LABELS = MA_PERIODS.map((period) => `MA${period}`)
 const GRID_COLOR = 'rgba(255,255,255,0.10)'
@@ -164,7 +165,7 @@ export function drawKlineOnPoster(
     ctx.fill()
   }
 
-  // 均线 MA5/10/20
+  // 均线 MA5/10/20/30/60（与屏幕同一套周期与配色顺序）
   const maSeries = MA_PERIODS.map((period) => computeMA(klines, period))
   for (let m = 0; m < maSeries.length; m += 1) {
     const values = maSeries[m]
@@ -210,31 +211,81 @@ export function drawKlineOnPoster(
     ctx.fillText(formatKlineTime(k.time), x + indexToX(idx, n, padL, plotW), y + h - 8)
   }
 
-  // 最新价虚线 + 右侧圆角标签（按最后一根涨跌着色）
-  const last = klines[lastIndex]
-  if (last) {
-    const lastY = y + priceToY(last.close, minP, maxP, 0, priceH)
-    const color = isUpKline(last) ? UP_COLOR : DOWN_COLOR
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'
-    ctx.lineWidth = 1
-    ctx.setLineDash([4, 4])
-    ctx.beginPath()
-    ctx.moveTo(x + padL, lastY)
-    ctx.lineTo(x + w - padR, lastY)
-    ctx.stroke()
-    ctx.setLineDash([])
-    const label = last.close.toFixed(2)
-    ctx.font = '20px sans-serif'
-    const labelW = ctx.measureText(label).width + 12
-    const tagX = x + w - padR - labelW
-    const tagY = lastY - 10
-    ctx.fillStyle = color
-    roundRectPath(ctx, tagX, tagY, labelW, 18, 4)
-    ctx.fill()
-    ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'center'
-    ctx.fillText(label, tagX + labelW / 2, tagY + 13)
+  // 极值标注：区间最高 / 最低价各一个（短箭头 + 价格文字，箭头指向该根影线端点）。
+  // 不画「最新价」虚线标签：常驻标签会压住最右侧 K 线，且屏幕端已改为触摸查看（与 quote-chart 一致）。
+  let hiIdx = -1
+  let loIdx = -1
+  let hiVal = -Infinity
+  let loVal = Infinity
+  for (let i = 0; i < n; i += 1) {
+    const k = klines[i]
+    if (!k) continue
+    if (k.high > hiVal) {
+      hiVal = k.high
+      hiIdx = i
+    }
+    if (k.low < loVal) {
+      loVal = k.low
+      loIdx = i
+    }
   }
+  const hiBar = hiIdx >= 0 ? klines[hiIdx] : undefined
+  const loBar = loIdx >= 0 ? klines[loIdx] : undefined
+  if (hiBar) {
+    drawExtremeTag(
+      ctx,
+      hiBar.high.toFixed(2),
+      x + indexToX(hiIdx, n, padL, plotW),
+      y + priceToY(hiBar.high, minP, maxP, 0, priceH),
+      x + padL,
+      x + w - padR,
+      UP_COLOR,
+    )
+  }
+  if (loBar) {
+    drawExtremeTag(
+      ctx,
+      loBar.low.toFixed(2),
+      x + indexToX(loIdx, n, padL, plotW),
+      y + priceToY(loBar.low, minP, maxP, 0, priceH),
+      x + padL,
+      x + w - padR,
+      DOWN_COLOR,
+    )
+  }
+}
+
+/**
+ * 单个极值标签：短箭头（尖端指向该根的最高 / 最低价）+ 价格文字，横向贴在极值点一侧。
+ * 标签一律摆向**空间更大的一侧**（极值靠左 → 标签在右，靠右 → 标签在左），
+ * 这样箭头顺手指向绘图区内部，文字也不会被画布边缘裁掉。
+ */
+function drawExtremeTag(
+  ctx: CanvasCtx,
+  text: string,
+  x: number,
+  y: number,
+  plotL: number,
+  plotR: number,
+  color: string,
+): void {
+  ctx.font = '20px sans-serif'
+  const arrowW = 9
+  const gap = 4
+  const toLeft = x - plotL >= plotR - x
+  const dir = toLeft ? -1 : 1
+  const baseX = x + dir * (4 + arrowW)
+
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(x + dir * 4, y)
+  ctx.lineTo(baseX, y - 6)
+  ctx.lineTo(baseX, y + 6)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.textAlign = toLeft ? 'right' : 'left'
+  ctx.fillText(text, baseX + dir * gap, y + 7)
 }
 
 /** 批量绘制矩形（rect 数组：x,y,w,h 依次排列；同色合并提升性能） */

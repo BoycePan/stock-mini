@@ -87,10 +87,12 @@ export function candleBody(
 }
 
 /**
- * 图表均线周期（MA5 / MA20 / MA30 / MA60）：行情页 K 线图与分享海报共用同一套参数，
- * 避免「屏幕上是 MA5/20/30/60、海报上是 MA5/10/20」这种口径不一致。
+ * 图表均线周期（MA5 / MA10 / MA20 / MA30 / MA60）：行情页 K 线图、板块 / 个股详情页的
+ * K 线卡片与分享海报共用同一套参数，避免「屏幕上是五条、海报上是四条」这种口径不一致。
+ * 下标顺序即绘制顺序与配色下标（见 quote-chart/draw.ts 的 palette.ma、
+ * kline-chart / kline-poster 的 MA_COLORS），新增周期一律追加在末尾或同步补色。
  */
-export const KLINE_MA_PERIODS: readonly number[] = [5, 20, 30, 60]
+export const KLINE_MA_PERIODS: readonly number[] = [5, 10, 20, 30, 60]
 
 /**
  * 简单移动平均：前 period-1 个索引为 null，第 i 个 = (i-period+1 .. i) 收盘均值。

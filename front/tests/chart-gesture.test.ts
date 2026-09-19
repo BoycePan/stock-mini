@@ -13,7 +13,6 @@ import { DEFAULT_VIEW_BARS, defaultViewport, MIN_VIEW_BARS } from '../utils/klin
 
 const TOTAL = 200
 const PAD_L = 40
-const PLOT_W = 280
 const RECT_LEFT = 20
 
 function config(over: Partial<GestureConfig> = {}): GestureConfig {
@@ -21,8 +20,6 @@ function config(over: Partial<GestureConfig> = {}): GestureConfig {
     zoomable: true,
     total: TOTAL,
     viewport: defaultViewport(TOTAL),
-    padL: PAD_L,
-    plotW: PLOT_W,
     rectLeft: RECT_LEFT,
     ...over,
   }
@@ -68,27 +65,40 @@ test('单指只查看数据：按下 / 拖动都只移动十字光标，不改�
   assert.equal(vertical.action?.kind, 'crosshair')
 })
 
-test('双指捏合：指距放大 → 根数变少、锚点那根停在原位；上下限夹紧', () => {
+test('双指捏合：指距放大 → 根数变少，锚点始终是最右侧那根；上下限夹紧', () => {
   const cfg = config()
   const start = beginGesture([at(PAD_L + 100, 100), at(PAD_L + 200, 100)], cfg)
   assert.equal(start.action?.kind, 'clear', '进入捏合先收起十字光标')
   assert.equal(start.state?.mode, 'pinch')
-  // 两指中点 = PAD_L+150 → 窗口内相对位置 (150)/280
-  const midRatio = 150 / PLOT_W
-  assert.ok(Math.abs((start.state?.anchorRatio ?? 0) - midRatio) < 1e-9)
 
-  // 指距翻倍（两指各向外 50px）→ 根数减半
+  // 指距翻倍（两指各向外 50px）→ 根数减半，窗口最右侧那根不动
   const zoomed = moveGesture(start.state, [at(PAD_L + 50, 100), at(PAD_L + 250, 100)], cfg)
   assert.equal(zoomed.action?.kind, 'viewport')
   if (zoomed.action?.kind === 'viewport') {
     assert.equal(zoomed.action.viewport.viewBars, DEFAULT_VIEW_BARS / 2)
-    const startIndex = zoomed.action.viewport.viewEnd - zoomed.action.viewport.viewBars + 1
-    const anchorAfter = startIndex + midRatio * (zoomed.action.viewport.viewBars - 1)
-    const anchorBefore = TOTAL - DEFAULT_VIEW_BARS + midRatio * (DEFAULT_VIEW_BARS - 1)
-    assert.ok(
-      Math.abs(anchorAfter - anchorBefore) <= 1,
-      `锚点那根应停在同一位置：${anchorAfter} vs ${anchorBefore}`,
-    )
+    assert.equal(zoomed.action.viewport.viewEnd, TOTAL - 1, '最右侧那根缩放前后不动')
+  }
+
+  // 两指中点落在最左 / 最右都给同一结果：锚点只认窗口最右侧，不看手指位置
+  const leftMid = beginGesture([at(PAD_L + 10, 100), at(PAD_L + 30, 100)], cfg)
+  const rightMid = beginGesture([at(PAD_L + 250, 100), at(PAD_L + 270, 100)], cfg)
+  const leftZoom = moveGesture(leftMid.state, [at(PAD_L - 10, 100), at(PAD_L + 50, 100)], cfg)
+  const rightZoom = moveGesture(rightMid.state, [at(PAD_L + 230, 100), at(PAD_L + 290, 100)], cfg)
+  assert.deepEqual(leftZoom.action, rightZoom.action, '缩放结果与两指落点无关')
+
+  // 已翻到历史（窗口右端不是最新一根）时同样以窗口最右侧为基准
+  const panned = config({ viewport: { viewBars: DEFAULT_VIEW_BARS, viewEnd: 120 } })
+  const pannedStart = beginGesture([at(PAD_L + 100, 100), at(PAD_L + 200, 100)], panned)
+  const pannedZoom = moveGesture(
+    pannedStart.state,
+    [at(PAD_L + 50, 100), at(PAD_L + 250, 100)],
+    panned,
+  )
+  if (pannedZoom.action?.kind === 'viewport') {
+    assert.equal(pannedZoom.action.viewport.viewEnd, 120, '翻看历史时锚点仍是窗口最右侧那根')
+    assert.equal(pannedZoom.action.viewport.viewBars, DEFAULT_VIEW_BARS / 2)
+  } else {
+    assert.fail('翻看历史时捏合应给出新窗口')
   }
 
   // 撑开到极限 → 最小窗口；捏合到极限 → 全量

@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14rpx 4rpx 0;
+  padding: 12rpx 16rpx 0;
 }
 
 .chart-range {
